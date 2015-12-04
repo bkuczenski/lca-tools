@@ -21,15 +21,14 @@ catch-all collection of scripts and functions that have project-specific purpose
 Function for scraping names, types, and geographies of GaBi process data sets from the GaBi website. Something similar is planned for Ecoinvent. 
 
 Usage:
-'''
->>> from projects import *
->>> P = gabi_package_list(GABI_URLS[PROFESSIONAL])
-Found 2 processListTables
-Processing 
-Adding DataFrame with 4 columns and 2608 rows
-Processing 
-Adding DataFrame with 4 columns and 41 rows
 
-
->>>
-'''
+    >>> from projects import *
+    >>> P = gabi_package_list(GABI_URLS[PROFESSIONAL])
+    Found 2 processListTables
+    Processing 
+    Adding DataFrame with 4 columns and 2608 rows
+    Processing 
+    Adding DataFrame with 4 columns and 41 rows
+    
+    
+    >>>

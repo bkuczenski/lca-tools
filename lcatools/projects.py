@@ -5,6 +5,8 @@ Useful functions for LCA-related projects that aren't really re-usable
 
 """
 
+from __future__ import print_function
+
 GABI_URLS = {"GaBi2014": 'http://www.gabi-software.com/support/gabi/gabi-database-2014-lci-documentation/professional-database-2014/',
              "Lean2014": 'http://www.gabi-software.com/support/gabi/gabi-5-lci-documentation/data-sets-by-database-modules/lean-database/'}
 
@@ -21,18 +23,18 @@ def gabi_package_list(url):
     """
 
     import pandas as pd
-    from urllib2 import urlopen
-    from BeautifulSoup import BeautifulSoup
+    from urllib.request import urlopen
+    from bs4  import BeautifulSoup
     html = urlopen(url).read()
     dom = BeautifulSoup(html)
     t = dom.findAll('table', attrs={'id': 'processListTable'})
 
-    print 'Found %d processListTables' % len(t)
+    print('Found %d processListTables' % len(t))
 
     # create data frame containing list headings
     p = []
     for table in t:
-        print 'Processing '
+        print('Processing ')
         columns = [k.text for k in table.findAll('th')]
         data = []
         for row in table.findAll('tr'):
@@ -43,7 +45,7 @@ def gabi_package_list(url):
         if len(columns) == 0:
             columns = ['Column' + str(i+1) for i in range(0, len(data[0]))]
 
-        print 'Adding DataFrame with %d columns and %d rows' % (len(columns), len(data))
+        print('Adding DataFrame with %d columns and %d rows' % (len(columns), len(data)))
         df = pd.DataFrame(columns=columns, data=data)
 
         p.append(df)

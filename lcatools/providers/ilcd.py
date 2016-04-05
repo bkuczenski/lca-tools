@@ -2,11 +2,12 @@ import re
 import os
 
 from lxml import objectify
+from lxml.etree import XMLSyntaxError
 
 from urllib.parse import urljoin
 
 from lcatools.providers.archive import Archive
-from lcatools.entities import LcFlow, LcProcess, LcQuantity
+from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcUnit
 from lcatools.interfaces import BasicInterface, uuid_regex
 
 
@@ -52,7 +53,11 @@ def _find_common(o, tag):
 
 
 def get_reference_flow(process):
-    ref_to_ref = int(_find_tag(process, 'referenceToReferenceFlow')[0])
+    try_ref = _find_tag(process, 'referenceToReferenceFlow')[0]
+    if try_ref == '':
+        return None, None  # multioutput, no specified reference
+    else:
+        ref_to_ref = int(try_ref)
     rf = [i for i in process['exchanges'].getchildren()
           if int(i.attrib['dataSetInternalID']) == ref_to_ref][0]
     rf_uuid = _find_tag(rf, 'referenceToFlowDataSet')[0].attrib['refObjectId']
@@ -149,16 +154,31 @@ class IlcdArchive(BasicInterface):
             child = self.retrieve_or_fetch_entity(uid, dtype=dtype)
         return child
 
+    def _get_objectified_entity(self, filename):
+        return objectify.fromstring(self._archive.readfile(filename))
+
+    def objectify(self, uid):
+        e = self.retrieve_or_fetch_entity(uid)
+        dtype = {
+            'process': 'Process',
+            'flow': 'Flow',
+            'quantity': 'FlowProperty'
+        }[e.entity_type]
+        return self._get_objectified_entity(self._build_entity_path(dtype, e.get_uuid()))
+
     def _create_unitgroup(self, filename):
         """
         UnitGroups aren't stored as full-fledged entities- they are stored as dicts inside quantities.
         :param filename:
         :return:
         """
-        o = objectify.fromstring(self._archive.readfile(filename))
+        o = self._get_objectified_entity(filename)
 
+        u = str(_find_common(o, 'UUID')[0])
         reference_unit = int(_find_tag(o, 'referenceToReferenceUnit')[0])
-        ref_unit = str(o['units'].getchildren()[reference_unit]['name'])
+        unitstring = str(o['units'].getchildren()[reference_unit]['name'])
+        ref_unit = LcUnit(unitstring, u)
+
         unitconv = dict()
         for i in o['units'].getchildren():
             unitconv[str(i['name'])] = float(i['meanValue'])
@@ -170,7 +190,7 @@ class IlcdArchive(BasicInterface):
         :param filename:
         :return:
         """
-        o = objectify.fromstring(self._archive.readfile(filename))
+        o = self._get_objectified_entity(filename)
 
         u = str(_find_common(o, 'UUID')[0])
         n = str(_find_common(o, 'name')[0])
@@ -193,7 +213,7 @@ class IlcdArchive(BasicInterface):
         :param filename: path to the data set relative to the archive
         :return: an LcFlow
         """
-        o = objectify.fromstring(self._archive.readfile(filename))
+        o = self._get_objectified_entity(filename)
 
         u = str(_find_common(o, 'UUID')[0])
         n = str(_find_tag(o, 'baseName')[0])
@@ -220,13 +240,10 @@ class IlcdArchive(BasicInterface):
         :param filename:
         :return:
         """
-        o = objectify.fromstring(self._archive.readfile(filename))
+        o = self._get_objectified_entity(filename)
 
         u = str(_find_common(o, 'UUID')[0])
         n = str(_find_tag(o, 'baseName')[0])
-
-        rf, rf_uri = get_reference_flow(o)
-        f = self._check_or_retrieve_child(filename, rf, rf_uri)
 
         g = _find_tag(o, 'locationOfOperationSupplyOrProduction')[0].attrib['location']
 
@@ -237,8 +254,18 @@ class IlcdArchive(BasicInterface):
 
         cls = [str(i) for i in _find_common(o, 'class')]
 
-        p = LcProcess(u, Name=n, ReferenceFlow=f, Comment=c, SpatialScope=g, TemporalScope=stt,
+        p = LcProcess(u, Name=n, Comment=c, SpatialScope=g, TemporalScope=stt,
                       Classifications=cls)
+
+        try:
+            rf, rf_uri = get_reference_flow(o)
+        except XMLSyntaxError:
+            rf = rf_uri = None
+
+        if rf is not None:
+            f = self._check_or_retrieve_child(filename, rf, rf_uri)
+            p['ReferenceFlow'] = f
+
         self[u] = p
         return p
 

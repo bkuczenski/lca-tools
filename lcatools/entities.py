@@ -36,14 +36,31 @@ class LcEntity(object):
         return concatenate(cls._pre_fields, cls._new_fields,
                            [cls._ref_field] if cls._ref_field is not [] else [], cls._post_fields)
 
-    def properties(self):
-        return [i for i in self._d.keys() if i not in self.signature_fields]
-
     def get_signature(self):
         k = dict()
         for i in self.signature_fields():
             k[i] = self[i]
         return k
+
+    def get_uuid(self):
+        return str(self._uuid)
+
+    def _validate_reference(self, ref_entity):
+        if ref_entity.entity_type != entity_refs[self.entity_type]:
+            raise TypeError("Type Mismatch on reference entity")
+        return True
+
+    def _set_reference(self, ref_entity):
+        """
+        set the entity's reference value.  Can be overridden
+        :param ref_entity:
+        :return:
+        """
+        self._validate_reference(ref_entity)
+        self.reference_entity = ref_entity
+
+    def properties(self):
+        return [i for i in self._d.keys() if i not in self.signature_fields]
 
     def validate(self, ext_uuid):
         if not isinstance(ext_uuid, uuid.UUID):
@@ -55,6 +72,15 @@ class LcEntity(object):
         if self._uuid != ext_uuid:
             print("%s: UUIDs don't match!" % self._uuid)
             valid = False
+        if self.reference_entity is not None:
+            try:
+                self._validate_reference(self.reference_entity)
+            except TypeError:
+                print("Reference entity type %s is wrong for %s (%s)" %
+                      (self.reference_entity.entity_type,
+                       self.entity_type,
+                       entity_types[self.entity_type]))
+                valid = False
         for i in self.signature_fields():
             try:
                 self[i]
@@ -76,13 +102,12 @@ class LcEntity(object):
         if key == 'EntityType':
             raise ValueError('Entity Type cannot be changed')
         elif key == self._ref_field:
-            assert value.__class__.__name__ == entity_refs[self.entity_type], "Type Mismatch on reference entity"
-            self.reference_entity = value
+            self._set_reference(value)
         else:
             self._d[key] = value
 
     def __str__(self):
-        print('%s entity: %s' % (self.entity_type, self._d['Name']))
+        return 'LC %s: %s' % (self.entity_type, self._d['Name'])
 
 
 class LcProcess(LcEntity):
@@ -199,8 +224,26 @@ class LcQuantity(LcEntity):
         return outbound / inbound
 
 
+class LcUnit(object):
+    """
+    Dummy class to store a reference to a unit definition
+    """
+    entity_type = 'unit'
+
+    def __init__(self, unitstring, unit_uuid):
+        self._uuid = uuid.UUID(unit_uuid)
+        self._unitstring = unitstring
+
+    @classmethod
+    def new(cls, unitstring):
+        return cls(unitstring, uuid.uuid4())
+
+    def __str__(self):
+        return '[%s]' % self._unitstring
+
+
 entity_refs = {
-    'process': LcFlow.__name__,
-    'flow': LcQuantity.__name__,
-    'quantity': 'str'
+    'process': 'flow',
+    'flow': 'quantity',
+    'quantity': 'unit'
 }

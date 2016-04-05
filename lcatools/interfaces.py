@@ -9,7 +9,9 @@ duck typing and doesn't require strict interface definitions.
 """
 import uuid
 import re
-from lcatools.entities import LcEntity
+from lcatools.entities import *
+
+import pandas as pd
 
 uuid_regex = re.compile('([0-9a-f]{8}.?([0-9a-f]{4}.?){3}.?[0-9a-f]{12})')
 
@@ -75,8 +77,7 @@ class BasicInterface(object):
     @staticmethod
     def _narrow_search(result_set, **kwargs):
         for k, v in kwargs.items():
-            if k in LcEntity.signature_fields():
-                result_set = [r for r in result_set if bool(re.search(v, r[k], flags=re.IGNORECASE))]
+            result_set = [r for r in result_set if bool(re.search(v, r[k], flags=re.IGNORECASE))]
         return result_set
 
     def search(self, *args, **kwargs):
@@ -102,8 +103,8 @@ class BasicInterface(object):
         """
         Client-facing function to retrieve entity by ID, first locally, then in archive
 
-        :param args:
-        :param kwargs:
+        :param args: the identifying string (uuid or partial uuid)
+        :param kwargs: used to filter search results on the local archive
         :return:
         """
         if len(args) > 0:
@@ -170,14 +171,33 @@ class BasicInterface(object):
         result_set = [v for v in self._entities.values() if v['EntityType'] == entity_type]
         return self._narrow_search(result_set, **kwargs)
 
-    def processes(self, **kwargs):
-        return self._entities_by_type('process', **kwargs)
+    def _to_pandas(self, entities, EntityClass=LcEntity, **kwargs):
+        sig = [p.get_signature() for p in entities]
+        index = [p.get_uuid() for p in entities]
+        df = pd.DataFrame(sig, index=index, columns=[i for i in EntityClass.signature_fields()], **kwargs)
+        df.index.name = 'UUID'
+        return df
 
-    def flows(self, **kwargs):
-        return self._entities_by_type('flow', **kwargs)
+    def processes(self, dataframe=False, **kwargs):
+        p = self._entities_by_type('process', **kwargs)
+        if dataframe:
+            return self._to_pandas(p, LcProcess)
+        else:
+            return p
 
-    def quantities(self, **kwargs):
-        return self._entities_by_type('quantity', **kwargs) 
+    def flows(self, dataframe=False, **kwargs):
+        f = self._entities_by_type('flow', **kwargs)
+        if dataframe:
+            return self._to_pandas(f, LcFlow)
+        else:
+            return f
+
+    def quantities(self, dataframe=False, **kwargs):
+        q = self._entities_by_type('quantity', **kwargs)
+        if dataframe:
+            return self._to_pandas(q, LcQuantity)
+        else:
+            return q
 
 
 class ProcessFlow(BasicInterface):

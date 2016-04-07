@@ -19,7 +19,10 @@ class LcEntity(object):
 
     def __init__(self, entity_type, entity_uuid, **kwargs):
 
-        self._uuid = uuid.UUID(entity_uuid)
+        if isinstance(entity_uuid, uuid.UUID):
+            self._uuid = entity_uuid
+        else:
+            self._uuid = uuid.UUID(entity_uuid)
         self._d = dict()
 
         self.entity_type = entity_type
@@ -28,6 +31,8 @@ class LcEntity(object):
         self._d['Name'] = ''
         self._d['Comment'] = ''
 
+        self._external_ref = None
+
         for k, v in kwargs.items():
             self[k] = v
 
@@ -35,6 +40,18 @@ class LcEntity(object):
     def signature_fields(cls):
         return concatenate(cls._pre_fields, cls._new_fields,
                            [cls._ref_field] if cls._ref_field is not [] else [], cls._post_fields)
+
+    def set_external_ref(self, ref):
+        """
+        Specify how the entity is referred to in the source dataset. If this is unset, the UUID is assumed
+        to be used externally.
+        :param ref:
+        :return:
+        """
+        self._external_ref = ref
+
+    def get_external_ref(self):
+        return '%s' % self._uuid if self._external_ref is None else self._external_ref
 
     def get_signature(self):
         k = dict()
@@ -58,6 +75,9 @@ class LcEntity(object):
         """
         self._validate_reference(ref_entity)
         self.reference_entity = ref_entity
+
+    def has_property(self, prop):
+        return prop in self._d
 
     def properties(self):
         return [i for i in self._d.keys() if i not in self.signature_fields]
@@ -88,6 +108,21 @@ class LcEntity(object):
                 print("Required field %s does not exist" % i)
                 valid = False
         return valid
+
+    def _print_ref_field(self):
+        if self.reference_entity is None:
+            return '%s' % None
+        else:
+            return '%s: %s' % (self.reference_entity.entity_type,
+                               self.reference_entity.get_external_ref())
+
+    def serialize(self):
+        return {
+            'entityType': self.entity_type,
+            'dataSetReference': self.get_external_ref(),
+            self._ref_field: self._print_ref_field(),
+            'tags': self._d
+        }
 
     def __getitem__(self, item):
         if item == self._ref_field:
@@ -158,6 +193,15 @@ class LcFlow(LcEntity):
 
     def set_local_unit(self, factor):
         self._ref_quantity_factor = factor
+
+    def __str__(self):
+        cas = self._d['CasNumber']
+        if cas is None:
+            cas = ''
+        if len(cas) > 0:
+            cas = ' (CAS ' + cas + ')'
+        comp = ', '.join((i for i in self._d['Compartment'] if i is not None))
+        return '%s%s [%s]' % (self._d['Name'], cas, comp)
 
 
 class LcQuantity(LcEntity):
@@ -230,13 +274,24 @@ class LcUnit(object):
     """
     entity_type = 'unit'
 
-    def __init__(self, unitstring, unit_uuid):
-        self._uuid = uuid.UUID(unit_uuid)
+    def __init__(self, unitstring, unit_uuid=None):
+        if unit_uuid is not None:
+            self._uuid = uuid.UUID(unit_uuid)
+        else:
+            self._uuid = None
         self._unitstring = unitstring
 
+    def get_external_ref(self):
+        return '%s' % self._unitstring if self._uuid is None else self._uuid
+
+    """
     @classmethod
     def new(cls, unitstring):
         return cls(unitstring, uuid.uuid4())
+    """
+
+    def unitstring(self):
+        return self._unitstring
 
     def __str__(self):
         return '[%s]' % self._unitstring

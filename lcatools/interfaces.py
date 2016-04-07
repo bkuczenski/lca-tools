@@ -51,8 +51,9 @@ class BasicInterface(object):
             raise KeyError('Entity already exists')
 
         if value.validate(u):
-            print('Adding %s entity with %s' % (value.entity_type, u))
+            print('Adding %s entity with %s: %s' % (value.entity_type, u, value['Name']))
             self._entities[u] = value
+
         else:
             raise ValueError('Entity fails validation.')
 
@@ -198,6 +199,27 @@ class BasicInterface(object):
             return self._to_pandas(q, LcQuantity)
         else:
             return q
+
+    def _quantities_with_unit(self, unitstring):
+        for q in self._entities_by_type('quantity'):
+            if q.has_property('UnitConv'):
+                if unitstring in q['UnitConv']:
+                    yield q
+            else:
+                if q['ReferenceUnit'].unitstring() == unitstring:
+                    yield q
+
+    def quantity_with_unit(self, unitstring):
+        return next((q for q in self._quantities_with_unit(unitstring)), None)
+
+    def serialize(self):
+        return {
+            'dataSourceType': self.__class__.__name__,
+            'dataSourceReference': self.ref,
+            'processes': [p.serialize() for p in self.processes()],
+            'flows': [f.serialize() for f in self.flows()],
+            'quantities': [q.serialize() for q in self.quantities()]
+        }
 
 
 class ProcessFlow(BasicInterface):

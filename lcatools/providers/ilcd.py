@@ -52,6 +52,12 @@ def _find_common(o, tag):
     return _find_tag(o, tag, ns='common')
 
 
+def get_flow_ref(exch):
+    f_uuid = _find_tag(exch, 'referenceToFlowDataSet')[0].attrib['refObjectId']
+    f_uri = _find_tag(exch, 'referenceToFlowDataSet')[0].attrib['uri']
+    return f_uuid, f_uri
+
+
 def get_reference_flow(process):
     try_ref = _find_tag(process, 'referenceToReferenceFlow')[0]
     if try_ref == '':
@@ -60,9 +66,7 @@ def get_reference_flow(process):
         ref_to_ref = int(try_ref)
     rf = [i for i in process['exchanges'].getchildren()
           if int(i.attrib['dataSetInternalID']) == ref_to_ref][0]
-    rf_uuid = _find_tag(rf, 'referenceToFlowDataSet')[0].attrib['refObjectId']
-    rf_uri = _find_tag(rf, 'referenceToFlowDataSet')[0].attrib['uri']
-    return rf_uuid, rf_uri
+    return get_flow_ref(rf)
 
 
 def get_reference_flow_property(flow):
@@ -101,12 +105,9 @@ class IlcdEntity(object):
 
 class IlcdArchive(BasicInterface):
     """
-    If the ref is a strictly local address, we are this kind of interface.
-
-    We don't need an init because we are inheriting a perfectly good one.
-
-    This has basic stuff like grab process
+    This class handles de-referencing for ILCD archives
     """
+
     def __init__(self, *args, prefix=None):
         """
         Just instantiates the parent class.
@@ -135,7 +136,7 @@ class IlcdArchive(BasicInterface):
         return postpath + '.xml'
 
     def _search_by_id(self, uid, dtype=None):
-        return [i for i in self.list_objects(dtype) if re.search(uid, i, flags=re.IGNORECASE)]
+        return [i for i in self.list_objects(dtype=dtype) if re.search(uid, i, flags=re.IGNORECASE)]
 
     def list_objects(self, dtype=None):
         assert self._archive.remote is False, "Cannot list objects for remote archives"
@@ -203,8 +204,14 @@ class IlcdArchive(BasicInterface):
 
         refunit, unitconv = self._create_unitgroup(ug_path)
 
-        q = LcQuantity(u, Name=n, ReferenceUnit=refunit, UnitConversion=unitconv, Comment=c)
-        self[u] = q
+        try_q = self.quantity_with_unit(refunit.unitstring())
+
+        if len(try_q) == 0:
+            q = LcQuantity(u, Name=n, ReferenceUnit=refunit, UnitConversion=unitconv, Comment=c)
+            self[u] = q
+        else:
+            q = try_q[0]
+
         return q
 
     def _create_flow(self, filename):
@@ -242,6 +249,18 @@ class IlcdArchive(BasicInterface):
         """
         o = self._get_objectified_entity(filename)
 
+        try:
+            rf, rf_uri = get_reference_flow(o)
+        except XMLSyntaxError:
+            rf = None
+
+        flowlist = []
+
+        for exch in o['exchanges'].getchildren():
+            # load all child flows
+            f_id, f_uri = get_flow_ref(exch)
+            flowlist.append(self._check_or_retrieve_child(filename, f_id, f_uri))
+
         u = str(_find_common(o, 'UUID')[0])
         n = str(_find_tag(o, 'baseName')[0])
 
@@ -257,17 +276,12 @@ class IlcdArchive(BasicInterface):
         p = LcProcess(u, Name=n, Comment=c, SpatialScope=g, TemporalScope=stt,
                       Classifications=cls)
 
-        try:
-            rf, rf_uri = get_reference_flow(o)
-        except XMLSyntaxError:
-            rf = rf_uri = None
-
         if rf is not None:
-            f = self._check_or_retrieve_child(filename, rf, rf_uri)
+            f = self[rf]
             p['ReferenceFlow'] = f
 
         self[u] = p
-        return p
+        return p, flowlist
 
     def _fetch(self, uid, **kwargs):
         """

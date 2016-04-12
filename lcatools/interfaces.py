@@ -10,6 +10,7 @@ duck typing and doesn't require strict interface definitions.
 import uuid
 import re
 from lcatools.entities import *
+from lcatools.exchanges import Exchange
 
 import pandas as pd
 
@@ -38,6 +39,8 @@ class BasicInterface(object):
     def __init__(self, ref):
         self.ref = ref
         self._entities = {}  # uuid-indexed list of known entities
+        self._exchanges = set()  # set of exchanges among the entities
+        self._characterizations = set()  # set of flow characterizations among the entities
 
     def __getitem__(self, item):
         return self._get_entity(item)
@@ -80,6 +83,14 @@ class BasicInterface(object):
         for k, v in kwargs.items():
             result_set = [r for r in result_set if bool(re.search(v, r[k], flags=re.IGNORECASE))]
         return result_set
+
+    def _add_exchange(self, exchange):
+        if exchange.entity_type == 'exchange':
+            self._exchanges.add(exchange)
+
+    def _add_characterization(self, characterization):
+        if characterization.entity_type == 'characterization':
+            self._characterizations.add(characterization)
 
     def search(self, *args, **kwargs):
         uid = None if len(args) == 0 else args[0]
@@ -200,6 +211,13 @@ class BasicInterface(object):
         else:
             return q
 
+    def exchanges(self, dataframe=False, **kwargs):
+        x = self._narrow_search([x for x in self._exchanges], **kwargs)
+        if dataframe:
+            return self._to_pandas(x, Exchange)
+        else:
+            return x
+
     def _quantities_with_unit(self, unitstring):
         for q in self._entities_by_type('quantity'):
             if q.has_property('UnitConv'):
@@ -212,13 +230,14 @@ class BasicInterface(object):
     def quantity_with_unit(self, unitstring):
         return next((q for q in self._quantities_with_unit(unitstring)), None)
 
-    def serialize(self):
+    def serialize(self, exchanges=False):
         return {
             'dataSourceType': self.__class__.__name__,
             'dataSourceReference': self.ref,
             'processes': [p.serialize() for p in self.processes()],
             'flows': [f.serialize() for f in self.flows()],
-            'quantities': [q.serialize() for q in self.quantities()]
+            'quantities': [q.serialize() for q in self.quantities()],
+            'exchanges': [] if exchanges is False else [x.serialize() for x in self.exchanges()]
         }
 
 

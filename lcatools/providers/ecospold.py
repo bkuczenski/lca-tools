@@ -18,6 +18,7 @@ from lxml import objectify
 from lcatools.interfaces import BasicInterface
 from lcatools.providers.archive import Archive
 from lcatools.entities import LcUnit, LcQuantity, LcFlow, LcProcess
+from lcatools.exchanges import Exchange
 
 
 tail = re.compile('/([^/]+)$')
@@ -42,7 +43,11 @@ class EcospoldVersionError(Exception):
     pass
 
 
-class EcospoldArchive(BasicInterface):
+class DirectionlessExchangeError(Exception):
+    pass
+
+
+class EcospoldV1Archive(BasicInterface):
     """
     Create an Ecospold Archive object from a path.  By default, assumes the path points to a literal
     .7z file, of the type that one can download from the ecoinvent website.  Creates an accessor for
@@ -59,7 +64,7 @@ class EcospoldArchive(BasicInterface):
         :param prefix: difference between the internal path (ref) and the ILCD base
         :return:
         """
-        super(EcospoldArchive, self).__init__(*args)
+        super(EcospoldV1Archive, self).__init__(*args)
         self.internal_prefix = prefix
         self._archive = Archive(self.ref)
         self._ns_uuid = uuid.uuid4()  # internal namespace UUID for generating keys
@@ -112,7 +117,7 @@ class EcospoldArchive(BasicInterface):
 
     def _create_flow(self, exch):
         """
-        An ecospold01 exchange is really just a long attribute list, plus an inputGroup or outputGroup (which is ignored)
+        An ecospold01 exchange is really just a long attribute list, plus an inputGroup or outputGroup (ignored here)
         :param exch:
         :return:
         """
@@ -131,7 +136,7 @@ class EcospoldArchive(BasicInterface):
             cat = [exch.get('category'), exch.get('subCategory')]
 
             f = LcFlow(uid, Name=n, ReferenceQuantity=q, CasNumber=cas, Comment=c, Compartment=cat)
-            f.set_external_ref(number)
+            f.set_external_ref(int(number))
             self[uid] = f
 
         return f
@@ -149,11 +154,16 @@ class EcospoldArchive(BasicInterface):
 
         for exch in o.dataset.flowData.getchildren():
             f = self._create_flow(exch)
-            flowlist.append(f)
             if hasattr(exch, 'outputGroup'):
+                d = 'Output'
                 if exch.outputGroup == 0:
                     assert rf is None, "Multiple reference flows found!"
                     rf = f
+            elif hasattr(exch, 'inputGroup'):
+                d = 'Input'
+            else:
+                raise DirectionlessExchangeError
+            flowlist.append((f, d))
 
         number = o.dataset.get('number')
         u = self.number_to_uuid(number)
@@ -176,14 +186,17 @@ class EcospoldArchive(BasicInterface):
             cls = [p_meta.referenceFunction.get('category'), p_meta.referenceFunction.get('subCategory')]
             p = LcProcess(u, Name=n, Comment=c, SpatialScope=g, TemporalScope=stt,
                           Classifications=cls)
-            p.set_external_ref(number)
+            p.set_external_ref(int(number))
 
             if rf is not None:
-                p['ReferenceFlow'] = rf
+                p['ReferenceExchange'] = Exchange(p, rf, 'Output')
 
             self[u] = p
 
-        return p, flowlist
+        for flow, f_dir in flowlist:
+            self._add_exchange(Exchange(p, flow, f_dir))
+
+        return p
 
     def _fetch(self, uid, **kwargs):
         """
@@ -204,5 +217,3 @@ class EcospoldArchive(BasicInterface):
         for k in self.list_objects():
             print('Loading %s...' % k)
             self._create_process(k)
-
-

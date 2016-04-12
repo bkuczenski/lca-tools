@@ -8,6 +8,7 @@ from urllib.parse import urljoin
 
 from lcatools.providers.archive import Archive
 from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcUnit
+from lcatools.exchanges import Exchange
 from lcatools.interfaces import BasicInterface, uuid_regex
 
 
@@ -55,7 +56,8 @@ def _find_common(o, tag):
 def get_flow_ref(exch):
     f_uuid = _find_tag(exch, 'referenceToFlowDataSet')[0].attrib['refObjectId']
     f_uri = _find_tag(exch, 'referenceToFlowDataSet')[0].attrib['uri']
-    return f_uuid, f_uri
+    f_dir = _find_tag(exch, 'exchangeDirection')[0].text
+    return f_uuid, f_uri, f_dir
 
 
 def get_reference_flow(process):
@@ -250,16 +252,17 @@ class IlcdArchive(BasicInterface):
         o = self._get_objectified_entity(filename)
 
         try:
-            rf, rf_uri = get_reference_flow(o)
+            rf, rf_uri, rf_dir = get_reference_flow(o)
         except XMLSyntaxError:
             rf = None
+            rf_dir = None
 
-        flowlist = []
+        exch_list = []
 
         for exch in o['exchanges'].getchildren():
             # load all child flows
-            f_id, f_uri = get_flow_ref(exch)
-            flowlist.append(self._check_or_retrieve_child(filename, f_id, f_uri))
+            f_id, f_uri, f_dir = get_flow_ref(exch)
+            exch_list.append((self._check_or_retrieve_child(filename, f_id, f_uri), f_dir))
 
         u = str(_find_common(o, 'UUID')[0])
         n = str(_find_tag(o, 'baseName')[0])
@@ -277,11 +280,14 @@ class IlcdArchive(BasicInterface):
                       Classifications=cls)
 
         if rf is not None:
-            f = self[rf]
-            p['ReferenceFlow'] = f
+            p['ReferenceExchange'] = Exchange(p, self[rf], rf_dir)
 
         self[u] = p
-        return p, flowlist
+
+        for flow, f_dir in exch_list:
+            self._add_exchange(Exchange(p, flow, f_dir))
+
+        return p
 
     def _fetch(self, uid, **kwargs):
         """

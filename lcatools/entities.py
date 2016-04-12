@@ -147,7 +147,7 @@ class LcEntity(object):
 
 class LcProcess(LcEntity):
 
-    _ref_field = 'ReferenceFlow'
+    _ref_field = 'ReferenceExchange'
     _new_fields = ['SpatialScope', 'TemporalScope']
 
     @classmethod
@@ -298,7 +298,7 @@ class LcUnit(object):
 
 
 entity_refs = {
-    'process': 'flow',
+    'process': 'exchange',
     'flow': 'quantity',
     'quantity': 'unit'
 }

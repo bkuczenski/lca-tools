@@ -42,8 +42,8 @@ class Exchange(object):
     def __eq__(self, other):
         if other is None:
             return False
-        return (self.process.get_uuid() == other.process.get_uuid() &
-                self.flow.get_uuid() == other.flow.get_uuid() &
+        return (self.process.get_uuid() == other.process.get_uuid() and
+                self.flow.get_uuid() == other.flow.get_uuid() and
                 self.direction == other.direction)
 
     def __str__(self):

@@ -167,6 +167,9 @@ class LcProcess(LcEntity):
         if 'TemporalScope' not in self._d:
             self._d['TemporalScope'] = '0'
 
+    def __str__(self):
+        return '%s [%s]' % (self._d['Name'], self._d['SpatialScope'])
+
 
 class LcFlow(LcEntity):
 

@@ -15,7 +15,7 @@ import uuid
 
 from lxml import objectify
 
-from lcatools.interfaces import BasicInterface
+from lcatools.interfaces import BasicInterface, to_uuid
 from lcatools.providers.archive import Archive
 from lcatools.entities import LcUnit, LcQuantity, LcFlow, LcProcess
 from lcatools.exchanges import Exchange
@@ -57,17 +57,20 @@ class EcospoldV1Archive(BasicInterface):
     nsmap = 'http://www.EcoInvent.org/EcoSpold01'  # only valid for v1 ecospold files
     spold_version = tail.search(nsmap).groups()[0]
 
-    def __init__(self, *args, prefix=None):
+    def __init__(self, *args, prefix=None, ns_uuid=None, quiet=True):
         """
         Just instantiates the parent class.
         :param args: just a reference
         :param prefix: difference between the internal path (ref) and the ILCD base
         :return:
         """
-        super(EcospoldV1Archive, self).__init__(*args)
+        super(EcospoldV1Archive, self).__init__(*args, quiet=quiet)
         self.internal_prefix = prefix
         self._archive = Archive(self.ref)
-        self._ns_uuid = uuid.uuid4()  # internal namespace UUID for generating keys
+
+        # internal namespace UUID for generating keys
+        ns_uuid = to_uuid(ns_uuid)
+        self._ns_uuid = uuid.uuid4() if ns_uuid is None else ns_uuid
 
     def number_to_uuid(self, number):
         """
@@ -165,8 +168,10 @@ class EcospoldV1Archive(BasicInterface):
                 raise DirectionlessExchangeError
             flowlist.append((f, d))
 
-        number = o.dataset.get('number')
-        u = self.number_to_uuid(number)
+        p_meta = o.dataset.metaInformation.processInformation
+        n = p_meta.referenceFunction.get('name')
+
+        u = self.number_to_uuid(n)
 
         if u in self._entities:
             p = self[u]
@@ -174,9 +179,6 @@ class EcospoldV1Archive(BasicInterface):
 
         else:
             # create new process
-            p_meta = o.dataset.metaInformation.processInformation
-
-            n = p_meta.referenceFunction.get('name')
             g = p_meta.geography.get('location')
             stt = 'interval(%s, %s)' % (str(_find_tag(p_meta, 'startDate')[0]),
                                         str(_find_tag(p_meta, 'endDate')[0]))
@@ -186,7 +188,7 @@ class EcospoldV1Archive(BasicInterface):
             cls = [p_meta.referenceFunction.get('category'), p_meta.referenceFunction.get('subCategory')]
             p = LcProcess(u, Name=n, Comment=c, SpatialScope=g, TemporalScope=stt,
                           Classifications=cls)
-            p.set_external_ref(int(number))
+            p.set_external_ref(n)
 
             if rf is not None:
                 p['ReferenceExchange'] = Exchange(p, rf, 'Output')
@@ -206,14 +208,23 @@ class EcospoldV1Archive(BasicInterface):
         :return:
         """
         print('No way to fetch by UUID. Loading all processes...')
-        self.load_all_processes()
+        self.load_all()
 
-    def load_all_processes(self):
+    def _load_all(self):
         """
         No need to "fetch" with ecospold v1, since UUIDs are not known in advance.
         Instead, just load all the processes at once.
         :return:
         """
         for k in self.list_objects():
-            print('Loading %s...' % k)
             self._create_process(k)
+        self.check_counter('quantity')
+        self.check_counter('flow')
+        self.check_counter('process')
+
+    def serialize(self, **kwargs):
+        j = super(EcospoldV1Archive, self).serialize(**kwargs)
+        if self.internal_prefix is not None:
+            j['prefix'] = self.internal_prefix
+        j['nsUuid'] = str(self._ns_uuid)
+        return j

@@ -23,6 +23,10 @@ typeDirs = {'Process': 'processes',
             }
 
 
+def find_ns(nsmap, dtype):
+    return next((k for k, v in nsmap.items() if re.search(dtype + '$', v)))
+
+
 def _check_dtype(dtype):
     if dtype not in typeDirs:
         print('Datatype %s not known.' % dtype)
@@ -54,36 +58,36 @@ def _find_common(o, tag):
     return _find_tag(o, tag, ns='common')
 
 
-def get_flow_ref(exch):
-    f_uuid = _find_tag(exch, 'referenceToFlowDataSet')[0].attrib['refObjectId']
-    f_uri = _find_tag(exch, 'referenceToFlowDataSet')[0].attrib['uri']
-    f_dir = _find_tag(exch, 'exchangeDirection')[0].text
+def get_flow_ref(exch, ns=None):
+    f_uuid = _find_tag(exch, 'referenceToFlowDataSet', ns=ns)[0].attrib['refObjectId']
+    f_uri = _find_tag(exch, 'referenceToFlowDataSet', ns=ns)[0].attrib['uri']
+    f_dir = _find_tag(exch, 'exchangeDirection', ns=ns)[0].text
     return f_uuid, f_uri, f_dir
 
 
-def get_reference_flow(process):
-    try_ref = _find_tag(process, 'referenceToReferenceFlow')[0]
+def get_reference_flow(process, ns=None):
+    try_ref = _find_tag(process, 'referenceToReferenceFlow', ns=ns)[0]
     if try_ref == '':
         return None, None, None  # multioutput, no specified reference
     else:
         ref_to_ref = int(try_ref)
     rf = [i for i in process['exchanges'].getchildren()
           if int(i.attrib['dataSetInternalID']) == ref_to_ref][0]
-    return get_flow_ref(rf)
+    return get_flow_ref(rf, ns=ns)
 
 
-def get_reference_flow_property(flow):
+def get_reference_flow_property(flow, ns=None):
     # load or check the reference quantity
-    ref_to_ref = int(_find_tag(flow, 'referenceToReferenceFlowProperty')[0])
+    ref_to_ref = int(_find_tag(flow, 'referenceToReferenceFlowProperty', ns=ns)[0])
     rfp = [i for i in flow['flowProperties'].getchildren()
            if int(i.attrib['dataSetInternalID']) == ref_to_ref][0]
-    rfp_uuid = _find_tag(rfp, 'referenceToFlowPropertyDataSet')[0].attrib['refObjectId']
-    rfp_uri = _find_tag(rfp, 'referenceToFlowPropertyDataSet')[0].attrib['uri']
+    rfp_uuid = _find_tag(rfp, 'referenceToFlowPropertyDataSet', ns=ns)[0].attrib['refObjectId']
+    rfp_uri = _find_tag(rfp, 'referenceToFlowPropertyDataSet', ns=ns)[0].attrib['uri']
     return rfp_uuid, rfp_uri
 
 
-def get_reference_unit_group(q):
-    ref_to_ref = _find_tag(q, 'referenceToReferenceUnitGroup')[0]
+def get_reference_unit_group(q, ns=None):
+    ref_to_ref = _find_tag(q, 'referenceToReferenceUnitGroup', ns=ns)[0]
     ug_uuid = ref_to_ref.attrib['refObjectId']
     ug_uri = ref_to_ref.attrib['uri']
     return ug_uuid, ug_uri
@@ -138,7 +142,7 @@ class IlcdArchive(BasicInterface):
         postpath = os.path.join(self._build_prefix(dtype), uid)
         return postpath + '.xml'
 
-    def _search_by_id(self, uid, dtype=None):
+    def search_by_id(self, uid, dtype=None):
         return [i for i in self.list_objects(dtype=dtype) if re.search(uid, i, flags=re.IGNORECASE)]
 
     def list_objects(self, dtype=None):
@@ -162,13 +166,8 @@ class IlcdArchive(BasicInterface):
         return objectify.fromstring(self._archive.readfile(filename))
 
     def objectify(self, uid, **kwargs):
-        e = self.retrieve_or_fetch_entity(uid, **kwargs)
-        dtype = {
-            'process': 'Process',
-            'flow': 'Flow',
-            'quantity': 'FlowProperty'
-        }[e.entity_type]
-        return self._get_objectified_entity(self._build_entity_path(dtype, e.get_uuid()))
+        search_results = self.search_by_id(uid, **kwargs)
+        return [self._get_objectified_entity(k) for k in search_results]
 
     def _create_unitgroup(self, filename):
         """
@@ -178,8 +177,10 @@ class IlcdArchive(BasicInterface):
         """
         o = self._get_objectified_entity(filename)
 
+        ns = find_ns(o.nsmap, 'UnitGroup')
+
         u = str(_find_common(o, 'UUID')[0])
-        reference_unit = int(_find_tag(o, 'referenceToReferenceUnit')[0])
+        reference_unit = int(_find_tag(o, 'referenceToReferenceUnit', ns=ns)[0])
         unitstring = str(o['units'].getchildren()[reference_unit]['name'])
         ref_unit = LcUnit(unitstring, u)
         ref_unit.set_external_ref('%s/%s' % (typeDirs['UnitGroup'], u))
@@ -196,13 +197,14 @@ class IlcdArchive(BasicInterface):
         :return:
         """
         o = self._get_objectified_entity(filename)
+        ns = find_ns(o.nsmap, 'FlowProperty')
 
         u = str(_find_common(o, 'UUID')[0])
         n = str(_find_common(o, 'name')[0])
 
         c = str(_find_common(o, 'generalComment')[0])
 
-        ug, ug_uri = get_reference_unit_group(o)
+        ug, ug_uri = get_reference_unit_group(o, ns=ns)
 
         ug_path = urljoin(filename, ug_uri)
 
@@ -229,15 +231,17 @@ class IlcdArchive(BasicInterface):
         """
         o = self._get_objectified_entity(filename)
 
-        u = str(_find_common(o, 'UUID')[0])
-        n = str(_find_tag(o, 'baseName')[0])
+        ns = find_ns(o.nsmap, 'Flow')
 
-        rfp, rfp_uri = get_reference_flow_property(o)
+        u = str(_find_common(o, 'UUID')[0])
+        n = str(_find_tag(o, 'baseName', ns=ns)[0])
+
+        rfp, rfp_uri = get_reference_flow_property(o, ns=ns)
         q = self._check_or_retrieve_child(filename, rfp, rfp_uri)
 
         c = str(_find_common(o, 'generalComment')[0])
 
-        cas = str(_find_tag(o, 'CASNumber')[0])
+        cas = str(_find_tag(o, 'CASNumber', ns=ns)[0])
 
         cat = _find_common(o, 'category')
         if cat == ['']:
@@ -258,8 +262,10 @@ class IlcdArchive(BasicInterface):
         """
         o = self._get_objectified_entity(filename)
 
+        ns = find_ns(o.nsmap, 'Process')
+
         try:
-            rf, rf_uri, rf_dir = get_reference_flow(o)
+            rf, rf_uri, rf_dir = get_reference_flow(o, ns=ns)
         except XMLSyntaxError:
             rf = None
             rf_dir = None
@@ -268,18 +274,18 @@ class IlcdArchive(BasicInterface):
 
         for exch in o['exchanges'].getchildren():
             # load all child flows
-            f_id, f_uri, f_dir = get_flow_ref(exch)
+            f_id, f_uri, f_dir = get_flow_ref(exch, ns=ns)
             try:
                 f = self._check_or_retrieve_child(filename, f_id, f_uri)
-            except (HTTPError, XMLSyntaxError):
+            except (HTTPError, XMLSyntaxError, KeyError):
                 f = self._create_dummy_flow_from_exch(f_id, exch)
                 self[f_id] = f
             exch_list.append((f, f_dir))
 
         u = str(_find_common(o, 'UUID')[0])
-        n = str(_find_tag(o, 'baseName')[0])
+        n = str(_find_tag(o, 'baseName', ns=ns)[0])
 
-        g = _find_tag(o, 'locationOfOperationSupplyOrProduction')[0].attrib['location']
+        g = _find_tag(o, 'locationOfOperationSupplyOrProduction', ns=ns)[0].attrib['location']
 
         stt = "interval(%s, %s)" % (_find_common(o, 'referenceYear')[0],
                                     _find_common(o, 'dataSetValidUntil')[0])
@@ -310,7 +316,6 @@ class IlcdArchive(BasicInterface):
         :param uid:
         :return:
         """
-        print('Trying to fetch new entity with %s' % uid)
         try:
             dtype = kwargs['dtype']
         except KeyError:
@@ -325,7 +330,7 @@ class IlcdArchive(BasicInterface):
             if self._archive.remote:
                 print('Cannot search on remote archives. Please supply a dtype')
                 return None
-            search_results = self._search_by_id(uid)
+            search_results = self.search_by_id(uid)
             if len(search_results) > 0:
                 print('Found Results:')
                 [print(i) for i in search_results]

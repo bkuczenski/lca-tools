@@ -113,8 +113,7 @@ class LcEntity(object):
         if self.reference_entity is None:
             return '%s' % None
         else:
-            return '%s: %s' % (self.reference_entity.entity_type,
-                               self.reference_entity.get_external_ref())
+            return '%s' % self.reference_entity.get_external_ref()
 
     def serialize(self):
         return {
@@ -274,6 +273,7 @@ class LcQuantity(LcEntity):
 class LcUnit(object):
     """
     Dummy class to store a reference to a unit definition
+    Design decision: even though ILCD unitgroups have assigned UUIDs, we are not maintaining unitgroups
     """
     entity_type = 'unit'
 
@@ -283,15 +283,13 @@ class LcUnit(object):
         else:
             self._uuid = None
         self._unitstring = unitstring
+        self._external_ref = None
+
+    def set_external_ref(self, external_ref):
+        self._external_ref = external_ref
 
     def get_external_ref(self):
-        return '%s' % self._unitstring if self._uuid is None else self._uuid
-
-    """
-    @classmethod
-    def new(cls, unitstring):
-        return cls(unitstring, uuid.uuid4())
-    """
+        return '%s' % self._unitstring if self._external_ref is None else self._external_ref
 
     def unitstring(self):
         return self._unitstring

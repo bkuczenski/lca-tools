@@ -25,7 +25,7 @@ class Exchange(object):
         """
         assert isinstance(process, LcProcess), "'process' must be an LcProcess!"
         assert isinstance(flow, LcFlow), "'flow' must be an LcFlow"
-        assert direction in directions, "direction must be a string in (%s)" % directions
+        assert direction in directions, "direction must be a string in (%s)" % ', '.join(directions)
 
         self.process = process
         self.flow = flow
@@ -62,4 +62,3 @@ class Exchange(object):
     @classmethod
     def signature_fields(cls):
         return ['process', 'flow', 'direction', 'quantity']
-

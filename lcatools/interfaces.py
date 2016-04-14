@@ -9,15 +9,17 @@ duck typing and doesn't require strict interface definitions.
 """
 import uuid
 import re
-from lcatools.entities import *
+import json
+from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcEntity
 from lcatools.exchanges import Exchange
+from collections import defaultdict
 
 import pandas as pd
 
 uuid_regex = re.compile('([0-9a-f]{8}.?([0-9a-f]{4}.?){3}.?[0-9a-f]{12})')
 
 
-def _to_uuid(_in):
+def to_uuid(_in):
     if isinstance(_in, uuid.UUID):
         return _in
     if uuid_regex.match(_in):
@@ -36,17 +38,21 @@ class BasicInterface(object):
 
     """
 
-    def __init__(self, ref):
+    def __init__(self, ref, quiet=False):
         self.ref = ref
         self._entities = {}  # uuid-indexed list of known entities
         self._exchanges = set()  # set of exchanges among the entities
         self._characterizations = set()  # set of flow characterizations among the entities
 
+        self._quiet = quiet  # whether to print out a message every time a new entity is added / deleted / modified
+
+        self._counter = defaultdict(int)
+
     def __getitem__(self, item):
         return self._get_entity(item)
 
     def __setitem__(self, key, value):
-        u = _to_uuid(key)
+        u = to_uuid(key)
         if u is None:
             raise ValueError('Key must be a valid UUID')
 
@@ -54,35 +60,18 @@ class BasicInterface(object):
             raise KeyError('Entity already exists')
 
         if value.validate(u):
-            print('Adding %s entity with %s: %s' % (value.entity_type, u, value['Name']))
+            if self._quiet is False:
+                print('Adding %s entity with %s: %s' % (value.entity_type, u, value['Name']))
             self._entities[u] = value
+            self._counter[value.entity_type] += 1
 
         else:
             raise ValueError('Entity fails validation.')
 
-    def _get_entity(self, entity):
-        """
-        We need to accommodate whatever input the user gives us and map it to a UUID
-         in our private _entities list.  If it's an actual UUID, do the lookup. If it's a string
-         that corresponds to a valid uuid, do the conversion and then the lookup.
-         Otherwise, [extend future semantic capabilities]
-         Note - future extensions happen in subclasses, not in the BasicInterface. So no errors caught.
-        :param entity:
-        :return:
-        """
-        if entity is None:
-            return None
-        entity = _to_uuid(entity)
-        if entity in self._entities:
-            return self._entities[entity]
-        else:
-            return None
-
-    @staticmethod
-    def _narrow_search(result_set, **kwargs):
-        for k, v in kwargs.items():
-            result_set = [r for r in result_set if bool(re.search(v, r[k], flags=re.IGNORECASE))]
-        return result_set
+    def check_counter(self, entity_type):
+        print('%d new %s entities added (%d total)' % (self._counter[entity_type], entity_type,
+                                                       len(self._entities_by_type(entity_type))))
+        self._counter[entity_type] = 0
 
     def _add_exchange(self, exchange):
         if exchange.entity_type == 'exchange':
@@ -91,6 +80,35 @@ class BasicInterface(object):
     def _add_characterization(self, characterization):
         if characterization.entity_type == 'characterization':
             self._characterizations.add(characterization)
+
+    def _get_entity(self, entity):
+        """
+        Retrieve an exact entity by UUID specification- either a uuid.UUID or a string that can be
+        converted to a valid UUID.
+
+        If the UUID is not found, returns None. handle this case in client code/subclass.
+        :param entity: something that corresponds to a literal UUID
+        :return: the LcEntity or None
+        """
+        if entity is None:
+            return None
+        entity = to_uuid(entity)
+        if entity in self._entities:
+            return self._entities[entity]
+        else:
+            return None
+
+    @staticmethod
+    def _narrow_search(result_set, **kwargs):
+        """
+        Narrows a result set using sequential keyword filtering
+        :param result_set:
+        :param kwargs:
+        :return:
+        """
+        for k, v in kwargs.items():
+            result_set = [r for r in result_set if bool(re.search(v, r[k], flags=re.IGNORECASE))]
+        return result_set
 
     def search(self, *args, **kwargs):
         uid = None if len(args) == 0 else args[0]
@@ -113,7 +131,9 @@ class BasicInterface(object):
 
     def retrieve_or_fetch_entity(self, *args, **kwargs):
         """
-        Client-facing function to retrieve entity by ID, first locally, then in archive
+        Client-facing function to retrieve entity by ID, first locally, then in archive.
+
+        Input is flexible-- could be a UUID or partial UUID (
 
         :param args: the identifying string (uuid or partial uuid)
         :param kwargs: used to filter search results on the local archive
@@ -140,6 +160,11 @@ class BasicInterface(object):
         return self._fetch(uid, **kwargs)
 
     def list_properties(self, entity):
+        """
+        List of properties of a given entity
+        :param entity:
+        :return:
+        """
         e = self._get_entity(entity)
         if e is not None:
             return e.properties()
@@ -147,7 +172,7 @@ class BasicInterface(object):
 
     def get_properties(self, entity):
         """
-
+        dict of properties and values for a given entity
         :param entity: a uuid
         :return:
         """
@@ -179,11 +204,30 @@ class BasicInterface(object):
         print('%d entities validated out of %d' % (count, len(self._entities)))
         return count
 
+    def _load_all(self):
+        """
+        Must be overridden in subclass
+        :return:
+        """
+        raise NotImplemented
+
+    def load_all(self):
+        print('Loading %s' % self.ref)
+        self._load_all()
+
     def _entities_by_type(self, entity_type, **kwargs):
         result_set = [v for v in self._entities.values() if v['EntityType'] == entity_type]
         return self._narrow_search(result_set, **kwargs)
 
-    def _to_pandas(self, entities, EntityClass=LcEntity, **kwargs):
+    @staticmethod
+    def _to_pandas(entities, EntityClass=LcEntity, **kwargs):
+        """
+        Creates an entity-type-specific DataFrame of entities.  Kind of funky and special purpose.
+        :param entities:
+        :param EntityClass: LcEntity subclass (used for determining signature fields)
+        :param kwargs:
+        :return:
+        """
         sig = [p.get_signature() for p in entities]
         index = [p.get_uuid() for p in entities]
         df = pd.DataFrame(sig, index=index, columns=[i for i in EntityClass.signature_fields()], **kwargs)
@@ -211,14 +255,20 @@ class BasicInterface(object):
         else:
             return q
 
-    def exchanges(self, dataframe=False, **kwargs):
-        x = self._narrow_search([x for x in self._exchanges], **kwargs)
+    def exchanges(self, dataframe=False):
+        x = [ex for ex in self._exchanges]
         if dataframe:
             return self._to_pandas(x, Exchange)
         else:
             return x
 
     def _quantities_with_unit(self, unitstring):
+        """
+        Generates a list of quantities that convert to/from the supplied unit string.
+        not sure why this is useful, except I use it below to generate the first such quantity.
+        :param unitstring:
+        :return:
+        """
         for q in self._entities_by_type('quantity'):
             if q.has_property('UnitConv'):
                 if unitstring in q['UnitConv']:
@@ -228,6 +278,11 @@ class BasicInterface(object):
                     yield q
 
     def quantity_with_unit(self, unitstring):
+        """
+        Just the first quantity encountered that has a given unitstring
+        :param unitstring:
+        :return:
+        """
         return next((q for q in self._quantities_with_unit(unitstring)), None)
 
     def serialize(self, exchanges=False):
@@ -239,6 +294,11 @@ class BasicInterface(object):
             'quantities': [q.serialize() for q in self.quantities()],
             'exchanges': [] if exchanges is False else [x.serialize() for x in self.exchanges()]
         }
+
+    def write_to_file(self, filename, **kwargs):
+        s = self.serialize(**kwargs)
+        with open(filename, 'w') as fp:
+            json.dump(s, fp, indent=2, sort_keys=True)
 
 
 class ProcessFlow(BasicInterface):

@@ -5,6 +5,7 @@ from lxml import objectify
 from lxml.etree import XMLSyntaxError
 
 from urllib.parse import urljoin
+from urllib.error import HTTPError
 
 from lcatools.providers.archive import Archive
 from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcUnit
@@ -63,7 +64,7 @@ def get_flow_ref(exch):
 def get_reference_flow(process):
     try_ref = _find_tag(process, 'referenceToReferenceFlow')[0]
     if try_ref == '':
-        return None, None  # multioutput, no specified reference
+        return None, None, None  # multioutput, no specified reference
     else:
         ref_to_ref = int(try_ref)
     rf = [i for i in process['exchanges'].getchildren()
@@ -110,14 +111,14 @@ class IlcdArchive(BasicInterface):
     This class handles de-referencing for ILCD archives
     """
 
-    def __init__(self, *args, prefix=None):
+    def __init__(self, *args, prefix=None, quiet=True):
         """
         Just instantiates the parent class.
         :param args: just a reference
         :param prefix: difference between the internal path (ref) and the ILCD base
         :return:
         """
-        super(IlcdArchive, self).__init__(*args)
+        super(IlcdArchive, self).__init__(*args, quiet=quiet)
         self.internal_prefix = prefix
         self._archive = Archive(self.ref)
 
@@ -160,8 +161,8 @@ class IlcdArchive(BasicInterface):
     def _get_objectified_entity(self, filename):
         return objectify.fromstring(self._archive.readfile(filename))
 
-    def objectify(self, uid):
-        e = self.retrieve_or_fetch_entity(uid)
+    def objectify(self, uid, **kwargs):
+        e = self.retrieve_or_fetch_entity(uid, **kwargs)
         dtype = {
             'process': 'Process',
             'flow': 'Flow',
@@ -181,6 +182,7 @@ class IlcdArchive(BasicInterface):
         reference_unit = int(_find_tag(o, 'referenceToReferenceUnit')[0])
         unitstring = str(o['units'].getchildren()[reference_unit]['name'])
         ref_unit = LcUnit(unitstring, u)
+        ref_unit.set_external_ref('%s/%s' % (typeDirs['UnitGroup'], u))
 
         unitconv = dict()
         for i in o['units'].getchildren():
@@ -206,15 +208,18 @@ class IlcdArchive(BasicInterface):
 
         refunit, unitconv = self._create_unitgroup(ug_path)
 
-        try_q = self.quantity_with_unit(refunit.unitstring())
+        q = LcQuantity(u, Name=n, ReferenceUnit=refunit, UnitConversion=unitconv, Comment=c)
+        q.set_external_ref('%s/%s' % (typeDirs['FlowProperty'], u))
 
-        if len(try_q) == 0:
-            q = LcQuantity(u, Name=n, ReferenceUnit=refunit, UnitConversion=unitconv, Comment=c)
-            self[u] = q
-        else:
-            q = try_q[0]
+        self[u] = q
 
         return q
+
+    @staticmethod
+    def _create_dummy_flow_from_exch(uid, exch):
+        n = str(_find_common(exch, 'shortDescription')[0])
+        print('Creating DUMMY flow with name %s' % n)
+        return LcFlow(uid, Name=n, Comment='Dummy flow (HTTP or XML error)')
 
     def _create_flow(self, filename):
         """
@@ -240,6 +245,8 @@ class IlcdArchive(BasicInterface):
         cat = [str(i) for i in cat]
 
         f = LcFlow(u, Name=n, ReferenceQuantity=q, CasNumber=cas, Comment=c, Compartment=cat)
+        f.set_external_ref('%s/%s' % (typeDirs['Flow'], u))
+
         self[u] = f
         return f
 
@@ -262,7 +269,12 @@ class IlcdArchive(BasicInterface):
         for exch in o['exchanges'].getchildren():
             # load all child flows
             f_id, f_uri, f_dir = get_flow_ref(exch)
-            exch_list.append((self._check_or_retrieve_child(filename, f_id, f_uri), f_dir))
+            try:
+                f = self._check_or_retrieve_child(filename, f_id, f_uri)
+            except (HTTPError, XMLSyntaxError):
+                f = self._create_dummy_flow_from_exch(f_id, exch)
+                self[f_id] = f
+            exch_list.append((f, f_dir))
 
         u = str(_find_common(o, 'UUID')[0])
         n = str(_find_tag(o, 'baseName')[0])
@@ -278,6 +290,8 @@ class IlcdArchive(BasicInterface):
 
         p = LcProcess(u, Name=n, Comment=c, SpatialScope=g, TemporalScope=stt,
                       Classifications=cls)
+
+        p.set_external_ref('%s/%s' % (typeDirs['Process'], u))
 
         if rf is not None:
             p['ReferenceExchange'] = Exchange(p, self[rf], rf_dir)
@@ -338,6 +352,20 @@ class IlcdArchive(BasicInterface):
             return self._create_quantity(filename)
         else:
             return objectify.fromstring(self._archive.readfile(filename))
+
+    def _load_all(self):
+        for i in self.list_objects('Process'):
+            self.retrieve_or_fetch_entity(i)
+        self.check_counter('quantity')
+        self.check_counter('flow')
+        self.check_counter('process')
+
+    def serialize(self, **kwargs):
+        j = super(IlcdArchive, self).serialize(**kwargs)
+        if self.internal_prefix is not None:
+            j['prefix'] = self.internal_prefix
+        return j
+
 
 '''
 class IlcdWebInterface(IlcdArchive):

@@ -150,13 +150,13 @@ class LcProcess(LcEntity):
     _new_fields = ['SpatialScope', 'TemporalScope']
 
     @classmethod
-    def new(cls, name, ref_flow, **kwargs):
+    def new(cls, name, ref_exchange, **kwargs):
         """
         :param name: the name of the process
-        :param ref_flow: the reference flow
+        :param ref_exchange: the reference exchange
         :return:
         """
-        return cls(uuid.uuid4(), Name=name, ReferenceFlow=ref_flow, **kwargs)
+        return cls(uuid.uuid4(), Name=name, ReferenceExchange=ref_exchange, **kwargs)
 
     def __init__(self, entity_uuid, **kwargs):
         super(LcProcess, self).__init__('process', entity_uuid, **kwargs)

@@ -65,7 +65,7 @@ def load_gabi_set(index, cname="csc-default", version='', savedir='.'):
 
     for link in links:
         print('Attempting to load %s...\n' % link)
-        load_gabi_collection(urljoin(base, link), version=version, savedir='.')
+        load_gabi_collection(urljoin(base, link), version=version, savedir=savedir)
 
 
 # if __name__ == '__main__':

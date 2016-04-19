@@ -118,7 +118,7 @@ class LcEntity(object):
     def serialize(self):
         return {
             'entityType': self.entity_type,
-            'dataSetReference': self.get_external_ref(),
+            'entityId': self.get_external_ref(),
             self._ref_field: self._print_ref_field(),
             'tags': self._d
         }
@@ -146,7 +146,7 @@ class LcEntity(object):
 
 class LcProcess(LcEntity):
 
-    _ref_field = 'ReferenceExchange'
+    _ref_field = 'referenceExchange'
     _new_fields = ['SpatialScope', 'TemporalScope']
 
     @classmethod
@@ -172,7 +172,7 @@ class LcProcess(LcEntity):
 
 class LcFlow(LcEntity):
 
-    _ref_field = 'ReferenceQuantity'
+    _ref_field = 'referenceQuantity'
     _new_fields = ['CasNumber', 'Compartment']
 
     @classmethod
@@ -208,7 +208,7 @@ class LcFlow(LcEntity):
 
 class LcQuantity(LcEntity):
 
-    _ref_field = 'ReferenceUnit'
+    _ref_field = 'referenceUnit'
     _new_fields = []
 
     @classmethod

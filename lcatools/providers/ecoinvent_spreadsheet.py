@@ -1,3 +1,5 @@
+from __future__ import print_function, unicode_literals
+
 from lcatools.interfaces import BasicInterface, to_uuid
 from lcatools.entities import LcProcess, LcFlow, LcQuantity, LcUnit
 from lcatools.exchanges import Exchange
@@ -52,6 +54,9 @@ class EcoinventSpreadsheet(BasicInterface):
         for u in units:
             self._create_quantity(u)
 
+    def key_to_id(self, key):
+        return uuid.uuid3(self._ns_uuid, key.encode('utf-8'))
+
     @staticmethod
     def _elementary_key(row):
         return '%s [%s, %s]' % (row['name'], row['compartment'], row['subcompartment'])
@@ -64,7 +69,7 @@ class EcoinventSpreadsheet(BasicInterface):
         print('Handling intermediate exchanges [public spreadsheet]')
         for index, row in _intermediate.iterrows():
             n = row['name']
-            u = uuid.uuid3(self._ns_uuid, n)
+            u = self.key_to_id(n)
             if u in self._entities:
                 continue
             q = self.quantity_with_unit(row['unitName'])
@@ -81,7 +86,7 @@ class EcoinventSpreadsheet(BasicInterface):
         print('Handling elementary exchanges [public spreadsheet]')
         for index, row in _elementary.iterrows():
             key = self._elementary_key(row)
-            u = uuid.uuid3(self._ns_uuid, key)
+            u = self.key_to_id(key)
             if u in self._entities:
                 continue
             q = self.quantity_with_unit(row['unitName'])
@@ -103,7 +108,7 @@ class EcoinventSpreadsheet(BasicInterface):
         inter = _intermediate[_intermediate[:2]].drop_duplicates()
         for index, row in inter.iterrows():
             n = row['name']
-            u = uuid.uuid3(self._ns_uuid, n)
+            u = self.key_to_id(n)
             if u in self._entities:
                 continue
             q = self.quantity_with_unit(row['unit'])
@@ -123,7 +128,7 @@ class EcoinventSpreadsheet(BasicInterface):
 
         for index, row in int_elem.iterrows():
             key = self._elementary_key(row)
-            u = uuid.uuid3(self._ns_uuid, key)
+            u = self.key_to_id(key)
             if u in self._entities:
                 continue
             n = row['name']
@@ -186,7 +191,7 @@ class EcoinventSpreadsheet(BasicInterface):
                 exch_name = row['product name']
                 ref_check = 'group'
 
-            exch_flow = self[uuid.uuid3(self._ns_uuid, exch_name)]
+            exch_flow = self[self.key_to_id(exch_name)]
             exch = Exchange(self[u], exch_flow, 'Output')
 
             if row[ref_check] == 'ReferenceProduct':

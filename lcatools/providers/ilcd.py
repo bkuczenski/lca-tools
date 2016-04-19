@@ -1,17 +1,27 @@
+from __future__ import print_function, unicode_literals
+
+bytes = str
+str = unicode
+
 import re
 import os
 
 from lxml import objectify
 from lxml.etree import XMLSyntaxError
 
-from urllib.parse import urljoin
-from urllib.error import HTTPError
+try:
+    from urllib.parse import urljoin
+    from urllib.error import HTTPError
+except ImportError:
+    from urlparse import urljoin
+    from urllib2 import HTTPError
 
 from lcatools.providers.archive import Archive
 from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcUnit
 from lcatools.exchanges import Exchange
 from lcatools.interfaces import BasicInterface, uuid_regex
 
+import posixpath
 
 typeDirs = {'Process': 'processes',
             'Flow': 'flows',
@@ -34,8 +44,8 @@ def _check_dtype(dtype):
     return True
 
 
-def _extract_dtype(filename):
-    cands = [i for i in re.split(os.path.sep, filename) if i in typeDirs.values()]
+def _extract_dtype(filename, pathtype=os.path):
+    cands = [i for i in re.split(pathtype.sep, filename) if i in typeDirs.values()]
     dtype = [k for k, v in typeDirs.items() if v in cands]
     if len(dtype) == 0:
         dtype = [None]
@@ -115,16 +125,23 @@ class IlcdArchive(BasicInterface):
     This class handles de-referencing for ILCD archives
     """
 
-    def __init__(self, *args, prefix=None, quiet=True):
+    def __init__(self, ref, prefix=None, quiet=True):
         """
         Just instantiates the parent class.
-        :param args: just a reference
+        :param ref: root of the archive
         :param prefix: difference between the internal path (ref) and the ILCD base
+          (note: for local archives, this defaults to 'ILCD'; for remote arcnives it
+           defaults to empty)
+        :param quiet: forwarded to BasicInterface
         :return:
         """
-        super(IlcdArchive, self).__init__(*args, quiet=quiet)
+        super(IlcdArchive, self).__init__(ref, quiet=quiet)
         self.internal_prefix = prefix
         self._archive = Archive(self.ref)
+        if self._archive.compressed or self._archive.remote:
+            self._pathtype = posixpath
+        else:
+            self._pathtype = os.path
 
     def _build_prefix(self, dtype=None):
         if self._archive.remote:
@@ -132,14 +149,14 @@ class IlcdArchive(BasicInterface):
         else:
             path = 'ILCD'
         if self.internal_prefix is not None:
-            path = os.path.join(self.internal_prefix, path)
+            path = self._pathtype.join(self.internal_prefix, path)
         if dtype is not None:
-            path = os.path.join(path, typeDirs[dtype])
+            path = self._pathtype.join(path, typeDirs[dtype])
         return path
 
     def _build_entity_path(self, dtype, uid):
         assert _check_dtype(dtype)
-        postpath = os.path.join(self._build_prefix(dtype), uid)
+        postpath = self._pathtype.join(self._build_prefix(dtype), uid)
         return postpath + '.xml'
 
     def search_by_id(self, uid, dtype=None):
@@ -158,7 +175,7 @@ class IlcdArchive(BasicInterface):
         child = self._get_entity(uid)
         if child is None:
             new_path = urljoin(filename, uri)
-            dtype, uid = _extract_dtype(new_path)
+            dtype, uid = _extract_dtype(new_path, self._pathtype)
             child = self.retrieve_or_fetch_entity(uid, dtype=dtype)
         return child
 
@@ -322,7 +339,7 @@ class IlcdArchive(BasicInterface):
             dtype = None
 
         if dtype is None:
-            dtype, uu = _extract_dtype(uid)
+            dtype, uu = _extract_dtype(uid, self._pathtype)
             if dtype is not None:
                 uid = uu
 
@@ -338,7 +355,7 @@ class IlcdArchive(BasicInterface):
                     print('Please specify dtype')
                     return None
                 filename = search_results[0]
-                dtype, uid = _extract_dtype(filename)
+                dtype, uid = _extract_dtype(filename, self._pathtype)
             else:
                 print('No results.')
                 return None

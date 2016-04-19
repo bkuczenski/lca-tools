@@ -20,6 +20,8 @@ http://www.gabi-software.com/support/gabi/gabi-database-2016-lci-documentation/
 look for a elements in div class="csc-default"
 """
 
+from __future__ import print_function, unicode_literals
+
 from urllib.request import urlopen, urljoin
 from bs4 import BeautifulSoup
 import os

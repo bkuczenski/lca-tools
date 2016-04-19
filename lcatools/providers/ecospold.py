@@ -8,6 +8,11 @@ web paper, to a collection of process data, to wit:
 
 """
 
+from __future__ import print_function, unicode_literals
+
+bytes = str
+str = unicode
+
 import os
 import re
 
@@ -57,14 +62,14 @@ class EcospoldV1Archive(BasicInterface):
     nsmap = 'http://www.EcoInvent.org/EcoSpold01'  # only valid for v1 ecospold files
     spold_version = tail.search(nsmap).groups()[0]
 
-    def __init__(self, *args, prefix=None, ns_uuid=None, quiet=True):
+    def __init__(self, ref, prefix=None, ns_uuid=None, quiet=True):
         """
         Just instantiates the parent class.
-        :param args: just a reference
+        :param ref: just a reference
         :param prefix: difference between the internal path (ref) and the ILCD base
         :return:
         """
-        super(EcospoldV1Archive, self).__init__(*args, quiet=quiet)
+        super(EcospoldV1Archive, self).__init__(ref, quiet=quiet)
         self.internal_prefix = prefix
         self._archive = Archive(self.ref)
 
@@ -72,14 +77,14 @@ class EcospoldV1Archive(BasicInterface):
         ns_uuid = to_uuid(ns_uuid)
         self._ns_uuid = uuid.uuid4() if ns_uuid is None else ns_uuid
 
-    def number_to_uuid(self, number):
+    def key_to_id(self, number):
         """
         Converts Ecospold01 "number" attributes to UUIDs using the internal UUID namespace.
         ASSUMPTION is that numbers are distinct across flows and processes - have not tested this rigorously
         :param number:
         :return:
         """
-        return uuid.uuid3(self._ns_uuid, number)
+        return uuid.uuid3(self._ns_uuid, number.encode('utf-8'))
 
     def _build_prefix(self):
         path = ''
@@ -125,7 +130,7 @@ class EcospoldV1Archive(BasicInterface):
         :return:
         """
         number = exch.get('number')
-        uid = self.number_to_uuid(number)
+        uid = self.key_to_id(number)
         if uid in self._entities:
             f = self[uid]
             assert f.entity_type == 'flow', "Expected flow, found %s" % f.entity_type
@@ -171,7 +176,7 @@ class EcospoldV1Archive(BasicInterface):
         p_meta = o.dataset.metaInformation.processInformation
         n = p_meta.referenceFunction.get('name')
 
-        u = self.number_to_uuid(n)
+        u = self.key_to_id(n)
 
         if u in self._entities:
             p = self[u]

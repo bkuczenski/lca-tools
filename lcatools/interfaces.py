@@ -7,6 +7,8 @@ for all the interface methods. Then the data providers can override whichever on
 On the calling side, the interface definitions function as documentation-only, since python uses
 duck typing and doesn't require strict interface definitions.
 """
+from __future__ import print_function, unicode_literals
+
 import uuid
 import re
 import json
@@ -22,6 +24,8 @@ uuid_regex = re.compile('([0-9a-f]{8}.?([0-9a-f]{4}.?){3}.?[0-9a-f]{12})')
 
 def to_uuid(_in):
     if isinstance(_in, uuid.UUID):
+        return _in
+    if _in is None:
         return _in
     if uuid_regex.match(_in):
         try:
@@ -275,7 +279,7 @@ class BasicInterface(object):
                 if unitstring in q['UnitConv']:
                     yield q
             else:
-                if q['ReferenceUnit'].unitstring() == unitstring:
+                if q['referenceUnit'].unitstring() == unitstring:
                     yield q
 
     def quantity_with_unit(self, unitstring):
@@ -301,8 +305,12 @@ class BasicInterface(object):
         if gzip is True:
             if not bool(re.search('\.gz$', filename)):
                 filename += '.gz'
-            with gz.open(filename, 'wt') as fp:
-                json.dump(s, fp, indent=2, sort_keys=True)
+            try:  # python3
+                with gz.open(filename, 'wt') as fp:
+                    json.dump(s, fp, indent=2, sort_keys=True)
+            except ValueError:  # python2
+                with gz.open(filename, 'w') as fp:
+                    json.dump(s, fp, indent=2, sort_keys=True)
         else:
             with open(filename, 'w') as fp:
                 json.dump(s, fp, indent=2, sort_keys=True)

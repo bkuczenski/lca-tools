@@ -1,12 +1,18 @@
+from __future__ import print_function, unicode_literals
+
 import os
 import re
 from py7zlib import Archive7z
 from zipfile import ZipFile
-from urllib.request import urlopen
-from urllib.parse import urljoin
+try:
+    from urllib.request import urlopen
+    from urllib.parse import urljoin
+except ImportError:
+    from urlparse import urljoin
+    from urllib2 import urlopen
 
 _ext = re.compile('\.([^.]+)$')
-_protocol = re.compile('^(\w+):')
+_protocol = re.compile('^(\w+)://')
 
 
 def get_ext(fname):

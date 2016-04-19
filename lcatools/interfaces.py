@@ -299,7 +299,7 @@ class BasicInterface(object):
     def write_to_file(self, filename, gzip=False, **kwargs):
         s = self.serialize(**kwargs)
         if gzip is True:
-            if not bool(re.match('\.gz$', filename)):
+            if not bool(re.search('\.gz$', filename)):
                 filename += '.gz'
             with gz.open(filename, 'wt') as fp:
                 json.dump(s, fp, indent=2, sort_keys=True)

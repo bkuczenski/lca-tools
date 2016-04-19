@@ -135,7 +135,7 @@ class LcEntity(object):
     def __setitem__(self, key, value):
         if key == 'EntityType':
             raise ValueError('Entity Type cannot be changed')
-        elif key == self._ref_field:
+        elif key.lower() == self._ref_field.lower():
             self._set_reference(value)
         else:
             self._d[key] = value

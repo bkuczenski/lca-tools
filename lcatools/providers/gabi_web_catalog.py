@@ -80,7 +80,7 @@ class GabiWebCatalog(object):
 
     def serialize(self, **kwargs):
         return {
-            'CatalogType': self.__class__.__name__,
-            'CatalogReference': self.catalog,
-            'Archives': [archive.serialize(**kwargs) for archive in self.archive]
+            'collectionType': self.__class__.__name__,
+            'collectionReference': self.catalog,
+            'archives': [archive.serialize(**kwargs) for archive in self.archive]
         }

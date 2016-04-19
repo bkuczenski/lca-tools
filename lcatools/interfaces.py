@@ -10,6 +10,7 @@ duck typing and doesn't require strict interface definitions.
 import uuid
 import re
 import json
+import gzip as gz
 from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcEntity
 from lcatools.exchanges import Exchange
 from collections import defaultdict
@@ -295,10 +296,16 @@ class BasicInterface(object):
             'exchanges': [] if exchanges is False else [x.serialize() for x in self.exchanges()]
         }
 
-    def write_to_file(self, filename, **kwargs):
+    def write_to_file(self, filename, gzip=False, **kwargs):
         s = self.serialize(**kwargs)
-        with open(filename, 'w') as fp:
-            json.dump(s, fp, indent=2, sort_keys=True)
+        if gzip is True:
+            if not bool(re.match('\.gz$', filename)):
+                filename += '.gz'
+            with gz.open(filename, 'wt') as fp:
+                json.dump(s, fp, indent=2, sort_keys=True)
+        else:
+            with open(filename, 'w') as fp:
+                json.dump(s, fp, indent=2, sort_keys=True)
 
 
 class ProcessFlow(BasicInterface):

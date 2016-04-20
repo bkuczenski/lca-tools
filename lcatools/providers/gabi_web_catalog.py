@@ -58,11 +58,10 @@ class GabiWebCatalog(object):
         for t in tables:
             self._find_roots(t)
 
+        self.archive = []
         self._archives = dict()
         for root in self._roots:
-            self._archives[root] = IlcdArchive(root, prefix=None, quiet=quiet)
-
-        self.archive = [self._archives[k] for k in self._roots]
+            self.install_archive(IlcdArchive(root, prefix=None, quiet=quiet))
 
         # populate list of objects
         self._list_objects = []
@@ -84,3 +83,10 @@ class GabiWebCatalog(object):
             'collectionReference': self.catalog,
             'archives': [archive.serialize(**kwargs) for archive in self.archive]
         }
+
+    def install_archive(self, archive):
+        if archive.ref not in self._roots:
+            raise ValueError('Reference %s not found' % archive.ref)
+        self._archives[archive.ref] = archive
+        self.archive = [self._archives[k] for k in self._roots]
+

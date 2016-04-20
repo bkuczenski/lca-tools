@@ -13,13 +13,13 @@ import uuid
 import re
 import json
 import gzip as gz
-from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcEntity
+from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcEntity, LcUnit
 from lcatools.exchanges import Exchange
 from collections import defaultdict
 
 import pandas as pd
 
-uuid_regex = re.compile('([0-9a-f]{8}.?([0-9a-f]{4}.?){3}.?[0-9a-f]{12})')
+uuid_regex = re.compile('([0-9a-f]{8}.?([0-9a-f]{4}.?){3}[0-9a-f]{12})')
 
 
 def to_uuid(_in):
@@ -27,9 +27,10 @@ def to_uuid(_in):
         return _in
     if _in is None:
         return _in
-    if uuid_regex.match(_in):
+    g = uuid_regex.search(_in).groups()
+    if len(g) > 0:
         try:
-            _out = uuid.UUID(_in)
+            _out = uuid.UUID(g[0])
         except ValueError:
             _out = None
     else:
@@ -78,9 +79,58 @@ class BasicInterface(object):
                                                        len(self._entities_by_type(entity_type))))
         self._counter[entity_type] = 0
 
+    @classmethod
+    def _create_unit(cls, unitstring):
+        return LcUnit(unitstring), None
+
+    @classmethod
+    def key_to_id(cls, key):
+        """
+        in the base class, the key is the uuid
+        :param key:
+        :return:
+        """
+        return to_uuid(key)
+
+    def entity_from_json(self, e):
+        """
+        Create an LcEntity subclass from a json-derived dict
+        :param e:
+        :return:
+        """
+        d = e['tags']
+        uid = self.key_to_id(e['entityId'])
+        if e['entityType'] == 'quantity':
+            unit, _ = self._create_unit(e['referenceUnit'])
+            d['referenceUnit'] = unit
+            entity = LcQuantity(uid, **d)
+        elif e['entityType'] == 'flow':
+            d['referenceQuantity'] = self[e['referenceQuantity']]
+            entity = LcFlow(uid, **d)
+        elif e['entityType'] == 'process':
+            direc, flow = e['referenceExchange'].split(': ')
+            entity = LcProcess(uid, **d)
+            entity['referenceExchange'] = Exchange(process=entity, flow=self[flow], direction=direc)
+        else:
+            raise TypeError('Unknown entity type %s' % e['entityType'])
+
+        entity.set_external_ref(e['entityId'])
+        self[uid] = entity
+
     def _add_exchange(self, exchange):
         if exchange.entity_type == 'exchange':
             self._exchanges.add(exchange)
+
+    def add_exchanges(self, jx):
+        """
+        jx is a list of json-derived exchange dictionaries
+        :param jx:
+        :return:
+        """
+        for x in jx:
+            self._add_exchange(Exchange(process=self[x['process']],
+                               flow=self[x['flow']],
+                               direction=x['direction']))
 
     def _add_characterization(self, characterization):
         if characterization.entity_type == 'characterization':
@@ -97,7 +147,7 @@ class BasicInterface(object):
         """
         if entity is None:
             return None
-        entity = to_uuid(entity)
+        entity = self.key_to_id(entity)
         if entity in self._entities:
             return self._entities[entity]
         else:

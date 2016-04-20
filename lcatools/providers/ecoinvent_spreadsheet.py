@@ -1,7 +1,7 @@
 from __future__ import print_function, unicode_literals
 
 from lcatools.interfaces import BasicInterface, to_uuid
-from lcatools.entities import LcProcess, LcFlow, LcQuantity, LcUnit
+from lcatools.entities import LcProcess, LcFlow, LcQuantity
 from lcatools.exchanges import Exchange
 
 import pandas as pd
@@ -37,7 +37,7 @@ class EcoinventSpreadsheet(BasicInterface):
         """
         try_q = self.quantity_with_unit(unitstring)
         if try_q is None:
-            ref_unit = LcUnit(unitstring)
+            ref_unit, _ = self._create_unit(unitstring)
 
             q = LcQuantity.new('Ecoinvent Spreadsheet Quantity %s' % unitstring, ref_unit, Comment=self.version)
             q.set_external_ref(unitstring)

@@ -22,7 +22,7 @@ from lxml import objectify
 
 from lcatools.interfaces import BasicInterface, to_uuid
 from lcatools.providers.archive import Archive
-from lcatools.entities import LcUnit, LcQuantity, LcFlow, LcProcess
+from lcatools.entities import LcQuantity, LcFlow, LcProcess
 from lcatools.exchanges import Exchange
 
 
@@ -113,7 +113,7 @@ class EcospoldV1Archive(BasicInterface):
         """
         try_q = self.quantity_with_unit(unitstring)
         if try_q is None:
-            ref_unit = LcUnit(unitstring)
+            ref_unit, _ = self._create_unit(unitstring)
 
             q = LcQuantity.new('EcoSpold Quantity %s' % unitstring, ref_unit, Comment=self.spold_version)
             q.set_external_ref(unitstring)

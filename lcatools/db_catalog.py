@@ -22,15 +22,19 @@ look for a elements in div class="csc-default"
 
 from __future__ import print_function, unicode_literals
 
+import six
+
 from urllib.request import urlopen, urljoin
 from bs4 import BeautifulSoup
 import os
 import json
 import gzip
+import re
 
 # import sys
 # from optparse import OptionParser
 
+from lcatools.providers.ilcd import IlcdArchive
 from lcatools.providers.gabi_web_catalog import GabiWebCatalog
 
 
@@ -68,6 +72,62 @@ def load_gabi_set(index, cname="csc-default", version='', savedir='.'):
     for link in links:
         print('Attempting to load %s...\n' % link)
         load_gabi_collection(urljoin(base, link), version=version, savedir=savedir)
+
+
+def _archive_from_json(j):
+    """
+
+    :param j: json dictionary containing an archive
+    :return:
+    """
+    if j['dataSourceType'] == 'IlcdArchive':
+        if 'prefix' in j.keys():
+            prefix = j['prefix']
+        else:
+            prefix = None
+
+        a = IlcdArchive(j['dataSourceReference'], prefix=prefix, quiet=True)
+
+        for e in j['quantities']:
+            a.entity_from_json(e)
+        for e in j['flows']:
+            a.entity_from_json(e)
+        for e in j['processes']:
+            a.entity_from_json(e)
+        a.add_exchanges(j['exchanges'])
+        return a
+
+
+def from_json(fname, **kwargs):
+    """
+    Routine to reconstruct a catalog from a json archive.
+    :param fname: json file, optionally gzipped
+    :param kwargs: TBD
+    :return: a subclass of BasicInterface
+    """
+    if bool(re.search('\.gz$', fname)):
+        if six.PY3:
+            with gzip.open(fname, 'rt') as fp:
+                j = json.load(fp)
+        else:
+            with gzip.open(fname, 'r') as fp:
+                j = json.load(fp)
+    else:
+        with open(fname, 'r') as fp:
+            j = json.load(fp)
+
+    if 'collectionType' in j.keys():
+        if j['collectionType'] == 'GabiWebCatalog':
+            g = GabiWebCatalog(j['collectionReference'], quiet=True)
+        else:
+            raise ValueError('Unknown collectionType %s' % j['collectionType'])
+        for a in j['archives']:
+            g.install_archive(_archive_from_json(a))
+        return g
+
+    else:
+        return _archive_from_json(j)
+
 
 
 # if __name__ == '__main__':

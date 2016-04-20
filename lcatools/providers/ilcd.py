@@ -1,20 +1,21 @@
 from __future__ import print_function, unicode_literals
 
-bytes = str
-str = unicode
-
 import re
 import os
 
 from lxml import objectify
 from lxml.etree import XMLSyntaxError
 
-try:
+try:  # python3
     from urllib.parse import urljoin
     from urllib.error import HTTPError
-except ImportError:
+except ImportError:  # python2
     from urlparse import urljoin
     from urllib2 import HTTPError
+
+    bytes = str
+    str = unicode
+
 
 from lcatools.providers.archive import Archive
 from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcUnit
@@ -186,20 +187,20 @@ class IlcdArchive(BasicInterface):
         search_results = self.search_by_id(uid, **kwargs)
         return [self._get_objectified_entity(k) for k in search_results]
 
-    def _create_unitgroup(self, filename):
+    def _create_unit(self, filename):
         """
         UnitGroups aren't stored as full-fledged entities- they are stored as dicts inside quantities.
         :param filename:
         :return:
         """
-        o = self._get_objectified_entity(filename)
+        o = self._get_objectified_entity(filename + '.xml')
 
         ns = find_ns(o.nsmap, 'UnitGroup')
 
         u = str(_find_common(o, 'UUID')[0])
         reference_unit = int(_find_tag(o, 'referenceToReferenceUnit', ns=ns)[0])
         unitstring = str(o['units'].getchildren()[reference_unit]['name'])
-        ref_unit = LcUnit(unitstring, u)
+        ref_unit = LcUnit(unitstring, unit_uuid=u)
         ref_unit.set_external_ref('%s/%s' % (typeDirs['UnitGroup'], u))
 
         unitconv = dict()
@@ -223,9 +224,9 @@ class IlcdArchive(BasicInterface):
 
         ug, ug_uri = get_reference_unit_group(o, ns=ns)
 
-        ug_path = urljoin(filename, ug_uri)
+        ug_path = urljoin(filename, '../unitgroups/' + ug)  # need the path without extension- I know- it's all sloppy
 
-        refunit, unitconv = self._create_unitgroup(ug_path)
+        refunit, unitconv = self._create_unit(ug_path)
 
         q = LcQuantity(u, Name=n, ReferenceUnit=refunit, UnitConversion=unitconv, Comment=c)
         q.set_external_ref('%s/%s' % (typeDirs['FlowProperty'], u))

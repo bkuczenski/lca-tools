@@ -1,6 +1,8 @@
 from __future__ import print_function, unicode_literals
 
-from lcatools.interfaces import BasicInterface, to_uuid
+import six
+
+from lcatools.interfaces import BasicInterface, to_uuid, uuid_regex
 from lcatools.entities import LcProcess, LcFlow, LcQuantity
 from lcatools.exchanges import Exchange
 
@@ -55,7 +57,13 @@ class EcoinventSpreadsheet(BasicInterface):
             self._create_quantity(u)
 
     def key_to_id(self, key):
-        return uuid.uuid3(self._ns_uuid, key.encode('utf-8'))
+        u = to_uuid(key)
+        if u is not None:
+            return u
+        if six.PY2:
+            return uuid.uuid3(self._ns_uuid, key.encode('utf-8'))
+        else:
+            return uuid.uuid3(self._ns_uuid, key)
 
     @staticmethod
     def _elementary_key(row):

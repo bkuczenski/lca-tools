@@ -27,13 +27,16 @@ def to_uuid(_in):
         return _in
     if _in is None:
         return _in
-    g = uuid_regex.search(_in).groups()
-    if len(g) > 0:
-        try:
-            _out = uuid.UUID(g[0])
-        except ValueError:
+    try:
+        g = uuid_regex.search(_in)
+        if g is not None:
+            try:
+                _out = uuid.UUID(g.groups()[0])
+            except ValueError:
+                _out = None
+        else:
             _out = None
-    else:
+    except TypeError:
         _out = None
     return _out
 
@@ -105,12 +108,18 @@ class BasicInterface(object):
             d['referenceUnit'] = unit
             entity = LcQuantity(uid, **d)
         elif e['entityType'] == 'flow':
-            d['referenceQuantity'] = self[e['referenceQuantity']]
+            try:
+                d['referenceQuantity'] = self[e['referenceQuantity']]
+            except TypeError:
+                pass  # allow referenceQuantity to be None
             entity = LcFlow(uid, **d)
         elif e['entityType'] == 'process':
-            direc, flow = e['referenceExchange'].split(': ')
             entity = LcProcess(uid, **d)
-            entity['referenceExchange'] = Exchange(process=entity, flow=self[flow], direction=direc)
+            try:
+                direc, flow = e['referenceExchange'].split(': ')
+                entity['referenceExchange'] = Exchange(process=entity, flow=self[flow], direction=direc)
+            except ValueError:
+                pass  # allow referenceExchange to be None
         else:
             raise TypeError('Unknown entity type %s' % e['entityType'])
 

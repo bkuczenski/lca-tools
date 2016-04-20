@@ -70,7 +70,14 @@ class Archive(object):
 
         self.remote = False
         if not os.path.exists(path):
-            raise FileNotFoundError('path does not resolve')
+            print('WARNING: path does not resolve.  Archive will be non-functional.')
+            self.remote = True
+            self.compressed = False
+            self._archive = None
+            self.OK = True
+            self.prefixes = []
+            self.ext = None
+            return
 
         if os.path.isdir(path):
             print('Path points to a directory. Assuming expanded archive')
@@ -153,7 +160,8 @@ class Archive(object):
             url = urljoin(self.path, fname)
             print('Accessing remote url: %s' % url)
             file = {
-                'http': lambda x: urlopen(x)
+                'http': lambda x: urlopen(x),
+                None: None
             }[self.ext](url)
             return file.read()
 

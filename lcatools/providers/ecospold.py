@@ -10,8 +10,11 @@ web paper, to a collection of process data, to wit:
 
 from __future__ import print_function, unicode_literals
 
-bytes = str
-str = unicode
+import six
+
+if six.PY2:
+    bytes = str
+    str = unicode
 
 import os
 import re
@@ -77,14 +80,21 @@ class EcospoldV1Archive(BasicInterface):
         ns_uuid = to_uuid(ns_uuid)
         self._ns_uuid = uuid.uuid4() if ns_uuid is None else ns_uuid
 
-    def key_to_id(self, number):
+    def key_to_id(self, key):
         """
         Converts Ecospold01 "number" attributes to UUIDs using the internal UUID namespace.
-        ASSUMPTION is that numbers are distinct across flows and processes - have not tested this rigorously
-        :param number:
+        :param key:
         :return:
         """
-        return uuid.uuid3(self._ns_uuid, number.encode('utf-8'))
+        if isinstance(key, int):
+            key = str(key)
+        u = to_uuid(key)
+        if u is not None:
+            return u
+        if six.PY2:
+            return uuid.uuid3(self._ns_uuid, key.encode('utf-8'))
+        else:
+            return uuid.uuid3(self._ns_uuid, key)
 
     def _build_prefix(self):
         path = ''
@@ -129,7 +139,7 @@ class EcospoldV1Archive(BasicInterface):
         :param exch:
         :return:
         """
-        number = exch.get('number')
+        number = int(exch.get('number'))
         uid = self.key_to_id(number)
         if uid in self._entities:
             f = self[uid]
@@ -144,7 +154,7 @@ class EcospoldV1Archive(BasicInterface):
             cat = [exch.get('category'), exch.get('subCategory')]
 
             f = LcFlow(uid, Name=n, ReferenceQuantity=q, CasNumber=cas, Comment=c, Compartment=cat)
-            f.set_external_ref(int(number))
+            f.set_external_ref(number)
             self[uid] = f
 
         return f

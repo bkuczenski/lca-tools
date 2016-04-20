@@ -35,6 +35,8 @@ import re
 # from optparse import OptionParser
 
 from lcatools.providers.ilcd import IlcdArchive
+from lcatools.providers.ecoinvent_spreadsheet import EcoinventSpreadsheet
+from lcatools.providers.ecospold import EcospoldV1Archive
 from lcatools.providers.gabi_web_catalog import GabiWebCatalog
 
 
@@ -87,15 +89,27 @@ def _archive_from_json(j):
             prefix = None
 
         a = IlcdArchive(j['dataSourceReference'], prefix=prefix, quiet=True)
+    elif j['dataSourceType'] == 'EcospoldV1Archive':
+        if 'prefix' in j.keys():
+            prefix = j['prefix']
+        else:
+            prefix = None
 
-        for e in j['quantities']:
-            a.entity_from_json(e)
-        for e in j['flows']:
-            a.entity_from_json(e)
-        for e in j['processes']:
-            a.entity_from_json(e)
-        a.add_exchanges(j['exchanges'])
-        return a
+        a = EcospoldV1Archive(j['dataSourceReference'], prefix=prefix, ns_uuid=j['nsUuid'], quiet=True)
+    elif j['dataSourceType'] == 'EcoinventSpreadsheet':
+        a = EcoinventSpreadsheet(j['dataSourceReference'], internal=bool(j['internal']), version=j['version'],
+                                 ns_uuid=j['nsUuid'], quiet=True)
+    else:
+        raise ValueError('Unknown dataSourceType %s' % j['dataSourceType'])
+
+    for e in j['quantities']:
+        a.entity_from_json(e)
+    for e in j['flows']:
+        a.entity_from_json(e)
+    for e in j['processes']:
+        a.entity_from_json(e)
+    a.add_exchanges(j['exchanges'])
+    return a
 
 
 def from_json(fname, **kwargs):

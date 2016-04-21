@@ -65,6 +65,8 @@ class LcEntity(object):
         return str(self._uuid)
 
     def _validate_reference(self, ref_entity):
+        if ref_entity is None:
+            return True  # allow none references
         if ref_entity.entity_type != entity_refs[self.entity_type]:
             raise TypeError("Type Mismatch on reference entity")
         return True

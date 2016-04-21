@@ -41,7 +41,7 @@ class Archive(object):
             archive = False
         return archive
 
-    def __init__(self, path):
+    def __init__(self, path, query_string=None):
         """
         Create an Archive object from a path.  Basically encapsulates the compression algorithm and presents
         a common interface to client code:
@@ -66,6 +66,9 @@ class Archive(object):
             self.OK = True
             self.prefixes = []
             print('Archive refers to a web address using protocol %s' % self.ext)
+            self.query_string = query_string
+            if self.query_string is not None:
+                print(' with query string %s' % self.query_string)
             return
 
         self.remote = False
@@ -74,7 +77,7 @@ class Archive(object):
             self.remote = True
             self.compressed = False
             self._archive = None
-            self.OK = True
+            self.OK = False
             self.prefixes = []
             self.ext = None
             return
@@ -158,6 +161,8 @@ class Archive(object):
         """
         if self.remote:
             url = urljoin(self.path, fname)
+            if self.query_string is not None:
+                url += '?' + self.query_string
             print('Accessing remote url: %s' % url)
             file = {
                 'http': lambda x: urlopen(x),

@@ -1,0 +1,310 @@
+{
+  "dataSourceReference": "C:\\Users\\Brandon\\Dropbox\\data\\ELCD\\elcd3.2.zip", 
+  "dataSourceType": "IlcdArchive", 
+  "exchanges": [], 
+  "flows": [], 
+  "processes": [], 
+  "quantities": [
+    {
+      "entityId": "flowproperties/05e42ba1-dbcd-4dc2-b735-a2f17dd211ae", 
+      "entityType": "quantity", 
+      "referenceUnit": "unitgroups/f2275057-f8be-4db9-bb78-5dfc276967a0", 
+      "tags": {
+        "Comment": "", 
+        "Name": "Mechanical Filtration (Transf.)", 
+        "UnitConversion": {
+          "cm*m2/d": 1.0
+        }
+      }
+    }, 
+    {
+      "entityId": "flowproperties/27f62f94-3fe1-4df5-9693-9112b832decb", 
+      "entityType": "quantity", 
+      "referenceUnit": "unitgroups/8faea1b8-2421-4a68-9f55-86d97d70b321", 
+      "tags": {
+        "Comment": "", 
+        "Name": "Erosion Resistance (Transf.)", 
+        "UnitConversion": {
+          "kg/a": 1.0, 
+          "t/a": 1000.0
+        }
+      }
+    }, 
+    {
+      "entityId": "flowproperties/2d9d802c-002d-4018-a702-d2d46e78625a", 
+      "entityType": "quantity", 
+      "referenceUnit": "unitgroups/a700dfc6-43e4-472e-b2a8-b8485dd38776", 
+      "tags": {
+        "Comment": "", 
+        "Name": "Biotic Production (Occ.)", 
+        "UnitConversion": {
+          "kg": 1.0
+        }
+      }
+    }, 
+    {
+      "entityId": "flowproperties/45915a2c-6ee8-45bd-8a46-070a7261558e", 
+      "entityType": "quantity", 
+      "referenceUnit": "unitgroups/36932b14-ba61-417b-a80c-eb9935d193f1", 
+      "tags": {
+        "Comment": "", 
+        "Name": "Groundwater Replenishment (Occ.)", 
+        "UnitConversion": {
+          "mm*m2": 1.0
+        }
+      }
+    }, 
+    {
+      "entityId": "flowproperties/58ea2de8-1f31-4248-9b03-18ec5d8db13b", 
+      "entityType": "quantity", 
+      "referenceUnit": "unitgroups/9e5a91be-b3d1-4268-8e7d-e5e93f6a75d4", 
+      "tags": {
+        "Comment": "", 
+        "Name": "Groundwater Replenishment (Transf.)", 
+        "UnitConversion": {
+          "(mm*m2)/a": 1.0
+        }
+      }
+    }, 
+    {
+      "entityId": "flowproperties/838aaa20-0117-11db-92e3-0800200c9a66", 
+      "entityType": "quantity", 
+      "referenceUnit": "unitgroups/838aaa21-0117-11db-92e3-0800200c9a66", 
+      "tags": {
+        "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).", 
+        "Name": "Goods transport (mass*distance)", 
+        "UnitConversion": {
+          "kg*km": 1000.0, 
+          "lb*mi": 1369.889285547942, 
+          "lb*nmi": 1190.4010818365032, 
+          "t*km": 1.0, 
+          "t*mi": 0.621371192237334, 
+          "t*nmi": 0.5399568034557235
+        }
+      }
+    }, 
+    {
+      "entityId": "flowproperties/8a9107c2-62a2-4997-95b0-6944c80b774e", 
+      "entityType": "quantity", 
+      "referenceUnit": "unitgroups/a6941776-ee4b-40fe-9a05-e19faac45240", 
+      "tags": {
+        "Comment": "", 
+        "Name": "Physicochemical Filtration (Occ.)", 
+        "UnitConversion": {
+          "(cmol*m2*a)/kg": 1.0
+        }
+      }
+    }, 
+    {
+      "entityId": "flowproperties/93a60a56-a3c8-11da-a746-0800200b9a66", 
+      "entityType": "quantity", 
+      "referenceUnit": "unitgroups/93a60a57-a4c8-11da-a746-0800200c9a66", 
+      "tags": {
+        "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).", 
+        "Name": "Mass", 
+        "UnitConversion": {
+          "Mg": 0.001, 
+          "g": 1000.0, 
+          "kg": 1.0, 
+          "kt": 5000.0, 
+          "lb av": 2.2046226218487757, 
+          "long tn": 0.0009842065276110606, 
+          "mg": 1000000.0, 
+          "ng": 1000000000000.0, 
+          "oz av": 35.27396194958041, 
+          "oz t": 32.15074656862798, 
+          "pg": 999999999999999.9, 
+          "sh tn": 0.001102311310924388, 
+          "t": 0.001, 
+          "ug": 999999999.9999999
+        }
+      }
+    }, 
+    {
+      "entityId": "flowproperties/93a60a56-a3c8-11da-a746-0800200c9a66", 
+      "entityType": "quantity", 
+      "referenceUnit": "unitgroups/93a60a57-a3c8-11da-a746-0800200c9a66", 
+      "tags": {
+        "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).", 
+        "Name": "Net calorific value", 
+        "UnitConversion": {
+          "GJ": 0.001, 
+          "J": 1000000.0, 
+          "MJ": 1.0, 
+          "MWh": 0.0002777777777777778, 
+          "TCE": 3.412084237535657e-05, 
+          "TOE": 2.3884589662749594e-05, 
+          "btu": 947.8169879134379, 
+          "kWh": 0.2777777777777778, 
+          "kcal": 238.85160149998808
+        }
+      }
+    }, 
+    {
+      "entityId": "flowproperties/93a60a56-a3c8-13da-a746-0800200c9a66", 
+      "entityType": "quantity", 
+      "referenceUnit": "unitgroups/93a60a57-a3c8-12da-a746-0800200c9a66", 
+      "tags": {
+        "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).", 
+        "Name": "Normal Volume", 
+        "UnitConversion": {
+          "US fl oz": 33814.022701842994, 
+          "bbl": 6.289810770432105, 
+          "bl (Imp)": 6.110256897196883, 
+          "bl (US beer)": 8.521683850642152, 
+          "bl (US dry)": 8.648409373989104, 
+          "bl (US fl)": 8.38641436057614, 
+          "bsh (Imp)": 27.496156037385973, 
+          "bsh (US)": 28.377593255889252, 
+          "cu ft": 35.31466672148859, 
+          "fl oz (Imp)": 35195.07972785404, 
+          "gal (Imp)": 219.96924829908778, 
+          "gal (US dry)": 227.02074606721396, 
+          "gal (US fl)": 264.1720523581484, 
+          "gal (US liq)": 264.1720372841846, 
+          "l": 1000.0, 
+          "m3": 1.0, 
+          "ml": 1000000.0, 
+          "pt (Imp)": 1759.7539863927022, 
+          "pt (US dry)": 1816.1659685377117, 
+          "pt (US fl)": 2113.376418865187, 
+          "ul": 999999999.9999999
+        }
+      }
+    }, 
+    {
+      "entityId": "flowproperties/93a60a56-a3c8-17da-a746-0800200c9a66", 
+      "entityType": "quantity", 
+      "referenceUnit": "unitgroups/93a60a57-a3c8-16da-a746-0800200c9a66", 
+      "tags": {
+        "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).", 
+        "Name": "Radioactivity", 
+        "UnitConversion": {
+          "Bq": 1000.0, 
+          "Ci": 2.7027027027027028e-08, 
+          "Rutherford": 0.001, 
+          "kBq": 1.0
+        }
+      }
+    }, 
+    {
+      "entityId": "flowproperties/93a60a56-a3c8-19da-a746-0800200c9a66", 
+      "entityType": "quantity", 
+      "referenceUnit": "unitgroups/93a60a57-a3c8-18da-a746-0800200c9a66", 
+      "tags": {
+        "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).", 
+        "Name": "Area", 
+        "UnitConversion": {
+          "a": 0.01, 
+          "ac": 0.0002471054072593638, 
+          "cm2": 10000.0, 
+          "ft2": 10.763910416709722, 
+          "ha": 0.0001, 
+          "km2": 1e-06, 
+          "m2": 1.0, 
+          "mi2": 3.86102158592535e-07, 
+          "nmi2": 2.9155334959812285e-07, 
+          "yd2": 1.1959900463010802
+        }
+      }
+    }, 
+    {
+      "entityId": "flowproperties/93a60a56-a3c8-21da-a746-0800200c9a66", 
+      "entityType": "quantity", 
+      "referenceUnit": "unitgroups/93a60a57-a3c8-20da-a746-0800200c9a66", 
+      "tags": {
+        "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).", 
+        "Name": "Area*time", 
+        "UnitConversion": {
+          "ft2*a": 10.763910416709722, 
+          "ha*a": 0.0001, 
+          "km2*a": 1e-06, 
+          "m2*a": 1.0, 
+          "m2*d": 365.00000365000005, 
+          "mi2*a": 3.8610216008328377e-07
+        }
+      }
+    }, 
+    {
+      "entityId": "flowproperties/93a60a56-a3c8-22da-a746-0800200c9a66", 
+      "entityType": "quantity", 
+      "referenceUnit": "unitgroups/93a60a57-a3c8-12da-a746-0800200c9a66", 
+      "tags": {
+        "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).", 
+        "Name": "Volume", 
+        "UnitConversion": {
+          "US fl oz": 33814.022701842994, 
+          "bbl": 6.289810770432105, 
+          "bl (Imp)": 6.110256897196883, 
+          "bl (US beer)": 8.521683850642152, 
+          "bl (US dry)": 8.648409373989104, 
+          "bl (US fl)": 8.38641436057614, 
+          "bsh (Imp)": 27.496156037385973, 
+          "bsh (US)": 28.377593255889252, 
+          "cu ft": 35.31466672148859, 
+          "fl oz (Imp)": 35195.07972785404, 
+          "gal (Imp)": 219.96924829908778, 
+          "gal (US dry)": 227.02074606721396, 
+          "gal (US fl)": 264.1720523581484, 
+          "gal (US liq)": 264.1720372841846, 
+          "l": 1000.0, 
+          "m3": 1.0, 
+          "ml": 1000000.0, 
+          "pt (Imp)": 1759.7539863927022, 
+          "pt (US dry)": 1816.1659685377117, 
+          "pt (US fl)": 2113.376418865187, 
+          "ul": 999999999.9999999
+        }
+      }
+    }, 
+    {
+      "entityId": "flowproperties/a819760a-7651-4579-a786-842f7575df60", 
+      "entityType": "quantity", 
+      "referenceUnit": "unitgroups/4af75db0-dc90-4097-8c21-ac6a2e0baf0c", 
+      "tags": {
+        "Comment": "", 
+        "Name": "Erosion Resistance (Occ.)", 
+        "UnitConversion": {
+          "kg": 1.0, 
+          "t": 1000.0
+        }
+      }
+    }, 
+    {
+      "entityId": "flowproperties/ac95ed26-5038-4862-8b82-94f1412875cd", 
+      "entityType": "quantity", 
+      "referenceUnit": "unitgroups/3dbb60e1-edde-49f7-b28d-f34b4af727b3", 
+      "tags": {
+        "Comment": "", 
+        "Name": "Physicochemical Filtration (Transf.)", 
+        "UnitConversion": {
+          "(cmol*m2)/kg": 1.0
+        }
+      }
+    }, 
+    {
+      "entityId": "flowproperties/e0d963f9-d6a4-42a5-90e9-fff8452aa2af", 
+      "entityType": "quantity", 
+      "referenceUnit": "unitgroups/59f6a0a2-731f-41c3-86df-d383dc673dfe", 
+      "tags": {
+        "Comment": "", 
+        "Name": "Mechanical Filtration (Occ.)", 
+        "UnitConversion": {
+          "cm*m3": 1.0
+        }
+      }
+    }, 
+    {
+      "entityId": "flowproperties/fd9a098b-253e-4f1e-986d-76a775c51722", 
+      "entityType": "quantity", 
+      "referenceUnit": "unitgroups/c28831de-8759-43da-98bd-05617cb1722d", 
+      "tags": {
+        "Comment": "", 
+        "Name": "Biotic Production (Transf.)", 
+        "UnitConversion": {
+          "kg/a": 1.0
+        }
+      }
+    }
+  ]
+}

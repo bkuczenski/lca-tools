@@ -205,7 +205,7 @@ class IlcdArchive(BasicInterface):
 
         unitconv = dict()
         for i in o['units'].getchildren():
-            unitconv[str(i['name'])] = float(i['meanValue'])
+            unitconv[str(i['name'])] = 1.0 / float(i['meanValue'])
         return ref_unit, unitconv
 
     def _create_quantity(self, filename):

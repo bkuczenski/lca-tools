@@ -1,7 +1,12 @@
 
 from lcatools.providers.ilcd import IlcdArchive
 from bs4 import BeautifulSoup
-from urllib.request import urlopen
+
+try:
+    from urllib.request import urlopen
+except ImportError:
+    from urllib2 import urlopen
+
 import re
 
 

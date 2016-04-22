@@ -24,7 +24,12 @@ from __future__ import print_function, unicode_literals
 
 import six
 
-from urllib.request import urlopen, urljoin
+try:
+    from urllib.request import urlopen, urljoin
+except ImportError:
+    from urllib2 import urlopen
+    from urlparse import urljoin
+
 from bs4 import BeautifulSoup
 import os
 import json

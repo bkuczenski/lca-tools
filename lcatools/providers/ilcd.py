@@ -33,6 +33,12 @@ typeDirs = {'Process': 'processes',
             'Contact': 'contacts'
             }
 
+elcd3_local_fallback = os.path.join(os.path.expanduser('~'), 'Dropbox', 'data',
+ 'ELCD', 'ELCD3.2.zip')
+
+
+elcd3_remote_fallback = "http://eplca.jrc.ec.europa.eu/ELCD3/resource/"
+
 
 def find_ns(nsmap, dtype):
     return next((k for k, v in nsmap.items() if re.search(dtype + '$', v)))
@@ -139,6 +145,14 @@ class IlcdArchive(BasicInterface):
         super(IlcdArchive, self).__init__(ref, quiet=quiet)
         self.internal_prefix = prefix
         self._archive = Archive(self.ref)
+
+        if not self._archive.OK:
+            print('Trying local ELCD reference')
+            self._archive = Archive(elcd3_local_fallback)
+        if not self._archive.OK:
+            print('Falling back to ELCD Remote Reference')
+            self._archive = Archive(elcd3_remote_fallback, query_string='format=xml')
+
         if self._archive.compressed or self._archive.remote:
             self._pathtype = posixpath
         else:
@@ -181,19 +195,21 @@ class IlcdArchive(BasicInterface):
         return child
 
     def _get_objectified_entity(self, filename):
-        return objectify.fromstring(self._archive.readfile(filename))
+        return objectify.fromstring(self._fetch_filename(filename))
 
     def objectify(self, uid, **kwargs):
         search_results = self.search_by_id(uid, **kwargs)
         return [self._get_objectified_entity(k) for k in search_results]
 
-    def _create_unit(self, filename):
+    def _create_unit(self, unit_ref):
         """
         UnitGroups aren't stored as full-fledged entities- they are stored as dicts inside quantities.
-        :param filename:
+        :param unit_ref:
         :return:
         """
-        o = self._get_objectified_entity(filename + '.xml')
+        dtype, uid = _extract_dtype(unit_ref, self._pathtype)
+        filename = self._build_entity_path(dtype, uid)
+        o = self._get_objectified_entity(filename)
 
         ns = find_ns(o.nsmap, 'UnitGroup')
 

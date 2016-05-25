@@ -353,10 +353,10 @@ class BasicInterface(object):
         return {
             'dataSourceType': self.__class__.__name__,
             'dataSourceReference': self.ref,
-            'processes': [p.serialize() for p in self.processes()],
-            'flows': [f.serialize() for f in self.flows()],
-            'quantities': [q.serialize() for q in self.quantities()],
-            'exchanges': [] if exchanges is False else [x.serialize() for x in self.exchanges()]
+            'processes': sorted([p.serialize() for p in self.processes()]),
+            'flows': sorted([f.serialize() for f in self.flows()]),
+            'quantities': sorted([q.serialize() for q in self.quantities()]),
+            'exchanges': [] if exchanges is False else sorted([x.serialize() for x in self.exchanges()])
         }
 
     def write_to_file(self, filename, gzip=False, **kwargs):

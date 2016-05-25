@@ -147,6 +147,16 @@ class LcEntity(object):
     def __str__(self):
         return 'LC %s: %s' % (self.entity_type, self._d['Name'])
 
+    def __eq__(self, other):
+        """
+        two entities are equal if their types, external references, and dictionaries are the same.
+        internal refs do not need to be equal; reference entities do not need to be equal
+        :return:
+        """
+        return (self._external_ref == other._external_ref and
+                self._d == other._d and
+                self.entity_type == other.entity_type)
+
 
 class LcProcess(LcEntity):
 

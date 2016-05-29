@@ -125,7 +125,7 @@ def from_json(fname, **kwargs):
     Routine to reconstruct a catalog from a json archive.
     :param fname: json file, optionally gzipped
     :param kwargs: TBD
-    :return: a subclass of BasicInterface
+    :return: a subclass of ArchiveInterface
     """
     if bool(re.search('\.gz$', fname)):
         if six.PY3:

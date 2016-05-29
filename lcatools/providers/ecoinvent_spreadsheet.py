@@ -2,7 +2,7 @@ from __future__ import print_function, unicode_literals
 
 import six
 
-from lcatools.interfaces import BasicInterface, to_uuid, uuid_regex
+from lcatools.interfaces import ArchiveInterface, to_uuid, uuid_regex
 from lcatools.entities import LcProcess, LcFlow, LcQuantity
 from lcatools.exchanges import Exchange
 
@@ -10,7 +10,7 @@ import pandas as pd
 import uuid
 
 
-class EcoinventSpreadsheet(BasicInterface):
+class EcoinventSpreadsheet(ArchiveInterface):
     """
     A class for implementing the basic interface based on the contents of an ecoinvent
     "activity overview" spreadsheet. Note the lack of specification for such a spreadsheet.

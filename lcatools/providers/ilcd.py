@@ -18,9 +18,10 @@ except ImportError:  # python2
 
 
 from lcatools.providers.archive import Archive
+from lcatools.providers.xml_widgets import *
 from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcUnit
 from lcatools.exchanges import Exchange
-from lcatools.interfaces import BasicInterface, uuid_regex
+from lcatools.interfaces import ArchiveInterface, uuid_regex
 
 import posixpath
 
@@ -60,30 +61,15 @@ def _extract_dtype(filename, pathtype=os.path):
     return dtype[0], uid
 
 
-def _find_tag(o, tag, ns=None):
-    """
-    Deals with the fuckin' ILCD namespace shit
-    :param o: objectified element
-    :param tag:
-    :return:
-    """
-    found = o.findall('.//{0}{1}'.format('{' + o.nsmap[ns] + '}', tag))
-    return [''] if len(found) == 0 else found
-
-
-def _find_common(o, tag):
-    return _find_tag(o, tag, ns='common')
-
-
 def get_flow_ref(exch, ns=None):
-    f_uuid = _find_tag(exch, 'referenceToFlowDataSet', ns=ns)[0].attrib['refObjectId']
-    f_uri = _find_tag(exch, 'referenceToFlowDataSet', ns=ns)[0].attrib['uri']
-    f_dir = _find_tag(exch, 'exchangeDirection', ns=ns)[0].text
+    f_uuid = find_tag(exch, 'referenceToFlowDataSet', ns=ns)[0].attrib['refObjectId']
+    f_uri = find_tag(exch, 'referenceToFlowDataSet', ns=ns)[0].attrib['uri']
+    f_dir = find_tag(exch, 'exchangeDirection', ns=ns)[0].text
     return f_uuid, f_uri, f_dir
 
 
 def get_reference_flow(process, ns=None):
-    try_ref = _find_tag(process, 'referenceToReferenceFlow', ns=ns)[0]
+    try_ref = find_tag(process, 'referenceToReferenceFlow', ns=ns)[0]
     if try_ref == '':
         return None, None, None  # multioutput, no specified reference
     else:
@@ -95,16 +81,16 @@ def get_reference_flow(process, ns=None):
 
 def get_reference_flow_property(flow, ns=None):
     # load or check the reference quantity
-    ref_to_ref = int(_find_tag(flow, 'referenceToReferenceFlowProperty', ns=ns)[0])
+    ref_to_ref = int(find_tag(flow, 'referenceToReferenceFlowProperty', ns=ns)[0])
     rfp = [i for i in flow['flowProperties'].getchildren()
            if int(i.attrib['dataSetInternalID']) == ref_to_ref][0]
-    rfp_uuid = _find_tag(rfp, 'referenceToFlowPropertyDataSet', ns=ns)[0].attrib['refObjectId']
-    rfp_uri = _find_tag(rfp, 'referenceToFlowPropertyDataSet', ns=ns)[0].attrib['uri']
+    rfp_uuid = find_tag(rfp, 'referenceToFlowPropertyDataSet', ns=ns)[0].attrib['refObjectId']
+    rfp_uri = find_tag(rfp, 'referenceToFlowPropertyDataSet', ns=ns)[0].attrib['uri']
     return rfp_uuid, rfp_uri
 
 
 def get_reference_unit_group(q, ns=None):
-    ref_to_ref = _find_tag(q, 'referenceToReferenceUnitGroup', ns=ns)[0]
+    ref_to_ref = find_tag(q, 'referenceToReferenceUnitGroup', ns=ns)[0]
     ug_uuid = ref_to_ref.attrib['refObjectId']
     ug_uri = ref_to_ref.attrib['uri']
     return ug_uuid, ug_uri
@@ -127,7 +113,7 @@ class IlcdEntity(object):
 '''
 
 
-class IlcdArchive(BasicInterface):
+class IlcdArchive(ArchiveInterface):
     """
     This class handles de-referencing for ILCD archives
     """
@@ -139,7 +125,7 @@ class IlcdArchive(BasicInterface):
         :param prefix: difference between the internal path (ref) and the ILCD base
           (note: for local archives, this defaults to 'ILCD'; for remote arcnives it
            defaults to empty)
-        :param quiet: forwarded to BasicInterface
+        :param quiet: forwarded to ArchiveInterface
         :return:
         """
         super(IlcdArchive, self).__init__(ref, quiet=quiet)
@@ -213,8 +199,8 @@ class IlcdArchive(BasicInterface):
 
         ns = find_ns(o.nsmap, 'UnitGroup')
 
-        u = str(_find_common(o, 'UUID')[0])
-        reference_unit = int(_find_tag(o, 'referenceToReferenceUnit', ns=ns)[0])
+        u = str(find_common(o, 'UUID')[0])
+        reference_unit = int(find_tag(o, 'referenceToReferenceUnit', ns=ns)[0])
         unitstring = str(o['units'].getchildren()[reference_unit]['name'])
         ref_unit = LcUnit(unitstring, unit_uuid=u)
         ref_unit.set_external_ref('%s/%s' % (typeDirs['UnitGroup'], u))
@@ -233,10 +219,10 @@ class IlcdArchive(BasicInterface):
         o = self._get_objectified_entity(filename)
         ns = find_ns(o.nsmap, 'FlowProperty')
 
-        u = str(_find_common(o, 'UUID')[0])
-        n = str(_find_common(o, 'name')[0])
+        u = str(find_common(o, 'UUID')[0])
+        n = str(find_common(o, 'name')[0])
 
-        c = str(_find_common(o, 'generalComment')[0])
+        c = str(find_common(o, 'generalComment')[0])
 
         ug, ug_uri = get_reference_unit_group(o, ns=ns)
 
@@ -253,7 +239,7 @@ class IlcdArchive(BasicInterface):
 
     @staticmethod
     def _create_dummy_flow_from_exch(uid, exch):
-        n = str(_find_common(exch, 'shortDescription')[0])
+        n = str(find_common(exch, 'shortDescription')[0])
         print('Creating DUMMY flow with name %s' % n)
         return LcFlow(uid, Name=n, Comment='Dummy flow (HTTP or XML error)')
 
@@ -267,19 +253,19 @@ class IlcdArchive(BasicInterface):
 
         ns = find_ns(o.nsmap, 'Flow')
 
-        u = str(_find_common(o, 'UUID')[0])
-        n = str(_find_tag(o, 'baseName', ns=ns)[0])
+        u = str(find_common(o, 'UUID')[0])
+        n = str(find_tag(o, 'baseName', ns=ns)[0])
 
         rfp, rfp_uri = get_reference_flow_property(o, ns=ns)
         q = self._check_or_retrieve_child(filename, rfp, rfp_uri)
 
-        c = str(_find_common(o, 'generalComment')[0])
+        c = str(find_common(o, 'generalComment')[0])
 
-        cas = str(_find_tag(o, 'CASNumber', ns=ns)[0])
+        cas = str(find_tag(o, 'CASNumber', ns=ns)[0])
 
-        cat = _find_common(o, 'category')
+        cat = find_common(o, 'category')
         if cat == ['']:
-            cat = _find_common(o, 'class')
+            cat = find_common(o, 'class')
         cat = [str(i) for i in cat]
 
         f = LcFlow(u, Name=n, ReferenceQuantity=q, CasNumber=cas, Comment=c, Compartment=cat)
@@ -316,17 +302,17 @@ class IlcdArchive(BasicInterface):
                 self[f_id] = f
             exch_list.append((f, f_dir))
 
-        u = str(_find_common(o, 'UUID')[0])
-        n = str(_find_tag(o, 'baseName', ns=ns)[0])
+        u = str(find_common(o, 'UUID')[0])
+        n = str(find_tag(o, 'baseName', ns=ns)[0])
 
-        g = _find_tag(o, 'locationOfOperationSupplyOrProduction', ns=ns)[0].attrib['location']
+        g = find_tag(o, 'locationOfOperationSupplyOrProduction', ns=ns)[0].attrib['location']
 
-        stt = "interval(%s, %s)" % (_find_common(o, 'referenceYear')[0],
-                                    _find_common(o, 'dataSetValidUntil')[0])
+        stt = "interval(%s, %s)" % (find_common(o, 'referenceYear')[0],
+                                    find_common(o, 'dataSetValidUntil')[0])
 
-        c = str(_find_common(o, 'generalComment')[0])
+        c = str(find_common(o, 'generalComment')[0])
 
-        cls = [str(i) for i in _find_common(o, 'class')]
+        cls = [str(i) for i in find_common(o, 'class')]
 
         p = LcProcess(u, Name=n, Comment=c, SpatialScope=g, TemporalScope=stt,
                       Classifications=cls)

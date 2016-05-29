@@ -12,50 +12,34 @@ from __future__ import print_function, unicode_literals
 
 import six
 
-if six.PY2:
-    bytes = str
-    str = unicode
-
 import os
-import re
 
 import uuid
 
 from lxml import objectify
 
-from lcatools.interfaces import BasicInterface, to_uuid
+from lcatools.interfaces import ArchiveInterface, to_uuid
 from lcatools.providers.archive import Archive
 from lcatools.entities import LcQuantity, LcFlow, LcProcess
-from lcatools.exchanges import Exchange
+from lcatools.exchanges import Exchange, DirectionlessExchangeError
 
+from lcatools.providers import tail
+from lcatools.providers.xml_widgets import find_tag
 
-tail = re.compile('/([^/]+)$')
+if six.PY2:
+    bytes = str
+    str = unicode
 
 
 def not_none(x):
     return x if x is not None else ''
 
 
-def _find_tag(o, tag, ns=None):
-    """
-    Deals with the fuckin' ILCD namespace shit
-    :param o: objectified element
-    :param tag:
-    :return:
-    """
-    found = o.findall('.//{0}{1}'.format('{' + o.nsmap[ns] + '}', tag))
-    return [''] if len(found) == 0 else found
-
-
 class EcospoldVersionError(Exception):
     pass
 
 
-class DirectionlessExchangeError(Exception):
-    pass
-
-
-class EcospoldV1Archive(BasicInterface):
+class EcospoldV1Archive(ArchiveInterface):
     """
     Create an Ecospold Archive object from a path.  By default, assumes the path points to a literal
     .7z file, of the type that one can download from the ecoinvent website.  Creates an accessor for
@@ -102,7 +86,7 @@ class EcospoldV1Archive(BasicInterface):
             path = os.path.join(self.internal_prefix, path)
         return path
 
-    def list_objects(self):
+    def list_datasets(self):
         assert self._archive.remote is False, "Cannot list objects for remote archives"
         return self._archive.listfiles(in_prefix=self._build_prefix())
 
@@ -195,8 +179,8 @@ class EcospoldV1Archive(BasicInterface):
         else:
             # create new process
             g = p_meta.geography.get('location')
-            stt = 'interval(%s, %s)' % (str(_find_tag(p_meta, 'startDate')[0]),
-                                        str(_find_tag(p_meta, 'endDate')[0]))
+            stt = 'interval(%s, %s)' % (str(find_tag(p_meta, 'startDate')[0]),
+                                        str(find_tag(p_meta, 'endDate')[0]))
 
             c = p_meta.referenceFunction.get('generalComment')
 
@@ -231,7 +215,7 @@ class EcospoldV1Archive(BasicInterface):
         Instead, just load all the processes at once.
         :return:
         """
-        for k in self.list_objects():
+        for k in self.list_datasets():
             self._create_process(k)
         self.check_counter('quantity')
         self.check_counter('flow')

@@ -3,6 +3,10 @@ from lcatools.entities import LcProcess, LcFlow, LcQuantity
 directions = ('Input', 'Output')
 
 
+class DirectionlessExchangeError(Exception):
+    pass
+
+
 class Exchange(object):
     """
     An exchange is an affiliation of a process, a flow, and a direction. An exchange does
@@ -35,6 +39,8 @@ class Exchange(object):
         else:
             assert isinstance(quantity, LcQuantity), "'quantity' must be an LcQuantity or None!"
             self.quantity = quantity
+
+        self.value = None
 
     def __hash__(self):
         return hash((self.process.get_uuid(), self.flow.get_uuid(), self.direction))

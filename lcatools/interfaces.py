@@ -15,6 +15,7 @@ import json
 import gzip as gz
 from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcEntity, LcUnit
 from lcatools.exchanges import Exchange
+from lcatools.characterizations import Characterization
 from collections import defaultdict
 
 import pandas as pd
@@ -41,7 +42,7 @@ def to_uuid(_in):
     return _out
 
 
-class BasicInterface(object):
+class ArchiveInterface(object):
     """
     An abstract interface has nothing but a reference
 
@@ -77,10 +78,13 @@ class BasicInterface(object):
         else:
             raise ValueError('Entity fails validation.')
 
-    def check_counter(self, entity_type):
-        print('%d new %s entities added (%d total)' % (self._counter[entity_type], entity_type,
-                                                       len(self._entities_by_type(entity_type))))
-        self._counter[entity_type] = 0
+    def check_counter(self, entity_type=None):
+        if entity_type is None:
+            [self.check_counter(entity_type=k) for k in ('process', 'flow', 'quantity')]
+        else:
+            print('%d new %s entities added (%d total)' % (self._counter[entity_type], entity_type,
+                                                           len(self._entities_by_type(entity_type))))
+            self._counter[entity_type] = 0
 
     @classmethod
     def _create_unit(cls, unitstring):
@@ -223,30 +227,6 @@ class BasicInterface(object):
         # fetch
         return self._fetch(uid, **kwargs)
 
-    def list_properties(self, entity):
-        """
-        List of properties of a given entity
-        :param entity:
-        :return:
-        """
-        e = self._get_entity(entity)
-        if e is not None:
-            return e.properties()
-        return e
-
-    def get_properties(self, entity):
-        """
-        dict of properties and values for a given entity
-        :param entity: a uuid
-        :return:
-        """
-        d = dict()
-        e = self._get_entity(entity)
-        if e is not None:
-            for i in e.properties():
-                d[i] = e[i]
-        return d
-
     def validate_entity_list(self):
         count = 0
         for k, v in self._entities.items():
@@ -326,6 +306,13 @@ class BasicInterface(object):
         else:
             return x
 
+    def characterizations(self, dataframe=False):
+        x = [ex for ex in self._characterizations]
+        if dataframe:
+            return self._to_pandas(x, Characterization)
+        else:
+            return x
+
     def _quantities_with_unit(self, unitstring):
         """
         Generates a list of quantities that convert to/from the supplied unit string.
@@ -349,14 +336,17 @@ class BasicInterface(object):
         """
         return next((q for q in self._quantities_with_unit(unitstring)), None)
 
-    def serialize(self, exchanges=False):
+    def serialize(self, exchanges=False, characterizations=False):
         return {
             'dataSourceType': self.__class__.__name__,
             'dataSourceReference': self.ref,
-            'processes': sorted([p.serialize() for p in self.processes()]),
-            'flows': sorted([f.serialize() for f in self.flows()]),
-            'quantities': sorted([q.serialize() for q in self.quantities()]),
-            'exchanges': [] if exchanges is False else sorted([x.serialize() for x in self.exchanges()])
+            'processes': sorted([p.serialize() for p in self.processes()], key=lambda x: x['entityId']),
+            'flows': sorted([f.serialize() for f in self.flows()], key=lambda x: x['entityId']),
+            'quantities': sorted([q.serialize() for q in self.quantities()], key=lambda x: x['entityId']),
+            'exchanges': [] if exchanges is False else sorted([x.serialize() for x in self.exchanges()],
+                                                              key=lambda x: x['flow']),
+            'characterizations': [] if characterizations is False else
+            sorted([x.serialize() for x in self.characterizations()], key=lambda x: x['flow'])
         }
 
     def write_to_file(self, filename, gzip=False, **kwargs):
@@ -375,7 +365,20 @@ class BasicInterface(object):
                 json.dump(s, fp, indent=2, sort_keys=True)
 
 
-class ProcessFlow(BasicInterface):
+class CatalogInterface(object):
+    """
+    A catalog is a container for a set of distinct archives, and provides useful services for accessing information
+    within them.  Catalog functionality is TODO but will include:
+
+     * maintain a dict of archives with convenient keys (default is archive.ref)
+     * retrieve entity by UUID or by external ref
+     * store synonyms
+    """
+
+    pass
+
+
+class ProcessFlow(ArchiveInterface):
     """
 
     """
@@ -387,7 +390,7 @@ class ProcessFlow(BasicInterface):
         return sorted(r)
 
 
-class FlowQuantity(BasicInterface):
+class FlowQuantity(ArchiveInterface):
     """
 
     """

@@ -86,6 +86,18 @@ class LcEntity(object):
     def properties(self):
         return [i for i in self._d.keys() if i not in self.signature_fields]
 
+    def get_properties(self):
+        """
+        dict of properties and values for a given entity
+        :param entity: a uuid
+        :return:
+        """
+        d = dict()
+        for i in self.properties():
+            d[i] = self._d[i]
+        return d
+
+
     def validate(self, ext_uuid):
         if not isinstance(ext_uuid, uuid.UUID):
             ext_uuid = uuid.UUID(ext_uuid)

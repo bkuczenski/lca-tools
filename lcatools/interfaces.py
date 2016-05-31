@@ -15,7 +15,7 @@ import json
 import gzip as gz
 from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcEntity, LcUnit
 from lcatools.exchanges import Exchange
-from lcatools.characterizations import Characterization
+from lcatools.characterizations import CharacterizationSet, Characterization
 from collections import defaultdict
 
 import pandas as pd
@@ -48,32 +48,36 @@ class ArchiveInterface(object):
 
     """
 
-    def __init__(self, ref, quiet=False):
+    def __init__(self, ref, quiet=False, upstream=None):
         self.ref = ref
         self._entities = {}  # uuid-indexed list of known entities
         self._exchanges = set()  # set of exchanges among the entities
-        self._characterizations = set()  # set of flow characterizations among the entities
+        self._characterizations = CharacterizationSet()  # set of flow characterizations among the entities
 
         self._quiet = quiet  # whether to print out a message every time a new entity is added / deleted / modified
 
         self._counter = defaultdict(int)
+        if upstream is not None:
+            assert isinstance(upstream, ArchiveInterface)
+        self._upstream = upstream
 
     def __getitem__(self, item):
         return self._get_entity(item)
 
-    def __setitem__(self, key, value):
-        u = to_uuid(key)
+    def add(self, entity):
+        key = entity.get_external_ref()
+        u = self.key_to_id(key)
         if u is None:
             raise ValueError('Key must be a valid UUID')
 
         if u in self._entities:
             raise KeyError('Entity already exists')
 
-        if value.validate(u):
+        if entity.validate(u):
             if self._quiet is False:
-                print('Adding %s entity with %s: %s' % (value.entity_type, u, value['Name']))
-            self._entities[u] = value
-            self._counter[value.entity_type] += 1
+                print('Adding %s entity with %s: %s' % (entity.entity_type, u, entity['Name']))
+            self._entities[u] = entity
+            self._counter[entity.entity_type] += 1
 
         else:
             raise ValueError('Entity fails validation.')
@@ -128,7 +132,7 @@ class ArchiveInterface(object):
             raise TypeError('Unknown entity type %s' % e['entityType'])
 
         entity.set_external_ref(e['entityId'])
-        self[uid] = entity
+        self.add(entity)
 
     def _add_exchange(self, exchange):
         if exchange.entity_type == 'exchange':
@@ -149,20 +153,24 @@ class ArchiveInterface(object):
         if characterization.entity_type == 'characterization':
             self._characterizations.add(characterization)
 
-    def _get_entity(self, entity):
+    def _get_entity(self, key):
         """
         Retrieve an exact entity by UUID specification- either a uuid.UUID or a string that can be
         converted to a valid UUID.
 
         If the UUID is not found, returns None. handle this case in client code/subclass.
-        :param entity: something that corresponds to a literal UUID
+        :param key: something that maps to a literal UUID via key_to_id
         :return: the LcEntity or None
         """
-        if entity is None:
+        if key is None:
             return None
-        entity = self.key_to_id(entity)
+        entity = self.key_to_id(key)
         if entity in self._entities:
-            return self._entities[entity]
+            e = self._entities[entity]
+            e['origin'] = self.ref
+            return e
+        elif self._upstream is not None:
+            return self._upstream[key]
         else:
             return None
 
@@ -186,12 +194,15 @@ class ArchiveInterface(object):
                           if bool(re.search(uid, str(k), flags=re.IGNORECASE))]
         else:
             result_set = [v for v in self._entities.values()]
-
-        return self._narrow_search(result_set, **kwargs)
+        if len(result_set) > 0:
+            return self._narrow_search(result_set, **kwargs)
+        elif self._upstream is not None:
+            return self._upstream.search(*args, **kwargs)
 
     def _fetch(self, entity, **kwargs):
         """
-        Dummy function to fetch from archive. MUST be overridden
+        Dummy function to fetch from archive. MUST be overridden.
+        Can't fetch from upstream.
         :param entity:
         :return:
         """
@@ -212,7 +223,7 @@ class ArchiveInterface(object):
         else:
             uid = None
 
-        entity = self._get_entity(uid)
+        entity = self._get_entity(uid)  # this checks upstream if it exists
         if entity is not None:
             # retrieve
             return entity
@@ -378,20 +389,36 @@ class CatalogInterface(object):
     pass
 
 
-class ProcessFlow(ArchiveInterface):
+class ProcessFlowInterface():
     """
 
-    """
     def list_processes(self):
         r = []
-        for k, v in self._entities.items():
+        for k, v in self.catalogs.items():
             if v['EntityType'] == 'process':
                 r.append(v.get_signature())
         return sorted(r)
-
-
-class FlowQuantity(ArchiveInterface):
     """
+
+
+class FlowQuantityInterface(object):
+    """
+    A Flow-Quantity service stores linked observations of flows and quantities with "factors" which report the
+     magnitude of the quantity, in proportion to the flow's reference quantity (which is implicitly mass in
+     the ecoinvent LCIA spreadsheet).
+
+    The flow-quantity interface allows the following:
+
+      * add_cf : register a link between a flow and a quantity having a particular factor
+
+      * lookup_cf : specify characteristics to match and return a result set
+
+      *
+
+      * report characterizations that link one flow with one quantity.
+
+
+
 
     """
     pass

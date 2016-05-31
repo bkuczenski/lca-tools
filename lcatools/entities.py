@@ -16,7 +16,7 @@ class LcEntity(object):
     """
     _pre_fields = ['EntityType', 'Name']
     _new_fields = []
-    _ref_field = []
+    _ref_field = ''
     _post_fields = ['Comment']
 
     def __init__(self, entity_type, entity_uuid, **kwargs):
@@ -97,7 +97,6 @@ class LcEntity(object):
             d[i] = self._d[i]
         return d
 
-
     def validate(self, ext_uuid):
         if not isinstance(ext_uuid, uuid.UUID):
             ext_uuid = uuid.UUID(ext_uuid)
@@ -140,7 +139,7 @@ class LcEntity(object):
         }
 
     def __getitem__(self, item):
-        if item == self._ref_field:
+        if item.lower() == self._ref_field.lower():
             return self.reference_entity
         elif item == 'EntityType':
             return self.entity_type

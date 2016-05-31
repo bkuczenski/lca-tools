@@ -35,7 +35,7 @@ typeDirs = {'Process': 'processes',
             }
 
 elcd3_local_fallback = os.path.join(os.path.expanduser('~'), 'Dropbox', 'data',
- 'ELCD', 'ELCD3.2.zip')
+                                    'ELCD', 'ELCD3.2.zip')
 
 
 elcd3_remote_fallback = "http://eplca.jrc.ec.europa.eu/ELCD3/resource/"
@@ -233,7 +233,7 @@ class IlcdArchive(ArchiveInterface):
         q = LcQuantity(u, Name=n, ReferenceUnit=refunit, UnitConversion=unitconv, Comment=c)
         q.set_external_ref('%s/%s' % (typeDirs['FlowProperty'], u))
 
-        self[u] = q
+        self.add(q)
 
         return q
 
@@ -271,7 +271,7 @@ class IlcdArchive(ArchiveInterface):
         f = LcFlow(u, Name=n, ReferenceQuantity=q, CasNumber=cas, Comment=c, Compartment=cat)
         f.set_external_ref('%s/%s' % (typeDirs['Flow'], u))
 
-        self[u] = f
+        self.add(f)
         return f
 
     def _create_process(self, filename):
@@ -299,7 +299,7 @@ class IlcdArchive(ArchiveInterface):
                 f = self._check_or_retrieve_child(filename, f_id, f_uri)
             except (HTTPError, XMLSyntaxError, KeyError):
                 f = self._create_dummy_flow_from_exch(f_id, exch)
-                self[f_id] = f
+                self.add(f)
             exch_list.append((f, f_dir))
 
         u = str(find_common(o, 'UUID')[0])
@@ -322,7 +322,7 @@ class IlcdArchive(ArchiveInterface):
         if rf is not None:
             p['ReferenceExchange'] = Exchange(p, self[rf], rf_dir)
 
-        self[u] = p
+        self.add(p)
 
         for flow, f_dir in exch_list:
             self._add_exchange(Exchange(p, flow, f_dir))

@@ -1,13 +1,3 @@
-class _LiterateFloatDescriptor(object):
-    def __init__(self, name):
-        self.name = name
-
-    def __set__(self, instance, value):
-        instance._d[self.name] = value
-
-    def __get__(self, instance, owner):
-        return instance._d[self.name]
-
 
 class LiterateFloat(float):
     """
@@ -16,18 +6,17 @@ class LiterateFloat(float):
     cmutel's uncertainty dictionaries, or tags describing the values, or really anything else.
 
     Not sure this will ultimately be useful, but here's to trying new things.
+
+    note: serialize as floats- literates are well-read but not outspoken
     """
     def __new__(cls, value, **kwargs):
-        return float.__new__(cls, **kwargs)
+        return float.__new__(cls, value)
 
     def __init__(self, value, **kwargs):
-        super(LiterateFloat, self).__init__(value)
+        float.__init__(value)
         self._d = dict()
-        for k, v in kwargs:
+        for k, v in kwargs.items():
             self._d[k] = v
-
-        self.mean = _LiterateFloatDescriptor('mean')
-        self.stdev = _LiterateFloatDescriptor('stdev')
 
     def __setitem__(self, key, value):
         self._d[key] = value
@@ -35,7 +24,15 @@ class LiterateFloat(float):
     def __getitem__(self, item):
         return self._d[item]
 
-    """
+    def keys(self):
+        return self._d.keys()
+
+    def dict(self):
+        return self._d
+
+    def __delitem__(self, key):
+        del self._d[key]
+
     @property
     def mean(self):
         if 'mean' in self._d:
@@ -57,4 +54,3 @@ class LiterateFloat(float):
     @stdev.setter
     def stdev(self, value):
         self._d['stdev'] = value
-    """

@@ -9,8 +9,6 @@ import six
 import os
 import re
 
-import uuid
-
 from lxml import objectify
 from time import time
 
@@ -41,20 +39,16 @@ class EcospoldV2Archive(ArchiveInterface):
     nsmap = 'http://www.EcoInvent.org/EcoSpold02'  # only valid for v1 ecospold files
     spold_version = tail.search(nsmap).groups()[0]
 
-    def __init__(self, ref, prefix=None, ns_uuid=None, quiet=True):
+    def __init__(self, ref, prefix=None, **kwargs):
         """
         Just instantiates the parent class.
         :param ref: just a reference
         :param prefix: difference between the internal path (ref) and the ILCD base
         :return:
         """
-        super(EcospoldV2Archive, self).__init__(ref, quiet=quiet)
+        super(EcospoldV2Archive, self).__init__(ref, **kwargs)
         self.internal_prefix = prefix
         self._archive = Archive(self.ref)
-
-        # internal namespace UUID for generating keys
-        ns_uuid = to_uuid(ns_uuid)
-        self._ns_uuid = uuid.uuid4() if ns_uuid is None else ns_uuid
 
     # no need for key_to_id - keys in ecospold are uuids
     def _prefix(self, filename):
@@ -104,7 +98,7 @@ class EcospoldV2Archive(ArchiveInterface):
 
             q = LcQuantity(unit_uuid, Name='EcoSpold Quantity %s' % unitstring, ReferenceUnit=ref_unit,
                            Comment=self.spold_version)
-            self[unit_uuid] = q
+            self.add(q)
         else:
             q = try_q
 
@@ -120,9 +114,9 @@ class EcospoldV2Archive(ArchiveInterface):
     @staticmethod
     def _cat_to_text(i):
         if isinstance(i, objectify.ObjectifiedElement):
-            return ' '.join([i.compartment.text, i.subcompartment.text])
+            return [i.compartment.text, i.subcompartment.text]
         else:
-            return ''
+            return []
 
     def _create_flow(self, exchange):
         if 'intermediate' in exchange.tag:
@@ -130,7 +124,7 @@ class EcospoldV2Archive(ArchiveInterface):
             cat = [self._cls_to_text(exchange.classification)]
         elif 'elementary' in exchange.tag:
             uid = exchange.attrib['elementaryExchangeId']
-            cat = [self._cat_to_text(exchange.compartment)]
+            cat = self._cat_to_text(exchange.compartment)
         else:
             raise AttributeError('No exchange type found for id %s' % exchange.attrib['id'])
 
@@ -148,7 +142,7 @@ class EcospoldV2Archive(ArchiveInterface):
         c = 'EcoSpold02 Flow'
 
         f = LcFlow(uid, Name=n, ReferenceQuantity=q, CasNumber=cas, Comment=c, Compartment=cat)
-        self[uid] = f
+        self.add(f)
 
         return f
 
@@ -210,7 +204,7 @@ class EcospoldV2Archive(ArchiveInterface):
             if len(rf) == 1:
                 p['ReferenceExchange'] = Exchange(p, rf[0], 'Output')
 
-        self[u] = p
+        self.add(p)
 
         for flow, f_dir in flowlist:
             self._add_exchange(Exchange(p, flow, f_dir))
@@ -250,5 +244,4 @@ class EcospoldV2Archive(ArchiveInterface):
         j = super(EcospoldV2Archive, self).serialize(**kwargs)
         if self.internal_prefix is not None:
             j['prefix'] = self.internal_prefix
-        j['nsUuid'] = str(self._ns_uuid)
         return j

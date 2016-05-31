@@ -14,22 +14,15 @@ import six
 
 import os
 
-import uuid
-
 from lxml import objectify
 
-from lcatools.interfaces import ArchiveInterface, to_uuid
+from lcatools.providers.base import NsUuidArchive
 from lcatools.providers.archive import Archive
 from lcatools.entities import LcQuantity, LcFlow, LcProcess
 from lcatools.exchanges import Exchange, DirectionlessExchangeError
 
 from lcatools.providers import tail
 from lcatools.providers.xml_widgets import find_tag
-
-if six.PY2:
-    bytes = str
-    str = unicode
-
 
 def not_none(x):
     return x if x is not None else ''
@@ -39,7 +32,7 @@ class EcospoldVersionError(Exception):
     pass
 
 
-class EcospoldV1Archive(ArchiveInterface):
+class EcospoldV1Archive(NsUuidArchive):
     """
     Create an Ecospold Archive object from a path.  By default, assumes the path points to a literal
     .7z file, of the type that one can download from the ecoinvent website.  Creates an accessor for
@@ -49,36 +42,16 @@ class EcospoldV1Archive(ArchiveInterface):
     nsmap = 'http://www.EcoInvent.org/EcoSpold01'  # only valid for v1 ecospold files
     spold_version = tail.search(nsmap).groups()[0]
 
-    def __init__(self, ref, prefix=None, ns_uuid=None, quiet=True):
+    def __init__(self, ref, prefix=None, **kwargs):
         """
         Just instantiates the parent class.
         :param ref: just a reference
         :param prefix: difference between the internal path (ref) and the ILCD base
         :return:
         """
-        super(EcospoldV1Archive, self).__init__(ref, quiet=quiet)
+        super(EcospoldV1Archive, self).__init__(ref, **kwargs)
         self.internal_prefix = prefix
         self._archive = Archive(self.ref)
-
-        # internal namespace UUID for generating keys
-        ns_uuid = to_uuid(ns_uuid)
-        self._ns_uuid = uuid.uuid4() if ns_uuid is None else ns_uuid
-
-    def key_to_id(self, key):
-        """
-        Converts Ecospold01 "number" attributes to UUIDs using the internal UUID namespace.
-        :param key:
-        :return:
-        """
-        if isinstance(key, int):
-            key = str(key)
-        u = to_uuid(key)
-        if u is not None:
-            return u
-        if six.PY2:
-            return uuid.uuid3(self._ns_uuid, key.encode('utf-8'))
-        else:
-            return uuid.uuid3(self._ns_uuid, key)
 
     def _build_prefix(self):
         path = ''
@@ -111,7 +84,7 @@ class EcospoldV1Archive(ArchiveInterface):
 
             q = LcQuantity.new('EcoSpold Quantity %s' % unitstring, ref_unit, Comment=self.spold_version)
             q.set_external_ref(unitstring)
-            self[q.get_uuid()] = q
+            self.add(q)
         else:
             q = try_q
 
@@ -125,8 +98,9 @@ class EcospoldV1Archive(ArchiveInterface):
         """
         number = int(exch.get('number'))
         uid = self.key_to_id(number)
-        if uid in self._entities:
-            f = self[uid]
+        try_f = self[uid]
+        if try_f is not None:
+            f = try_f
             assert f.entity_type == 'flow', "Expected flow, found %s" % f.entity_type
 
         else:
@@ -137,9 +111,9 @@ class EcospoldV1Archive(ArchiveInterface):
             cas = not_none(exch.get("CASNumber"))
             cat = [exch.get('category'), exch.get('subCategory')]
 
-            f = LcFlow(uid, Name=n, ReferenceQuantity=q, CasNumber=cas, Comment=c, Compartment=cat)
+            f = LcFlow(uid, Name=n, referenceQuantity=q, CasNumber=cas, Comment=c, Compartment=cat)
             f.set_external_ref(number)
-            self[uid] = f
+            self.add(f)
 
         return f
 
@@ -172,8 +146,9 @@ class EcospoldV1Archive(ArchiveInterface):
 
         u = self.key_to_id(n)
 
-        if u in self._entities:
-            p = self[u]
+        try_p = self[u]
+        if try_p is not None:
+            p = try_p
             assert p.entity_type == 'process', "Expected process, found %s" % p.entity_type
 
         else:
@@ -190,9 +165,8 @@ class EcospoldV1Archive(ArchiveInterface):
             p.set_external_ref(n)
 
             if rf is not None:
-                p['ReferenceExchange'] = Exchange(p, rf, 'Output')
-
-            self[u] = p
+                p['referenceExchange'] = Exchange(p, rf, 'Output')
+            self.add(p)
 
         for flow, f_dir in flowlist:
             self._add_exchange(Exchange(p, flow, f_dir))
@@ -225,5 +199,4 @@ class EcospoldV1Archive(ArchiveInterface):
         j = super(EcospoldV1Archive, self).serialize(**kwargs)
         if self.internal_prefix is not None:
             j['prefix'] = self.internal_prefix
-        j['nsUuid'] = str(self._ns_uuid)
         return j

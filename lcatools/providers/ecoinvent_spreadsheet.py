@@ -1,8 +1,6 @@
 from __future__ import print_function, unicode_literals
 
-import six
-
-from lcatools.interfaces import ArchiveInterface, to_uuid, uuid_regex
+from lcatools.providers.base import NsUuidArchive
 from lcatools.entities import LcProcess, LcFlow, LcQuantity
 from lcatools.exchanges import Exchange
 
@@ -10,7 +8,7 @@ import pandas as pd
 import uuid
 
 
-class EcoinventSpreadsheet(ArchiveInterface):
+class EcoinventSpreadsheet(NsUuidArchive):
     """
     A class for implementing the basic interface based on the contents of an ecoinvent
     "activity overview" spreadsheet. Note the lack of specification for such a spreadsheet.
@@ -20,14 +18,16 @@ class EcoinventSpreadsheet(ArchiveInterface):
         print('Reading %s ...' % sheetname)
         return pd.read_excel(self.ref, sheetname=sheetname).fillna('')
 
-    def __init__(self, ref, version='Unspecified', internal=False, ns_uuid=None, quiet=True):
-        super(EcoinventSpreadsheet, self).__init__(ref, quiet=quiet)
+    def __init__(self, ref, version='Unspecified', internal=False, **kwargs):
+        """
+        :param ref:
+        :param version:
+        :param internal:
+        :param kwargs: quiet, upstream
+        """
+        super(EcoinventSpreadsheet, self).__init__(ref, **kwargs)
         self.version = version
         self.internal = internal
-
-        # internal namespace UUID for generating keys
-        ns_uuid = to_uuid(ns_uuid)
-        self._ns_uuid = uuid.uuid4() if ns_uuid is None else ns_uuid
 
     def _create_quantity(self, unitstring):
         """
@@ -43,7 +43,7 @@ class EcoinventSpreadsheet(ArchiveInterface):
 
             q = LcQuantity.new('Ecoinvent Spreadsheet Quantity %s' % unitstring, ref_unit, Comment=self.version)
             q.set_external_ref(unitstring)
-            self[q.get_uuid()] = q
+            self.add(q)
         else:
             q = try_q
 
@@ -55,15 +55,6 @@ class EcoinventSpreadsheet(ArchiveInterface):
             set(_intermediate[unitname].unique().tolist()))
         for u in units:
             self._create_quantity(u)
-
-    def key_to_id(self, key):
-        u = to_uuid(key)
-        if u is not None:
-            return u
-        if six.PY2:
-            return uuid.uuid3(self._ns_uuid, key.encode('utf-8'))
-        else:
-            return uuid.uuid3(self._ns_uuid, key)
 
     @staticmethod
     def _elementary_key(row):
@@ -78,14 +69,14 @@ class EcoinventSpreadsheet(ArchiveInterface):
         for index, row in _intermediate.iterrows():
             n = row['name']
             u = self.key_to_id(n)
-            if u in self._entities:
+            if self[u] is not None:
                 continue
             q = self.quantity_with_unit(row['unitName'])
             f = LcFlow(u, Name=n, CasNumber=row['CAS'],
                        Compartment=['Intermediate flow'], ReferenceQuantity=q, Comment=row['comment'],
                        Synonyms=row['synonyms'])
             f.set_external_ref(n)
-            self[u] = f
+            self.add(f)
 
     def _external_elementary(self, _elementary):
         """
@@ -95,16 +86,16 @@ class EcoinventSpreadsheet(ArchiveInterface):
         for index, row in _elementary.iterrows():
             key = self._elementary_key(row)
             u = self.key_to_id(key)
-            if u in self._entities:
+            if self[u] is not None:
                 continue
             q = self.quantity_with_unit(row['unitName'])
             cat = [row['compartment'], row['subcompartment']]
             f = LcFlow(u, Name=row['name'], CasNumber=row['casNumber'],
-                       Compartment=cat, ReferenceQuantity=q, Comment='',
+                       Compartment=cat, referenceQuantity=q, Comment='',
                        Formula=row['formula'],
                        Synonyms=row['synonyms'])
             f.set_external_ref(key)
-            self[u] = f
+            self.add(f)
 
     def _internal_intermediate(self, _intermediate):
         """
@@ -117,13 +108,13 @@ class EcoinventSpreadsheet(ArchiveInterface):
         for index, row in inter.iterrows():
             n = row['name']
             u = self.key_to_id(n)
-            if u in self._entities:
+            if self[u] is not None:
                 continue
             q = self.quantity_with_unit(row['unit'])
-            f = LcFlow(u, Name=n, ReferenceQuantity=q, Compartment=['Intermediate flow'],
+            f = LcFlow(u, Name=n, referenceQuantity=q, Compartment=['Intermediate flow'],
                        CasNumber='', Comment='')
             f.set_external_ref(n)
-            self[u] = f
+            self.add(f)
 
     def _internal_elementary(self, _elementary):
         """
@@ -137,15 +128,15 @@ class EcoinventSpreadsheet(ArchiveInterface):
         for index, row in int_elem.iterrows():
             key = self._elementary_key(row)
             u = self.key_to_id(key)
-            if u in self._entities:
+            if self[u] is not None:
                 continue
             n = row['name']
             cat = [row['compartment'], row['subcompartment']]
             q = self.quantity_with_unit(row['unit'])
-            f = LcFlow(u, Name=n, ReferenceQuantity=q, Compartment=cat,
+            f = LcFlow(u, Name=n, referenceQuantity=q, Compartment=cat,
                        CasNumber=row['CAS'], Comment='', Formula=row['formula'])
             f.set_external_ref(key)
-            self[u] = f
+            self.add(f)
 
     def load_activities(self):
         print('Handling activities...')
@@ -158,7 +149,7 @@ class EcoinventSpreadsheet(ArchiveInterface):
 
             u = uuid.UUID(u)
 
-            if u not in self._entities:
+            if self[u] is not None:
                 """
                 create the process
                 """
@@ -187,7 +178,7 @@ class EcoinventSpreadsheet(ArchiveInterface):
                     p['IsicNumber'] = row['ISIC number']
                 except KeyError:
                     pass
-                self[u] = p
+                self.add(p)
 
             """
             Now, handle the flows
@@ -203,7 +194,7 @@ class EcoinventSpreadsheet(ArchiveInterface):
             exch = Exchange(self[u], exch_flow, 'Output')
 
             if row[ref_check] == 'ReferenceProduct':
-                self[u]['ReferenceExchange'] = exch
+                self[u]['referenceExchange'] = exch
 
             self._add_exchange(exch)
 
@@ -229,5 +220,4 @@ class EcoinventSpreadsheet(ArchiveInterface):
         j = super(EcoinventSpreadsheet, self).serialize(**kwargs)
         j['version'] = self.version
         j['internal'] = self.internal
-        j['nsUuid'] = str(self._ns_uuid)
         return j

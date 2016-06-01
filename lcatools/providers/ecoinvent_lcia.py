@@ -5,7 +5,7 @@ At this point I am really straight repeating a lot of Chris's work. but who can 
 from __future__ import print_function, unicode_literals
 
 from lcatools.providers.base import NsUuidArchive
-from lcatools.characterizations import Characterization
+from lcatools.characterizations import CharacterizationFactor
 from lcatools.literate_float import LiterateFloat
 
 from lcatools.entities import LcFlow, LcQuantity
@@ -68,6 +68,16 @@ class EcoinventLcia(NsUuidArchive):
         self.add(mass)
         self._mass = mass
 
+        self._upstream_hash = dict()  # for lookup use later
+        if self._upstream is not None:
+            # create a dict of upstream flows
+            for i in self._upstream.flows():
+                up_key = self._upstream_flow_key(i)
+                if up_key in self._upstream_hash:
+                    print('!!multiple upstream matches for %s!!' % up_key)
+                else:
+                    self._upstream_hash[self._upstream_flow_key(i)] = i
+
     @staticmethod
     def _quantity_key(row):
         return ', '.join([row[k] for k in ('method', 'category', 'indicator')])
@@ -75,6 +85,10 @@ class EcoinventLcia(NsUuidArchive):
     @staticmethod
     def _flow_key(row):
         return ', '.join([row[k] for k in ('name', 'compartment', 'subcompartment')])
+
+    @staticmethod
+    def _upstream_flow_key(flow):
+        return ', '.join([flow['Name']] + flow['Compartment'])
 
     def _create_quantity(self, row):
         """
@@ -109,8 +123,13 @@ class EcoinventLcia(NsUuidArchive):
         u = self.key_to_id(key)
         try_f = self[u]
         if try_f is None:
-            f = LcFlow(u, Name=row['name'], CasNumber='', Compartment=[row['compartment'], row['subcompartment']],
-                       Comment=row['note'], referenceQuantity=self._mass)
+            if key in self._upstream_hash:
+                f = self._upstream_hash[key]
+                if self._quiet is False:
+                    print('Found upstream match: %s' % str(f))
+            else:
+                f = LcFlow(u, Name=row['name'], CasNumber='', Compartment=[row['compartment'], row['subcompartment']],
+                           Comment=row['note'], referenceQuantity=self._mass)
             f.set_external_ref(key)
             self.add(f)
         else:
@@ -131,5 +150,5 @@ class EcoinventLcia(NsUuidArchive):
             f = self._create_flow(row)
             q = self._create_quantity(row)
             v = LiterateFloat(self._get_value(row), **row)
-            self._add_characterization(Characterization(flow=f, quantity=q, value=v))
+            self._add_characterization(CharacterizationFactor(flow=f, quantity=q, value=v))
         self.check_counter()

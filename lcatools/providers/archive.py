@@ -141,7 +141,9 @@ class Archive(object):
                     prefix = i[0][len(self.path):]
                     l.extend([os.path.join(prefix, z) for z in i[2]])
         self._numfiles = len(l)
-        return [i for i in l if re.match('^' + in_prefix, i)]
+        if in_prefix is not None:
+            return [i for i in l if re.match('^' + in_prefix, i)]
+        return l
 
     def countfiles(self):
         if self.remote:

@@ -107,7 +107,7 @@ class EcospoldV2Archive(ArchiveInterface):
     @staticmethod
     def _cls_to_text(i):
         if isinstance(i, objectify.ObjectifiedElement):
-            return ' '.join([i.classificationSystem.text, i.classificationValue.text])
+            return ': '.join([i.classificationSystem.text, i.classificationValue.text])
         else:
             return ''
 

@@ -42,6 +42,7 @@ import re
 from lcatools.providers.ilcd import IlcdArchive
 from lcatools.providers.ecoinvent_spreadsheet import EcoinventSpreadsheet
 from lcatools.providers.ecospold import EcospoldV1Archive
+from lcatools.providers.ecospold2 import EcospoldV2Archive
 from lcatools.providers.gabi_web_catalog import GabiWebCatalog
 
 
@@ -101,6 +102,14 @@ def _archive_from_json(j):
             prefix = None
 
         a = EcospoldV1Archive(j['dataSourceReference'], prefix=prefix, ns_uuid=j['nsUuid'], quiet=True)
+    elif j['dataSourceType'] == 'EcospoldV2Archive':
+        if 'prefix' in j.keys():
+            prefix = j['prefix']
+        else:
+            prefix = None
+
+        a = EcospoldV2Archive(j['dataSourceReference'], prefix=prefix, quiet=True)
+
     elif j['dataSourceType'] == 'EcoinventSpreadsheet':
         a = EcoinventSpreadsheet(j['dataSourceReference'], internal=bool(j['internal']), version=j['version'],
                                  ns_uuid=j['nsUuid'], quiet=True)

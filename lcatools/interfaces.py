@@ -73,7 +73,7 @@ class ArchiveInterface(object):
         if u in self._entities:
             raise KeyError('Entity already exists')
 
-        if entity.validate(u):
+        if entity.validate():
             if self._quiet is False:
                 print('Adding %s entity with %s: %s' % (entity.entity_type, u, entity['Name']))
             self._entities[u] = entity
@@ -167,7 +167,8 @@ class ArchiveInterface(object):
         entity = self.key_to_id(key)
         if entity in self._entities:
             e = self._entities[entity]
-            e['origin'] = self.ref
+            if 'origin' not in e.keys():
+                e['origin'] = self.ref
             return e
         elif self._upstream is not None:
             return self._upstream[key]
@@ -182,18 +183,28 @@ class ArchiveInterface(object):
         :param kwargs:
         :return:
         """
+        def _recurse_expand_subtag(tag):
+            if isinstance(tag, str):
+                return tag
+            else:
+                return ' '.join([_recurse_expand_subtag(t) for t in tag])
         for k, v in kwargs.items():
-            result_set = [r for r in result_set if bool(re.search(v, r[k], flags=re.IGNORECASE))]
+            result_set = [r for r in result_set if bool(re.search(v,
+                                                                  _recurse_expand_subtag(r[k]),
+                                                                  flags=re.IGNORECASE))]
         return result_set
 
     def search(self, *args, **kwargs):
         uid = None if len(args) == 0 else args[0]
         if uid is not None:
             # search on uuids
-            result_set = [v for k, v in self._entities.items()
+            result_set = [self._get_entity(k) for k in self._entities.keys()
                           if bool(re.search(uid, str(k), flags=re.IGNORECASE))]
         else:
-            result_set = [v for v in self._entities.values()]
+            if 'entity_type' in kwargs.keys():
+                result_set = self._entities_by_type(kwargs.pop('entity_type'))
+            else:
+                result_set = [self._get_entity(k) for k in self._entities.keys()]
         if len(result_set) > 0:
             return self._narrow_search(result_set, **kwargs)
         elif self._upstream is not None:
@@ -246,10 +257,14 @@ class ArchiveInterface(object):
             if not isinstance(k, uuid.UUID):
                 print('Key %s is not a valid UUID.' % k)
                 valid = False
+            # 2: confirm entity's external key maps to its uuid
+            if self.key_to_id(v.get_external_key()) != k:
+                print("%s: Key doesn't match UUID!" % v.get_external_key())
+                valid = False
 
             # confirm entity is dict-like with keys() and with a set of common keys
             try:
-                valid = valid & v.validate(k)
+                valid = valid & v.validate()
             except AttributeError:
                 print('Key %s: not a valid LcEntity (no validate() method)' % k)
                 valid = False
@@ -271,7 +286,7 @@ class ArchiveInterface(object):
         self._load_all()
 
     def _entities_by_type(self, entity_type, **kwargs):
-        result_set = [v for v in self._entities.values() if v['EntityType'] == entity_type]
+        result_set = [self._get_entity(k) for k, v in self._entities.items() if v['EntityType'] == entity_type]
         return self._narrow_search(result_set, **kwargs)
 
     @staticmethod

@@ -97,15 +97,10 @@ class LcEntity(object):
             d[i] = self._d[i]
         return d
 
-    def validate(self, ext_uuid):
-        if not isinstance(ext_uuid, uuid.UUID):
-            ext_uuid = uuid.UUID(ext_uuid)
+    def validate(self):
         valid = True
         if self.entity_type not in entity_types:
             print('Entity type %s not valid!' % self.entity_type)
-            valid = False
-        if self._uuid != ext_uuid:
-            print("%s: UUIDs don't match!" % self._uuid)
             valid = False
         if self.reference_entity is not None:
             try:
@@ -154,6 +149,9 @@ class LcEntity(object):
             self._set_reference(value)
         else:
             self._d[key] = value
+
+    def keys(self):
+        return self._d.keys()
 
     def __str__(self):
         return 'LC %s: %s' % (self.entity_type, self._d['Name'])

@@ -9,7 +9,7 @@ class Characterization(object):
 
     entity_type = 'characterization'
 
-    def __init__(self, flow, quantity, value=None):
+    def __init__(self, flow, quantity):
         """
 
         :param flow:
@@ -21,7 +21,6 @@ class Characterization(object):
 
         self.flow = flow
         self.quantity = quantity
-        self.value = value
 
     def __hash__(self):
         return hash((self.flow.get_uuid(), self.quantity.get_uuid()))
@@ -29,8 +28,8 @@ class Characterization(object):
     def __eq__(self, other):
         if other is None:
             return False
-        return (self.flow.get_uuid() == other.flow.get_uuid() &
-                self.quantity.get_uuid() == other.quantity.get_uuid())
+        return ((self.flow.get_uuid() == other.flow.get_uuid()) &
+                (self.quantity.get_uuid() == other.quantity.get_uuid()))
 
     def __str__(self):
         return '%s has %s %s' % (self.flow, self.quantity, self.quantity.reference_entity)
@@ -39,17 +38,30 @@ class Characterization(object):
         return self.flow.get_uuid(), self.quantity.get_uuid()
 
     def serialize(self):
-        d = {
+        return {
             'flow': self.flow.get_external_ref(),
             'quantity': self.quantity.get_external_ref()
         }
-        if self.value is not None:
-            d['value'] = self.value
-        return d
 
     @classmethod
     def signature_fields(cls):
         return ['flow', 'quantity']
+
+
+class CharacterizationFactor(Characterization):
+    """
+    A CharacterizationFactor is a characterization with a value field.
+    """
+
+    def __init__(self, *args, value=None, **kwargs):
+        super(CharacterizationFactor, self).__init__(*args, **kwargs)
+        self.value = value
+
+    def serialize(self):
+        d = super(CharacterizationFactor, self).serialize()
+        if self.value is not None:
+            d['value'] = self.value
+        return d
 
 
 class CharacterizationSet(object):
@@ -73,7 +85,10 @@ class CharacterizationSet(object):
     def add(self, char):
         if char.tupleize in self._d:
             if self.overwrite is False:
-                raise KeyError('Characterization is already in-set, and overwrite is False')
+                return
+                # reject overwrite silently
+                # raise KeyError('Characterization is already in-set, and overwrite is False')
+
         self._d[char.tupleize] = char
 
     def get(self, flow=None, quantity=None):

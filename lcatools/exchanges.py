@@ -40,8 +40,6 @@ class Exchange(object):
             assert isinstance(quantity, LcQuantity), "'quantity' must be an LcQuantity or None!"
             self.quantity = quantity
 
-        self.value = None
-
     def __hash__(self):
         return hash((self.process.get_uuid(), self.flow.get_uuid(), self.direction))
 
@@ -68,3 +66,12 @@ class Exchange(object):
     @classmethod
     def signature_fields(cls):
         return ['process', 'flow', 'direction', 'quantity']
+
+
+class ExchangeValue(Exchange):
+    """
+    An ExchangeValue is an exchange with a value
+    """
+    def __init__(self, *args, value=None, **kwargs):
+        super(ExchangeValue, self).__init__(*args, **kwargs)
+        self.value = value

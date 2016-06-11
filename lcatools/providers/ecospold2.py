@@ -10,6 +10,7 @@ import os
 import re
 
 from lxml import objectify
+from lxml.etree import XMLSyntaxError
 from time import time
 
 from lcatools.providers import tail
@@ -75,6 +76,18 @@ class EcospoldV2Archive(ArchiveInterface):
     def _get_objectified_entity(self, filename):
         try:
             o = objectify.fromstring(self._fetch_filename(filename))
+        except ValueError:
+            print('failed on :%s:' % filename)
+            return None
+        if o.nsmap[None] != self.nsmap:
+            raise EcospoldV2Error('This class is for EcoSpold v%s only!' % self.nsmap[-2:])
+        return o
+
+    def _get_objectified_entity_with_lt_gt(self, filename):
+        try:
+            f = self._fetch_filename(filename)
+            f = re.sub(' < ', ' &lt; ', re.sub(' > ', ' &gt; ', f))
+            o = objectify.fromstring(f)
         except ValueError:
             print('failed on :%s:' % filename)
             return None
@@ -152,7 +165,14 @@ class EcospoldV2Archive(ArchiveInterface):
         :param filename:
         :return:
         """
-        o = self._get_objectified_entity(filename)
+        try:
+            o = self._get_objectified_entity(filename)
+        except XMLSyntaxError:
+            try:
+                o = self._get_objectified_entity_with_lt_gt(filename)
+            except XMLSyntaxError:
+                print('Failed loading %s' % filename)
+                raise
 
         ad = find_tag(o, 'activityDescription')[0]
 

@@ -25,6 +25,13 @@ class Archive(object):
     """
 
     @staticmethod
+    def _create_cache_dir(path):
+        d = os.path.join(os.path.dirname(__file__), 'web_cache', _protocol.sub('', path))
+        if not os.path.isdir(d):
+            os.makedirs(d)
+        return d
+
+    @staticmethod
     def _access_7z(path):
         try:
             fp = open(path, 'rb')
@@ -41,17 +48,23 @@ class Archive(object):
             archive = False
         return archive
 
-    def __init__(self, path, query_string=None):
+    def __init__(self, path, query_string=None, cache=True):
         """
         Create an Archive object from a path.  Basically encapsulates the compression algorithm and presents
         a common interface to client code:
         self.listfiles()
         self.countfiles()
-        self.getfile(filename)
+        self.readfile(filename)
 
         writing providers is not presently supported.
 
+        By default remote archives create a local cache to store downloaded files- this cache is mounted as an
+        ordinary archive and is checked first when readfile() is called.  You can force a re-download by specifying
+        .readfile(..., force_download=True)
+
         :param path:
+        :param query_string: for remote repositories, append the supplied string after '?' in the URL
+        :param cache: (True) for remote repositories, cache downloaded files locally and use first
         :return: an archive object
         """
 
@@ -69,6 +82,10 @@ class Archive(object):
             self.query_string = query_string
             if self.query_string is not None:
                 print(' with query string %s' % self.query_string)
+            self.cache = cache
+            if self.cache:
+                self._cache = Archive(self._create_cache_dir(self.path))
+                print(' caching files locally in %s' % self._cache.path)
             return
 
         self.remote = False
@@ -83,7 +100,7 @@ class Archive(object):
             return
 
         if os.path.isdir(path):
-            print('Path points to a directory. Assuming expanded archive')
+            # print('Path points to a directory. Assuming expanded archive')
             self.path = os.path.abspath(path) + os.path.sep  # abs reference plus trailing slash
             self.compressed = False
             self._archive = None
@@ -123,6 +140,9 @@ class Archive(object):
         :return:
         """
         if self.remote:
+            if self.cache:
+                print('Listing cached files:')
+                return self._cache.listfiles(in_prefix=in_prefix)
             print('List files not supported for remote archives.')
             return []
 
@@ -147,6 +167,8 @@ class Archive(object):
 
     def countfiles(self):
         if self.remote:
+            if self.cache:
+                return self._cache.countfiles()
             print('List files not supported for remote archives.')
             return 0
 
@@ -154,14 +176,36 @@ class Archive(object):
             self.listfiles()
         return self._numfiles
 
-    def readfile(self, fname):
+    def writefile(self, fname, file, mode='wb'):
+        if self.remote:
+            print('Cannot write remote files.')
+            return
+        if self.compressed:
+            print('Writing to compressed archives not supported.')
+            return
+        with open(os.path.join(self.path, fname), mode) as fp:
+            fp.write(file)
+
+    def readfile(self, fname, force_download=False):
         """
         Have to decide what this does. I think it should return the raw data- since there's no way to get a pointer
         to a file in a generic archive
         :param fname:
+        :param force_download: for remote caching archives:
         :return:
         """
         if self.remote:
+            if self.cache:
+                if force_download:
+                    print('Download forced')
+                else:
+                    try:
+                        r = self._cache.readfile(fname)
+                        print('Found file in cache: %s' % fname)
+                        return r
+                    except FileNotFoundError:
+                        print('File not found in cache.. downloading')
+
             url = urljoin(self.path, fname)
             if self.query_string is not None:
                 url += '?' + self.query_string
@@ -170,6 +214,11 @@ class Archive(object):
                 'http': lambda x: urlopen(x),
                 None: None
             }[self.ext](url)
+            if self.cache:
+                self._create_cache_dir(os.path.dirname(url))
+                self._cache.writefile(fname, file.read())
+                return self._cache.readfile(fname)
+
             return file.read()
 
         elif self.compressed:
@@ -183,7 +232,7 @@ class Archive(object):
                 return file.read()
 
         else:
-            file = open(os.path.join(self.path, fname), 'r')
+            file = open(os.path.join(self.path, fname), 'rb')
             data = file.read()
             file.close()
             return data

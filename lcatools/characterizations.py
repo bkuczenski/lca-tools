@@ -77,19 +77,19 @@ class CharacterizationSet(object):
             if cf.value != 0:
                 yield cf
 
-    def zeros(self):
+    def iter_zeros(self):
         for k, cf in self._d.items():
             if cf.value == 0:
                 yield cf
 
     def add(self, char):
-        if char.tupleize in self._d:
+        if char.tupleize() in self._d:
             if self.overwrite is False:
                 return
                 # reject overwrite silently
                 # raise KeyError('Characterization is already in-set, and overwrite is False')
 
-        self._d[char.tupleize] = char
+        self._d[char.tupleize()] = char
 
     def get(self, flow=None, quantity=None):
         if flow is not None:

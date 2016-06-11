@@ -84,7 +84,7 @@ class LcEntity(object):
         return prop in self._d
 
     def properties(self):
-        return [i for i in self._d.keys() if i not in self.signature_fields]
+        return [i for i in self._d.keys() if i not in self.signature_fields()]
 
     def get_properties(self):
         """

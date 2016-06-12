@@ -97,7 +97,7 @@ class EcoinventLcia(NsUuidArchive):
         :return:
         """
         key = self._quantity_key(row)
-        u = self.key_to_id(key)
+        u = self._key_to_id(key)
         try_q = self[u]
         if try_q is None:
             unit, _ = self._create_unit(row['unit'])
@@ -120,7 +120,7 @@ class EcoinventLcia(NsUuidArchive):
 
     def _create_flow(self, row):
         key = self._flow_key(row)
-        u = self.key_to_id(key)
+        u = self._key_to_id(key)
         try_f = self[u]
         if try_f is None:
             if key in self._upstream_hash:
@@ -129,7 +129,8 @@ class EcoinventLcia(NsUuidArchive):
                     print('Found upstream match: %s' % str(f))
             else:
                 f = LcFlow(u, Name=row['name'], CasNumber='', Compartment=[row['compartment'], row['subcompartment']],
-                           Comment=row['note'], referenceQuantity=self._mass)
+                           Comment=row['note'])
+                f.add_characterization(self._mass, reference=True)
             f.set_external_ref(key)
             self.add(f)
         else:
@@ -150,5 +151,5 @@ class EcoinventLcia(NsUuidArchive):
             f = self._create_flow(row)
             q = self._create_quantity(row)
             v = LiterateFloat(self._get_value(row), **row)
-            self._add_characterization(CharacterizationFactor(flow=f, quantity=q, value=v))
+            f.add_characterization(q, value=v)
         self.check_counter()

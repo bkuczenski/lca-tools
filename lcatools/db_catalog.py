@@ -122,7 +122,10 @@ def _archive_from_json(j):
         a.entity_from_json(e)
     for e in j['processes']:
         a.entity_from_json(e)
-    a.add_exchanges(j['exchanges'])
+    if 'exchanges' in j:
+        a.handle_old_exchanges(j['exchanges'])
+    if 'characterizations' in j:
+        a.handle_old_characterizations(j['characterizations'])
     a.check_counter('quantity')
     a.check_counter('flow')
     a.check_counter('process')

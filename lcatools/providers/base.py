@@ -40,8 +40,9 @@ class NsUuidArchive(ArchiveInterface):
         ns_uuid = to_uuid(ns_uuid)  # if it's already a uuid, keep it; if it's a string, find it; else None
 
         self._ns_uuid = uuid.uuid4() if ns_uuid is None else ns_uuid
+        self._serialize_dict['nsUuid'] = str(self._ns_uuid)
 
-    def key_to_id(self, key):
+    def _key_to_id(self, key):
         """
         Converts Ecospold01 "number" attributes to UUIDs using the internal UUID namespace.
         :param key:
@@ -56,9 +57,3 @@ class NsUuidArchive(ArchiveInterface):
             return uuid.uuid3(self._ns_uuid, key.encode('utf-8'))
         else:
             return uuid.uuid3(self._ns_uuid, key)
-
-    def serialize(self, **kwargs):
-        j = super(NsUuidArchive, self).serialize(**kwargs)
-        j['nsUuid'] = str(self._ns_uuid)
-
-

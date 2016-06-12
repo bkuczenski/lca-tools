@@ -13,12 +13,12 @@ import uuid
 import re
 import json
 import gzip as gz
-from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcEntity, LcUnit
+from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcUnit  # , LcEntity
 from lcatools.exchanges import Exchange
-from lcatools.characterizations import CharacterizationSet, Characterization
+from lcatools.characterizations import CharacterizationSet  # , Characterization
 from collections import defaultdict
 
-import pandas as pd
+# import pandas as pd
 
 uuid_regex = re.compile('([0-9a-f]{8}.?([0-9a-f]{4}.?){3}[0-9a-f]{12})')
 
@@ -48,25 +48,61 @@ class ArchiveInterface(object):
 
     """
 
-    def __init__(self, ref, quiet=False, upstream=None):
+    @classmethod
+    def _create_unit(cls, unitstring):
+        return LcUnit(unitstring), None
+
+    @classmethod
+    def _key_to_id(cls, key):
+        """
+        in the base class, the key is the uuid-- this can get overridden
+        by default, to_uuid just finds a uuid by regex and returns uuid.UUID()
+        :param key:
+        :return:
+        """
+        return to_uuid(key)
+
+    def __init__(self, ref, quiet=True, upstream=None):
         self.ref = ref
         self._entities = {}  # uuid-indexed list of known entities
-        self._exchanges = set()  # set of exchanges among the entities
-        self._characterizations = CharacterizationSet()  # set of flow characterizations among the entities
 
         self._quiet = quiet  # whether to print out a message every time a new entity is added / deleted / modified
+
+        self._serialize_dict = dict()  # this gets added to
 
         self._counter = defaultdict(int)
         if upstream is not None:
             assert isinstance(upstream, ArchiveInterface)
         self._upstream = upstream
 
+    def _get_entity(self, key):
+        """
+        the fundamental method- retrieve an entity by UUID- either a uuid.UUID or a string that can be
+        converted to a valid UUID.
+
+        If the UUID is not found, returns None. handle this case in client code/subclass.
+        :param key: something that maps to a literal UUID via _key_to_id
+        :return: the LcEntity or None
+        """
+        if key is None:
+            return None
+        entity = self._key_to_id(key)
+        if entity in self._entities:
+            e = self._entities[entity]
+            if 'origin' not in e.keys():
+                e['origin'] = self.ref
+            return e
+        elif self._upstream is not None:
+            return self._upstream[key]
+        else:
+            return None
+
     def __getitem__(self, item):
         return self._get_entity(item)
 
     def add(self, entity):
         key = entity.get_external_ref()
-        u = self.key_to_id(key)
+        u = self._key_to_id(key)
         if u is None:
             raise ValueError('Key must be a valid UUID')
 
@@ -90,27 +126,108 @@ class ArchiveInterface(object):
                                                            len(self._entities_by_type(entity_type))))
             self._counter[entity_type] = 0
 
-    @classmethod
-    def _create_unit(cls, unitstring):
-        return LcUnit(unitstring), None
-
-    @classmethod
-    def key_to_id(cls, key):
-        """
-        in the base class, the key is the uuid
-        :param key:
-        :return:
-        """
-        return to_uuid(key)
-
     def entity_from_json(self, e):
         """
         Create an LcEntity subclass from a json-derived dict
+
+        this could use some serious refactoring
         :param e:
         :return:
         """
+        if 'tags' in e:
+            self._entity_from_old_json(e)
+            return
+        chars = None
+        exchs = None
+        ext_ref = e.pop('entityId')
+        uid = self._key_to_id(ext_ref)
+        etype = e.pop('entityType')
+        if etype == 'quantity':
+            unit, _ = self._create_unit(e.pop('referenceUnit'))
+            e['referenceUnit'] = unit
+            entity = LcQuantity(uid, **e)
+        elif etype == 'flow':
+            try:
+                e['referenceQuantity'] = self[e['referenceQuantity']]
+            except TypeError:
+                e.pop('referenceQuantity')
+            if 'characterizations' in e:
+                chars = e.pop('characterizations')
+            entity = LcFlow(uid, **e)
+            if chars is not None:
+                for c in chars:
+                    v = None
+                    q = self[c['quantity']]
+                    if 'value' in c:
+                        v = c['value']
+                    is_ref = q == entity['referenceQuantity']
+                    entity.add_characterization(q, reference=is_ref, value=v)
+        elif etype == 'process':
+            try:
+                rx = e.pop('referenceExchange')
+            except KeyError:
+                rx = None
+            if 'exchanges' in e:
+                exchs = e.pop('exchanges')
+            entity = LcProcess(uid, **e)
+            if exchs is not None:
+                for x in exchs:
+                    v = None
+                    is_ref = False
+                    f = self[x['flow']]
+                    d = x['direction']
+                    if 'value' in x:
+                        v = x['value']
+                    if 'isReference' in x:
+                        is_ref = x['isReference']
+                    entity.add_exchange(f, d, reference=is_ref, value=v)
+                rx = None
+            if rx is not None and rx != 'None':
+                try:
+                    direc, flow = rx.split(': ')
+                    entity['referenceExchange'] = Exchange(process=entity, flow=self[flow], direction=direc)
+                except AttributeError:
+                    print('rx: [%s]' % rx)
+                except ValueError:
+                    pass
+        else:
+            raise TypeError('Unknown entity type %s' % e['entityType'])
+
+        entity.set_external_ref(ext_ref)
+        self.add(entity)
+
+    def handle_old_exchanges(self, jx):
+        for x in jx:
+            p = self[x['process']]
+            f = self[x['flow']]
+            v = None
+            if 'value' in x:
+                v = x['value']
+            d = x['direction']
+            rx = p['referenceExchange']
+            if rx is not None:
+                is_ref = (rx.flow == f and rx.direction == d)
+            else:
+                is_ref = False
+            p.add_exchange(f, d, reference=is_ref, value=v)
+
+    def handle_old_characterizations(self, jc):
+        for c in jc:
+            f = self[c['flow']]
+            q = self[c['quantity']]
+            v = None
+            if 'value' in c:
+                v = c['value']
+            rq = f['referenceQuantity']
+            if rq is not None:
+                is_ref = rq == q
+            else:
+                is_ref = False
+            f.add_characterization(q, reference=is_ref, value=v)
+
+    def _entity_from_old_json(self, e):
         d = e['tags']
-        uid = self.key_to_id(e['entityId'])
+        uid = self._key_to_id(e['entityId'])
         if e['entityType'] == 'quantity':
             unit, _ = self._create_unit(e['referenceUnit'])
             d['referenceUnit'] = unit
@@ -133,47 +250,6 @@ class ArchiveInterface(object):
 
         entity.set_external_ref(e['entityId'])
         self.add(entity)
-
-    def _add_exchange(self, exchange):
-        if exchange.entity_type == 'exchange':
-            self._exchanges.add(exchange)
-
-    def add_exchanges(self, jx):
-        """
-        jx is a list of json-derived exchange dictionaries
-        :param jx:
-        :return:
-        """
-        for x in jx:
-            self._add_exchange(Exchange(process=self[x['process']],
-                               flow=self[x['flow']],
-                               direction=x['direction']))
-
-    def _add_characterization(self, characterization):
-        if characterization.entity_type == 'characterization':
-            self._characterizations.add(characterization)
-
-    def _get_entity(self, key):
-        """
-        Retrieve an exact entity by UUID specification- either a uuid.UUID or a string that can be
-        converted to a valid UUID.
-
-        If the UUID is not found, returns None. handle this case in client code/subclass.
-        :param key: something that maps to a literal UUID via key_to_id
-        :return: the LcEntity or None
-        """
-        if key is None:
-            return None
-        entity = self.key_to_id(key)
-        if entity in self._entities:
-            e = self._entities[entity]
-            if 'origin' not in e.keys():
-                e['origin'] = self.ref
-            return e
-        elif self._upstream is not None:
-            return self._upstream[key]
-        else:
-            return None
 
     @staticmethod
     def _narrow_search(result_set, **kwargs):
@@ -223,7 +299,7 @@ class ArchiveInterface(object):
         """
         Client-facing function to retrieve entity by ID, first locally, then in archive.
 
-        Input is flexible-- could be a UUID or partial UUID (
+        Input is flexible-- could be a UUID or key (partial uuid is just not useful)
 
         :param args: the identifying string (uuid or partial uuid)
         :param kwargs: used to filter search results on the local archive
@@ -239,12 +315,14 @@ class ArchiveInterface(object):
             # retrieve
             return entity
 
-        # search locally
+        '''
+        # why would I search locally for partial uuids??? this function is not for retrieve or fetch approximate entity
         result_set = self.search(uid, **kwargs)
         if len(result_set) == 1:
             return result_set[0]
         elif len(result_set) > 1:
             return result_set
+        '''
 
         # fetch
         return self._fetch(uid, **kwargs)
@@ -258,7 +336,7 @@ class ArchiveInterface(object):
                 print('Key %s is not a valid UUID.' % k)
                 valid = False
             # 2: confirm entity's external key maps to its uuid
-            if self.key_to_id(v.get_external_key()) != k:
+            if self._key_to_id(v.get_external_key()) != k:
                 print("%s: Key doesn't match UUID!" % v.get_external_key())
                 valid = False
 
@@ -289,6 +367,7 @@ class ArchiveInterface(object):
         result_set = [self._get_entity(k) for k, v in self._entities.items() if v['EntityType'] == entity_type]
         return self._narrow_search(result_set, **kwargs)
 
+    '''
     @staticmethod
     def _to_pandas(entities, EntityClass=LcEntity, **kwargs):
         """
@@ -303,41 +382,25 @@ class ArchiveInterface(object):
         df = pd.DataFrame(sig, index=index, columns=[i for i in EntityClass.signature_fields()], **kwargs)
         df.index.name = 'UUID'
         return df
+    '''
 
     def processes(self, dataframe=False, **kwargs):
         p = self._entities_by_type('process', **kwargs)
         if dataframe:
-            return self._to_pandas(p, LcProcess)
-        else:
-            return p
+            pass  # return self._to_pandas(p, LcProcess)
+        return p
 
     def flows(self, dataframe=False, **kwargs):
         f = self._entities_by_type('flow', **kwargs)
         if dataframe:
-            return self._to_pandas(f, LcFlow)
-        else:
-            return f
+            pass  # return self._to_pandas(f, LcFlow)
+        return f
 
     def quantities(self, dataframe=False, **kwargs):
         q = self._entities_by_type('quantity', **kwargs)
         if dataframe:
-            return self._to_pandas(q, LcQuantity)
-        else:
-            return q
-
-    def exchanges(self, dataframe=False):
-        x = [ex for ex in self._exchanges]
-        if dataframe:
-            return self._to_pandas(x, Exchange)
-        else:
-            return x
-
-    def characterizations(self, dataframe=False):
-        x = [ex for ex in self._characterizations]
-        if dataframe:
-            return self._to_pandas(x, Characterization)
-        else:
-            return x
+            pass  # return self._to_pandas(q, LcQuantity)
+        return q
 
     def _quantities_with_unit(self, unitstring):
         """
@@ -363,17 +426,17 @@ class ArchiveInterface(object):
         return next((q for q in self._quantities_with_unit(unitstring)), None)
 
     def serialize(self, exchanges=False, characterizations=False):
-        return {
+        j = {
             'dataSourceType': self.__class__.__name__,
             'dataSourceReference': self.ref,
-            'processes': sorted([p.serialize() for p in self.processes()], key=lambda x: x['entityId']),
-            'flows': sorted([f.serialize() for f in self.flows()], key=lambda x: x['entityId']),
-            'quantities': sorted([q.serialize() for q in self.quantities()], key=lambda x: x['entityId']),
-            'exchanges': [] if exchanges is False else sorted([x.serialize() for x in self.exchanges()],
-                                                              key=lambda x: x['flow']),
-            'characterizations': [] if characterizations is False else
-            sorted([x.serialize() for x in self.characterizations()], key=lambda x: x['flow'])
+            'processes': sorted([p.serialize(exchanges=exchanges) for p in self.processes()],
+                                key=lambda x: x['entityId']),
+            'flows': sorted([f.serialize(characterizations=characterizations) for f in self.flows()],
+                            key=lambda x: x['entityId']),
+            'quantities': sorted([q.serialize() for q in self.quantities()], key=lambda x: x['entityId'])
         }
+        j.update(self._serialize_dict)
+        return j
 
     def write_to_file(self, filename, gzip=False, **kwargs):
         s = self.serialize(**kwargs)
@@ -404,7 +467,7 @@ class CatalogInterface(object):
     pass
 
 
-class ProcessFlowInterface():
+class ProcessFlowInterface(object):
     """
 
     def list_processes(self):
@@ -414,6 +477,32 @@ class ProcessFlowInterface():
                 r.append(v.get_signature())
         return sorted(r)
     """
+    def __init__(self, archive):
+        assert isinstance(archive, ArchiveInterface), 'Requires an archive'
+        self._archive = archive
+
+        self._exchanges = set()  # set of exchanges among the entities
+
+    def _add_exchange(self, exchange):
+        if exchange.entity_type == 'exchange':
+            self._exchanges.add(exchange)
+
+    def add_exchanges(self, jx):
+        """
+        jx is a list of json-derived exchange dictionaries
+        :param jx:
+        :return:
+        """
+        for x in jx:
+            self._add_exchange(Exchange(process=self._archive[x['process']],
+                                        flow=self._archive[x['flow']],
+                                        direction=x['direction']))
+
+    def exchanges(self, dataframe=False):
+        x = [ex for ex in self._exchanges]
+        if dataframe:
+            pass  # return self._to_pandas(x, Exchange)
+        return x
 
 
 class FlowQuantityInterface(object):
@@ -436,4 +525,18 @@ class FlowQuantityInterface(object):
 
 
     """
-    pass
+    def __init__(self, archive):
+        assert isinstance(archive, ArchiveInterface), 'Requires an archive'
+        self._archive = archive
+
+        self._characterizations = CharacterizationSet()  # set of flow characterizations among the entities
+
+    def _add_characterization(self, characterization):
+        if characterization.entity_type == 'characterization':
+            self._characterizations.add(characterization)
+
+    def characterizations(self, dataframe=False):
+        x = [ex for ex in self._characterizations]
+        if dataframe:
+            pass  # return self._to_pandas(x, Characterization)
+        return x

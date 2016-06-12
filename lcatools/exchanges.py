@@ -1,5 +1,3 @@
-from lcatools.entities import LcProcess, LcFlow, LcQuantity
-
 directions = ('Input', 'Output')
 
 
@@ -27,8 +25,8 @@ class Exchange(object):
         :param quantity:
         :return:
         """
-        assert isinstance(process, LcProcess), "'process' must be an LcProcess!"
-        assert isinstance(flow, LcFlow), "'flow' must be an LcFlow"
+        assert process.entity_type == 'process', "'process' must be an LcProcess!"
+        assert flow.entity_type == 'flow', "'flow' must be an LcFlow"
         assert direction in directions, "direction must be a string in (%s)" % ', '.join(directions)
 
         self.process = process
@@ -37,7 +35,7 @@ class Exchange(object):
         if quantity is None:
             self.quantity = flow.reference_entity
         else:
-            assert isinstance(quantity, LcQuantity), "'quantity' must be an LcQuantity or None!"
+            assert quantity.entity_type == 'quantity', "'quantity' must be an LcQuantity or None!"
             self.quantity = quantity
 
     def __hash__(self):
@@ -62,6 +60,15 @@ class Exchange(object):
             'flow': self.flow.get_external_ref(),
             'direction': self.direction
         }
+
+    def serialize_process(self):
+        j = {
+            'flow': self.flow.get_external_ref(),
+            'direction': self.direction,
+        }
+        if self.process['referenceExchange'] is self:
+            j['isReference'] = True
+        return j
 
     @classmethod
     def signature_fields(cls):

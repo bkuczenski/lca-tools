@@ -49,9 +49,12 @@ class EcospoldV2Archive(ArchiveInterface):
         """
         super(EcospoldV2Archive, self).__init__(ref, **kwargs)
         self.internal_prefix = prefix
+        if self.internal_prefix is not None:
+            self._serialize_dict['prefix'] = self.internal_prefix
+
         self._archive = Archive(self.ref)
 
-    # no need for key_to_id - keys in ecospold are uuids
+    # no need for _key_to_id - keys in ecospold are uuids
     def _prefix(self, filename):
         if self.internal_prefix is not None:
             try:
@@ -154,7 +157,8 @@ class EcospoldV2Archive(ArchiveInterface):
         n = exchange.name.text
         c = 'EcoSpold02 Flow'
 
-        f = LcFlow(uid, Name=n, ReferenceQuantity=q, CasNumber=cas, Comment=c, Compartment=cat)
+        f = LcFlow(uid, Name=n, CasNumber=cas, Comment=c, Compartment=cat)
+        f.add_characterization(quantity=q, reference=True)
         self.add(f)
 
         return f
@@ -220,14 +224,11 @@ class EcospoldV2Archive(ArchiveInterface):
         p = LcProcess(u, Name=n, Comment=c, SpatialScope=g, TemporalScope=stt,
                       Classifications=cls)
 
-        if rf is not None:
-            if len(rf) == 1:
-                p['ReferenceExchange'] = Exchange(p, rf[0], 'Output')
+        for flow, f_dir in flowlist:
+            is_rf = (flow in rf and f_dir == 'Output')
+            p.add_exchange(flow, f_dir, reference=is_rf)
 
         self.add(p)
-
-        for flow, f_dir in flowlist:
-            self._add_exchange(Exchange(p, flow, f_dir))
 
         return p
 
@@ -256,12 +257,4 @@ class EcospoldV2Archive(ArchiveInterface):
                 print(' Loaded %d processes (t=%.2f s)' % (count, time()-now))
 
         print(' Loaded %d processes (t=%.2f s)' % (count, time() - now))
-        self.check_counter('quantity')
-        self.check_counter('flow')
-        self.check_counter('process')
-
-    def serialize(self, **kwargs):
-        j = super(EcospoldV2Archive, self).serialize(**kwargs)
-        if self.internal_prefix is not None:
-            j['prefix'] = self.internal_prefix
-        return j
+        self.check_counter()

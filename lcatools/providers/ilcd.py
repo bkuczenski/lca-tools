@@ -130,6 +130,9 @@ class IlcdArchive(ArchiveInterface):
         """
         super(IlcdArchive, self).__init__(ref, quiet=quiet)
         self.internal_prefix = prefix
+        if prefix is not None:
+            self._serialize_dict['prefix'] = prefix
+
         self._archive = Archive(self.ref)
 
         if not self._archive.OK:
@@ -144,20 +147,21 @@ class IlcdArchive(ArchiveInterface):
         else:
             self._pathtype = os.path
 
-    def _build_prefix(self, dtype=None):
+    def _build_prefix(self):
         if self._archive.remote:
             path = ''
         else:
             path = 'ILCD'
         if self.internal_prefix is not None:
             path = self._pathtype.join(self.internal_prefix, path)
-        if dtype is not None:
-            path = self._pathtype.join(path, typeDirs[dtype])
         return path
+
+    def _de_prefix(self, file):
+        return re.sub('^' + self._pathtype.join(self._build_prefix(), ''), '', file)
 
     def _build_entity_path(self, dtype, uid):
         assert _check_dtype(dtype)
-        postpath = self._pathtype.join(self._build_prefix(dtype), uid)
+        postpath = self._pathtype.join(self._build_prefix(), typeDirs[dtype], uid)
         return postpath + '.xml'
 
     def search_by_id(self, uid, dtype=None):
@@ -165,9 +169,11 @@ class IlcdArchive(ArchiveInterface):
 
     def list_objects(self, dtype=None):
         assert self._archive.remote is False, "Cannot list objects for remote archives"
+        in_prefix = self._build_prefix()
         if dtype is not None:
             assert _check_dtype(dtype)
-        return self._archive.listfiles(in_prefix=self._build_prefix(dtype))
+            in_prefix = self._pathtype.join(in_prefix, typeDirs[dtype])
+        return [self._de_prefix(f) for f in self._archive.listfiles(in_prefix=in_prefix)]
 
     def _fetch_filename(self, filename):
         return self._archive.readfile(filename)
@@ -268,8 +274,10 @@ class IlcdArchive(ArchiveInterface):
             cat = find_common(o, 'class')
         cat = [str(i) for i in cat]
 
-        f = LcFlow(u, Name=n, ReferenceQuantity=q, CasNumber=cas, Comment=c, Compartment=cat)
+        f = LcFlow(u, Name=n, CasNumber=cas, Comment=c, Compartment=cat)
         f.set_external_ref('%s/%s' % (typeDirs['Flow'], u))
+
+        f.add_characterization(q, reference=True)
 
         self.add(f)
         return f
@@ -319,13 +327,11 @@ class IlcdArchive(ArchiveInterface):
 
         p.set_external_ref('%s/%s' % (typeDirs['Process'], u))
 
-        if rf is not None:
-            p['ReferenceExchange'] = Exchange(p, self[rf], rf_dir)
+        for flow, f_dir in exch_list:
+            is_rf = (rf == flow.get_uuid() and rf_dir == f_dir)
+            p.add_exchange(flow, f_dir, reference=is_rf)
 
         self.add(p)
-
-        for flow, f_dir in exch_list:
-            self._add_exchange(Exchange(p, flow, f_dir))
 
         return p
 
@@ -385,11 +391,6 @@ class IlcdArchive(ArchiveInterface):
         self.check_counter('flow')
         self.check_counter('process')
 
-    def serialize(self, **kwargs):
-        j = super(IlcdArchive, self).serialize(**kwargs)
-        if self.internal_prefix is not None:
-            j['prefix'] = self.internal_prefix
-        return j
 
 
 '''

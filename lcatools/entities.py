@@ -3,6 +3,9 @@ from __future__ import print_function, unicode_literals
 import uuid
 from itertools import chain
 
+from lcatools.exchanges import Exchange, ExchangeValue
+from lcatools.characterizations import Characterization, CharacterizationFactor
+
 
 def concatenate(*lists):
     return chain(*lists)
@@ -89,7 +92,6 @@ class LcEntity(object):
     def get_properties(self):
         """
         dict of properties and values for a given entity
-        :param entity: a uuid
         :return:
         """
         d = dict()
@@ -126,12 +128,13 @@ class LcEntity(object):
             return '%s' % self.reference_entity.get_external_ref()
 
     def serialize(self):
-        return {
+        j = {
             'entityType': self.entity_type,
             'entityId': self.get_external_ref(),
             self._ref_field: self._print_ref_field(),
-            'tags': self._d
         }
+        j.update(self._d)
+        return j
 
     def __getitem__(self, item):
         if item.lower() == self._ref_field.lower():
@@ -183,6 +186,7 @@ class LcProcess(LcEntity):
 
     def __init__(self, entity_uuid, **kwargs):
         super(LcProcess, self).__init__('process', entity_uuid, **kwargs)
+        self._exchanges = set()
 
         if 'SpatialScope' not in self._d:
             self._d['SpatialScope'] = 'GLO'
@@ -191,6 +195,22 @@ class LcProcess(LcEntity):
 
     def __str__(self):
         return '%s [%s]' % (self._d['Name'], self._d['SpatialScope'])
+
+    def add_exchange(self, flow, dirn, reference=False, value=None):
+        if value is None:
+            e = Exchange(self, flow, dirn)
+        else:
+            e = ExchangeValue(self, flow, dirn, value=value)
+        self._exchanges.add(e)
+        if reference:
+            self._set_reference(e)
+
+    def serialize(self, exchanges=False):
+        j = super(LcProcess, self).serialize()
+        if exchanges:
+            j['exchanges'] = sorted([x.serialize_process() for x in self._exchanges],
+                                    key=lambda x: (x['direction'], x['flow']))
+        return j
 
 
 class LcFlow(LcEntity):
@@ -210,7 +230,9 @@ class LcFlow(LcEntity):
     def __init__(self, entity_uuid, **kwargs):
         super(LcFlow, self).__init__('flow', entity_uuid, **kwargs)
 
-        self._ref_quantity_factor = 1
+        self._characterizations = set()
+
+        self._ref_quantity_factor = 1.0
 
         for k in self._new_fields:
             if k not in self._d:
@@ -227,6 +249,24 @@ class LcFlow(LcEntity):
             cas = ' (CAS ' + cas + ')'
         comp = ', '.join((i for i in self._d['Compartment'] if i is not None))
         return '%s%s [%s]' % (self._d['Name'], cas, comp)
+
+    def add_characterization(self, quantity, reference=False, value=None):
+        if reference:
+            self._set_reference(quantity)
+            if value is not None:
+                self._ref_quantity_factor = value
+        if value is None:
+            c = Characterization(self, quantity)
+        else:
+            c = CharacterizationFactor(self, quantity, value=value)
+        self._characterizations.add(c)
+
+    def serialize(self, characterizations=False):
+        j = super(LcFlow, self).serialize()
+        if characterizations:
+            j['characterizations'] = sorted([x.serialize() for x in self._characterizations],
+                                            key=lambda x: x['flow']),
+        return j
 
 
 class LcQuantity(LcEntity):

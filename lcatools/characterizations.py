@@ -1,4 +1,3 @@
-from lcatools.entities import LcFlow, LcQuantity
 
 
 class Characterization(object):
@@ -16,8 +15,8 @@ class Characterization(object):
         :param quantity:
         :return:
         """
-        assert isinstance(flow, LcFlow), "'flow' must be an LcFlow"
-        assert isinstance(quantity, LcQuantity), "'quantity' must be an LcQuantity"
+        assert flow.entity_type == 'flow', "'flow' must be an LcFlow"
+        assert quantity.entity_type == 'quantity', "'quantity' must be an LcQuantity"
 
         self.flow = flow
         self.quantity = quantity

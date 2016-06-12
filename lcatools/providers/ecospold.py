@@ -19,10 +19,11 @@ from lxml import objectify
 from lcatools.providers.base import NsUuidArchive
 from lcatools.providers.archive import Archive
 from lcatools.entities import LcQuantity, LcFlow, LcProcess
-from lcatools.exchanges import Exchange, DirectionlessExchangeError
+from lcatools.exchanges import DirectionlessExchangeError
 
 from lcatools.providers import tail
 from lcatools.providers.xml_widgets import find_tag
+
 
 def not_none(x):
     return x if x is not None else ''
@@ -97,7 +98,7 @@ class EcospoldV1Archive(NsUuidArchive):
         :return:
         """
         number = int(exch.get('number'))
-        uid = self.key_to_id(number)
+        uid = self._key_to_id(number)
         try_f = self[uid]
         if try_f is not None:
             f = try_f
@@ -111,7 +112,8 @@ class EcospoldV1Archive(NsUuidArchive):
             cas = not_none(exch.get("CASNumber"))
             cat = [exch.get('category'), exch.get('subCategory')]
 
-            f = LcFlow(uid, Name=n, referenceQuantity=q, CasNumber=cas, Comment=c, Compartment=cat)
+            f = LcFlow(uid, Name=n, CasNumber=cas, Comment=c, Compartment=cat)
+            f.add_characterization(q, reference=True)
             f.set_external_ref(number)
             self.add(f)
 
@@ -144,7 +146,7 @@ class EcospoldV1Archive(NsUuidArchive):
         p_meta = o.dataset.metaInformation.processInformation
         n = p_meta.referenceFunction.get('name')
 
-        u = self.key_to_id(n)
+        u = self._key_to_id(n)
 
         try_p = self[u]
         if try_p is not None:
@@ -164,12 +166,11 @@ class EcospoldV1Archive(NsUuidArchive):
                           Classifications=cls)
             p.set_external_ref(n)
 
-            if rf is not None:
-                p['referenceExchange'] = Exchange(p, rf, 'Output')
-            self.add(p)
+            for flow, f_dir in flowlist:
+                is_rf = (flow is rf and f_dir == 'Output')
+                p.add_exchange(flow, f_dir, reference=is_rf)
 
-        for flow, f_dir in flowlist:
-            self._add_exchange(Exchange(p, flow, f_dir))
+            self.add(p)
 
         return p
 

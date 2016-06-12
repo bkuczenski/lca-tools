@@ -49,6 +49,13 @@ class EcoinventSpreadsheet(NsUuidArchive):
 
         return q
 
+    def _create_flow(self, u, unit, ext_ref, **kwargs):
+        q = self.quantity_with_unit(unit)
+        f = LcFlow(u, **kwargs)
+        f.set_external_ref(ext_ref)
+        f.add_characterization(quantity=q, reference=True)
+        self.add(f)
+
     def _create_quantities(self, _elementary, _intermediate):
         unitname = 'unit' if self.internal else 'unitName'
         units = set(_elementary[unitname].unique().tolist()).union(
@@ -68,15 +75,12 @@ class EcoinventSpreadsheet(NsUuidArchive):
         print('Handling intermediate exchanges [public spreadsheet]')
         for index, row in _intermediate.iterrows():
             n = row['name']
-            u = self.key_to_id(n)
+            u = self._key_to_id(n)
             if self[u] is not None:
                 continue
-            q = self.quantity_with_unit(row['unitName'])
-            f = LcFlow(u, Name=n, CasNumber=row['CAS'],
-                       Compartment=['Intermediate flow'], ReferenceQuantity=q, Comment=row['comment'],
-                       Synonyms=row['synonyms'])
-            f.set_external_ref(n)
-            self.add(f)
+            self._create_flow(u, row['unitName'], n, Name=n, CasNumber=row['CAS'],
+                              Compartment=['Intermediate flow'], Comment=row['comment'],
+                              Synonyms=row['synonyms'])
 
     def _external_elementary(self, _elementary):
         """
@@ -85,17 +89,13 @@ class EcoinventSpreadsheet(NsUuidArchive):
         print('Handling elementary exchanges [public spreadsheet]')
         for index, row in _elementary.iterrows():
             key = self._elementary_key(row)
-            u = self.key_to_id(key)
+            u = self._key_to_id(key)
             if self[u] is not None:
                 continue
-            q = self.quantity_with_unit(row['unitName'])
             cat = [row['compartment'], row['subcompartment']]
-            f = LcFlow(u, Name=row['name'], CasNumber=row['casNumber'],
-                       Compartment=cat, referenceQuantity=q, Comment='',
-                       Formula=row['formula'],
-                       Synonyms=row['synonyms'])
-            f.set_external_ref(key)
-            self.add(f)
+            self._create_flow(u, row['unitName'], key, Name=row['name'], CasNumber=row['casNumber'],
+                              Compartment=cat, Comment='', Formula=row['formula'],
+                              Synonyms=row['synonyms'])
 
     def _internal_intermediate(self, _intermediate):
         """
@@ -107,14 +107,11 @@ class EcoinventSpreadsheet(NsUuidArchive):
         inter = _intermediate[_intermediate[:2]].drop_duplicates()
         for index, row in inter.iterrows():
             n = row['name']
-            u = self.key_to_id(n)
+            u = self._key_to_id(n)
             if self[u] is not None:
                 continue
-            q = self.quantity_with_unit(row['unit'])
-            f = LcFlow(u, Name=n, referenceQuantity=q, Compartment=['Intermediate flow'],
-                       CasNumber='', Comment='')
-            f.set_external_ref(n)
-            self.add(f)
+            self._create_flow(u, row['unit'], n, Name=n, Compartment=['Intermediate flow'],
+                              CasNumber='', Comment='')
 
     def _internal_elementary(self, _elementary):
         """
@@ -127,16 +124,13 @@ class EcoinventSpreadsheet(NsUuidArchive):
 
         for index, row in int_elem.iterrows():
             key = self._elementary_key(row)
-            u = self.key_to_id(key)
+            u = self._key_to_id(key)
             if self[u] is not None:
                 continue
             n = row['name']
             cat = [row['compartment'], row['subcompartment']]
-            q = self.quantity_with_unit(row['unit'])
-            f = LcFlow(u, Name=n, referenceQuantity=q, Compartment=cat,
-                       CasNumber=row['CAS'], Comment='', Formula=row['formula'])
-            f.set_external_ref(key)
-            self.add(f)
+            self._create_flow(u, row['unit'], key, Name=n, Compartment=cat,
+                              CasNumber=row['CAS'], Comment='', Formula=row['formula'])
 
     def load_activities(self):
         print('Handling activities...')
@@ -149,7 +143,7 @@ class EcoinventSpreadsheet(NsUuidArchive):
 
             u = uuid.UUID(u)
 
-            if self[u] is not None:
+            if self[u] is None:
                 """
                 create the process
                 """
@@ -179,6 +173,8 @@ class EcoinventSpreadsheet(NsUuidArchive):
                 except KeyError:
                     pass
                 self.add(p)
+            else:
+                p = self[u]
 
             """
             Now, handle the flows
@@ -190,13 +186,9 @@ class EcoinventSpreadsheet(NsUuidArchive):
                 exch_name = row['product name']
                 ref_check = 'group'
 
-            exch_flow = self[self.key_to_id(exch_name)]
-            exch = Exchange(self[u], exch_flow, 'Output')
+            exch_flow = self[self._key_to_id(exch_name)]
 
-            if row[ref_check] == 'ReferenceProduct':
-                self[u]['referenceExchange'] = exch
-
-            self._add_exchange(exch)
+            p.add_exchange(exch_flow, 'Output', reference=row[ref_check] == 'ReferenceProduct')
 
     def _load_all(self):
         _elementary = self._little_read('elementary exchanges')

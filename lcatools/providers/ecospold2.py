@@ -205,7 +205,8 @@ class EcospoldV2Archive(ArchiveInterface):
                 d = 'Input'
             else:
                 raise DirectionlessExchangeError
-            flowlist.append((f, d))
+            v = exch.get('amount')  # or None if not found
+            flowlist.append((f, d, v))
 
         n = find_tag(ad, 'activityName')[0].text
         try:
@@ -224,9 +225,9 @@ class EcospoldV2Archive(ArchiveInterface):
         p = LcProcess(u, Name=n, Comment=c, SpatialScope=g, TemporalScope=stt,
                       Classifications=cls)
 
-        for flow, f_dir in flowlist:
+        for flow, f_dir, val in flowlist:
             is_rf = (flow in rf and f_dir == 'Output')
-            p.add_exchange(flow, f_dir, reference=is_rf)
+            p.add_exchange(flow, f_dir, reference=is_rf, value=val)
 
         self.add(p)
 

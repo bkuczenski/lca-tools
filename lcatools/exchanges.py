@@ -82,3 +82,11 @@ class ExchangeValue(Exchange):
     def __init__(self, *args, value=None, **kwargs):
         super(ExchangeValue, self).__init__(*args, **kwargs)
         self.value = value
+
+    def __str__(self):
+        return '%6.6s: [%.3g %s] %s' % (self.direction, self.value, self.quantity.reference_entity, self.flow)
+
+    def serialize_process(self):
+        j = super(ExchangeValue, self).serialize_process()
+        j['value'] = float(self.value)
+        return j

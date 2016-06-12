@@ -96,6 +96,13 @@ def get_reference_unit_group(q, ns=None):
     return ug_uuid, ug_uri
 
 
+def get_exch_value(exch, ns=None):
+    try:
+        v = float(find_tag(exch, 'resultingAmount', ns=ns)[0])
+    except ValueError:
+        v = None
+    return v
+
 '''
 class IlcdEntity(object):
     """
@@ -308,7 +315,8 @@ class IlcdArchive(ArchiveInterface):
             except (HTTPError, XMLSyntaxError, KeyError):
                 f = self._create_dummy_flow_from_exch(f_id, exch)
                 self.add(f)
-            exch_list.append((f, f_dir))
+            v = get_exch_value(exch, ns=ns)
+            exch_list.append((f, f_dir, v))
 
         u = str(find_common(o, 'UUID')[0])
         n = str(find_tag(o, 'baseName', ns=ns)[0])
@@ -327,9 +335,9 @@ class IlcdArchive(ArchiveInterface):
 
         p.set_external_ref('%s/%s' % (typeDirs['Process'], u))
 
-        for flow, f_dir in exch_list:
+        for flow, f_dir, val in exch_list:
             is_rf = (rf == flow.get_uuid() and rf_dir == f_dir)
-            p.add_exchange(flow, f_dir, reference=is_rf)
+            p.add_exchange(flow, f_dir, reference=is_rf, value=val)
 
         self.add(p)
 

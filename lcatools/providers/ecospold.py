@@ -141,7 +141,8 @@ class EcospoldV1Archive(NsUuidArchive):
                 d = 'Input'
             else:
                 raise DirectionlessExchangeError
-            flowlist.append((f, d))
+            v = exch.get('meanValue')  # returns none if missing
+            flowlist.append((f, d, v))
 
         p_meta = o.dataset.metaInformation.processInformation
         n = p_meta.referenceFunction.get('name')
@@ -166,9 +167,9 @@ class EcospoldV1Archive(NsUuidArchive):
                           Classifications=cls)
             p.set_external_ref(n)
 
-            for flow, f_dir in flowlist:
+            for flow, f_dir, val in flowlist:
                 is_rf = (flow is rf and f_dir == 'Output')
-                p.add_exchange(flow, f_dir, reference=is_rf)
+                p.add_exchange(flow, f_dir, reference=is_rf, value=val)
 
             self.add(p)
 

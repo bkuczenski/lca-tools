@@ -52,9 +52,10 @@ def load_gabi_collection(url, version='', savedir='.'):
     file_path = os.path.join(savedir, file_name)
     if os.path.exists(file_path):
         # future we can try "pick up where we left off"; for now we just bail if the file is already there
-        return
+        G = from_json(file_path)
+    else:
+        G = GabiWebCatalog(url, quiet=True)
 
-    G = GabiWebCatalog(url, quiet=True)
     G.load_all()
     j = G.serialize(exchanges=True)
     with gzip.open(file_path, 'wt') as fp:
@@ -63,19 +64,26 @@ def load_gabi_collection(url, version='', savedir='.'):
     return
 
 
-def load_gabi_set(index, cname="csc-default", version='', savedir='.'):
+def grab_db_browser_links(index, cname="csc-default"):
     html = urlopen(index).read()
     dom = BeautifulSoup(html, 'lxml')
 
     base = dom.findAll('base')[0].attrs['href']
 
+    browser_divs = dom.findAll('div', {"class": cname})
+    links = []
+    for d in browser_divs:
+        links.extend([x.attrs['href'] for x in d.findAll('a')])
+    return base, links
+
+
+def load_gabi_set(index, cname="csc-default", version='', savedir='.'):
     if not os.path.exists(savedir):
         os.makedirs(savedir)
 
     # grab links to database browser pages
-    links = []
-    for d in dom.findAll('div', {"class": cname}):
-        links.extend([x.attrs['href'] for x in d.findAll('a')])
+
+    base, links = grab_db_browser_links(index, cname=cname)
 
     for link in links:
         print('Attempting to load %s...\n' % link)
@@ -115,6 +123,9 @@ def _archive_from_json(j):
                                  ns_uuid=j['nsUuid'], quiet=True)
     else:
         raise ValueError('Unknown dataSourceType %s' % j['dataSourceType'])
+
+    if 'catalogNames' in j:
+        a.catalog_names = j['catalogNames']
 
     for e in j['quantities']:
         a.entity_from_json(e)

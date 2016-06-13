@@ -323,8 +323,7 @@ class IlcdArchive(ArchiveInterface):
 
         g = find_tag(o, 'locationOfOperationSupplyOrProduction', ns=ns)[0].attrib['location']
 
-        stt = "interval(%s, %s)" % (find_common(o, 'referenceYear')[0],
-                                    find_common(o, 'dataSetValidUntil')[0])
+        stt = {'begin': str(find_common(o, 'referenceYear')[0]), 'end': str(find_common(o, 'dataSetValidUntil')[0])}
 
         c = str(find_common(o, 'generalComment')[0])
 

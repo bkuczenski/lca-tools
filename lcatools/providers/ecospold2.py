@@ -219,7 +219,7 @@ class EcospoldV2Archive(ArchiveInterface):
         g = find_tag(ad, 'geography')[0].shortname.text
 
         tp = find_tag(ad, 'timePeriod')[0]
-        stt = 'interval(%s, %s)' % (tp.get('startDate'), tp.get('endDate'))
+        stt = {'begin': tp.get('startDate'), 'end': tp.get('endDate')}
         cls = [self._cls_to_text(i) for i in find_tag(ad, 'classification')]
 
         p = LcProcess(u, Name=n, Comment=c, SpatialScope=g, TemporalScope=stt,

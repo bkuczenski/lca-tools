@@ -155,7 +155,7 @@ class EcoinventSpreadsheet(NsUuidArchive):
 
                 else:
                     g = row['geography']
-                    st = 'interval(%s, %s)' % (row['start date'], row['end date'])
+                    st = {'begin': row['start date'], 'end': row['end date']}
                     c = row['tags']
 
                 p = LcProcess(u, Name=n, Comment=c, SpatialScope=g, TemporalScope=st)

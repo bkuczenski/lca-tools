@@ -161,12 +161,12 @@ class LcEntity(object):
 
     def __eq__(self, other):
         """
-        two entities are equal if their types, external references, and dictionaries are the same.
+        two entities are equal if their types, origins, and external references are the same.
         internal refs do not need to be equal; reference entities do not need to be equal
         :return:
         """
-        return (self._external_ref == other._external_ref and
-                self._d == other._d and
+        return (self.get_external_ref() == other.get_external_ref() and
+                self['origin'] == other['origin'] and
                 self.entity_type == other.entity_type)
 
 
@@ -205,10 +205,10 @@ class LcProcess(LcEntity):
         if reference:
             self._set_reference(e)
 
-    def serialize(self, exchanges=False):
+    def serialize(self, exchanges=False, **kwargs):
         j = super(LcProcess, self).serialize()
         if exchanges:
-            j['exchanges'] = sorted([x.serialize_process() for x in self._exchanges],
+            j['exchanges'] = sorted([x.serialize_process(**kwargs) for x in self._exchanges],
                                     key=lambda x: (x['direction'], x['flow']))
         return j
 
@@ -254,17 +254,18 @@ class LcFlow(LcEntity):
         if reference:
             self._set_reference(quantity)
             if value is not None:
-                self._ref_quantity_factor = value
+                self.set_local_unit(value)
+
         if value is None:
             c = Characterization(self, quantity)
         else:
             c = CharacterizationFactor(self, quantity, value=value)
         self._characterizations.add(c)
 
-    def serialize(self, characterizations=False):
+    def serialize(self, characterizations=False, **kwargs):
         j = super(LcFlow, self).serialize()
         if characterizations:
-            j['characterizations'] = sorted([x.serialize() for x in self._characterizations],
+            j['characterizations'] = sorted([x.serialize(**kwargs) for x in self._characterizations],
                                             key=lambda x: x['flow']),
         return j
 

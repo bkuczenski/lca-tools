@@ -36,7 +36,7 @@ class Characterization(object):
     def tupleize(self):
         return self.flow.get_uuid(), self.quantity.get_uuid()
 
-    def serialize(self):
+    def serialize(self, **kwargs):
         return {
             'flow': self.flow.get_external_ref(),
             'quantity': self.quantity.get_external_ref()
@@ -56,10 +56,11 @@ class CharacterizationFactor(Characterization):
         super(CharacterizationFactor, self).__init__(*args, **kwargs)
         self.value = value
 
-    def serialize(self):
+    def serialize(self, values=False):
         d = super(CharacterizationFactor, self).serialize()
-        if self.value is not None:
-            d['value'] = self.value
+        if values:
+            if self.value is not None:
+                d['value'] = self.value
         return d
 
 

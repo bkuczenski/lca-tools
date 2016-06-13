@@ -61,7 +61,7 @@ class Exchange(object):
             'direction': self.direction
         }
 
-    def serialize_process(self):
+    def serialize_process(self, **kwargs):
         j = {
             'flow': self.flow.get_external_ref(),
             'direction': self.direction,
@@ -86,7 +86,8 @@ class ExchangeValue(Exchange):
     def __str__(self):
         return '%6.6s: [%.3g %s] %s' % (self.direction, self.value, self.quantity.reference_entity, self.flow)
 
-    def serialize_process(self):
+    def serialize_process(self, values=False):
         j = super(ExchangeValue, self).serialize_process()
-        j['value'] = float(self.value)
+        if values:
+            j['value'] = float(self.value)
         return j

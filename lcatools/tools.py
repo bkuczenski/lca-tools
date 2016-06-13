@@ -11,7 +11,7 @@ import json
 
 from collections import defaultdict, Counter
 
-from lcatools.db_catalog import from_json  # included for "from tools import *" by user
+# from lcatools.db_catalog import from_json  # included for "from tools import *" by user
 
 # TODO: re-implement these tools to work directly on json catalogs; put them in lca-tools-datafiles
 

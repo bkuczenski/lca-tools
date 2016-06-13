@@ -75,6 +75,8 @@ class ArchiveInterface(object):
             assert isinstance(upstream, ArchiveInterface)
         self._upstream = upstream
 
+        self.catalog_names = dict()  # this is a place to store *some kind* of upstream reference to be determined
+
     def _get_entity(self, key):
         """
         the fundamental method- retrieve an entity by UUID- either a uuid.UUID or a string that can be
@@ -425,13 +427,14 @@ class ArchiveInterface(object):
         """
         return next((q for q in self._quantities_with_unit(unitstring)), None)
 
-    def serialize(self, exchanges=False, characterizations=False):
+    def serialize(self, exchanges=False, characterizations=False, values=False):
         j = {
             'dataSourceType': self.__class__.__name__,
             'dataSourceReference': self.ref,
-            'processes': sorted([p.serialize(exchanges=exchanges) for p in self.processes()],
+            'catalogNames': self.catalog_names,
+            'processes': sorted([p.serialize(exchanges=exchanges, values=values) for p in self.processes()],
                                 key=lambda x: x['entityId']),
-            'flows': sorted([f.serialize(characterizations=characterizations) for f in self.flows()],
+            'flows': sorted([f.serialize(characterizations=characterizations, values=values) for f in self.flows()],
                             key=lambda x: x['entityId']),
             'quantities': sorted([q.serialize() for q in self.quantities()], key=lambda x: x['entityId'])
         }

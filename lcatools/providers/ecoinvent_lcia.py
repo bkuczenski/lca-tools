@@ -128,6 +128,8 @@ class EcoinventLcia(NsUuidArchive):
                 if self._quiet is False:
                     print('Found upstream match: %s' % str(f))
             else:
+                if self._quiet is False:
+                    print('Creating new flow with %s ' % self._upstream_flow_key(f))
                 f = LcFlow(u, Name=row['name'], CasNumber='', Compartment=[row['compartment'], row['subcompartment']],
                            Comment=row['note'])
                 f.add_characterization(self._mass, reference=True)

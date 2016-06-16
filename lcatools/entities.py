@@ -125,12 +125,13 @@ class LcEntity(object):
         if self.reference_entity is None:
             return '%s' % None
         else:
-            return '%s' % self.reference_entity.get_external_ref()
+            return '%s' % self.reference_entity.get_uuid()
 
     def serialize(self):
         j = {
+            'entityId': self.get_uuid(),
             'entityType': self.entity_type,
-            'entityId': self.get_external_ref(),
+            'externalId': self.get_external_ref(),
             self._ref_field: self._print_ref_field(),
         }
         j.update(self._d)
@@ -265,8 +266,7 @@ class LcFlow(LcEntity):
     def serialize(self, characterizations=False, **kwargs):
         j = super(LcFlow, self).serialize()
         if characterizations:
-            j['characterizations'] = sorted([x.serialize(**kwargs) for x in self._characterizations],
-                                            key=lambda x: x['flow']),
+            j['characterizations'] = [x.serialize(**kwargs) for x in self._characterizations]
         return j
 
 
@@ -357,6 +357,9 @@ class LcUnit(object):
 
     def unitstring(self):
         return self._unitstring
+
+    def get_uuid(self):
+        return self._unitstring  # needed for upward compat
 
     def __str__(self):
         return '[%s]' % self._unitstring

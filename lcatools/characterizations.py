@@ -38,8 +38,7 @@ class Characterization(object):
 
     def serialize(self, **kwargs):
         return {
-            'flow': self.flow.get_external_ref(),
-            'quantity': self.quantity.get_external_ref()
+            'quantity': self.quantity.get_uuid()
         }
 
     @classmethod

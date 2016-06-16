@@ -52,18 +52,18 @@ class Exchange(object):
         return '%s has %s: %s %s' % (self.process, self.direction, self.flow, self.quantity.reference_entity)
 
     def get_external_ref(self):
-        return '%s: %s' % (self.direction, self.flow.get_external_ref())
+        return '%s: %s' % (self.direction, self.flow.get_uuid())
 
     def serialize(self):
         return {
-            'process': self.process.get_external_ref(),
-            'flow': self.flow.get_external_ref(),
+            'process': self.process.get_uuid(),
+            'flow': self.flow.get_uuid(),
             'direction': self.direction
         }
 
     def serialize_process(self, **kwargs):
         j = {
-            'flow': self.flow.get_external_ref(),
+            'flow': self.flow.get_uuid(),
             'direction': self.direction,
         }
         if self.process['referenceExchange'] is self:

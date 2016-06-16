@@ -56,6 +56,8 @@ def load_gabi_collection(url, version='', savedir='.'):
     else:
         G = GabiWebCatalog(url, quiet=True)
 
+    G.catalog_names[collection_name] = url
+
     G.load_all()
     j = G.serialize(exchanges=True)
     with gzip.open(file_path, 'wt') as fp:

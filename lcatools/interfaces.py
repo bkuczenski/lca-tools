@@ -73,9 +73,16 @@ class ArchiveInterface(object):
         self._counter = defaultdict(int)
         if upstream is not None:
             assert isinstance(upstream, ArchiveInterface)
+            self._serialize_dict['upstreamReference'] = upstream.ref
         self._upstream = upstream
 
         self.catalog_names = dict()  # this is a place to store *some kind* of upstream reference to be determined
+
+    def __str__(self):
+        s = '%s with %d entities at %s' % (self.__class__.__name__, self.ref, len(self._entities))
+        if self._upstream is not None:
+            s += ' [upstream %s (%d entities)]' % (self._upstream.__class__.__name__, len(self._upstream._entities))
+        return s
 
     def _get_entity(self, key):
         """
@@ -267,9 +274,12 @@ class ArchiveInterface(object):
             else:
                 return ' '.join([_recurse_expand_subtag(t) for t in tag])
         for k, v in kwargs.items():
-            result_set = [r for r in result_set if bool(re.search(v,
-                                                                  _recurse_expand_subtag(r[k]),
-                                                                  flags=re.IGNORECASE))]
+            if isinstance(v, str):
+                v = [v]
+            for vv in v:
+                result_set = [r for r in result_set if bool(re.search(vv,
+                                                                      _recurse_expand_subtag(r[k]),
+                                                                      flags=re.IGNORECASE))]
         return result_set
 
     def search(self, *args, **kwargs):

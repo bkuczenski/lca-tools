@@ -33,6 +33,7 @@ def from_json(fname):
     :param fname: json file, optionally gzipped
     :return: a subclass of ArchiveInterface
     """
+    print('Loading JSON data from %s:' % fname)
     if bool(re.search('\.gz$', fname)):
         if USING_PYTHON2:
             with gzip.open(fname, 'r') as fp:

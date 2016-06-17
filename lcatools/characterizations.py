@@ -37,9 +37,12 @@ class Characterization(object):
         return self.flow.get_uuid(), self.quantity.get_uuid()
 
     def serialize(self, **kwargs):
-        return {
+        j = {
             'quantity': self.quantity.get_uuid()
         }
+        if self.quantity == self.flow['referenceQuantity']:
+            j['isReference'] = True
+        return j
 
     @classmethod
     def signature_fields(cls):

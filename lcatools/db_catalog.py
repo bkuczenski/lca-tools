@@ -24,14 +24,6 @@ from __future__ import print_function, unicode_literals
 
 import six
 
-try:
-    from urllib.request import urlopen, urljoin
-except ImportError:
-    from urllib2 import urlopen
-    from urlparse import urljoin
-
-from bs4 import BeautifulSoup
-import os
 import json
 import gzip
 import re
@@ -44,52 +36,6 @@ from lcatools.providers.ecoinvent_spreadsheet import EcoinventSpreadsheet
 from lcatools.providers.ecospold import EcospoldV1Archive
 from lcatools.providers.ecospold2 import EcospoldV2Archive
 from lcatools.providers.gabi_web_catalog import GabiWebCatalog
-
-
-def load_gabi_collection(url, version='', savedir='.'):
-    collection_name = [f for f in filter(bool, url.split('/'))][-1]  # last chunk of url
-    file_name = 'gabi_' + version + '_' + collection_name + '.json.gz'
-    file_path = os.path.join(savedir, file_name)
-    if os.path.exists(file_path):
-        # future we can try "pick up where we left off"; for now we just bail if the file is already there
-        G = from_json(file_path)
-    else:
-        G = GabiWebCatalog(url, quiet=True)
-
-    G.catalog_names[collection_name] = url
-
-    G.load_all()
-    j = G.serialize(exchanges=True)
-    with gzip.open(file_path, 'wt') as fp:
-        print('Writing %s to %s...\n' % (collection_name, file_path))
-        json.dump(j, fp, indent=2, sort_keys=True)
-    return
-
-
-def grab_db_browser_links(index, cname="csc-default"):
-    html = urlopen(index).read()
-    dom = BeautifulSoup(html, 'lxml')
-
-    base = dom.findAll('base')[0].attrs['href']
-
-    browser_divs = dom.findAll('div', {"class": cname})
-    links = []
-    for d in browser_divs:
-        links.extend([x.attrs['href'] for x in d.findAll('a')])
-    return base, links
-
-
-def load_gabi_set(index, cname="csc-default", version='', savedir='.'):
-    if not os.path.exists(savedir):
-        os.makedirs(savedir)
-
-    # grab links to database browser pages
-
-    base, links = grab_db_browser_links(index, cname=cname)
-
-    for link in links:
-        print('Attempting to load %s...\n' % link)
-        load_gabi_collection(urljoin(base, link), version=version, savedir=savedir)
 
 
 def _archive_from_json(j):

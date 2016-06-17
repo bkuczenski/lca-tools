@@ -1,7 +1,7 @@
 import sys
 from optparse import OptionParser
 
-from lcatools.db_catalog import load_gabi_set
+from lcatools.providers.gabi_web_catalog import load_gabi_set
 
 GABI_2016_INDEX = "http://www.gabi-software.com/support/gabi/gabi-database-2016-lci-documentation/"
 

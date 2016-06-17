@@ -127,11 +127,13 @@ class EcoinventLcia(NsUuidArchive):
                 f = self._upstream_hash[key]
                 if self._quiet is False:
                     print('Found upstream match: %s' % str(f))
+                if f['referenceQuantity'] not in self._entities:
+                    self.add(f['referenceQuantity'])
             else:
-                if self._quiet is False:
-                    print('Creating new flow with %s ' % self._upstream_flow_key(f))
                 f = LcFlow(u, Name=row['name'], CasNumber='', Compartment=[row['compartment'], row['subcompartment']],
                            Comment=row['note'])
+                if self._quiet is False:
+                    print('Created new flow with %s ' % self._upstream_flow_key(f))
                 f.add_characterization(self._mass, reference=True)
             f.set_external_ref(key)
             self.add(f)

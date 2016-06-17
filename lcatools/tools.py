@@ -4,6 +4,9 @@ Container for tools used to compute interesting things about / across archives
 
 from __future__ import print_function, unicode_literals
 
+from eight import *
+from eight import USING_PYTHON2
+
 import os
 import re
 import gzip
@@ -19,12 +22,28 @@ catalog_dir = '/data/GitHub/lca-tools-datafiles/catalogs'
 
 
 def gz_files(path):
-    return [os.path.join(path, f) for f in filter(lambda x: re.search('\.gz$', x), os.listdir(path))]
+    files = [os.path.join(path, f) for f in filter(lambda x: re.search('\.json\.gz$', x), os.listdir(path))]
+    names = [re.sub('\.json\.gz$', '', os.path.basename(f)) for f in files]
+    return files, names
 
 
-def load_json(file):
-    with gzip.open(file, 'rt') as fp:
-        return json.load(fp)
+def from_json(fname):
+    """
+    Routine to reconstruct a catalog from a json archive.
+    :param fname: json file, optionally gzipped
+    :return: a subclass of ArchiveInterface
+    """
+    if bool(re.search('\.gz$', fname)):
+        if USING_PYTHON2:
+            with gzip.open(fname, 'r') as fp:
+                j = json.load(fp)
+        else:
+            with gzip.open(fname, 'rt') as fp:
+                j = json.load(fp)
+    else:
+        with open(fname, 'r') as fp:
+            j = json.load(fp)
+    return j
 
 
 def parse_exchange(exch_ref):

@@ -266,7 +266,8 @@ class LcFlow(LcEntity):
     def serialize(self, characterizations=False, **kwargs):
         j = super(LcFlow, self).serialize()
         if characterizations:
-            j['characterizations'] = [x.serialize(**kwargs) for x in self._characterizations]
+            j['characterizations'] = sorted([x.serialize(**kwargs) for x in self._characterizations],
+                                            key=lambda x: x['quantity'])
         return j
 
 

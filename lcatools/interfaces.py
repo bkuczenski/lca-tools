@@ -102,7 +102,10 @@ class ArchiveInterface(object):
                 e['origin'] = self.ref
             return e
         elif self._upstream is not None:
-            return self._upstream[key]
+            e = self._upstream[key]
+            if e is not None:
+                self.add(e)  # e is just a reference, so this is literally just a dictionary key
+            return e
         else:
             return None
 

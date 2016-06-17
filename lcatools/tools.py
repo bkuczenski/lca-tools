@@ -14,6 +14,12 @@ import json
 
 from collections import defaultdict, Counter
 
+from lcatools.providers.ilcd import IlcdArchive
+from lcatools.providers.ecoinvent_spreadsheet import EcoinventSpreadsheet
+from lcatools.providers.ecospold import EcospoldV1Archive
+from lcatools.providers.ecospold2 import EcospoldV2Archive
+from lcatools.providers.ecoinvent_lcia import EcoinventLcia
+
 # from lcatools.db_catalog import from_json  # included for "from tools import *" by user
 
 # TODO: re-implement these tools to work directly on json catalogs; put them in lca-tools-datafiles
@@ -22,12 +28,14 @@ catalog_dir = '/data/GitHub/lca-tools-datafiles/catalogs'
 
 
 def gz_files(path):
-    files = [os.path.join(path, f) for f in filter(lambda x: re.search('\.json\.gz$', x), os.listdir(path))]
-    names = [re.sub('\.json\.gz$', '', os.path.basename(f)) for f in files]
-    return files, names
+    return [os.path.join(path, f) for f in filter(lambda x: re.search('\.json\.gz$', x), os.listdir(path))]
 
 
-def from_json(fname):
+def split_nick(fname):
+    return re.sub('\.json\.gz$', '', os.path.basename(fname))
+
+
+def _from_json(fname):
     """
     Routine to reconstruct a catalog from a json archive.
     :param fname: json file, optionally gzipped
@@ -45,6 +53,69 @@ def from_json(fname):
         with open(fname, 'r') as fp:
             j = json.load(fp)
     return j
+
+
+def archive_from_json(fname):
+    """
+
+    :param j: json dictionary containing an archive
+    :param nick: nickname to reference the archive
+    :return:
+    """
+    j = _from_json(fname)
+    if j['dataSourceType'] == 'IlcdArchive':
+        if 'prefix' in j.keys():
+            prefix = j['prefix']
+        else:
+            prefix = None
+
+        a = IlcdArchive(j['dataSourceReference'], prefix=prefix, quiet=True)
+    elif j['dataSourceType'] == 'EcospoldV1Archive':
+        if 'prefix' in j.keys():
+            prefix = j['prefix']
+        else:
+            prefix = None
+
+        a = EcospoldV1Archive(j['dataSourceReference'], prefix=prefix, ns_uuid=j['nsUuid'], quiet=True)
+    elif j['dataSourceType'] == 'EcospoldV2Archive':
+        if 'prefix' in j.keys():
+            prefix = j['prefix']
+        else:
+            prefix = None
+
+        a = EcospoldV2Archive(j['dataSourceReference'], prefix=prefix, quiet=True)
+
+    elif j['dataSourceType'] == 'EcoinventSpreadsheet':
+        a = EcoinventSpreadsheet(j['dataSourceReference'], internal=bool(j['internal']), version=j['version'],
+                                 ns_uuid=j['nsUuid'], quiet=True)
+
+    elif j['dataSourceType'] == 'EcoinventLcia':
+        a = EcoinventLcia(j['dataSourceReference'], ns_uuid=j['nsUuid'])
+
+    else:
+        raise ValueError('Unknown dataSourceType %s' % j['dataSourceType'])
+
+    if 'catalogNames' in j:
+        a.catalog_names = j['catalogNames']
+
+    if 'upstreamReference' in j:
+        print('**Upstream reference not resolved: %s\n' % j['upstreamReference'])
+        a._serialize_dict['upstreamReference'] = j['upstreamReference']
+
+    for e in j['quantities']:
+        a.entity_from_json(e)
+    for e in j['flows']:
+        a.entity_from_json(e)
+    for e in j['processes']:
+        a.entity_from_json(e)
+    if 'exchanges' in j:
+        a.handle_old_exchanges(j['exchanges'])
+    if 'characterizations' in j:
+        a.handle_old_characterizations(j['characterizations'])
+    a.check_counter('quantity')
+    a.check_counter('flow')
+    a.check_counter('process')
+    return a
 
 
 def parse_exchange(exch_ref):

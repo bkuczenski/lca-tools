@@ -5,13 +5,8 @@ from eight import *
 
 from collections import defaultdict
 
-from lcatools.tools import gz_files, from_json
+from lcatools.tools import gz_files, split_nick, archive_from_json
 
-from lcatools.providers.ilcd import IlcdArchive
-from lcatools.providers.ecoinvent_spreadsheet import EcoinventSpreadsheet
-from lcatools.providers.ecospold import EcospoldV1Archive
-from lcatools.providers.ecospold2 import EcospoldV2Archive
-from lcatools.providers.ecoinvent_lcia import EcoinventLcia
 
 
 class LcaCatalog(object):
@@ -24,92 +19,60 @@ class LcaCatalog(object):
         self.archives = []  # a list of installed archives
         self._nicknames = dict()  # a mapping of nickname to archive index
         self._shortest = []  # a list of the shortest nickname for each archive
+        self._sources_loaded = dict()  # map input source to archive
+        self._refs_loaded = dict()  # map archive.ref to archive
         if catalog_dir is not None:
             self._install_catalogs_from_dir(catalog_dir)
 
     def _install_catalogs_from_dir(self, dr):
-        files, names = gz_files(dr)
+        files = gz_files(dr)
         for i, f in enumerate(files):
-            self._archive_from_json(from_json(f), names[i])
+            self.load_json_archive(f)
 
     def _set_shortest(self, k):
         self._shortest[k] = min([n for n, v in self._nicknames.items() if v == k], key=len)
 
-    def _install_archive(self, a, nick, overwrite=False):
-        if nick in self._nicknames:
-            if overwrite:
-                print('Overwriting archive "%s" with %s')
-                self.archives[self._nicknames[nick]] = a
-                self._set_shortest(self._nicknames[nick])
-                return
-            raise KeyError('Nickname %s already exists', nick)
-        self.archives.append(a)
-        self._nicknames[nick] = len(self.archives)
-        self._shortest.append(nick)
-
-    def _archive_from_json(self, j, nick, **kwargs):
+    def _install_archive(self, a, source, nick=None, overwrite=False):
         """
-
-        :param j: json dictionary containing an archive
-        :param nick: nickname to reference the archive
+        overwrite should always be false except on data reload
+        (i.e. changing sources inplace is a user error)
+        :param a:
+        :param nick:
+        :param overwrite:
         :return:
         """
-        if j['dataSourceType'] == 'IlcdArchive':
-            if 'prefix' in j.keys():
-                prefix = j['prefix']
+        if source in self._sources_loaded:
+            if overwrite:
+                print('Overwriting archive "%s" with %s')
+                self.archives[self._sources_loaded[source]] = a
+                self._set_shortest(self._sources_loaded[source])
+                return
             else:
-                prefix = None
+                print('Archive already exists and overwrite is false.')
+                return
+        if nick is None:
+            nick = split_nick(source)
+        if nick in self._nicknames:
+            raise KeyError('Nickname %s already exists', nick)
+        self.archives.append(a)
+        self._shortest.append(nick)
+        assert len(self.archives) == len(self._shortest)
+        self._nicknames[nick] = len(self.archives) - 1
+        self._sources_loaded[source] = len(self.archives) - 1
+        self._refs_loaded[a.ref] = len(self.archives) - 1
 
-            a = IlcdArchive(j['dataSourceReference'], prefix=prefix, quiet=True)
-        elif j['dataSourceType'] == 'EcospoldV1Archive':
-            if 'prefix' in j.keys():
-                prefix = j['prefix']
+    def load_json_archive(self, f, **kwargs):
+        if f in self._sources_loaded:
+            print('source %s already loaded' % f)
+            if 'overwrite' not in kwargs or kwargs['overwrite'] is False:
+                print('overwrite=True to overwrite')
+                return
             else:
-                prefix = None
+                # if overwrite is true- go ahead and load it
+                pass
 
-            a = EcospoldV1Archive(j['dataSourceReference'], prefix=prefix, ns_uuid=j['nsUuid'], quiet=True)
-        elif j['dataSourceType'] == 'EcospoldV2Archive':
-            if 'prefix' in j.keys():
-                prefix = j['prefix']
-            else:
-                prefix = None
-
-            a = EcospoldV2Archive(j['dataSourceReference'], prefix=prefix, quiet=True)
-
-        elif j['dataSourceType'] == 'EcoinventSpreadsheet':
-            a = EcoinventSpreadsheet(j['dataSourceReference'], internal=bool(j['internal']), version=j['version'],
-                                     ns_uuid=j['nsUuid'], quiet=True)
-
-        elif j['dataSourceType'] == 'EcoinventLcia':
-            a = EcoinventLcia(j['dataSourceReference'], ns_uuid=j['nsUuid'])
-
-        else:
-            raise ValueError('Unknown dataSourceType %s' % j['dataSourceType'])
-
-        if 'catalogNames' in j:
-            a.catalog_names = j['catalogNames']
-
-        if 'upstreamReference' in j:
-            print('**Upstream reference not resolved: %s\n' % j['upstreamReference'])
-            a._serialize_dict['upstreamReference'] = j['upstreamReference']
-
-        for e in j['quantities']:
-            a.entity_from_json(e)
-        for e in j['flows']:
-            a.entity_from_json(e)
-        for e in j['processes']:
-            a.entity_from_json(e)
-        if 'exchanges' in j:
-            a.handle_old_exchanges(j['exchanges'])
-        if 'characterizations' in j:
-            a.handle_old_characterizations(j['characterizations'])
-        a.check_counter('quantity')
-        a.check_counter('flow')
-        a.check_counter('process')
-        self._install_archive(a, nick, **kwargs)
-
-    def load_json_archive(self, f, nick, **kwargs):
-        self._archive_from_json(from_json(f), nick, **kwargs)
+        a = archive_from_json(f)
+        self._install_archive(a, f, **kwargs)
 
     def alias(self, nick, alias):
         """

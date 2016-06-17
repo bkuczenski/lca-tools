@@ -62,3 +62,6 @@ target/
 
 # remote archive cache
 lcatools/providers/web_cache/
+
+# pycharm config
+.idea/

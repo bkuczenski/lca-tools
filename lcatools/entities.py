@@ -197,6 +197,10 @@ class LcProcess(LcEntity):
     def __str__(self):
         return '%s [%s]' % (self._d['Name'], self._d['SpatialScope'])
 
+    def exchanges(self):
+        for i in sorted(self._exchanges, key=lambda x: x.direction):
+            yield i
+
     def add_exchange(self, flow, dirn, reference=False, value=None):
         if value is None:
             e = Exchange(self, flow, dirn)

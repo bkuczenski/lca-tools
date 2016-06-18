@@ -3,11 +3,10 @@ from __future__ import print_function, unicode_literals
 
 from eight import *
 
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 
 from lcatools.tools import gz_files, split_nick, archive_from_json
-
-
+from lcatools.interfaces import ProcessFlowInterface, FlowQuantityInterface
 
 class LcaCatalog(object):
     """
@@ -21,8 +20,27 @@ class LcaCatalog(object):
         self._shortest = []  # a list of the shortest nickname for each archive
         self._sources_loaded = dict()  # map input source to archive
         self._refs_loaded = dict()  # map archive.ref to archive
+        self._pf = ProcessFlowInterface(self)
+        self._fq = FlowQuantityInterface(self)
         if catalog_dir is not None:
             self._install_catalogs_from_dir(catalog_dir)
+
+    def get_index(self, item):
+        if isinstance(item, int):
+            return item
+        elif isinstance(item, str):
+            return self._nicknames[item]
+        else:
+            raise TypeError('unhandled type %s' % type(item))
+
+    def __getitem__(self, item):
+        """
+        catalog[ref] - if ref is an integer, index into self.archives
+        if ref is a string, interpret as a nickname
+        :param item:
+        :return: an archive
+        """
+        return self.archives[self.get_index(item)]
 
     def _install_catalogs_from_dir(self, dr):
         files = gz_files(dr)
@@ -60,6 +78,17 @@ class LcaCatalog(object):
         self._nicknames[nick] = len(self.archives) - 1
         self._sources_loaded[source] = len(self.archives) - 1
         self._refs_loaded[a.ref] = len(self.archives) - 1
+        self._load_exchanges(len(self.archives) - 1)
+
+    def _load_exchanges(self, index):
+        self._pf.add_archive(index)
+
+    def exchanges(self, key, entity):
+        index = self.get_index(key)
+        if isinstance(entity, str):
+            return self._pf.exchanges(index, entity)
+        else:
+            return self._pf.exchanges(index, entity.get_uuid())
 
     def load_json_archive(self, f, **kwargs):
         if f in self._sources_loaded:

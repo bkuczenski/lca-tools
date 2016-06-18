@@ -16,7 +16,11 @@ import gzip as gz
 from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcUnit  # , LcEntity
 from lcatools.exchanges import Exchange
 from lcatools.characterizations import CharacterizationSet  # , Characterization
-from collections import defaultdict
+from lcatools.logical_flows import LogicalFlow
+from collections import defaultdict, namedtuple
+
+CatalogRef = namedtuple('CatalogRef', ['archive', 'id'])
+
 
 # import pandas as pd
 
@@ -79,7 +83,7 @@ class ArchiveInterface(object):
         self.catalog_names = dict()  # this is a place to store *some kind* of upstream reference to be determined
 
     def __str__(self):
-        s = '%s with %d entities at %s' % (self.__class__.__name__, self.ref, len(self._entities))
+        s = '%s with %d entities at %s' % (self.__class__.__name__, len(self._entities), self.ref)
         if self._upstream is not None:
             s += ' [upstream %s (%d entities)]' % (self._upstream.__class__.__name__, len(self._upstream._entities))
         return s
@@ -470,21 +474,19 @@ class ArchiveInterface(object):
                 json.dump(s, fp, indent=2, sort_keys=True)
 
 
-class CatalogInterface(object):
-    """
-    A catalog is a container for a set of distinct archives, and provides useful services for accessing information
-    within them.  Catalog functionality is TODO but will include:
-
-     * maintain a dict of archives with convenient keys (default is archive.ref)
-     * retrieve entity by UUID or by external ref
-     * store synonyms
-    """
-
-    pass
-
-
 class ProcessFlowInterface(object):
     """
+    a ProcessFlow interface creates a standard mechanism to answer inventory queries.  The main purpose of the
+      interface is to return exchanges for a given process or flow.
+
+    The interface provides a *dictionary of logical flows* and allows the user to specify *synonyms*.
+
+    The following queries are
+     [to be] supported:
+
+     - given a process, return all exchanges [this comes for free]
+
+     - given a flow
 
     def list_processes(self):
         r = []
@@ -492,33 +494,42 @@ class ProcessFlowInterface(object):
             if v['EntityType'] == 'process':
                 r.append(v.get_signature())
         return sorted(r)
-    """
-    def __init__(self, archive):
-        assert isinstance(archive, ArchiveInterface), 'Requires an archive'
-        self._archive = archive
-
-        self._exchanges = set()  # set of exchanges among the entities
-
-    def _add_exchange(self, exchange):
-        if exchange.entity_type == 'exchange':
-            self._exchanges.add(exchange)
-
-    def add_exchanges(self, jx):
-        """
-        jx is a list of json-derived exchange dictionaries
-        :param jx:
-        :return:
-        """
-        for x in jx:
-            self._add_exchange(Exchange(process=self._archive[x['process']],
-                                        flow=self._archive[x['flow']],
-                                        direction=x['direction']))
 
     def exchanges(self, dataframe=False):
         x = [ex for ex in self._exchanges]
         if dataframe:
             pass  # return self._to_pandas(x, Exchange)
         return x
+    """
+    def __init__(self, catalog):
+        self._catalog = catalog
+        self._flows = dict()
+
+    def add_archive(self, index):
+        for p in self._catalog[index].processes():
+            for x in p.exchanges():
+                key = CatalogRef(index, x.flow.get_uuid())
+                if key not in self._flows:
+                    self._flows[key] = LogicalFlow.create(self._catalog, key)
+                self._flows[key].add_exchange(key, x)
+
+    def exchanges(self, index, entity_id):
+        """
+        :param index: must be a numerical index
+        :param entity_id: must be a uuid
+        :return:
+        """
+        if isinstance(entity_id, str):
+            entity = self._catalog[index][entity_id]
+        else:
+            entity = entity_id
+            entity_id = entity.get_uuid()
+        if not isinstance(index, int):
+            index = self._catalog._nicknames[index]
+        if isinstance(entity, LcProcess):
+            return entity.exchanges()
+        elif isinstance(entity, LcFlow):
+            return self._flows[CatalogRef(index, entity_id)].exchanges()
 
 
 class FlowQuantityInterface(object):
@@ -541,9 +552,8 @@ class FlowQuantityInterface(object):
 
 
     """
-    def __init__(self, archive):
-        assert isinstance(archive, ArchiveInterface), 'Requires an archive'
-        self._archive = archive
+    def __init__(self, catalog):
+        self._catalog = catalog
 
         self._characterizations = CharacterizationSet()  # set of flow characterizations among the entities
 

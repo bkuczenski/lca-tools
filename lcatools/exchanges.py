@@ -37,6 +37,7 @@ class Exchange(object):
         else:
             assert quantity.entity_type == 'quantity', "'quantity' must be an LcQuantity or None!"
             self.quantity = quantity
+        self.value = None
 
     def __hash__(self):
         return hash((self.process.get_uuid(), self.flow.get_uuid(), self.direction))

@@ -13,13 +13,13 @@ import uuid
 import re
 import json
 import gzip as gz
+
 from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcUnit  # , LcEntity
 from lcatools.exchanges import Exchange
-from lcatools.characterizations import CharacterizationSet  # , Characterization
-from lcatools.logical_flows import LogicalFlow
-from collections import defaultdict, namedtuple
+from collections import defaultdict
 
-CatalogRef = namedtuple('CatalogRef', ['archive', 'id'])
+
+# CatalogRef = namedtuple('CatalogRef', ['archive', 'id'])
 
 
 # import pandas as pd
@@ -75,17 +75,26 @@ class ArchiveInterface(object):
         self._serialize_dict = dict()  # this gets added to
 
         self._counter = defaultdict(int)
+        self._upstream = None
         if upstream is not None:
-            assert isinstance(upstream, ArchiveInterface)
-            self._serialize_dict['upstreamReference'] = upstream.ref
-        self._upstream = upstream
+            self.set_upstream(upstream)
 
         self.catalog_names = dict()  # this is a place to store *some kind* of upstream reference to be determined
+
+    def set_upstream(self, upstream):
+        assert isinstance(upstream, ArchiveInterface)
+        self._serialize_dict['upstreamReference'] = upstream.ref
+        self._upstream = upstream
+
+    def query_upstream_ref(self):
+        if 'upstreamReference' in self._serialize_dict:
+            return self._serialize_dict['upstreamReference']
+        return None
 
     def __str__(self):
         s = '%s with %d entities at %s' % (self.__class__.__name__, len(self._entities), self.ref)
         if self._upstream is not None:
-            s += ' [upstream %s (%d entities)]' % (self._upstream.__class__.__name__, len(self._upstream._entities))
+            s += ' [upstream %s]' % self._upstream.__class__.__name__
         return s
 
     def _get_entity(self, key):
@@ -472,97 +481,3 @@ class ArchiveInterface(object):
         else:
             with open(filename, 'w') as fp:
                 json.dump(s, fp, indent=2, sort_keys=True)
-
-
-class ProcessFlowInterface(object):
-    """
-    a ProcessFlow interface creates a standard mechanism to answer inventory queries.  The main purpose of the
-      interface is to return exchanges for a given process or flow.
-
-    The interface provides a *dictionary of logical flows* and allows the user to specify *synonyms*.
-
-    The following queries are
-     [to be] supported:
-
-     - given a process, return all exchanges [this comes for free]
-
-     - given a flow
-
-    def list_processes(self):
-        r = []
-        for k, v in self.catalogs.items():
-            if v['EntityType'] == 'process':
-                r.append(v.get_signature())
-        return sorted(r)
-
-    def exchanges(self, dataframe=False):
-        x = [ex for ex in self._exchanges]
-        if dataframe:
-            pass  # return self._to_pandas(x, Exchange)
-        return x
-    """
-    def __init__(self, catalog):
-        self._catalog = catalog
-        self._flows = dict()
-
-    def add_archive(self, index):
-        for p in self._catalog[index].processes():
-            for x in p.exchanges():
-                key = CatalogRef(index, x.flow.get_uuid())
-                if key not in self._flows:
-                    self._flows[key] = LogicalFlow.create(self._catalog, key)
-                self._flows[key].add_exchange(key, x)
-
-    def exchanges(self, index, entity_id):
-        """
-        :param index: must be a numerical index
-        :param entity_id: must be a uuid
-        :return:
-        """
-        if isinstance(entity_id, str):
-            entity = self._catalog[index][entity_id]
-        else:
-            entity = entity_id
-            entity_id = entity.get_uuid()
-        if not isinstance(index, int):
-            index = self._catalog._nicknames[index]
-        if isinstance(entity, LcProcess):
-            return entity.exchanges()
-        elif isinstance(entity, LcFlow):
-            return self._flows[CatalogRef(index, entity_id)].exchanges()
-
-
-class FlowQuantityInterface(object):
-    """
-    A Flow-Quantity service stores linked observations of flows and quantities with "factors" which report the
-     magnitude of the quantity, in proportion to the flow's reference quantity (which is implicitly mass in
-     the ecoinvent LCIA spreadsheet).
-
-    The flow-quantity interface allows the following:
-
-      * add_cf : register a link between a flow and a quantity having a particular factor
-
-      * lookup_cf : specify characteristics to match and return a result set
-
-      *
-
-      * report characterizations that link one flow with one quantity.
-
-
-
-
-    """
-    def __init__(self, catalog):
-        self._catalog = catalog
-
-        self._characterizations = CharacterizationSet()  # set of flow characterizations among the entities
-
-    def _add_characterization(self, characterization):
-        if characterization.entity_type == 'characterization':
-            self._characterizations.add(characterization)
-
-    def characterizations(self, dataframe=False):
-        x = [ex for ex in self._characterizations]
-        if dataframe:
-            pass  # return self._to_pandas(x, Characterization)
-        return x

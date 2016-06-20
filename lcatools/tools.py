@@ -57,10 +57,8 @@ def _from_json(fname):
 
 def archive_from_json(fname):
     """
-
-    :param j: json dictionary containing an archive
-    :param nick: nickname to reference the archive
-    :return:
+    :param fname: JSON filename
+    :return: an ArchiveInterface
     """
     j = _from_json(fname)
     if j['dataSourceType'] == 'IlcdArchive':
@@ -99,7 +97,7 @@ def archive_from_json(fname):
         a.catalog_names = j['catalogNames']
 
     if 'upstreamReference' in j:
-        print('**Upstream reference not resolved: %s\n' % j['upstreamReference'])
+        print('**Upstream reference encountered: %s\n' % j['upstreamReference'])
         a._serialize_dict['upstreamReference'] = j['upstreamReference']
 
     for e in j['quantities']:

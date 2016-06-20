@@ -1,7 +1,10 @@
 from __future__ import print_function, unicode_literals
 
 from collections import namedtuple
-from lcatools.exchanges import Exchange
+# from lcatools.exchanges import Exchange
+
+ExchangeRef = namedtuple('ExchangeRef', ('index', 'exchange'))
+CharacterizationRef = namedtuple('FactorRef', ('index', 'characterization'))
 
 
 class LogicalFlow(object):
@@ -37,6 +40,9 @@ class LogicalFlow(object):
         """
         if catalog_ref in self._entities:
             raise KeyError('Entity already exists')
+        if catalog_ref.entity_type() != 'flow':
+            raise TypeError('Reference %s is not a flow entity!' % catalog_ref.entity_type())
+        catalog_ref.validate(self._catalog)
         self._entities.append(catalog_ref)
 
     def add_exchange(self, cat_ref, exch):
@@ -47,8 +53,13 @@ class LogicalFlow(object):
         :return:
         """
         if cat_ref in self._entities:
-            self._exchanges.add((cat_ref.archive, exch))
+            self._exchanges.add(ExchangeRef(cat_ref.index, exch))
 
     def exchanges(self):
-        for exch in sorted(self._exchanges, key=lambda x: (x[0], x[1].direction)):
+        for exch in sorted(self._exchanges, key=lambda x: (x.index, x.exchange.direction)):
             yield exch
+
+    def characterizations(self):
+        for flow in self._entities:
+            for char in flow.entity().characterizations():
+                yield CharacterizationRef(flow.index, char)

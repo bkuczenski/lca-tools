@@ -65,6 +65,9 @@ class CharacterizationFactor(Characterization):
                 d['value'] = self.value
         return d
 
+    def __str__(self):
+        return '%s: [%.3g %s] %s' % (self.flow, self.value, self.quantity.reference_entity, self.quantity)
+
 
 class CharacterizationSet(object):
     """

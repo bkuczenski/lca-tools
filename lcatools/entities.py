@@ -267,6 +267,10 @@ class LcFlow(LcEntity):
             c = CharacterizationFactor(self, quantity, value=value)
         self._characterizations.add(c)
 
+    def characterizations(self):
+        for i in self._characterizations:
+            yield i
+
     def serialize(self, characterizations=False, **kwargs):
         j = super(LcFlow, self).serialize()
         if characterizations:

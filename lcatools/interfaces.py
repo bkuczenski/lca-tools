@@ -285,7 +285,9 @@ class ArchiveInterface(object):
         :return:
         """
         def _recurse_expand_subtag(tag):
-            if isinstance(tag, str):
+            if tag is None:
+                return ''
+            elif isinstance(tag, str):
                 return tag
             else:
                 return ' '.join([_recurse_expand_subtag(t) for t in tag])

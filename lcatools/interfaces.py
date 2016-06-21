@@ -389,9 +389,9 @@ class ArchiveInterface(object):
         """
         raise NotImplemented
 
-    def load_all(self):
+    def load_all(self, **kwargs):
         print('Loading %s' % self.ref)
-        self._load_all()
+        self._load_all(**kwargs)
 
     def _entities_by_type(self, entity_type, **kwargs):
         result_set = [self._get_entity(k) for k, v in self._entities.items() if v['EntityType'] == entity_type]

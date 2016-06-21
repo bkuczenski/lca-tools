@@ -12,7 +12,8 @@ class LcaCatalog(CatalogInterface):
     def __init__(self, catalog_dir=None):
         self._pf = ProcessFlowInterface(self)
         self._fq = FlowQuantityInterface(self)
-        super(LcaCatalog, self).__init__(catalog_dir=catalog_dir)
+        self.catalog_dir = catalog_dir
+        super(LcaCatalog, self).__init__()
 
     def load_json_archive(self, *args, **kwargs):
         super(LcaCatalog, self).load_json_archive(*args, **kwargs)

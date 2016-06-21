@@ -3,7 +3,7 @@ from __future__ import print_function, unicode_literals
 
 from eight import *
 
-from collections import defaultdict, namedtuple
+from collections import defaultdict  # , namedtuple
 
 from lcatools.interfaces import to_uuid
 
@@ -11,7 +11,6 @@ from lcatools.characterizations import CharacterizationSet  # , Characterization
 from lcatools.logical_flows import LogicalFlow, ExchangeRef
 from lcatools.entities import LcProcess, LcFlow
 from lcatools.tools import gz_files, split_nick, archive_from_json
-
 
 
 def get_entity_uuid(item):
@@ -69,14 +68,12 @@ class CatalogInterface(object):
     A catalog stores a list of archives and exposes retrieval methods that return entity references
     as CatalogRef objects
     """
-    def __init__(self, catalog_dir=None):
+    def __init__(self):
         self.archives = []  # a list of installed archives
         self._nicknames = dict()  # a mapping of nickname to archive index
         self._shortest = []  # a list of the shortest nickname for each archive
         self._sources_loaded = dict()  # map input source to archive
         self._refs_loaded = dict()  # map archive.ref to archive
-        if catalog_dir is not None:
-            self._install_catalogs_from_dir(catalog_dir)
 
     def get_index(self, item):
         if isinstance(item, int):
@@ -143,6 +140,9 @@ class CatalogInterface(object):
         self._nicknames[nick] = len(self.archives) - 1
         self._sources_loaded[source] = len(self.archives) - 1
         self._refs_loaded[a.ref] = len(self.archives) - 1
+
+    def install_archive(self, archive, **kwargs):
+        self._install_archive(archive, 'memory', **kwargs)
 
     def load_json_archive(self, f, **kwargs):
         if f in self._sources_loaded:
@@ -269,11 +269,17 @@ class ProcessFlowInterface(object):
 
     def add_archive(self, index):
         for p in self._catalog[index].processes():
-            for x in p.exchanges():
-                key = CatalogRef(self._catalog, index, x.flow.get_uuid())
-                if key not in self._flows:
-                    self._flows[key] = LogicalFlow.create(self._catalog, key)
-                self._flows[key].add_exchange(key, x)
+            self.add_exchanges(index, p.exchanges())
+
+    def add_exchanges(self, index, exchanges):
+        for x in exchanges:
+            f_id = x.flow.get_uuid()
+            key = CatalogRef(self._catalog, index, f_id)
+            if f_id in self._flows:
+                self._flows[f_id].add_ref(key)
+            else:
+                self._flows[f_id] = LogicalFlow.create(key)
+            self._flows[f_id].add_exchange(key, x)
 
     def exchanges(self, cat_ref):
         """
@@ -286,11 +292,11 @@ class ProcessFlowInterface(object):
             return (ExchangeRef(cat_ref.index, x) for x in entity.exchanges())
         elif isinstance(entity, LcFlow):
             cat_ref.validate(self._catalog)
-            return self._flows[cat_ref].exchanges()
+            return self._flows[cat_ref.id].exchanges()
 
     def characterizations(self, cat_ref):
         cat_ref.validate(self._catalog)
-        return self._flows[cat_ref].characterizations()
+        return self._flows[cat_ref.id].characterizations()
 
 
 class FlowQuantityInterface(object):

@@ -12,8 +12,8 @@ class LogicalFlow(object):
     A LogicalFlow is a notional "indefinite" flow that may correspond to flow instances in several catalogs.
     """
     @classmethod
-    def create(cls, catalog, ref):
-        logical_flow = cls(catalog)
+    def create(cls, ref):
+        logical_flow = cls(ref.catalog)
         logical_flow.add_ref(ref)
         return logical_flow
 
@@ -36,14 +36,17 @@ class LogicalFlow(object):
         Does not automatically populate the exchange list, as that is cpu-intensive.
         To do so manually, call self.pull_exchanges()
         :param catalog_ref:
-        :return:
+        :return: bool - True if ref is new and added; False if ref already exists
         """
         if catalog_ref in self._entities:
-            raise KeyError('Entity already exists')
+            # print('%s' % catalog_ref)
+            # raise KeyError('Entity already exists')
+            return False
         if catalog_ref.entity_type() != 'flow':
             raise TypeError('Reference %s is not a flow entity!' % catalog_ref.entity_type())
         catalog_ref.validate(self._catalog)
         self._entities.append(catalog_ref)
+        return True
 
     def add_exchange(self, cat_ref, exch):
         """

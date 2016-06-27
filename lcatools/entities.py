@@ -3,7 +3,7 @@ from __future__ import print_function, unicode_literals
 import uuid
 from itertools import chain
 
-from lcatools.exchanges import Exchange, ExchangeValue
+from lcatools.exchanges import Exchange, ExchangeValue, AllocatedExchange
 from lcatools.characterizations import Characterization, CharacterizationFactor
 
 
@@ -186,8 +186,9 @@ class LcProcess(LcEntity):
         return cls(uuid.uuid4(), Name=name, ReferenceExchange=ref_exchange, **kwargs)
 
     def __init__(self, entity_uuid, **kwargs):
-        super(LcProcess, self).__init__('process', entity_uuid, **kwargs)
+        self.reference_entity = set()
         self._exchanges = set()
+        super(LcProcess, self).__init__('process', entity_uuid, **kwargs)
 
         if 'SpatialScope' not in self._d:
             self._d['SpatialScope'] = 'GLO'
@@ -197,23 +198,92 @@ class LcProcess(LcEntity):
     def __str__(self):
         return '%s [%s]' % (self._d['Name'], self._d['SpatialScope'])
 
+    def _validate_reference(self, ref_entity):
+        if super(LcProcess, self)._validate_reference(ref_entity):
+            if isinstance(ref_entity, AllocatedExchange):
+                # current policy: all non-self exchange values are zero
+                raise TypeError('Allocated exchanges may not be reference flows!')
+            return True
+        return False
+
+    def _set_reference(self, ref_entity):
+        """
+        is it a problem that there's no way to un-set reference exchanges? my feeling is no.
+        :param ref_entity:
+        :return:
+        """
+        self._validate_reference(ref_entity)
+        self.reference_entity.add(ref_entity)
+
     def exchanges(self):
         for i in sorted(self._exchanges, key=lambda x: x.direction):
             yield i
 
+    def allocated_exchanges(self, reference):
+        for i in sorted(self._exchanges, key=lambda x: x.direction):
+            if isinstance(i, AllocatedExchange):
+                yield ExchangeValue.from_allocated(i, reference)
+
     def add_exchange(self, flow, dirn, reference=False, value=None):
         if value is None:
             e = Exchange(self, flow, dirn)
-        else:
+        elif isinstance(value, float):
             e = ExchangeValue(self, flow, dirn, value=value)
+        elif isinstance(value, dict):
+            e = AllocatedExchange.from_dict(self, flow, dirn, value=value)
+        else:
+            raise TypeError('Unhandled value type %s' % type(value))
         self._exchanges.add(e)
         if reference:
             self._set_reference(e)
 
+    def add_allocated_exchange(self, flow, dirn, reference=None, value=None):
+        """
+        Several things have to happen here:
+         - the reference, which must be an exchange, must exist in the process's set of reference entities
+
+         - if the flow+dirn does not already exist in the exchange list, it needs to be created.
+
+         - if the flow+dirn already exists as a non-AllocatedExchange, it needs to be popped from the
+           exchange list, upgraded to an AllocatedExchange, and the new information stored
+
+         - if the flow+dirn is already an AllocatedExchange, then it just needs to be updated.
+        :param flow:
+        :param dirn:
+        :param reference:
+        :param value:
+        :return:
+        """
+        if not isinstance(reference, Exchange):
+            raise TypeError('Reference must be an exchange!')
+        self._set_reference(reference)  # make sure it's in there
+        current = [x for x in self._exchanges if x.flow == flow and x.direction == dirn]
+        if len(current) == 0:
+            exch = AllocatedExchange(self, flow, dirn)
+            self._exchanges.add(exch)
+        elif len(current) == 1:
+            if isinstance(current[0], AllocatedExchange):
+                exch = current[0]
+            else:
+                exch = AllocatedExchange.from_exchange(current[0])
+                self._exchanges.remove(current[0])
+                self._exchanges.add(exch)
+        else:  # len(current) > 1??
+            raise KeyError('Something is very wrong- multiple exchanges found!!')
+        # update with new information
+        exch[reference.flow.get_uuid()] = value
+
     def serialize(self, exchanges=False, **kwargs):
         j = super(LcProcess, self).serialize()
+        j.pop(self._ref_field)  # reference reported in exchanges
         if exchanges:
-            j['exchanges'] = sorted([x.serialize_process(**kwargs) for x in self._exchanges],
+            # if exchanges is true, report all exchanges
+            j['exchanges'] = sorted([x.serialize(**kwargs) for x in self._exchanges],
+                                    key=lambda x: (x['direction'], x['flow']))
+        else:
+            # if exchanges is false, only report reference exchanges
+            j['exchanges'] = sorted([x.serialize(**kwargs) for x in self._exchanges
+                                     if x in self.reference_entity],
                                     key=lambda x: (x['direction'], x['flow']))
         return j
 

@@ -186,9 +186,12 @@ class LcProcess(LcEntity):
         return cls(uuid.uuid4(), Name=name, ReferenceExchange=ref_exchange, **kwargs)
 
     def __init__(self, entity_uuid, **kwargs):
-        self.reference_entity = set()
         self._exchanges = set()
         super(LcProcess, self).__init__('process', entity_uuid, **kwargs)
+        if self.reference_entity is None:
+            self.reference_entity = set()
+        else:
+            self.reference_entity = {self.reference_entity}
 
         if 'SpatialScope' not in self._d:
             self._d['SpatialScope'] = 'GLO'
@@ -198,13 +201,14 @@ class LcProcess(LcEntity):
     def __str__(self):
         return '%s [%s]' % (self._d['Name'], self._d['SpatialScope'])
 
-    def _validate_reference(self, ref_entity):
-        if super(LcProcess, self)._validate_reference(ref_entity):
-            if isinstance(ref_entity, AllocatedExchange):
-                # current policy: all non-self exchange values are zero
-                raise TypeError('Allocated exchanges may not be reference flows!')
-            return True
-        return False
+    def _validate_reference(self, ref_set):
+        for x in ref_set:
+            if super(LcProcess, self)._validate_reference(x):
+                if isinstance(x, AllocatedExchange):
+                    x._check_ref()
+            else:
+                return False
+        return True
 
     def _set_reference(self, ref_entity):
         """
@@ -212,7 +216,7 @@ class LcProcess(LcEntity):
         :param ref_entity:
         :return:
         """
-        self._validate_reference(ref_entity)
+        self._validate_reference({ref_entity})
         self.reference_entity.add(ref_entity)
 
     def exchanges(self):
@@ -236,6 +240,7 @@ class LcProcess(LcEntity):
         self._exchanges.add(e)
         if reference:
             self._set_reference(e)
+        return e
 
     def add_allocated_exchange(self, flow, dirn, reference=None, value=None):
         """
@@ -272,6 +277,7 @@ class LcProcess(LcEntity):
             raise KeyError('Something is very wrong- multiple exchanges found!!')
         # update with new information
         exch[reference.flow.get_uuid()] = value
+        return exch
 
     def serialize(self, exchanges=False, **kwargs):
         j = super(LcProcess, self).serialize()

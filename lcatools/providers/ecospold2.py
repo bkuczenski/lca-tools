@@ -13,10 +13,12 @@ from lxml import objectify
 from lxml.etree import XMLSyntaxError
 from time import time
 
+from collections import namedtuple
+
 from lcatools.providers import tail
 from lcatools.providers.xml_widgets import *
 
-from lcatools.interfaces import ArchiveInterface, to_uuid
+from lcatools.interfaces import ArchiveInterface, uuid_regex
 from lcatools.providers.archive import Archive
 from lcatools.entities import LcQuantity, LcFlow, LcProcess
 from lcatools.exchanges import Exchange, DirectionlessExchangeError
@@ -24,6 +26,9 @@ from lcatools.exchanges import Exchange, DirectionlessExchangeError
 if six.PY2:
     bytes = str
     str = unicode
+
+
+EcospoldExchange = namedtuple('EcospoldExchange', ('flow', 'direction', 'value'))
 
 
 class EcospoldV2Error(Exception):
@@ -163,7 +168,72 @@ class EcospoldV2Archive(ArchiveInterface):
 
         return f
 
-    def _create_process(self, filename):
+    def _create_process_entity(self, o):
+        ad = find_tag(o, 'activityDescription')[0]
+
+        u = ad.activity.get('id')
+
+        if self[u] is not None:
+            return self[u]
+
+        n = find_tag(ad, 'activityName')[0].text
+        try:
+            c = find_tag(ad, 'generalComment')[0]['text'].text
+        except TypeError:
+            c = 'no comment.'
+        except AttributeError:
+            print('activity ID %s: no comment' % u)
+            c = 'no comment.'
+        g = find_tag(ad, 'geography')[0].shortname.text
+
+        tp = find_tag(ad, 'timePeriod')[0]
+        stt = {'begin': tp.get('startDate'), 'end': tp.get('endDate')}
+        cls = [self._cls_to_text(i) for i in find_tag(ad, 'classification')]
+
+        p = LcProcess(u, Name=n, Comment=c, SpatialScope=g, TemporalScope=stt,
+                      Classifications=cls)
+
+        self.add(p)
+        return p
+
+    def _grab_reference_flow(self, o, rf):
+        """
+        Create a reference exchange from the flowdata
+        :param o:
+        :param rf:
+        :return:
+        """
+        for x in find_tag(o, 'flowData')[0].getchildren():
+            if 'intermediate' in x.tag:
+                if x.attrib['intermediateExchangeId'] == rf:
+                    return self._create_flow(x)
+
+        raise KeyError('Noted reference exchange %s not found!' % rf)
+
+    def _collect_exchanges(self, o):
+        """
+
+        :param o:
+        :return:
+        """
+        flowlist = []
+
+        for exch in find_tag(o, 'flowData')[0].getchildren():
+            if 'parameter' in exch.tag:
+                continue
+
+            f = self._create_flow(exch)
+            if hasattr(exch, 'outputGroup'):
+                d = 'Output'
+            elif hasattr(exch, 'inputGroup'):
+                d = 'Input'
+            else:
+                raise DirectionlessExchangeError
+            v = float(exch.get('amount'))  # or None if not found
+            flowlist.append(EcospoldExchange(f, d, v))
+        return flowlist
+
+    def _create_process(self, filename, exchanges=True):
         """
         Extract dataset object from XML file
         :param filename:
@@ -178,58 +248,15 @@ class EcospoldV2Archive(ArchiveInterface):
                 print('Failed loading %s' % filename)
                 raise
 
-        ad = find_tag(o, 'activityDescription')[0]
-
-        u = ad.activity.get('id')
-
-        if self[u] is not None:
-            return self[u]
-
-        rf = None  # reference flow
-        flowlist = []
-
-        for exch in find_tag(o, 'flowData')[0].getchildren():
-            if 'parameter' in exch.tag:
-                continue
-
-            f = self._create_flow(exch)
-            if hasattr(exch, 'outputGroup'):
-                d = 'Output'
-                if exch.outputGroup == 0:
-                    if rf is None:
-                        rf = [f]
-                    else:
-                        rf.append(f)
-                        # Multiple reference flows found!
-            elif hasattr(exch, 'inputGroup'):
-                d = 'Input'
-            else:
-                raise DirectionlessExchangeError
-            v = exch.get('amount')  # or None if not found
-            flowlist.append((f, d, v))
-
-        n = find_tag(ad, 'activityName')[0].text
-        try:
-            c = find_tag(ad, 'generalComment')[0]['text'].text
-        except TypeError:
-            c = 'no comment.'
-        except AttributeError:
-            print('%s: no comment' % filename)
-            c = 'no comment.'
-        g = find_tag(ad, 'geography')[0].shortname.text
-
-        tp = find_tag(ad, 'timePeriod')[0]
-        stt = {'begin': tp.get('startDate'), 'end': tp.get('endDate')}
-        cls = [self._cls_to_text(i) for i in find_tag(ad, 'classification')]
-
-        p = LcProcess(u, Name=n, Comment=c, SpatialScope=g, TemporalScope=stt,
-                      Classifications=cls)
-
-        for flow, f_dir, val in flowlist:
-            is_rf = (flow in rf and f_dir == 'Output')
-            p.add_exchange(flow, f_dir, reference=is_rf, value=val)
-
-        self.add(p)
+        p = self._create_process_entity(o)
+        rf = self._grab_reference_flow(o, uuid_regex.findall(filename)[1][0])  # second UUID, first match should be reference flow uuid
+        rx = p.add_exchange(rf, 'Output', reference=True)
+        print('Identified reference exchange\n %s' % rx)
+        if exchanges:
+            for exch in self._collect_exchanges(o):
+                if exch.value != 0:
+                    print('Adding %s [%s] (%g)' % (exch.flow, exch.direction, exch.value))
+                    p.add_allocated_exchange(exch.flow, exch.direction, reference=rx, value=exch.value)
 
         return p
 
@@ -248,11 +275,11 @@ class EcospoldV2Archive(ArchiveInterface):
             return None
         return self._create_process(files[0])
 
-    def _load_all(self):
+    def _load_all(self, exchanges=True):
         now = time()
         count = 0
         for k in self.list_datasets():
-            self._create_process(k)
+            self._create_process(k, exchanges=exchanges)
             count += 1
             if count % 100 == 0:
                 print(' Loaded %d processes (t=%.2f s)' % (count, time()-now))

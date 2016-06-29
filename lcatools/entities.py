@@ -212,11 +212,12 @@ class LcProcess(LcEntity):
 
     def _set_reference(self, ref_entity):
         """
-        is it a problem that there's no way to un-set reference exchanges? my feeling is no.
+        is it a problem that there's no way to un-set reference exchanges? my feeling is no, at least at present.
         :param ref_entity:
         :return:
         """
         self._validate_reference({ref_entity})
+
         self.reference_entity.add(ref_entity)
 
     def exchanges(self):
@@ -228,56 +229,74 @@ class LcProcess(LcEntity):
             if isinstance(i, AllocatedExchange):
                 yield ExchangeValue.from_allocated(i, reference)
 
-    def add_exchange(self, flow, dirn, reference=False, value=None):
-        if value is None:
-            e = Exchange(self, flow, dirn)
-        elif isinstance(value, float):
-            e = ExchangeValue(self, flow, dirn, value=value)
-        elif isinstance(value, dict):
-            e = AllocatedExchange.from_dict(self, flow, dirn, value=value)
-        else:
-            raise TypeError('Unhandled value type %s' % type(value))
-        self._exchanges.add(e)
-        if reference:
-            self._set_reference(e)
-        return e
+    def add_reference(self, flow, dirn):
+        rx = Exchange(self, flow, dirn)
+        self._set_reference(rx)
+        return rx
 
-    def add_allocated_exchange(self, flow, dirn, reference=None, value=None):
+    def add_exchange(self, flow, dirn, reference=None, value=None):
         """
-        Several things have to happen here:
-         - the reference, which must be an exchange, must exist in the process's set of reference entities
+        This is used to create Exchanges and ExchangeValues and AllocatedExchanges.
 
-         - if the flow+dirn does not already exist in the exchange list, it needs to be created.
+        If the flow+dirn is already in the exchange set:
+            if no reference is specified and/or no value is specified- nothing to do
+            otherwise (if reference and value are specified):
+                upgrade the exchange to an allocatedExchange and add the new reference exch val
+        otherwise:
+            if reference is specified, create an AllocatedExchange
+            otherwise create an Exchange / ExchangeValue
 
-         - if the flow+dirn already exists as a non-AllocatedExchange, it needs to be popped from the
-           exchange list, upgraded to an AllocatedExchange, and the new information stored
-
-         - if the flow+dirn is already an AllocatedExchange, then it just needs to be updated.
         :param flow:
         :param dirn:
         :param reference:
         :param value:
         :return:
         """
-        if not isinstance(reference, Exchange):
-            raise TypeError('Reference must be an exchange!')
-        self._set_reference(reference)  # make sure it's in there
         current = [x for x in self._exchanges if x.flow == flow and x.direction == dirn]
-        if len(current) == 0:
-            exch = AllocatedExchange(self, flow, dirn)
-            self._exchanges.add(exch)
-        elif len(current) == 1:
-            if isinstance(current[0], AllocatedExchange):
-                exch = current[0]
+        if len(current) == 1:
+            e = current[0]
+            if value is None or value == 0:
+                return None
+            elif reference is None:
+                if isinstance(e, AllocatedExchange):
+                    e.value = value
+                    return e
+                else:
+                    exch = ExchangeValue.from_exchange(e)
+                    self._exchanges.remove(e)
+                    self._exchanges.add(exch)
+                    return exch
             else:
-                exch = AllocatedExchange.from_exchange(current[0])
-                self._exchanges.remove(current[0])
+                exch = AllocatedExchange.from_exchange(e)
+                if isinstance(value, dict):
+                    exch.update(value)
+                else:
+                    exch[reference] = value
+                self._exchanges.remove(e)
                 self._exchanges.add(exch)
-        else:  # len(current) > 1??
+                return exch
+        elif len(current) > 1:
             raise KeyError('Something is very wrong- multiple exchanges found!!')
-        # update with new information
-        exch[reference.flow.get_uuid()] = value
-        return exch
+        else:
+            if value is None or value == 0:
+                e = Exchange(self, flow, dirn)
+            elif isinstance(value, float):
+                if reference is None:
+                    e = ExchangeValue(self, flow, dirn, value=value)
+                else:
+                    if reference not in self.reference_entity:
+                        raise KeyError('Specified reference is not registered with process: %s' % reference)
+                    e = AllocatedExchange(self, flow, dirn, value=value)
+                    e[reference] = value
+
+            elif isinstance(value, dict):
+                e = AllocatedExchange.from_dict(self, flow, dirn, value=value)
+            else:
+                raise TypeError('Unhandled value type %s' % type(value))
+            if e in self._exchanges:
+                raise KeyError('Exchange already present')
+            self._exchanges.add(e)
+            return e
 
     def serialize(self, exchanges=False, **kwargs):
         j = super(LcProcess, self).serialize()

@@ -31,6 +31,15 @@ if six.PY2:
 EcospoldExchange = namedtuple('EcospoldExchange', ('flow', 'direction', 'value'))
 
 
+def spold_reference_flow(filename):
+    """
+    second UUID, first match should be reference flow uuid
+    :param filename:
+    :return:
+    """
+    return uuid_regex.findall(filename)[1][0]
+
+
 class EcospoldV2Error(Exception):
     pass
 
@@ -94,11 +103,14 @@ class EcospoldV2Archive(ArchiveInterface):
     def _get_objectified_entity_with_lt_gt(self, filename):
         try:
             f = self._fetch_filename(filename)
-            f = re.sub(' < ', ' &lt; ', re.sub(' > ', ' &gt; ', f))
+            f = re.sub(' < ', ' &lt; ', re.sub(' > ', ' &gt; ', f.decode()))
             o = objectify.fromstring(f)
         except ValueError:
             print('failed on :%s:' % filename)
             return None
+        except TypeError:
+            print('failed on :%s:' % filename)
+            raise
         if o.nsmap[None] != self.nsmap:
             raise EcospoldV2Error('This class is for EcoSpold v%s only!' % self.nsmap[-2:])
         return o
@@ -249,17 +261,18 @@ class EcospoldV2Archive(ArchiveInterface):
                 raise
 
         p = self._create_process_entity(o)
-        rf = self._grab_reference_flow(o, uuid_regex.findall(filename)[1][0])  # second UUID, first match should be reference flow uuid
-        rx = p.add_exchange(rf, 'Output', reference=True)
-        print('Identified reference exchange\n %s' % rx)
+        rf = self._grab_reference_flow(o, spold_reference_flow(filename))
+        rx = p.add_reference(rf, 'Output')
+        self._print('Identified reference exchange\n %s' % rx)
         if exchanges:
             for exch in self._collect_exchanges(o):
                 if exch.value != 0:
-                    print('Adding %s [%s] (%g)' % (exch.flow, exch.direction, exch.value))
-                    p.add_allocated_exchange(exch.flow, exch.direction, reference=rx, value=exch.value)
+                    self._print('Exch %s [%s] (%g)' % (exch.flow, exch.direction, exch.value))
+                    p.add_exchange(exch.flow, exch.direction, reference=rx, value=exch.value)
 
         return p
 
+    '''
     def _fetch(self, uid, ref_flow=None):
         """
         ecospoldV2 files are named by activityId_referenceFlow - if none is supplied, take the first one found
@@ -274,12 +287,20 @@ class EcospoldV2Archive(ArchiveInterface):
         if len(files) == 0:
             return None
         return self._create_process(files[0])
+    '''
+
+    def retrieve_or_fetch_entity(self, filename, **kwargs):
+        entity = self._get_entity(filename)  # this checks upstream if it exists
+        if entity is not None:
+            if spold_reference_flow(filename) in [x.flow.get_uuid() for x in entity.reference_entity]:
+                return entity
+        return self._create_process(filename, **kwargs)
 
     def _load_all(self, exchanges=True):
         now = time()
         count = 0
         for k in self.list_datasets():
-            self._create_process(k, exchanges=exchanges)
+            self.retrieve_or_fetch_entity(k, exchanges=exchanges)
             count += 1
             if count % 100 == 0:
                 print(' Loaded %d processes (t=%.2f s)' % (count, time()-now))

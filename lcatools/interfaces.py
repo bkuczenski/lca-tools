@@ -91,6 +91,10 @@ class ArchiveInterface(object):
             return self._serialize_dict['upstreamReference']
         return None
 
+    def _print(self, *args):
+        if self._quiet is False:
+            print(*args)
+
     def __str__(self):
         s = '%s with %d entities at %s' % (self.__class__.__name__, len(self._entities), self.ref)
         if self._upstream is not None:
@@ -168,6 +172,7 @@ class ArchiveInterface(object):
         uid = self._key_to_id(ext_ref)
         etype = e.pop('entityType')
         if etype == 'quantity':
+            # can't move this to entity because we need _create_unit- so we wouldn't gain anything
             unit, _ = self._create_unit(e.pop('referenceUnit'))
             e['referenceUnit'] = unit
             entity = LcQuantity(uid, **e)
@@ -188,6 +193,7 @@ class ArchiveInterface(object):
                     is_ref = q == entity['referenceQuantity']
                     entity.add_characterization(q, reference=is_ref, value=v)
         elif etype == 'process':
+            # note-- we want to abandon referenceExchange notation, but we need to leave it in for backward compat
             try:
                 rx = e.pop('referenceExchange')
             except KeyError:

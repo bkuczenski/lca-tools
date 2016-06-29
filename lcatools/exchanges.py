@@ -74,6 +74,14 @@ class ExchangeValue(Exchange):
     An ExchangeValue is an exchange with a value
     """
     @classmethod
+    def from_exchange(cls, exch, value=None):
+        if isinstance(exch, ExchangeValue):
+            if value is not None:
+                raise ValueError('Exchange exists and has value %g (new value %g)' % (exch.value, value))
+            return exch
+        return cls(exch.process, exch.flow, exch.direction, value=value)
+
+    @classmethod
     def from_allocated(cls, allocated, reference):
         return cls(allocated.process, allocated.flow, allocated.direction, value=allocated[reference])
 
@@ -92,12 +100,63 @@ class ExchangeValue(Exchange):
         return j
 
 
+class MarketExchange(Exchange):
+    """
+    A MarketExchange is an alternative implementation of an ExchangeValue that handles the multiple-input process
+    case, i.e. when several processes produce the same product, and the database must balance them according to
+    some apportionment of market value or production volume.
+
+    The client code has to explicitly create a market exchange.  How does it know to do that? in the case of
+    ecospold2, it has to determine whether the process has duplicate [non-zero] flows with activityLinkIds.
+
+    In other cases, it will be foreground / linker code that does it.
+
+    Add market suppliers using dictionary notation.  Use exchange values or production volumes, but do it consistently.
+    The exchange value returned is always the individual supplier's value divided by the sum of values.
+    """
+    def __init__(self, *args, **kwargs):
+        super(MarketExchange, self).__init__(*args, **kwargs)
+        self._market_dict = dict()
+
+    def _sum(self):
+        return sum([v for k, v in self._market_dict.items()])
+
+    def keys(self):
+        return self._market_dict.keys()
+
+    def markets(self):
+        return self._market_dict.items()
+
+    def __setitem__(self, key, value):
+        if key in self._market_dict:
+            raise KeyError('Key already exists with value %g (new value %g)' % (self._market_dict[key], value))
+        self._market_dict[key] = value
+
+    def __getitem__(self, item):
+        return self._market_dict[item] / self._sum()
+
+    def __str__(self):
+        return 'Market for %s: %d suppliers, %g total volume' % (self.flow, len(self._market_dict), self._sum())
+
+    def serialize(self, values=False):
+        j = super(MarketExchange, self).serialize()
+        if values:
+            j['marketSuppliers'] = self._market_dict
+        else:
+            j['marketSuppliers'] = [k for k in self.keys()]
+        return j
+
+
 class AllocatedExchange(Exchange):
     """
-    An AllocatedExchange is an alternative implementation of an ExchangeValue that behaves like an
-    ordinary ExchangeValue, but also stores multiple exchange values, indexed via a dict of uuids for reference
+    An AllocatedExchange is an alternative implementation of an ExchangeValue that handles the multiple-output
+    process case.  Each allocatable output must be registered as part of the process's reference entity.
+    The AllocatedExchange stores multiple exchange values, indexed via a dict of uuids for reference
     flows.  (It is assumed that no process features the same flow in both input and output directions AS REFERENCE
     FLOWS.)  An allocation factor can only be set for flows that are listed in the parent process's reference entity.
+
+    A multi-output process (with AllocatedExchanges) and a multi-input process (with MarketExchanges) are mutually
+    exclusive.
 
     If an AllocatedExchange's flow UUID is found in the value_dict, it is a reference exchange. In this case, it
     is an error if the exchange value for the reference flow is zero, or if the exchange value for any non-
@@ -114,6 +173,8 @@ class AllocatedExchange(Exchange):
 
     @classmethod
     def from_exchange(cls, exchange):
+        if isinstance(exchange, AllocatedExchange):
+            return exchange
         self = cls(exchange.process, exchange.flow, exchange.direction)
         self._value = exchange.value
         return self
@@ -125,8 +186,6 @@ class AllocatedExchange(Exchange):
         super(AllocatedExchange, self).__init__(process, flow, direction, **kwargs)
 
     def _check_ref(self):
-        if self._value is not None:
-            raise ValueError('Exch generic value is already set to %g (versus ref %s)' % (self._value, self._ref_flow))
         for r, v in self._value_dict.items():
             if r == self._ref_flow and v == 0:
                 print('r: %s ref: %s v: %d' % (r, self._ref_flow, v))
@@ -137,6 +196,13 @@ class AllocatedExchange(Exchange):
 
     @property
     def value(self):
+        """
+        Get the exchange's "generic" value.
+        If the exchange is a reference exchange, then this is the exchange's self-reference
+        otherwise, if the exchange has only one entry, return it
+        otherwise, return _value, whatever it be
+        :return:
+        """
         if self._ref_flow in self._value_dict:
             return self[self._ref_flow]
         if self._value is None:
@@ -146,10 +212,13 @@ class AllocatedExchange(Exchange):
 
     @value.setter
     def value(self, exch_val):
+        if exch_val is None:
+            return
         if self._ref_flow in self._value_dict:
-            self._value_dict[self._ref_flow] = exch_val
-        else:
-            self._value = exch_val
+            raise KeyError('neutral value is already in dictionary! %g (new value %g)' % (
+                self._value_dict[self._ref_flow], exch_val))
+        self._value_dict[self._ref_flow] = exch_val
+        self._value = exch_val
 
     def keys(self):
         """
@@ -166,6 +235,9 @@ class AllocatedExchange(Exchange):
         """
         return self._value_dict.items()
 
+    def update(self, d):
+        self._value_dict.update(d)
+
     @staticmethod
     def _normalize_key(key):
         if isinstance(key, Exchange):
@@ -175,19 +247,30 @@ class AllocatedExchange(Exchange):
         return key
 
     def __getitem__(self, item):
+        """
+        If the key is known, return it
+        otherwise, if the key is the exchange's reference flow, return generic _value
+        otherwise, if the key is some other reference flow, return 0
+        otherwise, KeyError
+        :param item:
+        :return:
+        """
         k = self._normalize_key(item)
         if k in self._value_dict:
             return self._value_dict[k]
+        if k == self._ref_flow:
+            return self._value
         if k in [x.flow.get_uuid() for x in self.process.reference_entity]:
             return 0.0
         raise KeyError('Key %s is not identified as a reference exchange for the parent process' % k)
 
     def __setitem__(self, key, value):
         key = self._normalize_key(key)
+        if key in self._value_dict:
+            print(self._value_dict)
+            raise KeyError('Exchange value already defined for this reference!')
         if key not in [x.flow.get_uuid() for x in self.process.reference_entity]:
             raise KeyError('Cannot set allocation for a non-reference flow')
-        #if not isinstance(value, float):
-        #    raise ValueError('Allocated exchange value must be float, found %s' % value)
         if self._ref_flow in self._value_dict:  # reference exchange
             if key == self._ref_flow:
                 if value == 0:
@@ -198,6 +281,13 @@ class AllocatedExchange(Exchange):
         self._value_dict[key] = value
         if key == self._ref_flow:
             self._check_ref()
+
+    def __str__(self):
+        if self._ref_flow in self._value_dict:
+            ref = '{*}'
+        else:
+            ref = '   '
+        return '%6.6s: %s [%.3g %s] %s' % (self.direction, ref, self.value, self.quantity.reference_entity, self.flow)
 
     def serialize(self, values=False):
         j = super(AllocatedExchange, self).serialize()

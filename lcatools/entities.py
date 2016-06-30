@@ -234,7 +234,7 @@ class LcProcess(LcEntity):
         self._set_reference(rx)
         return rx
 
-    def add_exchange(self, flow, dirn, reference=None, value=None):
+    def add_exchange(self, flow, dirn, reference=None, value=None, **kwargs):
         """
         This is used to create Exchanges and ExchangeValues and AllocatedExchanges.
 
@@ -252,7 +252,8 @@ class LcProcess(LcEntity):
         :param value:
         :return:
         """
-        current = [x for x in self._exchanges if x.flow == flow and x.direction == dirn]
+        _x = Exchange(self, flow, dirn, **kwargs)
+        current = [x for x in self._exchanges if x == _x]
         if len(current) == 1:
             e = current[0]
             if value is None or value == 0:
@@ -279,18 +280,18 @@ class LcProcess(LcEntity):
             raise KeyError('Something is very wrong- multiple exchanges found!!')
         else:
             if value is None or value == 0:
-                e = Exchange(self, flow, dirn)
+                e = _x
             elif isinstance(value, float):
                 if reference is None:
-                    e = ExchangeValue(self, flow, dirn, value=value)
+                    e = ExchangeValue(self, flow, dirn, value=value, **kwargs)
                 else:
                     if reference not in self.reference_entity:
                         raise KeyError('Specified reference is not registered with process: %s' % reference)
-                    e = AllocatedExchange(self, flow, dirn, value=value)
+                    e = AllocatedExchange(self, flow, dirn, value=value, **kwargs)
                     e[reference] = value
 
             elif isinstance(value, dict):
-                e = AllocatedExchange.from_dict(self, flow, dirn, value=value)
+                e = AllocatedExchange.from_dict(self, flow, dirn, value=value, **kwargs)
             else:
                 raise TypeError('Unhandled value type %s' % type(value))
             if e in self._exchanges:

@@ -10,19 +10,20 @@ class Exchange(object):
     An exchange is an affiliation of a process, a flow, and a direction. An exchange does
     not include an exchange value- though presumably a valued exchange would be a subclass.
 
-    An exchange may specify a quantity different from the flow's reference quantity; by default
-    the reference quantity is used.
+    An exchange may specify a uuid of a terminating process; tests for equality will distinguish
+    differently-terminated flows. (ecoinvent)
     """
 
     entity_type = 'exchange'
 
-    def __init__(self, process, flow, direction, quantity=None):
+    def __init__(self, process, flow, direction, unit=None, termination=None):
         """
 
         :param process:
         :param flow:
         :param direction:
-        :param quantity:
+        :param unit: default: flow's reference quantity unit
+        :param termination: string id of terminating process or None
         :return:
         """
         assert process.entity_type == 'process', "'process' must be an LcProcess!"
@@ -32,25 +33,35 @@ class Exchange(object):
         self.process = process
         self.flow = flow
         self.direction = direction
-        if quantity is None:
-            self.quantity = flow.reference_entity
-        else:
-            assert quantity.entity_type == 'quantity', "'quantity' must be an LcQuantity or None!"
-            self.quantity = quantity
+        self.unit = unit or flow.reference_entity.reference_entity
+        self.termination = None
+        if termination is not None:
+            self.termination = str(termination)
         self.value = None
 
     def __hash__(self):
-        return hash((self.process.get_uuid(), self.flow.get_uuid(), self.direction))
+        return hash((self.process.get_uuid(), self.flow.get_uuid(), self.direction, self.termination))
 
     def __eq__(self, other):
         if other is None:
             return False
         return (self.process.get_uuid() == other.process.get_uuid() and
                 self.flow.get_uuid() == other.flow.get_uuid() and
-                self.direction == other.direction)
+                self.direction == other.direction and
+                self.termination == other.termination)
+
+    @property
+    def tflow(self):
+        """
+        indicates if an exchange is terminated with '(#)'
+        :return:
+        """
+        if self.termination is not None:
+            return str(self.flow) + ' (#)'
+        return str(self.flow)
 
     def __str__(self):
-        return '%s has %s: %s %s' % (self.process, self.direction, self.flow, self.quantity.reference_entity)
+        return '%s has %s: %s %s' % (self.process, self.direction, self.tflow, self.unit)
 
     def get_external_ref(self):
         return '%s: %s' % (self.direction, self.flow.get_uuid())
@@ -74,16 +85,17 @@ class ExchangeValue(Exchange):
     An ExchangeValue is an exchange with a value
     """
     @classmethod
-    def from_exchange(cls, exch, value=None):
+    def from_exchange(cls, exch, value=None, **kwargs):
         if isinstance(exch, ExchangeValue):
             if value is not None:
                 raise ValueError('Exchange exists and has value %g (new value %g)' % (exch.value, value))
             return exch
-        return cls(exch.process, exch.flow, exch.direction, value=value)
+        return cls(exch.process, exch.flow, exch.direction, value=value, **kwargs)
 
     @classmethod
     def from_allocated(cls, allocated, reference):
-        return cls(allocated.process, allocated.flow, allocated.direction, value=allocated[reference])
+        return cls(allocated.process, allocated.flow, allocated.direction, value=allocated[reference],
+                   termination=allocated.termination)
 
     def __init__(self, *args, value=None, **kwargs):
         super(ExchangeValue, self).__init__(*args, **kwargs)
@@ -91,7 +103,7 @@ class ExchangeValue(Exchange):
         self.value = value
 
     def __str__(self):
-        return '%6.6s: [%.3g %s] %s' % (self.direction, self.value, self.quantity.reference_entity, self.flow)
+        return '%6.6s: [%.3g %s] %s' % (self.direction, self.value, self.unit, self.tflow)
 
     def serialize(self, values=False):
         j = super(ExchangeValue, self).serialize()
@@ -166,8 +178,8 @@ class AllocatedExchange(Exchange):
     both.  Then an open task is to deserialize same.-- but that just requires serializing them as dicts
     """
     @classmethod
-    def from_dict(cls, process, flow, direction, value=None):
-        self = cls(process, flow, direction)
+    def from_dict(cls, process, flow, direction, value=None, **kwargs):
+        self = cls(process, flow, direction, **kwargs)
         self._value_dict.update(value)  # this will fail unless value was specified
         return self
 
@@ -175,7 +187,7 @@ class AllocatedExchange(Exchange):
     def from_exchange(cls, exchange):
         if isinstance(exchange, AllocatedExchange):
             return exchange
-        self = cls(exchange.process, exchange.flow, exchange.direction)
+        self = cls(exchange.process, exchange.flow, exchange.direction, termination=exchange.termination)
         self._value = exchange.value
         return self
 
@@ -287,7 +299,7 @@ class AllocatedExchange(Exchange):
             ref = '{*}'
         else:
             ref = '   '
-        return '%6.6s: %s [%.3g %s] %s' % (self.direction, ref, self.value, self.quantity.reference_entity, self.flow)
+        return '%6.6s: %s [%.3g %s] %s' % (self.direction, ref, self.value, self.unit, self.tflow)
 
     def serialize(self, values=False):
         j = super(AllocatedExchange, self).serialize()

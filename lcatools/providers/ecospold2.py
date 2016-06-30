@@ -28,7 +28,7 @@ if six.PY2:
     str = unicode
 
 
-EcospoldExchange = namedtuple('EcospoldExchange', ('flow', 'direction', 'value'))
+EcospoldExchange = namedtuple('EcospoldExchange', ('flow', 'direction', 'value', 'termination'))
 
 
 def spold_reference_flow(filename):
@@ -242,7 +242,8 @@ class EcospoldV2Archive(ArchiveInterface):
             else:
                 raise DirectionlessExchangeError
             v = float(exch.get('amount'))  # or None if not found
-            flowlist.append(EcospoldExchange(f, d, v))
+            t = exch.get('activityLinkId')  # or None if not found
+            flowlist.append(EcospoldExchange(f, d, v, t))
         return flowlist
 
     def _create_process(self, filename, exchanges=True):
@@ -268,7 +269,8 @@ class EcospoldV2Archive(ArchiveInterface):
             for exch in self._collect_exchanges(o):
                 if exch.value != 0:
                     self._print('Exch %s [%s] (%g)' % (exch.flow, exch.direction, exch.value))
-                    p.add_exchange(exch.flow, exch.direction, reference=rx, value=exch.value)
+                    p.add_exchange(exch.flow, exch.direction, reference=rx, value=exch.value,
+                                   termination=exch.termination)
 
         return p
 

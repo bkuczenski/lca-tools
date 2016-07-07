@@ -24,6 +24,7 @@ class LogicalFlow(object):
         self._catalog = catalog
         self._entities = []  # an array of CatalogRef namedtuples
         self._exchanges = set()  # an unordered set of exchanges
+
         self.name = None
 
     def flows(self):
@@ -55,6 +56,7 @@ class LogicalFlow(object):
         :param exch:
         :return:
         """
+        assert exch.entity_type == 'exchange', 'Not an exchange!'
         if cat_ref in self._entities:
             self._exchanges.add(ExchangeRef(cat_ref.index, exch))
 

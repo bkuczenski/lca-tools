@@ -19,6 +19,9 @@ from lcatools.exchanges import Exchange
 from collections import defaultdict
 
 
+LD_CONTEXT = 'http://lca-tools.github.io/context.jsonld'
+
+
 # CatalogRef = namedtuple('CatalogRef', ['archive', 'id'])
 
 
@@ -141,6 +144,9 @@ class ArchiveInterface(object):
         if entity.validate():
             if self._quiet is False:
                 print('Adding %s entity with %s: %s' % (entity.entity_type, u, entity['Name']))
+            if 'origin' not in entity.keys():
+                entity['origin'] = self.ref
+                assert entity.get_uuid() == str(u), 'New entity uuid must match origin repository key!'
             self._entities[u] = entity
             self._counter[entity.entity_type] += 1
 
@@ -307,6 +313,14 @@ class ArchiveInterface(object):
         return result_set
 
     def search(self, *args, **kwargs):
+        """
+        Find entities by search term, either full or partial uuid or entity property like 'Name', 'CasNumber',
+        or so on.
+        :param uuid: optional positional argument is a fragmentary (or complete) uuid string. (additional positional
+         params are ignored)
+        :param kwargs: regex search through entities' properties as named in the kw arguments
+        :return:
+        """
         uid = None if len(args) == 0 else args[0]
         if uid is not None:
             # search on uuids
@@ -371,10 +385,15 @@ class ArchiveInterface(object):
             if not isinstance(k, uuid.UUID):
                 print('Key %s is not a valid UUID.' % k)
                 valid = False
-            # 2: confirm entity's external key maps to its uuid
-            if self._key_to_id(v.get_external_key()) != k:
-                print("%s: Key doesn't match UUID!" % v.get_external_key())
+            if 'origin' not in v.keys():
+                print("%s: No origin!" % k)
                 valid = False
+
+            if v['origin'] == self.ref:
+                # 2: confirm entity's external key maps to its uuid
+                if self._key_to_id(v.get_external_ref()) != k:
+                    print("%s: Key doesn't match UUID in origin!" % v.get_external_ref())
+                    valid = False
 
             # confirm entity is dict-like with keys() and with a set of common keys
             try:

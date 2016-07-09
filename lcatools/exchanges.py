@@ -5,6 +5,10 @@ class DirectionlessExchangeError(Exception):
     pass
 
 
+class DuplicateExchangeError(Exception):
+    pass
+
+
 class Exchange(object):
     """
     An exchange is an affiliation of a process, a flow, and a direction. An exchange does
@@ -33,7 +37,10 @@ class Exchange(object):
         self.process = process
         self.flow = flow
         self.direction = direction
-        self.unit = unit or flow.reference_entity.reference_entity
+        try:
+            self.unit = unit or flow.reference_entity.reference_entity
+        except AttributeError:
+            self.unit = None
         self.termination = None
         if termination is not None:
             self.termination = str(termination)
@@ -88,7 +95,7 @@ class ExchangeValue(Exchange):
     def from_exchange(cls, exch, value=None, **kwargs):
         if isinstance(exch, ExchangeValue):
             if value is not None:
-                raise ValueError('Exchange exists and has value %g (new value %g)' % (exch.value, value))
+                raise DuplicateExchangeError('Exchange exists and has value %g (new value %g)' % (exch.value, value))
             return exch
         return cls(exch.process, exch.flow, exch.direction, value=value, **kwargs)
 
@@ -96,6 +103,9 @@ class ExchangeValue(Exchange):
     def from_allocated(cls, allocated, reference):
         return cls(allocated.process, allocated.flow, allocated.direction, value=allocated[reference],
                    termination=allocated.termination)
+
+    def add_to_value(self, value):
+        self.value += value
 
     def __init__(self, *args, value=None, **kwargs):
         super(ExchangeValue, self).__init__(*args, **kwargs)
@@ -227,10 +237,18 @@ class AllocatedExchange(Exchange):
         if exch_val is None:
             return
         if self._ref_flow in self._value_dict:
-            raise KeyError('neutral value is already in dictionary! %g (new value %g)' % (
+            raise DuplicateExchangeError('default value is already in dictionary! %g (new value %g)' % (
                 self._value_dict[self._ref_flow], exch_val))
         self._value_dict[self._ref_flow] = exch_val
         self._value = exch_val
+
+    def add_to_value(self, value, reference=None):
+        if reference is None:
+            self._value_dict[self._ref_flow] = self._value_dict[self._ref_flow] + value
+            self._value = self._value_dict[self._ref_flow]
+        else:
+            reference = self._normalize_key(reference)
+            self._value_dict[reference] = self._value_dict[reference] + value
 
     def keys(self):
         """
@@ -279,8 +297,8 @@ class AllocatedExchange(Exchange):
     def __setitem__(self, key, value):
         key = self._normalize_key(key)
         if key in self._value_dict:
-            print(self._value_dict)
-            raise KeyError('Exchange value already defined for this reference!')
+            # print(self._value_dict)
+            raise DuplicateExchangeError('Exchange value already defined for this reference!')
         if key not in [x.flow.get_uuid() for x in self.process.reference_entity]:
             raise KeyError('Cannot set allocation for a non-reference flow')
         if self._ref_flow in self._value_dict:  # reference exchange

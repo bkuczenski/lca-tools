@@ -3,7 +3,7 @@ from __future__ import print_function, unicode_literals
 import uuid
 from itertools import chain
 
-from lcatools.exchanges import Exchange, ExchangeValue, AllocatedExchange
+from lcatools.exchanges import Exchange, ExchangeValue, AllocatedExchange, DuplicateExchangeError
 from lcatools.characterizations import Characterization, CharacterizationFactor
 
 
@@ -210,6 +210,9 @@ class LcProcess(LcEntity):
                 return False
         return True
 
+    def _print_ref_field(self):
+        return 'see exchanges'
+
     def _set_reference(self, ref_entity):
         """
         is it a problem that there's no way to un-set reference exchanges? my feeling is no, at least at present.
@@ -234,7 +237,7 @@ class LcProcess(LcEntity):
         self._set_reference(rx)
         return rx
 
-    def add_exchange(self, flow, dirn, reference=None, value=None, **kwargs):
+    def add_exchange(self, flow, dirn, reference=None, value=None, add_dups=False, **kwargs):
         """
         This is used to create Exchanges and ExchangeValues and AllocatedExchanges.
 
@@ -250,34 +253,57 @@ class LcProcess(LcEntity):
         :param dirn:
         :param reference:
         :param value:
+        :param add_dups: (False) set to true to handle "duplicate exchange" errors by cumulating their values
         :return:
         """
         _x = Exchange(self, flow, dirn, **kwargs)
-        current = [x for x in self._exchanges if x == _x]
-        if len(current) == 1:
-            e = current[0]
+        if _x in self._exchanges:
             if value is None or value == 0:
                 return None
-            elif reference is None:
+            e = [x for x in self._exchanges if x == _x][0]
+            if reference is None:
                 if isinstance(e, AllocatedExchange):
-                    e.value = value
+                    try:
+                        e.value = value  # this will catch already-set errors
+                    except DuplicateExchangeError:
+                        if add_dups:
+                            e.add_to_value(value)
+                        else:
+                            print('Duplicate exchange in process %s:\n%s' % (self.get_uuid(), e))
+                            raise
                     return e
                 else:
-                    exch = ExchangeValue.from_exchange(e)
-                    self._exchanges.remove(e)
-                    self._exchanges.add(exch)
-                    return exch
+                    try:
+                        exch = ExchangeValue.from_exchange(e, value=value)  # this will catch already-set errors
+                        self._exchanges.remove(e)
+                        self._exchanges.add(exch)
+                        return exch
+                    except DuplicateExchangeError:
+                        if add_dups:
+                            e.add_to_value(value)
+                            return e
+                        else:
+                            print('Duplicate exchange in process %s:\n%s' % (self.get_uuid(), e))
+                            raise
+
             else:
                 exch = AllocatedExchange.from_exchange(e)
                 if isinstance(value, dict):
                     exch.update(value)
                 else:
-                    exch[reference] = value
+                    try:
+                        exch[reference] = value  # this will catch already-set errors
+                    except DuplicateExchangeError:
+                        if add_dups:
+                            exch.add_to_value(value, reference=reference)
+                        else:
+                            print('Duplicate exchange in process %s:\n%s' % (self.get_uuid(), e))
+                            raise
+
                 self._exchanges.remove(e)
                 self._exchanges.add(exch)
                 return exch
-        elif len(current) > 1:
-            raise KeyError('Something is very wrong- multiple exchanges found!!')
+
         else:
             if value is None or value == 0:
                 e = _x
@@ -369,9 +395,14 @@ class LcFlow(LcEntity):
 
     def serialize(self, characterizations=False, **kwargs):
         j = super(LcFlow, self).serialize()
+        j.pop(self._ref_field)  # reference reported in characterizations
         if characterizations:
             j['characterizations'] = sorted([x.serialize(**kwargs) for x in self._characterizations],
                                             key=lambda x: x['quantity'])
+        else:
+            j['characterizations'] = [x.serialize(**kwargs) for x in self._characterizations
+                                      if x.quantity == self.reference_entity]
+
         return j
 
 

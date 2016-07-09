@@ -40,8 +40,10 @@ class EcoinventSpreadsheet(NsUuidArchive):
         try_q = self.quantity_with_unit(unitstring)
         if try_q is None:
             ref_unit, _ = self._create_unit(unitstring)
+            u = self._key_to_id(unitstring)
 
-            q = LcQuantity.new('Ecoinvent Spreadsheet Quantity %s' % unitstring, ref_unit, Comment=self.version)
+            q = LcQuantity(u, Name='Ecoinvent Spreadsheet Quantity %s' % unitstring,
+                           ReferenceUnit=ref_unit, Comment=self.version)
             q.set_external_ref(unitstring)
             self.add(q)
         else:
@@ -187,8 +189,10 @@ class EcoinventSpreadsheet(NsUuidArchive):
                 ref_check = 'group'
 
             exch_flow = self[self._key_to_id(exch_name)]
+            if row[ref_check] == 'ReferenceProduct':
+                p.add_reference(exch_flow, 'Output')
 
-            p.add_exchange(exch_flow, 'Output', reference=row[ref_check] == 'ReferenceProduct')
+            p.add_exchange(exch_flow, 'Output')
 
     def _load_all(self):
         _elementary = self._little_read('elementary exchanges')

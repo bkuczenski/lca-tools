@@ -129,7 +129,7 @@ class EcoinventLcia(NsUuidArchive):
                     print('Found upstream match: %s' % str(f))
                 if self[f['referenceQuantity'].get_uuid()] is None:
                     # this should never run, since retrieving the query should add it to the db automatically
-                    print('\n ref key not found: %s.\n adding quantity %s' %(key, f['referenceQuantity']))
+                    print('\n ref key not found: %s.\n adding quantity %s' % (key, f['referenceQuantity']))
                     self.add(f['referenceQuantity'])
             else:
                 f = LcFlow(u, Name=row['name'], CasNumber='', Compartment=[row['compartment'], row['subcompartment']],

@@ -335,8 +335,9 @@ class IlcdArchive(ArchiveInterface):
         p.set_external_ref('%s/%s' % (typeDirs['Process'], u))
 
         for flow, f_dir, val in exch_list:
-            is_rf = (rf == flow.get_uuid() and rf_dir == f_dir)
-            p.add_exchange(flow, f_dir, reference=is_rf, value=val)
+            if rf == flow.get_uuid() and rf_dir == f_dir:
+                p.add_reference(flow, f_dir)
+            p.add_exchange(flow, f_dir, reference=None, value=val, add_dups=True)  # add_dups: poor quality control on ELCD
 
         self.add(p)
 

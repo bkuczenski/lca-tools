@@ -82,8 +82,10 @@ class EcospoldV1Archive(NsUuidArchive):
         try_q = self.quantity_with_unit(unitstring)
         if try_q is None:
             ref_unit, _ = self._create_unit(unitstring)
+            uid = self._key_to_id(unitstring)
 
-            q = LcQuantity.new('EcoSpold Quantity %s' % unitstring, ref_unit, Comment=self.spold_version)
+            q = LcQuantity(uid, Name='EcoSpold Quantity %s' % unitstring,
+                           ReferenceUnit=ref_unit, Comment=self.spold_version)
             q.set_external_ref(unitstring)
             self.add(q)
         else:
@@ -142,7 +144,7 @@ class EcospoldV1Archive(NsUuidArchive):
             else:
                 raise DirectionlessExchangeError
             v = exch.get('meanValue')  # returns none if missing
-            flowlist.append((f, d, v))
+            flowlist.append((f, d, float(v)))
 
         p_meta = o.dataset.metaInformation.processInformation
         n = p_meta.referenceFunction.get('name')
@@ -166,9 +168,13 @@ class EcospoldV1Archive(NsUuidArchive):
                           Classifications=cls)
             p.set_external_ref(n)
 
+            if rf is None:
+                rx = None
+            else:
+                rx = p.add_reference(rf, 'Output')
             for flow, f_dir, val in flowlist:
-                is_rf = (flow is rf and f_dir == 'Output')
-                p.add_exchange(flow, f_dir, reference=is_rf, value=val)
+                self._print('Exch %s [%s] (%g)' % (flow, f_dir, val))
+                p.add_exchange(flow, f_dir, reference=None, value=val, add_dups=True)
 
             self.add(p)
 

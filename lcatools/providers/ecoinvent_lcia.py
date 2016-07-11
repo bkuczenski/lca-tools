@@ -5,7 +5,6 @@ At this point I am really straight repeating a lot of Chris's work. but who can 
 from __future__ import print_function, unicode_literals
 
 from lcatools.providers.base import NsUuidArchive
-from lcatools.characterizations import CharacterizationFactor
 from lcatools.literate_float import LiterateFloat
 
 from lcatools.entities import LcFlow, LcQuantity
@@ -103,7 +102,7 @@ class EcoinventLcia(NsUuidArchive):
             unit, _ = self._create_unit(row['unit'])
 
             q = LcQuantity(u, Name=key, referenceUnit=unit, Comment='Ecoinvent LCIA implementation',
-                           method=row['method'], category=row['category'], indicator=row['indicator'])
+                           Method=row['method'], Category=row['category'], Indicator=row['indicator'])
             q.set_external_ref(key)
             self.add(q)
         else:

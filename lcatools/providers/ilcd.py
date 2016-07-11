@@ -27,7 +27,7 @@ import posixpath
 
 typeDirs = {'Process': 'processes',
             'Flow': 'flows',
-            'LCIAMethod': 'lciamethods',
+            'LCIAMethod': 'LCIAmethods',  # love that case consistency
             'FlowProperty': 'flowproperties',
             'UnitGroup': 'unitgroups',
             'Source': 'sources',
@@ -79,14 +79,15 @@ def get_reference_flow(process, ns=None):
     return get_flow_ref(rf, ns=ns)
 
 
-def get_reference_flow_property(flow, ns=None):
+def get_reference_flow_property_id(flow, ns=None):
     # load or check the reference quantity
-    ref_to_ref = int(find_tag(flow, 'referenceToReferenceFlowProperty', ns=ns)[0])
-    rfp = [i for i in flow['flowProperties'].getchildren()
+    return int(find_tag(flow, 'referenceToReferenceFlowProperty', ns=ns)[0])
+'''    rfp = [i for i in flow['flowProperties'].getchildren()
            if int(i.attrib['dataSetInternalID']) == ref_to_ref][0]
     rfp_uuid = find_tag(rfp, 'referenceToFlowPropertyDataSet', ns=ns)[0].attrib['refObjectId']
     rfp_uri = find_tag(rfp, 'referenceToFlowPropertyDataSet', ns=ns)[0].attrib['uri']
     return rfp_uuid, rfp_uri
+'''
 
 
 def get_reference_unit_group(q, ns=None):
@@ -125,7 +126,7 @@ class IlcdArchive(ArchiveInterface):
     This class handles de-referencing for ILCD archives
     """
 
-    def __init__(self, ref, prefix=None, quiet=True):
+    def __init__(self, ref, prefix=None, **kwargs):
         """
         Just instantiates the parent class.
         :param ref: root of the archive
@@ -135,7 +136,7 @@ class IlcdArchive(ArchiveInterface):
         :param quiet: forwarded to ArchiveInterface
         :return:
         """
-        super(IlcdArchive, self).__init__(ref, quiet=quiet)
+        super(IlcdArchive, self).__init__(ref, **kwargs)
         self.internal_prefix = prefix
         if prefix is not None:
             self._serialize_dict['prefix'] = prefix
@@ -253,7 +254,7 @@ class IlcdArchive(ArchiveInterface):
     @staticmethod
     def _create_dummy_flow_from_exch(uid, exch):
         n = str(find_common(exch, 'shortDescription')[0])
-        print('Creating DUMMY flow with name %s' % n)
+        print('Creating DUMMY flow (%s) with name %s' % (uid, n))
         return LcFlow(uid, Name=n, Comment='Dummy flow (HTTP or XML error)')
 
     def _create_flow(self, filename):
@@ -269,9 +270,6 @@ class IlcdArchive(ArchiveInterface):
         u = str(find_common(o, 'UUID')[0])
         n = str(find_tag(o, 'baseName', ns=ns)[0])
 
-        rfp, rfp_uri = get_reference_flow_property(o, ns=ns)
-        q = self._check_or_retrieve_child(filename, rfp, rfp_uri)
-
         c = str(find_common(o, 'generalComment')[0])
 
         cas = str(find_tag(o, 'CASNumber', ns=ns)[0])
@@ -284,10 +282,47 @@ class IlcdArchive(ArchiveInterface):
         f = LcFlow(u, Name=n, CasNumber=cas, Comment=c, Compartment=cat)
         f.set_external_ref('%s/%s' % (typeDirs['Flow'], u))
 
-        f.add_characterization(q, reference=True)
+        ref_to_ref = get_reference_flow_property_id(o, ns=ns)
+        for fp in o['flowProperties'].getchildren():
+            if int(fp.attrib['dataSetInternalID']) == ref_to_ref:
+                is_ref = True
+            else:
+                is_ref = False
+            val = float(find_tag(fp, 'meanValue', ns=ns)[0])
+
+            ref = find_tag(fp, 'referenceToFlowPropertyDataSet', ns=ns)[0]
+            rfp_uuid = ref.attrib['refObjectId']
+            rfp_uri = ref.attrib['uri']
+
+            try:
+                q = self._check_or_retrieve_child(filename, rfp_uuid, rfp_uri)
+            except (HTTPError, XMLSyntaxError, KeyError):
+                continue
+
+            f.add_characterization(q, reference=is_ref, value=val)
 
         self.add(f)
         return f
+
+    def _create_process_entity(self, o, ns):
+        u = str(find_common(o, 'UUID')[0])
+        n = str(find_tag(o, 'baseName', ns=ns)[0])
+
+        g = find_tag(o, 'locationOfOperationSupplyOrProduction', ns=ns)[0].attrib['location']
+
+        stt = {'begin': str(find_common(o, 'referenceYear')[0]), 'end': str(find_common(o, 'dataSetValidUntil')[0])}
+
+        c = str(find_common(o, 'generalComment')[0])
+
+        cls = [str(i) for i in find_common(o, 'class')]
+
+        p = LcProcess(u, Name=n, Comment=c, SpatialScope=g, TemporalScope=stt,
+                      Classifications=cls)
+        self.add(p)
+
+        p.set_external_ref('%s/%s' % (typeDirs['Process'], u))
+
+        return p
 
     def _create_process(self, filename):
         """
@@ -313,33 +348,19 @@ class IlcdArchive(ArchiveInterface):
             try:
                 f = self._check_or_retrieve_child(filename, f_id, f_uri)
             except (HTTPError, XMLSyntaxError, KeyError):
+                print('In file %s:' % filename)
                 f = self._create_dummy_flow_from_exch(f_id, exch)
                 self.add(f)
             v = get_exch_value(exch, ns=ns)
             exch_list.append((f, f_dir, v))
 
-        u = str(find_common(o, 'UUID')[0])
-        n = str(find_tag(o, 'baseName', ns=ns)[0])
-
-        g = find_tag(o, 'locationOfOperationSupplyOrProduction', ns=ns)[0].attrib['location']
-
-        stt = {'begin': str(find_common(o, 'referenceYear')[0]), 'end': str(find_common(o, 'dataSetValidUntil')[0])}
-
-        c = str(find_common(o, 'generalComment')[0])
-
-        cls = [str(i) for i in find_common(o, 'class')]
-
-        p = LcProcess(u, Name=n, Comment=c, SpatialScope=g, TemporalScope=stt,
-                      Classifications=cls)
-
-        p.set_external_ref('%s/%s' % (typeDirs['Process'], u))
+        p = self._create_process_entity(o, ns)
 
         for flow, f_dir, val in exch_list:
             if rf == flow.get_uuid() and rf_dir == f_dir:
                 p.add_reference(flow, f_dir)
-            p.add_exchange(flow, f_dir, reference=None, value=val, add_dups=True)  # add_dups: poor quality control on ELCD
-
-        self.add(p)
+            p.add_exchange(flow, f_dir, reference=None, value=val,
+                           add_dups=True)  # add_dups: poor quality control on ELCD
 
         return p
 
@@ -398,7 +419,6 @@ class IlcdArchive(ArchiveInterface):
         self.check_counter('quantity')
         self.check_counter('flow')
         self.check_counter('process')
-
 
 
 '''

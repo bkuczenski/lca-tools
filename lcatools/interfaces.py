@@ -184,9 +184,9 @@ class ArchiveInterface(object):
             entity = LcQuantity(uid, **e)
         elif etype == 'flow':
             try:
-                e['referenceQuantity'] = self[e['referenceQuantity']]
-            except TypeError:
                 e.pop('referenceQuantity')
+            except KeyError:
+                pass
             if 'characterizations' in e:
                 chars = e.pop('characterizations')
             entity = LcFlow(uid, **e)
@@ -196,7 +196,10 @@ class ArchiveInterface(object):
                     q = self[c['quantity']]
                     if 'value' in c:
                         v = c['value']
-                    is_ref = q == entity['referenceQuantity']
+                    if 'isReference' in c:
+                        is_ref = True
+                    else:
+                        is_ref = False
                     entity.add_characterization(q, reference=is_ref, value=v)
         elif etype == 'process':
             # note-- we want to abandon referenceExchange notation, but we need to leave it in for backward compat
@@ -210,14 +213,16 @@ class ArchiveInterface(object):
             if exchs is not None:
                 for x in exchs:
                     v = None
-                    is_ref = False
+                    # is_ref = False
                     f = self[x['flow']]
                     d = x['direction']
                     if 'value' in x:
                         v = x['value']
                     if 'isReference' in x:
-                        is_ref = x['isReference']
-                    entity.add_exchange(f, d, reference=is_ref, value=v)
+                        # is_ref = x['isReference']
+                        entity.add_reference(f, d)
+                    # TODO: handle allocations -- I think this will "just work" if v is a dict
+                    entity.add_exchange(f, d, value=v)
                 rx = None
             if rx is not None and rx != 'None':
                 try:

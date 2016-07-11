@@ -1,14 +1,17 @@
 
+class DuplicateCharacterizationError(Exception):
+    pass
+
 
 class Characterization(object):
     """
-    A characterization is an affiliation of a flow and a quantity. At this point it is merely an
-    assertion that the flow can be described in terms of the quantity.
+    A characterization is an affiliation of a flow and a quantity. Characterizations are inherently naively spatialized,
+    with factors stored in a dict of locations, and the 'GLO' location being used as the default.
     """
 
     entity_type = 'characterization'
 
-    def __init__(self, flow, quantity):
+    def __init__(self, flow, quantity, **kwargs):
         """
 
         :param flow:
@@ -20,6 +23,43 @@ class Characterization(object):
 
         self.flow = flow
         self.quantity = quantity
+        self._locations = dict()
+        if kwargs:
+            self.add_value(**kwargs)
+
+    @property
+    def value(self):
+        if 'GLO' in self._locations:
+            return self._locations['GLO']
+        elif len(self._locations) == 0:
+            return None
+        else:
+            return self._locations
+
+    @value.setter
+    def value(self, val):
+        self._locations['GLO'] = val
+
+    def __getitem__(self, item):
+        return self._locations[item]
+
+    def __setitem__(self, key, value):
+        if key in self._locations:
+            raise DuplicateCharacterizationError('Characterization value already present! %s = %g' %
+                                                 (key, self._locations[key]))
+        self._locations[key] = value
+
+    def update_values(self, **kwargs):
+        self._locations.update(kwargs)
+
+    def add_value(self, value=None, location=None):
+        if location is None:
+            self['GLO'] = value
+        else:
+            self[location] = value
+
+    def locations(self):
+        return self._locations.keys()
 
     def __hash__(self):
         return hash((self.flow.get_uuid(), self.quantity.get_uuid()))
@@ -31,42 +71,28 @@ class Characterization(object):
                 (self.quantity.get_uuid() == other.quantity.get_uuid()))
 
     def __str__(self):
-        return '%s has %s %s' % (self.flow, self.quantity, self.quantity.reference_entity)
+        if self.value is not None:
+            return '%s: [%.3g %s] %s' % (self.flow, self.value, self.quantity.reference_entity, self.quantity)
+        else:
+            return '%s has %s %s' % (self.flow, self.quantity, self.quantity.reference_entity)
 
     def tupleize(self):
         return self.flow.get_uuid(), self.quantity.get_uuid()
 
-    def serialize(self, **kwargs):
+    def serialize(self, values=False):
         j = {
             'quantity': self.quantity.get_uuid()
         }
         if self.quantity == self.flow['referenceQuantity']:
             j['isReference'] = True
+        if values:
+            if self.value is not None:
+                j['value'] = self.value
         return j
 
     @classmethod
     def signature_fields(cls):
         return ['flow', 'quantity']
-
-
-class CharacterizationFactor(Characterization):
-    """
-    A CharacterizationFactor is a characterization with a value field.
-    """
-
-    def __init__(self, *args, value=None, **kwargs):
-        super(CharacterizationFactor, self).__init__(*args, **kwargs)
-        self.value = value
-
-    def serialize(self, values=False):
-        d = super(CharacterizationFactor, self).serialize()
-        if values:
-            if self.value is not None:
-                d['value'] = self.value
-        return d
-
-    def __str__(self):
-        return '%s: [%.3g %s] %s' % (self.flow, self.value, self.quantity.reference_entity, self.quantity)
 
 
 class CharacterizationSet(object):

@@ -4,7 +4,7 @@ import uuid
 from itertools import chain
 
 from lcatools.exchanges import Exchange, ExchangeValue, AllocatedExchange, DuplicateExchangeError
-from lcatools.characterizations import Characterization, CharacterizationFactor
+from lcatools.characterizations import Characterization
 
 
 def concatenate(*lists):
@@ -125,7 +125,7 @@ class LcEntity(object):
         if self.reference_entity is None:
             return '%s' % None
         else:
-            return '%s' % self.reference_entity.get_uuid()
+            return '%s' % self.reference_entity.get_external_ref()
 
     def serialize(self):
         j = {
@@ -377,17 +377,21 @@ class LcFlow(LcEntity):
         comp = ', '.join((i for i in self._d['Compartment'] if i is not None))
         return '%s%s [%s]' % (self._d['Name'], cas, comp)
 
-    def add_characterization(self, quantity, reference=False, value=None):
+    def add_characterization(self, quantity, reference=False, value=None, **kwargs):
         if reference:
             self._set_reference(quantity)
             if value is not None:
                 self.set_local_unit(value)
 
-        if value is None:
-            c = Characterization(self, quantity)
+        c = Characterization(self, quantity)
+        if c in self._characterizations:
+            if value is None:
+                return
+            c = [x for x in self._characterizations if x == c][0]
         else:
-            c = CharacterizationFactor(self, quantity, value=value)
-        self._characterizations.add(c)
+            self._characterizations.add(c)
+        if value is not None:
+            c.add_value(value=value, **kwargs)
 
     def characterizations(self):
         for i in self._characterizations:

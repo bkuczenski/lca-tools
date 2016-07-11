@@ -67,16 +67,6 @@ class EcoinventLcia(NsUuidArchive):
         self.add(mass)
         self._mass = mass
 
-        self._upstream_hash = dict()  # for lookup use later
-        if self._upstream is not None:
-            # create a dict of upstream flows
-            for i in self._upstream.flows():
-                up_key = self._upstream_flow_key(i)
-                if up_key in self._upstream_hash:
-                    print('!!multiple upstream matches for %s!!' % up_key)
-                else:
-                    self._upstream_hash[self._upstream_flow_key(i)] = i
-
     @staticmethod
     def _quantity_key(row):
         return ', '.join([row[k] for k in ('method', 'category', 'indicator')])
@@ -84,10 +74,6 @@ class EcoinventLcia(NsUuidArchive):
     @staticmethod
     def _flow_key(row):
         return ', '.join([row[k] for k in ('name', 'compartment', 'subcompartment')])
-
-    @staticmethod
-    def _upstream_flow_key(flow):
-        return ', '.join([flow['Name']] + flow['Compartment'])
 
     def _create_quantity(self, row):
         """
@@ -120,26 +106,14 @@ class EcoinventLcia(NsUuidArchive):
     def _create_flow(self, row):
         key = self._flow_key(row)
         u = self._key_to_id(key)
-        try_f = self[u]
-        if try_f is None:
-            if key in self._upstream_hash:
-                f = self._upstream_hash[key]
-                if self._quiet is False:
-                    print('Found upstream match: %s' % str(f))
-                if self[f['referenceQuantity'].get_uuid()] is None:
-                    # this should never run, since retrieving the query should add it to the db automatically
-                    print('\n ref key not found: %s.\n adding quantity %s' % (key, f['referenceQuantity']))
-                    self.add(f['referenceQuantity'])
-            else:
-                f = LcFlow(u, Name=row['name'], CasNumber='', Compartment=[row['compartment'], row['subcompartment']],
-                           Comment=row['note'])
-                if self._quiet is False:
-                    print('Created new flow with %s ' % self._upstream_flow_key(f))
-                f.add_characterization(self._mass, reference=True)
+        f = self._try_flow(u, key)
+        if f is None:
+            f = LcFlow(u, Name=row['name'], CasNumber='', Compartment=[row['compartment'], row['subcompartment']],
+                       Comment=row['note'])
+            self._print('Created new flow with %s ' % self._upstream_flow_key(f))
+            f.add_characterization(self._mass, reference=True)
             f.set_external_ref(key)
             self.add(f)
-        else:
-            f = try_f
         return f
 
     def _get_value(self, row):

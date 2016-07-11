@@ -5,6 +5,7 @@ import os
 
 from lxml import objectify
 from lxml.etree import XMLSyntaxError
+from itertools import chain
 
 try:  # python3
     from urllib.parse import urljoin
@@ -17,11 +18,12 @@ except ImportError:  # python2
     str = unicode
 
 
+from lcatools.providers.base import LcArchive
 from lcatools.providers.archive import Archive
 from lcatools.providers.xml_widgets import *
 from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcUnit
-from lcatools.exchanges import Exchange
-from lcatools.interfaces import ArchiveInterface, uuid_regex
+from lcatools.interfaces import uuid_regex
+from lcatools.characterizations import DuplicateCharacterizationError
 
 import posixpath
 
@@ -121,7 +123,7 @@ class IlcdEntity(object):
 '''
 
 
-class IlcdArchive(ArchiveInterface):
+class IlcdArchive(LcArchive):
     """
     This class handles de-referencing for ILCD archives
     """
@@ -255,7 +257,7 @@ class IlcdArchive(ArchiveInterface):
     def _create_dummy_flow_from_exch(uid, exch):
         n = str(find_common(exch, 'shortDescription')[0])
         print('Creating DUMMY flow (%s) with name %s' % (uid, n))
-        return LcFlow(uid, Name=n, Comment='Dummy flow (HTTP or XML error)')
+        return LcFlow(uid, Name=n, Comment='Dummy flow (HTTP or XML error)', Compartment=['dummy flows'])
 
     def _create_flow(self, filename):
         """
@@ -268,7 +270,11 @@ class IlcdArchive(ArchiveInterface):
         ns = find_ns(o.nsmap, 'Flow')
 
         u = str(find_common(o, 'UUID')[0])
-        n = str(find_tag(o, 'baseName', ns=ns)[0])
+        n = ', '.join(chain(filter(len, [str(find_tag(o, k, ns=ns)[0])
+                                         for k in ('baseName',
+                                                   'treatmentStandardsRoutes',
+                                                   'mixAndLocationTypes',
+                                                   'flowProperties')])))
 
         c = str(find_common(o, 'generalComment')[0])
 
@@ -299,14 +305,22 @@ class IlcdArchive(ArchiveInterface):
             except (HTTPError, XMLSyntaxError, KeyError):
                 continue
 
-            f.add_characterization(q, reference=is_ref, value=val)
+            try:
+                f.add_characterization(q, reference=is_ref, value=val)
+            except DuplicateCharacterizationError:
+                print('Duplicate Characterization in filename %s\n %s = %g' % (filename, q, val))
+                # let it go
 
         self.add(f)
         return f
 
     def _create_process_entity(self, o, ns):
         u = str(find_common(o, 'UUID')[0])
-        n = str(find_tag(o, 'baseName', ns=ns)[0])
+        n = ', '.join(chain(filter(len, [str(find_tag(o, k, ns=ns)[0])
+                                         for k in ('baseName',
+                                                   'treatmentStandardsRoutes',
+                                                   'mixAndLocationTypes',
+                                                   'functionalUnitFlowProperties')])))
 
         g = find_tag(o, 'locationOfOperationSupplyOrProduction', ns=ns)[0].attrib['location']
 

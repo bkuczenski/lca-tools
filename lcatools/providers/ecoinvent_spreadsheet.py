@@ -51,12 +51,19 @@ class EcoinventSpreadsheet(NsUuidArchive):
 
         return q
 
-    def _create_flow(self, u, unit, ext_ref, **kwargs):
-        q = self.quantity_with_unit(unit)
-        f = LcFlow(u, **kwargs)
-        f.set_external_ref(ext_ref)
-        f.add_characterization(quantity=q, reference=True)
-        self.add(f)
+    def _create_flow(self, u, unit, ext_ref, Name=None, Compartment=None, **kwargs):
+        upstream_key = ', '.join([Name] + Compartment)
+        f = self._try_flow(u, upstream_key)
+        if f is None:
+            f = LcFlow(u, Name=Name, Compartment=Compartment, **kwargs)
+            f.set_external_ref(ext_ref)
+            q = self._create_quantity(unit)
+            if q is None:
+                raise ValueError
+            f.add_characterization(quantity=q, reference=True)
+            self.add(f)
+        else:
+            f.update(kwargs)
 
     def _create_quantities(self, _elementary, _intermediate):
         unitname = 'unit' if self.internal else 'unitName'
@@ -78,8 +85,6 @@ class EcoinventSpreadsheet(NsUuidArchive):
         for index, row in _intermediate.iterrows():
             n = row['name']
             u = self._key_to_id(n)
-            if self[u] is not None:
-                continue
             self._create_flow(u, row['unitName'], n, Name=n, CasNumber=row['CAS'],
                               Compartment=['Intermediate flow'], Comment=row['comment'],
                               Synonyms=row['synonyms'])
@@ -92,8 +97,6 @@ class EcoinventSpreadsheet(NsUuidArchive):
         for index, row in _elementary.iterrows():
             key = self._elementary_key(row)
             u = self._key_to_id(key)
-            if self[u] is not None:
-                continue
             cat = [row['compartment'], row['subcompartment']]
             self._create_flow(u, row['unitName'], key, Name=row['name'], CasNumber=row['casNumber'],
                               Compartment=cat, Comment='', Formula=row['formula'],
@@ -110,8 +113,6 @@ class EcoinventSpreadsheet(NsUuidArchive):
         for index, row in inter.iterrows():
             n = row['name']
             u = self._key_to_id(n)
-            if self[u] is not None:
-                continue
             self._create_flow(u, row['unit'], n, Name=n, Compartment=['Intermediate flow'],
                               CasNumber='', Comment='')
 
@@ -127,8 +128,6 @@ class EcoinventSpreadsheet(NsUuidArchive):
         for index, row in int_elem.iterrows():
             key = self._elementary_key(row)
             u = self._key_to_id(key)
-            if self[u] is not None:
-                continue
             n = row['name']
             cat = [row['compartment'], row['subcompartment']]
             self._create_flow(u, row['unit'], key, Name=n, Compartment=cat,

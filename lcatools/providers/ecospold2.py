@@ -18,7 +18,8 @@ from collections import namedtuple
 from lcatools.providers import tail
 from lcatools.providers.xml_widgets import *
 
-from lcatools.interfaces import ArchiveInterface, uuid_regex
+from lcatools.providers.base import LcArchive
+from lcatools.interfaces import uuid_regex
 from lcatools.providers.archive import Archive
 from lcatools.entities import LcQuantity, LcFlow, LcProcess
 from lcatools.exchanges import Exchange, DirectionlessExchangeError
@@ -44,7 +45,7 @@ class EcospoldV2Error(Exception):
     pass
 
 
-class EcospoldV2Archive(ArchiveInterface):
+class EcospoldV2Archive(LcArchive):
     """
     class for loading metadata from ecospold v2 files. Now I know ecoinvent supplies a whole ton of supplementary
     information in files that are *outside* the ecospold archives- and that information is going to be IGNORED.

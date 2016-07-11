@@ -69,7 +69,8 @@ class LcEntity(object):
 
     def _validate_reference(self, ref_entity):
         if ref_entity is None:
-            return True  # allow none references
+            raise ValueError('Null reference')
+            return False  # allow none references
         if ref_entity.entity_type != entity_refs[self.entity_type]:
             raise TypeError("Type Mismatch on reference entity")
         return True
@@ -98,6 +99,9 @@ class LcEntity(object):
         for i in self.properties():
             d[i] = self._d[i]
         return d
+
+    def update(self, d):
+        self._d.update(d)
 
     def validate(self):
         valid = True
@@ -166,6 +170,8 @@ class LcEntity(object):
         internal refs do not need to be equal; reference entities do not need to be equal
         :return:
         """
+        if other is None:
+            return False
         return (self.get_external_ref() == other.get_external_ref() and
                 self['origin'] == other['origin'] and
                 self.entity_type == other.entity_type)
@@ -380,8 +386,9 @@ class LcFlow(LcEntity):
     def add_characterization(self, quantity, reference=False, value=None, **kwargs):
         if reference:
             self._set_reference(quantity)
-            if value is not None:
-                self.set_local_unit(value)
+            if value is None:
+                value = 1.0
+            self.set_local_unit(value)
 
         c = Characterization(self, quantity)
         if c in self._characterizations:

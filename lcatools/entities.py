@@ -69,7 +69,7 @@ class LcEntity(object):
 
     def _validate_reference(self, ref_entity):
         if ref_entity is None:
-            raise ValueError('Null reference')
+            # raise ValueError('Null reference')
             return False  # allow none references
         if ref_entity.entity_type != entity_refs[self.entity_type]:
             raise TypeError("Type Mismatch on reference entity")
@@ -363,7 +363,7 @@ class LcFlow(LcEntity):
     def __init__(self, entity_uuid, **kwargs):
         super(LcFlow, self).__init__('flow', entity_uuid, **kwargs)
 
-        self._characterizations = set()
+        self._characterizations = dict()
 
         self._ref_quantity_factor = 1.0
 
@@ -390,28 +390,46 @@ class LcFlow(LcEntity):
                 value = 1.0
             self.set_local_unit(value)
 
+        q = quantity.get_uuid()
         c = Characterization(self, quantity)
-        if c in self._characterizations:
+        if q in self._characterizations.keys():
             if value is None:
                 return
-            c = [x for x in self._characterizations if x == c][0]
+            c = self._characterizations[q]
         else:
-            self._characterizations.add(c)
+            self._characterizations[q] = c
         if value is not None:
             c.add_value(value=value, **kwargs)
 
     def characterizations(self):
-        for i in self._characterizations:
+        for i in self._characterizations.values():
             yield i
+
+    def cf(self, quantity, location='GLO'):
+        return self._characterizations[quantity.get_uuid()][location]
+
+    def convert(self, val, to=None, fr=None, location='GLO'):
+        """
+        converts the value (in
+        :param val:
+        :param to: to quantity
+        :param fr: from quantity
+        :param location: cfs are localized to unrestricted strings babee
+        the flow's reference quantity is used if either is unspecified
+        :return: value * self.char(to)[loc] / self.char(fr)[loc]
+        """
+        out = self.cf(to or self.reference_entity, location=location)
+        inn = self.cf(fr or self.reference_entity, location=location)
+        return val * out / inn
 
     def serialize(self, characterizations=False, **kwargs):
         j = super(LcFlow, self).serialize()
         j.pop(self._ref_field)  # reference reported in characterizations
         if characterizations:
-            j['characterizations'] = sorted([x.serialize(**kwargs) for x in self._characterizations],
+            j['characterizations'] = sorted([x.serialize(**kwargs) for x in self._characterizations.values()],
                                             key=lambda x: x['quantity'])
         else:
-            j['characterizations'] = [x.serialize(**kwargs) for x in self._characterizations
+            j['characterizations'] = [x.serialize(**kwargs) for x in self._characterizations.values()
                                       if x.quantity == self.reference_entity]
 
         return j

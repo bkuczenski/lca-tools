@@ -17,7 +17,7 @@ import gzip as gz
 from collections import defaultdict
 
 
-LD_CONTEXT = 'http://lca-tools.github.io/context.jsonld'
+LD_CONTEXT = 'https://bkuczenski.github.io/lca-tools-datafiles/context.jsonld'
 
 
 # CatalogRef = namedtuple('CatalogRef', ['archive', 'id'])

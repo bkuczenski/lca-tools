@@ -406,7 +406,12 @@ class LcFlow(LcEntity):
             yield i
 
     def cf(self, quantity, location='GLO'):
-        return self._characterizations[quantity.get_uuid()][location]
+        if quantity.get_uuid() in self._characterizations:
+            try:
+                return self._characterizations[quantity.get_uuid()][location]
+            except KeyError:
+                return self._characterizations[quantity.get_uuid()].value
+        return 0.0
 
     def convert(self, val, to=None, fr=None, location='GLO'):
         """

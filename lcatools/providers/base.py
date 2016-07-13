@@ -98,6 +98,10 @@ class LcArchive(ArchiveInterface):
                     v = None
                     q = self[c['quantity']]
                     if q is None:
+                        import json, sys
+                        print(ext_ref)
+                        json.dump(c, sys.stdout, indent=2)
+
                         raise KeyError
                     if 'value' in c:
                         v = c['value']

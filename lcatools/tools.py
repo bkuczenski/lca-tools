@@ -19,6 +19,7 @@ from lcatools.providers.ecoinvent_spreadsheet import EcoinventSpreadsheet
 from lcatools.providers.ecospold import EcospoldV1Archive
 from lcatools.providers.ecospold2 import EcospoldV2Archive
 from lcatools.providers.ecoinvent_lcia import EcoinventLcia
+from lcatools.providers.ilcd_lcia import IlcdLcia
 
 # from lcatools.db_catalog import from_json  # included for "from tools import *" by user
 
@@ -68,6 +69,13 @@ def archive_from_json(fname):
             prefix = None
 
         a = IlcdArchive(j['dataSourceReference'], prefix=prefix, quiet=True)
+    elif j['dataSourceType'] == 'IlcdLcia':
+        if 'prefix' in j.keys():
+            prefix = j['prefix']
+        else:
+            prefix = None
+
+        a = IlcdLcia(j['dataSourceReference'], prefix=prefix, quiet=True)
     elif j['dataSourceType'] == 'EcospoldV1Archive':
         if 'prefix' in j.keys():
             prefix = j['prefix']

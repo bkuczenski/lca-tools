@@ -344,14 +344,19 @@ class EcospoldV2Archive(LcArchive):
         o = self.objectify(filename)
         rf = self._grab_reference_flow(o, spold_reference_flow(filename))
         cfs = self._collect_impact_scores(o)
+
+        tags = dict()
+        for q in self.quantities():
+            if 'Method' in q.keys():
+                if q['Name'] in tags:
+                    raise KeyError('Name collision %s' % q['Name'])
+                tags[q['Name']] = q
+
         for cf in cfs:
             my_tag = ', '.join([cf.Method, cf.Category, cf.Indicator])
-            q = [x for x in self.quantities() if x['Name'] == my_tag]
-            if len(q) > 1:
-                raise KeyError('Multiple quantities found')
-            elif len(q) == 1:
+            if my_tag in tags:
                 self._print('Found LCIA score: %s' % my_tag)
-                rf.add_characterization(q[0], value=cf.score)
+                rf.add_characterization(tags[my_tag], value=cf.score)
         return rf
 
     def _load_all(self, exchanges=True):

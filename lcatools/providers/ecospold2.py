@@ -30,6 +30,7 @@ if six.PY2:
 
 
 EcospoldExchange = namedtuple('EcospoldExchange', ('flow', 'direction', 'value', 'termination'))
+EcospoldLciaResult = namedtuple('EcospoldLciaResult', ('Method', 'Category', 'Indicator', 'score'))
 
 
 def spold_reference_flow(filename):
@@ -153,6 +154,11 @@ class EcospoldV2Archive(LcArchive):
             return []
 
     def _create_flow(self, exchange):
+        """
+        makes a flow entity and adds to the db
+        :param exchange:
+        :return:
+        """
         if 'intermediate' in exchange.tag:
             uid = exchange.attrib['intermediateExchangeId']
             cat = [self._cls_to_text(exchange.classification)]
@@ -177,6 +183,7 @@ class EcospoldV2Archive(LcArchive):
 
         f = LcFlow(uid, Name=n, CasNumber=cas, Comment=c, Compartment=cat)
         f.add_characterization(quantity=q, reference=True)
+
         self.add(f)
 
         return f
@@ -234,6 +241,8 @@ class EcospoldV2Archive(LcArchive):
         for exch in find_tag(o, 'flowData')[0].getchildren():
             if 'parameter' in exch.tag:
                 continue
+            if 'impactIndicator' in exch.tag:
+                continue
 
             f = self._create_flow(exch)
             if hasattr(exch, 'outputGroup'):
@@ -247,12 +256,27 @@ class EcospoldV2Archive(LcArchive):
             flowlist.append(EcospoldExchange(f, d, v, t))
         return flowlist
 
-    def _create_process(self, filename, exchanges=True):
+    @staticmethod
+    def _collect_impact_scores(o):
         """
-        Extract dataset object from XML file
-        :param filename:
+        the old "1115"
+        :param o:
         :return:
         """
+
+        scores = []
+
+        for exch in find_tag(o, 'flowData')[0].getchildren():
+            if 'impactIndicator' in exch.tag:
+                m = str(find_tag(exch, 'impactMethodName')[0])
+                c = str(find_tag(exch, 'impactCategoryName')[0])
+                i = str(find_tag(exch, 'name')[0])
+                v = float(exch.get('amount'))
+                scores.append(EcospoldLciaResult(m, c, i, v))
+
+        return scores
+
+    def objectify(self, filename):
         try:
             o = self._get_objectified_entity(filename)
         except XMLSyntaxError:
@@ -261,6 +285,15 @@ class EcospoldV2Archive(LcArchive):
             except XMLSyntaxError:
                 print('Failed loading %s' % filename)
                 raise
+        return o
+
+    def _create_process(self, filename, exchanges=True):
+        """
+        Extract dataset object from XML file
+        :param filename:
+        :return:
+        """
+        o = self.objectify(filename)
 
         p = self._create_process_entity(o)
         rf = self._grab_reference_flow(o, spold_reference_flow(filename))
@@ -298,6 +331,28 @@ class EcospoldV2Archive(LcArchive):
             if spold_reference_flow(filename) in [x.flow.get_uuid() for x in entity.reference_entity]:
                 return entity
         return self._create_process(filename, **kwargs)
+
+    def retrieve_lcia_scores(self, filename):
+        """
+        This function retrieves LCIA scores from an Ecospold02 file and stores them as characterizations in
+        an LcFlow entity corresponding to the *first* (and presumably, only) reference intermediate flow
+
+        Only stores cfs for quantities that exist locally.
+        :param filename:
+        :return:
+        """
+        o = self.objectify(filename)
+        rf = self._grab_reference_flow(o, spold_reference_flow(filename))
+        cfs = self._collect_impact_scores(o)
+        for cf in cfs:
+            my_tag = ', '.join([cf.Method, cf.Category, cf.Indicator])
+            q = [x for x in self.quantities() if x['Name'] == my_tag]
+            if len(q) > 1:
+                raise KeyError('Multiple quantities found')
+            elif len(q) == 1:
+                self._print('Found LCIA score: %s' % my_tag)
+                rf.add_characterization(q[0], value=cf.score)
+        return rf
 
     def _load_all(self, exchanges=True):
         now = time()

@@ -176,9 +176,8 @@ class ArchiveInterface(object):
             if isinstance(v, str):
                 v = [v]
             for vv in v:
-                result_set = [r for r in result_set if bool(re.search(vv,
-                                                                      _recurse_expand_subtag(r[k]),
-                                                                      flags=re.IGNORECASE))]
+                result_set = [r for r in result_set if k in r.keys() and
+                              bool(re.search(vv, _recurse_expand_subtag(r[k]), flags=re.IGNORECASE))]
         return result_set
 
     def search(self, *args, **kwargs):
@@ -200,10 +199,10 @@ class ArchiveInterface(object):
                 result_set = self._entities_by_type(kwargs.pop('entity_type'))
             else:
                 result_set = [self._get_entity(k) for k in self._entities.keys()]
-        if len(result_set) > 0:
-            return self._narrow_search(result_set, **kwargs)
-        elif self._upstream is not None:
-            return self._upstream.search(*args, **kwargs)
+        result_set = self._narrow_search(result_set, **kwargs)
+        if self._upstream is not None:
+            result_set += self._upstream.search(*args, **kwargs)
+        return result_set
 
     def _fetch(self, entity, **kwargs):
         """
@@ -310,6 +309,7 @@ class ArchiveInterface(object):
 
     def serialize(self, **kwargs):
         j = {
+            '@context': LD_CONTEXT,
             'dataSourceType': self.__class__.__name__,
             'dataSourceReference': self.ref,
             'catalogNames': self.catalog_names

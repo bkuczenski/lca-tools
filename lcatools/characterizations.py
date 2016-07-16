@@ -81,6 +81,7 @@ class Characterization(object):
 
     def serialize(self, values=False):
         j = {
+            'entityType': self.entity_type,
             'quantity': self.quantity.get_uuid()
         }
         if self.quantity == self.flow['referenceQuantity']:

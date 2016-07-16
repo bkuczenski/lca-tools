@@ -268,9 +268,9 @@ class EcospoldV2Archive(LcArchive):
 
         for exch in find_tag(o, 'flowData')[0].getchildren():
             if 'impactIndicator' in exch.tag:
-                m = str(find_tag(exch, 'impactMethodName')[0])
-                c = str(find_tag(exch, 'impactCategoryName')[0])
-                i = str(find_tag(exch, 'name')[0])
+                m = exch.impactMethodName.text
+                c = exch.impactCategoryName.text
+                i = exch.name.text
                 v = float(exch.get('amount'))
                 scores.append(EcospoldLciaResult(m, c, i, v))
 
@@ -280,10 +280,11 @@ class EcospoldV2Archive(LcArchive):
         try:
             o = self._get_objectified_entity(filename)
         except XMLSyntaxError:
+            print('  !!XMLSyntaxError-- trying to escape < and > signs')
             try:
                 o = self._get_objectified_entity_with_lt_gt(filename)
             except XMLSyntaxError:
-                print('Failed loading %s' % filename)
+                print('  !!Failed loading %s' % filename)
                 raise
         return o
 
@@ -341,9 +342,13 @@ class EcospoldV2Archive(LcArchive):
         :param filename:
         :return:
         """
+        import time
+        start_time = time.time()
         o = self.objectify(filename)
+        self._print('%30.30s -- %5f' % ('Objectified', time.time() - start_time))
         rf = self._grab_reference_flow(o, spold_reference_flow(filename))
         cfs = self._collect_impact_scores(o)
+        self._print('%30.30s -- %5f' % ('Impact scores collected', time.time() - start_time))
 
         tags = dict()
         for q in self.quantities():
@@ -351,12 +356,15 @@ class EcospoldV2Archive(LcArchive):
                 if q['Name'] in tags:
                     raise KeyError('Name collision %s' % q['Name'])
                 tags[q['Name']] = q
+        self._print('%30.30s -- %5f' % ('Method names extracted', time.time() - start_time))
 
         for cf in cfs:
             my_tag = ', '.join([cf.Method, cf.Category, cf.Indicator])
             if my_tag in tags:
-                self._print('Found LCIA score: %s' % my_tag)
-                rf.add_characterization(tags[my_tag], value=cf.score)
+                if not rf.has_characterization(tags[my_tag]):
+                    self._print('Adding LCIA score: %s' % my_tag)
+                    rf.add_characterization(tags[my_tag], value=cf.score)
+        self._print('%30.30s -- %5f' % ('cfs added- finished', time.time() - start_time))
         return rf
 
     def _load_all(self, exchanges=True):

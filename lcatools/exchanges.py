@@ -75,6 +75,7 @@ class Exchange(object):
 
     def serialize(self, **kwargs):
         j = {
+            'entityType': self.entity_type,
             'flow': self.flow.get_uuid(),
             'direction': self.direction,
         }

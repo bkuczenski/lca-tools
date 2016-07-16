@@ -42,6 +42,10 @@ class LcArchive(ArchiveInterface):
     def _upstream_flow_key(flow):
         return ', '.join([flow['Name']] + flow['Compartment'])
 
+    @staticmethod
+    def _lcia_key(quantity):
+        return ', '.join([quantity['Method'], quantity['Category'], quantity['Indicator']])
+
     def _try_flow(self, uid, key):
         if self[uid] is not None:
             return self[uid]

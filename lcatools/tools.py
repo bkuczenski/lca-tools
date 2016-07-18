@@ -15,11 +15,11 @@ import json
 from collections import defaultdict, Counter
 
 from lcatools.providers.ilcd import IlcdArchive
+from lcatools.providers.ilcd_lcia import IlcdLcia
+from lcatools.providers.ecospold2 import EcospoldV2Archive
 from lcatools.providers.ecoinvent_spreadsheet import EcoinventSpreadsheet
 from lcatools.providers.ecospold import EcospoldV1Archive
-from lcatools.providers.ecospold2 import EcospoldV2Archive
 from lcatools.providers.ecoinvent_lcia import EcoinventLcia
-from lcatools.providers.ilcd_lcia import IlcdLcia
 
 # from lcatools.db_catalog import from_json  # included for "from tools import *" by user
 
@@ -34,6 +34,30 @@ def gz_files(path):
 
 def split_nick(fname):
     return re.sub('\.json\.gz$', '', os.path.basename(fname))
+
+
+def archive_factory(ref, ds_type, **kwargs):
+    """
+    creates an archive
+    :param ref:
+    :param ds_type:
+    :param kwargs:
+    :return:
+    """
+    init_fcn = {
+        'ilcdarchive': IlcdArchive,
+        'ilcd': IlcdArchive,
+        'ilcdlcia': IlcdLcia,
+        'ilcd_lcia': IlcdLcia,
+        'ecospoldv1archive': EcospoldV1Archive,
+        'ecospold': EcospoldV1Archive,
+        'ecospoldv2archive': EcospoldV2Archive,
+        'ecospold2': EcospoldV2Archive,
+        'ecoinventspreadsheet': EcoinventSpreadsheet,
+        'ecoinventlcia': EcoinventLcia,
+        'ecoinvent_lcia': EcoinventLcia
+    }[ds_type.lower()]
+    return init_fcn(ref, **kwargs)
 
 
 def _from_json(fname):
@@ -62,43 +86,22 @@ def archive_from_json(fname):
     :return: an ArchiveInterface
     """
     j = _from_json(fname)
-    if j['dataSourceType'] == 'IlcdArchive':
-        if 'prefix' in j.keys():
-            prefix = j['prefix']
-        else:
-            prefix = None
+    archive_kwargs = dict()
+    archive_kwargs['quiet'] = True
 
-        a = IlcdArchive(j['dataSourceReference'], prefix=prefix, quiet=True)
-    elif j['dataSourceType'] == 'IlcdLcia':
-        if 'prefix' in j.keys():
-            prefix = j['prefix']
-        else:
-            prefix = None
+    if 'prefix' in j.keys():
+        archive_kwargs['prefix'] = j['prefix']
 
-        a = IlcdLcia(j['dataSourceReference'], prefix=prefix, quiet=True)
-    elif j['dataSourceType'] == 'EcospoldV1Archive':
-        if 'prefix' in j.keys():
-            prefix = j['prefix']
-        else:
-            prefix = None
+    if 'nsUuid' in j.keys():
+        archive_kwargs['ns_uuid'] = j['nsUuid']
 
-        a = EcospoldV1Archive(j['dataSourceReference'], prefix=prefix, ns_uuid=j['nsUuid'], quiet=True)
-    elif j['dataSourceType'] == 'EcospoldV2Archive':
-        if 'prefix' in j.keys():
-            prefix = j['prefix']
-        else:
-            prefix = None
+    if j['dataSourceType'] == 'EcoinventSpreadsheet':
+        archive_kwargs['internal'] = bool(j['internal'])
+        archive_kwargs['version'] = j['version']
 
-        a = EcospoldV2Archive(j['dataSourceReference'], prefix=prefix, quiet=True)
-
-    elif j['dataSourceType'] == 'EcoinventSpreadsheet':
-        a = EcoinventSpreadsheet(j['dataSourceReference'], internal=bool(j['internal']), version=j['version'],
-                                 ns_uuid=j['nsUuid'], quiet=True)
-
-    elif j['dataSourceType'] == 'EcoinventLcia':
-        a = EcoinventLcia(j['dataSourceReference'], ns_uuid=j['nsUuid'])
-
-    else:
+    try:
+        a = archive_factory(j['dataSourceReference'], j['dataSourceType'], **archive_kwargs)
+    except KeyError:
         raise ValueError('Unknown dataSourceType %s' % j['dataSourceType'])
 
     if 'catalogNames' in j:

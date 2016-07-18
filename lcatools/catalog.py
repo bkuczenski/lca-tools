@@ -10,7 +10,7 @@ from lcatools.interfaces import to_uuid
 from lcatools.characterizations import CharacterizationSet  # , Characterization
 from lcatools.logical_flows import LogicalFlow, ExchangeRef
 from lcatools.entities import LcProcess, LcFlow
-from lcatools.tools import gz_files, split_nick, archive_from_json
+from lcatools.tools import gz_files, split_nick, archive_from_json, archive_factory
 
 
 def get_entity_uuid(item):
@@ -35,6 +35,10 @@ class CatalogRef(object):
         for k in (self.index, self.id):
             yield k
 
+    def names(self):
+        for n in (self.id, str(self.entity()), self):
+            yield n
+
     def entity(self):
         return self.catalog[self.index][self.id]
 
@@ -43,7 +47,7 @@ class CatalogRef(object):
 
     def __str__(self):
         e = self.entity()
-        return '(%30.30s) {%1.1s} %s' % (self.catalog.name(self.index), e.entity_type, e)
+        return '(%s) {%1.1s} %s' % (self.catalog.name(self.index), e.entity_type, e)
 
     def __hash__(self):
         return hash((self.index, self.id))
@@ -62,18 +66,91 @@ class CatalogRef(object):
         if self.entity() is None:
             raise KeyError('CatalogRef does not resolve!')
 
+    def serialize(self):
+        return {
+            'index': self.index,
+            'entity': self.id
+        }
+
 
 class CatalogInterface(object):
     """
     A catalog stores a list of archives and exposes retrieval methods that return entity references
     as CatalogRef objects
     """
+    @classmethod
+    def from_json(cls, j):
+        """
+        Create a catalog and populate it with archives as specified in a json file.
+
+        The format should be as follows:
+        {
+          'catalogs': [
+            {
+              'index': 0,
+              'dataSourceType': '...',
+              'source': '/path/to/file',
+              'nicknames': [
+                ...
+              ],
+              'parameters':
+              {
+                'param': 'value',
+                ...
+              }
+            },
+            ...
+          ]
+        }
+
+        j['dataSourceType'].lower() should be either 'json' or something understood by archive_factory.
+
+         * If 'json', then source points to the json file and 'parameters' is ignored.
+
+         * else, source points to the archive ref, and 'parameters' are passed as keyword arguments to archive_factory
+
+        In either case, each nickname is associated with the catalog once it's loaded.
+
+        Every index from 0 up to len(j['catalogs']) must be present. Only sequential indices starting from 0 will
+         be loaded.
+        :return:
+        """
+        catalog = cls()
+        for i in range(len(j['catalogs'])):
+            try:
+                cat = [c for c in j['catalogs'] if c['index'] == i][0]
+            except IndexError:
+                break
+            if 'nicknames' in cat.keys():
+                nicks = cat['nicknames']
+            else:
+                nicks = [None]
+
+            source = cat['source']
+
+            assert i == len(catalog.archives), "something's wrong with archive loading: sequence is corrupted"
+            if cat['dataSourceType'].lower() == 'json':
+                catalog.load_json_archive(source, nick=nicks[0])
+            else:
+                if 'parameters' in cat.keys():
+                    params = cat['parameters']
+                else:
+                    params = dict()
+                a = archive_factory(source, cat['dataSourceType'], **params)
+                catalog._install_archive(a, source, nick=nicks[0])
+            if len(nicks) > 1:
+                for k in range(1, len(nicks)):
+                    catalog.alias(nicks[0], nicks[k])
+
     def __init__(self):
         self.archives = []  # a list of installed archives
         self._nicknames = dict()  # a mapping of nickname to archive index
         self._shortest = []  # a list of the shortest nickname for each archive
         self._sources_loaded = dict()  # map input source to archive
         self._refs_loaded = dict()  # map archive.ref to archive
+        self._from_json = []
+        self._sources = []
+        self._params = []
 
     def get_index(self, item):
         if isinstance(item, int):
@@ -134,15 +211,29 @@ class CatalogInterface(object):
             nick = split_nick(source)
         if nick in self._nicknames:
             raise KeyError('Nickname %s already exists', nick)
+        print('Installing %s archive in position %d', a.__class__.__name__, len(self.archives))
         self.archives.append(a)
+        self._sources.append(source)
         self._shortest.append(nick)
         assert len(self.archives) == len(self._shortest)
-        self._nicknames[nick] = len(self.archives) - 1
-        self._sources_loaded[source] = len(self.archives) - 1
-        self._refs_loaded[a.ref] = len(self.archives) - 1
+        new_index = len(self.archives) - 1
+        self._nicknames[nick] = new_index
+        self._sources_loaded[source] = new_index
+        self._refs_loaded[a.ref] = new_index
+        self._params.append(None)
+        self._from_json.append(False)
+        return new_index
 
     def install_archive(self, archive, **kwargs):
         self._install_archive(archive, 'memory', **kwargs)
+
+    def load_archive(self, ref, ds_type, overwrite=False, nick=None, **kwargs):
+        if ds_type.lower() == 'json':
+            self.load_json_archive(ref, overwrite=overwrite, nick=nick)
+        else:
+            a = archive_factory(ref, ds_type, **kwargs)
+            new_index = self._install_archive(a, ref, overwrite=overwrite, nick=nick)
+            self._params[new_index] = kwargs
 
     def load_json_archive(self, f, **kwargs):
         if f in self._sources_loaded:
@@ -155,8 +246,9 @@ class CatalogInterface(object):
                 pass
 
         a = archive_from_json(f)
-        self._install_archive(a, f, **kwargs)
+        new_index = self._install_archive(a, f, **kwargs)
         self._set_upstream(a)
+        self._from_json[new_index] = True
 
     def alias(self, nick, alias):
         """
@@ -234,6 +326,30 @@ class CatalogInterface(object):
             for i, k in enumerate(res_set):
                 print('[%2d] %s ' % (i, k))
         return res_set
+
+    def _serialize_archive(self, index):
+        nicks = [k for k, v in self._nicknames.items() if v == index]
+        if self._from_json[index]:
+            return {
+                'index': index,
+                'dataSourceType': 'JSON',
+                'source': self._sources[index],
+                'nicknames': nicks
+            }
+        else:
+            return {
+                'index': index,
+                'dataSourceType': self.archives[index].__class__.__name__,
+                'source': self._sources[index],
+                'nicknames': nicks,
+                'parameters': self._params[index]
+            }
+
+    def serialize(self):
+        return {
+            "catalogs": sorted([self._serialize_archive(index) for index in range(len(self.archives))],
+                               key=lambda x: x['index'])
+        }
 
 
 class ProcessFlowInterface(object):

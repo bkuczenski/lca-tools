@@ -22,6 +22,7 @@ It operates on CatalogRefs, which can dereference themselves
 """
 from lcatools.logical_flows import LogicalFlow, LogicalQuantity, LogicalSet
 from lcatools.catalog import CatalogRef
+from lcatools.foreground.compartments import Compartment, load_compartments
 
 
 class LcFlows(object):
@@ -29,6 +30,7 @@ class LcFlows(object):
     @classmethod
     def from_json(cls, catalog, j):
         db = cls()
+        db._compartments = Compartment.from_json(j['compartments'])
 
         def to_ref(x):
             return CatalogRef(catalog, int(x['index']), x['entity'])
@@ -48,14 +50,39 @@ class LcFlows(object):
         return db
 
     def __init__(self):
-
+        self._compartments = Compartment.from_json(load_compartments())
         self._flows = LogicalSet(type(LogicalFlow))
-
         self._quantities = LogicalSet(type(LogicalQuantity))
+
+    def compartments(self, cat_ref):
+        c = cat_ref.entity()['Compartment']
+        return self._compartments.traverse(c)
+
+    def add_compartments(self, cat_ref):
+        c = cat_ref.entity()['Compartment']
+        return self._compartments.add_subs(c)
+
+    def is_elementary(self, cat_ref):
+        comps = self.compartments(cat_ref)
+        return comps[-1].elementary
+
+    def list_subcompartments(self, comp_list):
+        """
+        lists subcompartments of a given compartment string
+        :param comp_list:
+        :return:
+        """
+        comps = self._compartments.traverse(comp_list)
+        return [x.name for x in comps[-1].subcompartments()]
 
     def add_flow(self, cat_ref):
         self._flows.add(LogicalFlow.create(cat_ref))
         self._add_flow_cfs(cat_ref)
+        try:
+            self.compartments(cat_ref)
+        except KeyError:
+            print('New compartments added!')
+            self.add_compartments(cat_ref)
 
     def _add_flow_cfs(self, cat_ref):
         for cf in cat_ref.entity().characterizations():
@@ -107,6 +134,7 @@ class LcFlows(object):
         self._flows.check()
         self._quantities.check()
         return {
+            'compartments': self._compartments.serialize(),
             'flows': self._flows.serialize(),
             'quantities': self._quantities.serialize()
         }

@@ -81,9 +81,11 @@ class LcArchive(ArchiveInterface):
             return
         chars = None
         exchs = None
-        ext_ref = e.pop('entityId')
-        uid = self._key_to_id(ext_ref)
+        e_id = e.pop('entityId')
+        ext_ref = e.pop('externalId')
+        uid = self._key_to_id(e_id)
         etype = e.pop('entityType')
+        origin = e.pop('origin')
         if etype == 'quantity':
             # can't move this to entity because we need _create_unit- so we wouldn't gain anything
             unit, _ = self._create_unit(e.pop('referenceUnit'))
@@ -148,6 +150,7 @@ class LcArchive(ArchiveInterface):
         else:
             raise TypeError('Unknown entity type %s' % e['entityType'])
 
+        entity.origin = origin
         entity.set_external_ref(ext_ref)
         self.add(entity)
 
@@ -245,7 +248,7 @@ class LcArchive(ArchiveInterface):
         :param unitstring:
         :return:
         """
-        return next((q for q in self._quantities_with_unit(unitstring) if q['origin'] == self.ref), None)
+        return next((q for q in self._quantities_with_unit(unitstring) if q.origin == self.ref), None)
 
     def serialize(self, exchanges=False, characterizations=False, values=False):
         """

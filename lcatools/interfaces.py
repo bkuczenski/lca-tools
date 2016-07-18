@@ -114,8 +114,8 @@ class ArchiveInterface(object):
         entity = self._key_to_id(key)
         if entity in self._entities:
             e = self._entities[entity]
-            if 'origin' not in e.keys():
-                e['origin'] = self.ref
+            if e.origin is None:
+                e.origin = self.ref
             return e
         elif self._upstream is not None:
             e = self._upstream[key]
@@ -140,9 +140,9 @@ class ArchiveInterface(object):
         if entity.validate():
             if self._quiet is False:
                 print('Adding %s entity with %s: %s' % (entity.entity_type, u, entity['Name']))
-            if 'origin' not in entity.keys():
-                entity['origin'] = self.ref
+            if entity.origin is None:
                 assert entity.get_uuid() == str(u), 'New entity uuid must match origin repository key!'
+                entity.origin = self.ref
             self._entities[u] = entity
             self._counter[entity.entity_type] += 1
 
@@ -253,11 +253,11 @@ class ArchiveInterface(object):
             if not isinstance(k, uuid.UUID):
                 print('Key %s is not a valid UUID.' % k)
                 valid = False
-            if 'origin' not in v.keys():
+            if v.origin is None:
                 print("%s: No origin!" % k)
                 valid = False
 
-            if v['origin'] == self.ref:
+            if v.origin == self.ref:
                 # 2: confirm entity's external key maps to its uuid
                 if self._key_to_id(v.get_external_ref()) != k:
                     print("%s: Key doesn't match UUID in origin!" % v.get_external_ref())

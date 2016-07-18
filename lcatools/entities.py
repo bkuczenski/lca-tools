@@ -13,6 +13,10 @@ def concatenate(*lists):
 entity_types = ('process', 'flow', 'quantity')
 
 
+class OriginExists(Exception):
+    pass
+
+
 class LcEntity(object):
     """
     All LC entities behave like dicts, but they all have some common properties, defined here.
@@ -32,6 +36,7 @@ class LcEntity(object):
 
         self.entity_type = entity_type
         self.reference_entity = None
+        self._origin = None
 
         self._d['Name'] = ''
         self._d['Comment'] = ''
@@ -40,6 +45,17 @@ class LcEntity(object):
 
         for k, v in kwargs.items():
             self[k] = v
+
+    @property
+    def origin(self):
+        return self._origin
+
+    @origin.setter
+    def origin(self, value):
+        if self._origin is None:
+            self._origin = value
+        else:
+            raise OriginExists('Origin already set to %s' % self._origin)
 
     @classmethod
     def signature_fields(cls):
@@ -136,6 +152,7 @@ class LcEntity(object):
             'entityId': self.get_uuid(),
             'entityType': self.entity_type,
             'externalId': self.get_external_ref(),
+            'origin': self.origin,
             self._ref_field: self._print_ref_field(),
         }
         j.update(self._d)
@@ -155,6 +172,8 @@ class LcEntity(object):
             raise ValueError('Entity Type cannot be changed')
         elif key.lower() == self._ref_field.lower():
             self._set_reference(value)
+        elif key.lower() in ('entityid', 'entitytype', 'externalid', 'origin'):
+            raise KeyError('Disallowed Keyname %s' % key)
         else:
             self._d[key] = value
 
@@ -173,7 +192,7 @@ class LcEntity(object):
         if other is None:
             return False
         return (self.get_external_ref() == other.get_external_ref() and
-                self['origin'] == other['origin'] and
+                self.origin == other.origin and
                 self.entity_type == other.entity_type)
 
 

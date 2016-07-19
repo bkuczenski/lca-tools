@@ -42,11 +42,14 @@ class CatalogRef(object):
     def entity(self):
         return self.catalog[self.index][self.id]
 
+    @property
     def entity_type(self):
         return self.entity().entity_type
 
     def __str__(self):
         e = self.entity()
+        if e is None:
+            return '(%s) {%1.1s} %s' % (self.catalog.name(self.index), '-', self.id)
         return '(%s) {%1.1s} %s' % (self.catalog.name(self.index), e.entity_type, e)
 
     def __hash__(self):
@@ -129,18 +132,21 @@ class CatalogInterface(object):
             source = cat['source']
 
             assert i == len(catalog.archives), "something's wrong with archive loading: sequence is corrupted"
-            if cat['dataSourceType'].lower() == 'json':
-                catalog.load_json_archive(source, nick=nicks[0])
-            else:
-                if 'parameters' in cat.keys():
-                    params = cat['parameters']
-                else:
+            if 'parameters' in cat.keys():
+                params = cat['parameters']
+                if params is None:
                     params = dict()
-                a = archive_factory(source, cat['dataSourceType'], **params)
-                catalog._install_archive(a, source, nick=nicks[0])
+            else:
+                params = dict()
+            if cat['dataSourceType'].lower() == 'json':
+                catalog.load_json_archive(source, nick=nicks[0], **params)
+            else:
+                catalog.load_archive(source, cat['dataSourceType'], nick=nicks[0], **params)
+
             if len(nicks) > 1:
                 for k in range(1, len(nicks)):
                     catalog.alias(nicks[0], nicks[k])
+        return catalog
 
     def __init__(self):
         self.archives = []  # a list of installed archives
@@ -151,6 +157,9 @@ class CatalogInterface(object):
         self._from_json = []
         self._sources = []
         self._params = []
+
+    def ref(self, index, item):
+        return CatalogRef(self, index, item)
 
     def get_index(self, item):
         if isinstance(item, int):
@@ -188,6 +197,9 @@ class CatalogInterface(object):
                 print('Upstream ref %s found and linked' % ref)
             else:
                 print('Upstream ref %s not found in catalog!' % ref)
+                # because of lost upstream, need to rewrite uuid to match local index
+                archive.truncate_upstream()
+                # [maybe this should be done in general?]
 
     def _install_archive(self, a, source, nick=None, overwrite=False):
         """
@@ -211,7 +223,7 @@ class CatalogInterface(object):
             nick = split_nick(source)
         if nick in self._nicknames:
             raise KeyError('Nickname %s already exists', nick)
-        print('Installing %s archive in position %d', a.__class__.__name__, len(self.archives))
+        print('Installing %s archive in position %d' %( a.__class__.__name__, len(self.archives)) )
         self.archives.append(a)
         self._sources.append(source)
         self._shortest.append(nick)
@@ -229,13 +241,13 @@ class CatalogInterface(object):
 
     def load_archive(self, ref, ds_type, overwrite=False, nick=None, **kwargs):
         if ds_type.lower() == 'json':
-            self.load_json_archive(ref, overwrite=overwrite, nick=nick)
+            self.load_json_archive(ref, overwrite=overwrite, nick=nick, **kwargs)
         else:
             a = archive_factory(ref, ds_type, **kwargs)
             new_index = self._install_archive(a, ref, overwrite=overwrite, nick=nick)
             self._params[new_index] = kwargs
 
-    def load_json_archive(self, f, **kwargs):
+    def load_json_archive(self, f, nick=None, overwrite=False, **kwargs):
         if f in self._sources_loaded:
             print('source %s already loaded' % f)
             if 'overwrite' not in kwargs or kwargs['overwrite'] is False:
@@ -245,10 +257,11 @@ class CatalogInterface(object):
                 # if overwrite is true- go ahead and load it
                 pass
 
-        a = archive_from_json(f)
-        new_index = self._install_archive(a, f, **kwargs)
+        a = archive_from_json(f, **kwargs)
+        new_index = self._install_archive(a, f, nick=nick, overwrite=overwrite)
         self._set_upstream(a)
         self._from_json[new_index] = True
+        self._params[new_index] = kwargs
 
     def alias(self, nick, alias):
         """
@@ -302,10 +315,16 @@ class CatalogInterface(object):
                     break
             return r
 
-    def search(self, archive=None, show=False, **kwargs):
+    @staticmethod
+    def _show(res):
+        for i, k in enumerate(res):
+            print('[%2d] %s ' % (i, k))
+
+    def search(self, archive=None, etype=None, show=False, **kwargs):
         """
         Search for a string in the catalog,
         :param archive: a nickname or a list of nicknames
+        :param etype: positional shortcut for entity_type=x
         :param show: [False] if True, print a tabular list of results to stdout
         :param kwargs: search arguments passed to the archives- must be in the form of key=value.  Some useful
         keys include 'Name', 'Comment', 'Compartment', 'Classification'
@@ -313,6 +332,10 @@ class CatalogInterface(object):
         """
         if archive is None:
             archive = range(len(self.archives))
+        if etype is not None:
+            if 'entity_type' in kwargs:
+                raise KeyError('colliding entity_type and etype!')
+            kwargs['entity_type'] = etype
         if isinstance(archive, str) or isinstance(archive, int):
             # turn single references into a list
             archive = [archive]
@@ -323,27 +346,43 @@ class CatalogInterface(object):
             if r is not None:
                 res_set.extend([CatalogRef(self, i, t.get_uuid()) for t in r])
         if show:
-            for i, k in enumerate(res_set):
-                print('[%2d] %s ' % (i, k))
+            self._show(res_set)
         return res_set
+
+    def terminate(self, index, flow_ref, show=False):
+        """
+        flow must be a cat ref
+        for some reason, doing this as a list comprehension didn't work
+        :param index:
+        :param flow_ref:
+        :param show: [False] display
+        :return:
+        """
+        if True:
+            z = []
+            for p in self[index].processes():
+                if any([x.flow.get_uuid() == flow_ref.id for x in p.exchanges()]):
+                    z.append(p)
+            if show:
+                self._show(z)
+            return z
+        else:
+            return [self.ref(index, p) for p in self[index].processes()
+                    if any([x.flow.get_uuid() == flow_ref.id for x in p.exchanges()])]
 
     def _serialize_archive(self, index):
         nicks = [k for k, v in self._nicknames.items() if v == index]
         if self._from_json[index]:
-            return {
-                'index': index,
-                'dataSourceType': 'JSON',
-                'source': self._sources[index],
-                'nicknames': nicks
-            }
+            ds_type = 'JSON'
         else:
-            return {
-                'index': index,
-                'dataSourceType': self.archives[index].__class__.__name__,
-                'source': self._sources[index],
-                'nicknames': nicks,
-                'parameters': self._params[index]
-            }
+            ds_type = self.archives[index].__class__.__name__
+        return {
+            'index': index,
+            'dataSourceType': ds_type,
+            'source': self._sources[index],
+            'nicknames': nicks,
+            'parameters': self._params[index]
+        }
 
     def serialize(self):
         return {

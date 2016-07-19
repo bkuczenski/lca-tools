@@ -248,6 +248,10 @@ class LcProcess(LcEntity):
 
         self.reference_entity.add(ref_entity)
 
+    def inventory(self):
+        for i in self.exchanges():
+            print('%s' % i)
+
     def exchanges(self):
         for i in sorted(self._exchanges, key=lambda x: x.direction):
             yield i

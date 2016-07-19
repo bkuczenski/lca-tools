@@ -82,13 +82,26 @@ class ArchiveInterface(object):
 
     def set_upstream(self, upstream):
         assert isinstance(upstream, ArchiveInterface)
-        self._serialize_dict['upstreamReference'] = upstream.ref
+        if upstream.ref != self.ref:
+            self._serialize_dict['upstreamReference'] = upstream.ref
         self._upstream = upstream
 
     def query_upstream_ref(self):
         if 'upstreamReference' in self._serialize_dict:
             return self._serialize_dict['upstreamReference']
         return None
+
+    def truncate_upstream(self):
+        """
+        removes upstream reference and rewrites entity uuids to match current index. note: deprecates the upstream
+        upstream_
+        :return:
+        """
+        for k, e in self._entities.items():
+            e._uuid = k
+        self._upstream = None
+        if 'upstreamReference' in self._serialize_dict:
+            self._serialize_dict.pop('upstreamReference')
 
     def _print(self, *args):
         if self._quiet is False:
@@ -129,7 +142,10 @@ class ArchiveInterface(object):
         return self._get_entity(item)
 
     def add(self, entity):
-        key = entity.get_external_ref()
+        if entity.origin is None or entity.origin == self.ref:
+            key = entity.get_external_ref()
+        else:
+            key = entity.get_uuid()
         u = self._key_to_id(key)
         if u is None:
             raise ValueError('Key must be a valid UUID')

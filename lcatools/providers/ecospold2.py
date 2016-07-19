@@ -333,7 +333,7 @@ class EcospoldV2Archive(LcArchive):
                 return entity
         return self._create_process(filename, **kwargs)
 
-    def retrieve_lcia_scores(self, filename):
+    def retrieve_lcia_scores(self, filename, quantities=None):
         """
         This function retrieves LCIA scores from an Ecospold02 file and stores them as characterizations in
         an LcFlow entity corresponding to the *first* (and presumably, only) reference intermediate flow
@@ -342,6 +342,9 @@ class EcospoldV2Archive(LcArchive):
         :param filename:
         :return:
         """
+        if quantities is None:
+            quantities = self.quantities()
+
         import time
         start_time = time.time()
         o = self.objectify(filename)
@@ -351,7 +354,7 @@ class EcospoldV2Archive(LcArchive):
         self._print('%30.30s -- %5f' % ('Impact scores collected', time.time() - start_time))
 
         tags = dict()
-        for q in self.quantities():
+        for q in quantities:
             if 'Method' in q.keys():
                 if q['Name'] in tags:
                     raise KeyError('Name collision %s' % q['Name'])

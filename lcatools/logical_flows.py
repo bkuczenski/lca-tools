@@ -50,8 +50,8 @@ class LogicalSet(object):
         return chk
 
     def add(self, item):
-        if not isinstance(item, self._type):
-            raise TypeMismatchError
+        if type(item) != self._type:
+            raise TypeMismatchError('item: %s, self-type: %s' % (type(item), self._type))
         for n in item.names():
             if n in self._mapping:
                 print('Duplicate entry- specify merge to append')
@@ -64,6 +64,18 @@ class LogicalSet(object):
     def _map_item(self, item):
         for n in item.names():
             self._mapping[n] = item
+
+    def keys(self):
+        return self._mapping.keys()
+
+    def items(self):
+        for i in self._set:
+            yield i
+
+    def add_ref(self, existing, new):
+        ex = self[existing]
+        ex.add_ref(new)
+        self._map_item(ex)
 
     def mergewith(self, name, item):
         """
@@ -146,8 +158,8 @@ class Logical(object):
             # print('%s' % catalog_ref)
             # raise KeyError('Entity already exists')
             return False
-        if catalog_ref.entity_type() != self._type:
-            raise TypeError('Reference %s is not a %s entity!' % (catalog_ref.entity_type(), self._type))
+        if catalog_ref.entity_type != self._type:
+            raise TypeError('Reference %s is not a %s entity!' % (catalog_ref.entity_type, self._type))
         catalog_ref.validate(self._catalog)
         self._entities.append(catalog_ref)
         return True

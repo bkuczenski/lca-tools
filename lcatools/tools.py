@@ -20,6 +20,7 @@ from lcatools.providers.ecospold2 import EcospoldV2Archive
 from lcatools.providers.ecoinvent_spreadsheet import EcoinventSpreadsheet
 from lcatools.providers.ecospold import EcospoldV1Archive
 from lcatools.providers.ecoinvent_lcia import EcoinventLcia
+from lcatools.providers.foreground import ForegroundArchive
 
 # from lcatools.db_catalog import from_json  # included for "from tools import *" by user
 
@@ -55,7 +56,9 @@ def archive_factory(ref, ds_type, **kwargs):
         'ecospold2': EcospoldV2Archive,
         'ecoinventspreadsheet': EcoinventSpreadsheet,
         'ecoinventlcia': EcoinventLcia,
-        'ecoinvent_lcia': EcoinventLcia
+        'ecoinvent_lcia': EcoinventLcia,
+        'foregroundarchive': ForegroundArchive.load,
+        'foreground': ForegroundArchive.load
     }[ds_type.lower()]
     return init_fcn(ref, **kwargs)
 
@@ -80,13 +83,12 @@ def _from_json(fname):
     return j
 
 
-def archive_from_json(fname):
+def archive_from_json(fname, **archive_kwargs):
     """
     :param fname: JSON filename
     :return: an ArchiveInterface
     """
     j = _from_json(fname)
-    archive_kwargs = dict()
     archive_kwargs['quiet'] = True
 
     if 'prefix' in j.keys():

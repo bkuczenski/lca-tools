@@ -2,10 +2,11 @@ from __future__ import print_function, unicode_literals
 
 from lcatools.providers.base import NsUuidArchive
 from lcatools.entities import LcProcess, LcFlow, LcQuantity
-from lcatools.exchanges import Exchange
+from lcatools.providers.ecospold2 import EcospoldV2Archive
 
 import pandas as pd
 import uuid
+import os
 
 
 class EcoinventSpreadsheet(NsUuidArchive):
@@ -18,7 +19,7 @@ class EcoinventSpreadsheet(NsUuidArchive):
         print('Reading %s ...' % sheetname)
         return pd.read_excel(self.ref, sheetname=sheetname).fillna('')
 
-    def __init__(self, ref, version='Unspecified', internal=False, **kwargs):
+    def __init__(self, ref, version='Unspecified', internal=False, data_dir=None, model=None, **kwargs):
         """
         :param ref:
         :param version:
@@ -28,6 +29,63 @@ class EcoinventSpreadsheet(NsUuidArchive):
         super(EcoinventSpreadsheet, self).__init__(ref, **kwargs)
         self.version = version
         self.internal = internal
+
+        self._serialize_dict['version'] = version
+        self._serialize_dict['internal'] = version
+
+        # these things are query-only, for foreground use
+        self._data_dir = data_dir
+        self._model = model
+        if self._data_dir is not None:
+            if model == 'undefined':
+                self.fg = EcospoldV2Archive(self._fg_filename, prefix='datasets - public')
+                self.bg = None
+            else:
+                self.fg = EcospoldV2Archive(self._fg_filename, prefix='datasets')
+                self.bg = EcospoldV2Archive(self._bg_filename, prefix='datasets')
+        else:
+            self.fg = None
+            self.bg = None
+
+    @property
+    def _fg_filename(self):
+        if self._data_dir is None:
+            raise AttributeError('No data directory')
+        else:
+            fn = os.path.join(self._data_dir, '_'.join(['current_Version', self.version, self._model,
+                                                        'ecoSpold02']) + '.zip')
+            print('Loading FG from %s' % fn)
+            return fn
+
+    @property
+    def _bg_filename(self):
+        if self._data_dir is None:
+            raise AttributeError('No data directory')
+        else:
+            fn = os.path.join(self._data_dir, '_'.join(['current_Version', self.version, self._model,
+                                                        'lcia', 'ecoSpold02']) + '.zip')
+            print('Loading BG from %s' % fn)
+            return fn
+
+    def fg_lookup(self, process, flow=None):
+        if self.fg is None:
+            raise AttributeError('No foreground')
+        else:
+            if flow is None:
+                if isinstance(process, str):
+                    return self.fg.retrieve_or_fetch_entity(process)
+                return self.fg.list_datasets(process.get_uuid())
+            return self.fg.retrieve_or_fetch_entity('_'.join([process.get_uuid(), flow.get_uuid()]) + '.spold')
+
+    def bg_lookup(self, process, flow=None):
+        if self.bg is None:
+            raise AttributeError('No background')
+        else:
+            if flow is None:
+                if isinstance(process, str):
+                    return self.bg.retrieve_lcia_scores(process)
+                return self.bg.list_datasets(process.get_uuid())
+            return self.bg.retrieve_lcia_scores('_'.join([process.get_uuid(), flow.get_uuid()]) + '.spold')
 
     def _create_quantity(self, unitstring):
         """
@@ -211,8 +269,3 @@ class EcoinventSpreadsheet(NsUuidArchive):
         self.load_activities()
         self.check_counter('process')
 
-    def serialize(self, **kwargs):
-        j = super(EcoinventSpreadsheet, self).serialize(**kwargs)
-        j['version'] = self.version
-        j['internal'] = self.internal
-        return j

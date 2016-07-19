@@ -44,15 +44,15 @@ class LcFlows(object):
         for q in j['quantities']:
             q_ref = to_ref(q[0])
             db.add_quantity(q_ref)
-            if len(q) > q:
+            if len(q) > 1:
                 for i in range(1, len(q)):
                     db.add_ref(q_ref, to_ref([i]))
         return db
 
     def __init__(self):
         self._compartments = Compartment.from_json(load_compartments())
-        self._flows = LogicalSet(type(LogicalFlow))
-        self._quantities = LogicalSet(type(LogicalQuantity))
+        self._flows = LogicalSet(LogicalFlow)
+        self._quantities = LogicalSet(LogicalQuantity)
 
     def compartments(self, cat_ref):
         c = cat_ref.entity()['Compartment']
@@ -60,7 +60,7 @@ class LcFlows(object):
 
     def add_compartments(self, cat_ref):
         c = cat_ref.entity()['Compartment']
-        return self._compartments.add_subs(c)
+        return self._compartments.add_subs(c, verbose=True)
 
     def is_elementary(self, cat_ref):
         comps = self.compartments(cat_ref)
@@ -87,7 +87,7 @@ class LcFlows(object):
     def _add_flow_cfs(self, cat_ref):
         for cf in cat_ref.entity().characterizations():
             q_ref = CatalogRef(cat_ref.catalog, cat_ref.index, cf.quantity)
-            if q_ref not in self._quantities:
+            if q_ref not in self._quantities.keys():
                 self.add_quantity(q_ref)
             self.add_cf(q_ref, cf)
 
@@ -108,11 +108,11 @@ class LcFlows(object):
         self._quantities[q_ref].add_cf(q_ref, cf)
 
     def add_ref(self, existing_ref, new_ref):
-        if existing_ref in self._flows:
-            self._flows[existing_ref].add_ref(new_ref)
+        if existing_ref in self._flows.keys():
+            self._flows.add_ref(existing_ref, new_ref)
             self._add_flow_cfs(new_ref)
-        elif existing_ref in self._quantities:
-            self._quantities[existing_ref].add_ref(new_ref)
+        elif existing_ref in self._quantities.keys():
+            self._quantities.add_ref(existing_ref, new_ref)
         else:
             raise KeyError("Can't find existing ref %s" % existing_ref)
 
@@ -123,12 +123,20 @@ class LcFlows(object):
         :param ref_b:
         :return:
         """
-        if ref_a in self._flows:
+        if ref_a in self._flows.keys():
             self._flows.mergewith(ref_a, self._flows[ref_b])
-        elif ref_a in self._quantities:
+        elif ref_a in self._quantities.keys():
             self._quantities.mergewith(ref_a, self._quantities[ref_b])
         else:
             raise KeyError("Can't find existing ref %s" % ref_a)
+
+    def flows(self):
+        for f in self._flows.items():
+            yield f
+
+    def quantities(self):
+        for q in self._quantities.items():
+            yield q
 
     def serialize(self):
         self._flows.check()

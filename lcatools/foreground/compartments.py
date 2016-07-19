@@ -77,29 +77,31 @@ class Compartment(object):
                 return x
         raise KeyError('No subcompartment found')
 
-    def add_sub(self, name, elementary=None):
+    def add_sub(self, name, elementary=None, verbose=False):
         try:
             sub = self[name]
         except KeyError:
             if elementary is None:
                 elementary = self._elementary
-            print('New compartment %s [elementary: %s]' % (name, elementary))
+            if verbose:
+                print('New compartment %s [elementary: %s]' % (name, elementary))
             sub = Compartment(name, elementary=elementary)
         self._subcompartments.add(sub)
         return sub
 
-    def add_subs(self, subs):
+    def add_subs(self, subs, verbose=False):
         """
         input is a list of subcompartments to be added recursively
         :param subs:
+        :param verbose:
         :return:
         """
         subs = _ensure_list(subs)
         if len(subs) == 1:
-            self.add_sub(subs[0])
+            self.add_sub(subs[0], verbose=verbose)
         else:
-            sub = self.add_sub(subs[0])
-            sub.add_subs(subs[1:])
+            sub = self.add_sub(subs[0], verbose=verbose)
+            sub.add_subs(subs[1:], verbose=verbose)
 
     def traverse(self, subs):
         """

@@ -85,11 +85,16 @@ class LcFlows(object):
             self.add_compartments(cat_ref)
 
     def _add_flow_cfs(self, cat_ref):
+        """
+        We only want to add CFs for quantities already IN the database-
+        the workflow is first curate the set of quantities of interest; then add flows of interest
+        :param cat_ref:
+        :return:
+        """
         for cf in cat_ref.entity().characterizations():
             q_ref = CatalogRef(cat_ref.catalog, cat_ref.index, cf.quantity)
-            if q_ref not in self._quantities.keys():
-                self.add_quantity(q_ref)
-            self.add_cf(q_ref, cf)
+            if q_ref in self._quantities.keys():
+                self.add_cf(q_ref, cf)
 
     def add_quantity(self, cat_ref):
         self._quantities.add(LogicalQuantity.create(cat_ref))
@@ -137,6 +142,34 @@ class LcFlows(object):
     def quantities(self):
         for q in self._quantities.items():
             yield q
+
+    def flow(self, f):
+        """
+        f can be anything in cat_ref.names()
+        :param f:
+        :return:
+        """
+        return self._flows[f]
+
+    def quantity(self, q):
+        """
+        q can be anything in cat_ref.names()
+        :param q:
+        :return:
+        """
+        return self._quantities[q]
+
+    def lcia_methods(self):
+        """
+        Quantities with an Indicator property are judged to be LCIA methods. We are yielding logical quantities so we
+        don't need to worry if there are repeats or inconsistencies- the point of the logical db is to be inclusive
+        :return:
+        """
+        for q in self.quantities():
+            for e in q:
+                if 'Indicator' in e.entity().keys():
+                    yield q
+                    break
 
     def serialize(self):
         self._flows.check()

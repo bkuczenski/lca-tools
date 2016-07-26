@@ -406,6 +406,10 @@ class LcFlow(LcEntity):
         comp = ', '.join((i for i in self._d['Compartment'] if i is not None))
         return '%s%s [%s]' % (self._d['Name'], cas, comp)
 
+    def profile(self):
+        for cf in self._characterizations:
+            print('%s' % cf)
+
     def add_characterization(self, quantity, reference=False, value=None, **kwargs):
         if reference:
             self._set_reference(quantity)

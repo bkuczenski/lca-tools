@@ -70,6 +70,9 @@ class Exchange(object):
     def __str__(self):
         return '%s has %s: %s %s' % (self.process, self.direction, self.tflow, self.unit)
 
+    def f_view(self):
+        return '%s of %s' % (self.direction, self.process)
+
     def get_external_ref(self):
         return '%s: %s' % (self.direction, self.flow.get_uuid())
 
@@ -115,6 +118,9 @@ class ExchangeValue(Exchange):
 
     def __str__(self):
         return '%6.6s: [%.3g %s] %s' % (self.direction, self.value, self.unit, self.tflow)
+
+    def f_view(self):
+        return '%6.6s: [%.3g %s] %s' % (self.direction, self.value, self.unit, self.process)
 
     def serialize(self, values=False):
         j = super(ExchangeValue, self).serialize()
@@ -319,6 +325,9 @@ class AllocatedExchange(Exchange):
         else:
             ref = '   '
         return '%6.6s: %s [%.3g %s] %s' % (self.direction, ref, self.value, self.unit, self.tflow)
+
+    def f_view(self):
+        return '%6.6s: [%.3g %s] %s' % (self.direction, self.value, self.unit, self.process)
 
     def serialize(self, values=False):
         j = super(AllocatedExchange, self).serialize()

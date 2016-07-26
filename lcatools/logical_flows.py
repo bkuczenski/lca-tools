@@ -2,6 +2,7 @@ from __future__ import print_function, unicode_literals
 
 from collections import namedtuple
 # from lcatools.exchanges import Exchange
+import uuid
 
 ExchangeRef = namedtuple('ExchangeRef', ('index', 'exchange'))
 CharacterizationRef = namedtuple('FactorRef', ('index', 'characterization'))
@@ -112,6 +113,8 @@ class Logical(object):
         return logical
 
     def __init__(self, entity_type, catalog):
+        self._uuid = uuid.uuid4()  # need a hashable
+
         self._catalog = catalog
         self._type = entity_type
         self._entities = []
@@ -130,8 +133,11 @@ class Logical(object):
             for n in e.names():
                 yield n
 
+    def __eq__(self, other):
+        return self._uuid == other._uuid
+
     def __hash__(self):
-        return hash(())
+        return hash(self._uuid)
 
     def merge(self, other):
         """
@@ -166,7 +172,7 @@ class Logical(object):
 
     def _add_obs(self, cat_ref, obs):
         """
-        cat_ref should be in the flow's ref list
+        cat_ref should be in the ref list
         :param cat_ref:
         :param obs:
         :return:
@@ -203,6 +209,15 @@ class LogicalFlow(Logical):
             for char in flow.entity().characterizations():
                 yield CharacterizationRef(flow.index, char)
 
+    def profile(self):
+        print('Exchanges:')
+        for e in sorted(self.exchanges(), key=lambda x: x[0].index):
+            print('(%s) %s' % (e[0].catalog.name(e[0].index), e[1].f_view()))
+        for e in self._entities:
+            print('%s :' % e)
+            e.entity().profile()
+            print('\n')
+
 
 class LogicalQuantity(Logical):
     """
@@ -214,6 +229,9 @@ class LogicalQuantity(Logical):
     def add_cf(self, cat_ref, cf):
         """
         cat_ref should be in the flow's ref list
+        We don't want duplicates of the same observations- though redundant observations are okay [although
+        I don't know how we'll deal with them yet]
+        But for now, if the cfs are the same
         :param cat_ref:
         :param cf:
         :return:
@@ -221,9 +239,15 @@ class LogicalQuantity(Logical):
         assert cf.entity_type == 'characterization', 'Not a cf!'
         assert cat_ref.entity() == cf.quantity
         if cat_ref in self._entities:
+
             self._add_obs(cat_ref, (CharacterizationRef(cat_ref.index, cf)))
 
     def cfs(self):
         for cf in self._observations:
             yield cf
+
+    def profile(self):
+        for cf in sorted(self.cfs, key=lambda x: x[0].index):
+            print('(%s) %s' % (cf[0].catalog.name(cf[0].index), cf[1].q_view()))
+
 

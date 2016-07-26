@@ -17,6 +17,10 @@ class BalanceAlreadySet(Exception):
     pass
 
 
+class CacheAlreadySet(Exception):
+    pass
+
+
 class LcFragment(LcEntity):
     """
 
@@ -64,12 +68,24 @@ class LcFragment(LcEntity):
         self._cached_exch_value = None
         self._cached_unit_scores = dict()  # of quantities
 
+        self._termination = None
+
         if 'Flow' not in self._d:
             self._d['Flow'] = flow['Name']
         if 'Direction' not in self._d:
             self._d['Direction'] = direction
         if 'StageName' not in self._d:
             self._d['StageName'] = ''
+
+    @property
+    def cached_ev(self):
+        return self._cached_exch_value
+
+    @cached_ev.setter
+    def cached_ev(self, value):
+        if self._cached_exch_value is not None:
+            raise CacheAlreadySet('Set Value: %g (new: %g' % (self._cached_exch_value, value))
+        self._cached_exch_value = value
 
     def __str__(self):
         if self.reference_entity is None:
@@ -127,4 +143,5 @@ class FragmentFlow(object):
     an immutable record of the termination of a traversal query. essentially an enhanced NodeCache record which
     can be easily serialized to an antelope fragmentflow record.
     """
-    pass
+    def __init__(self, fragment, ):
+        pass

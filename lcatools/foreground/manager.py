@@ -114,9 +114,19 @@ class ForegroundManager(object):
         self._flowdb = self._create_or_load_flowdb()
         self.save()
 
+    def __getitem__(self, item):
+        return self._catalog.__getitem__(item)
+
+    def show(self):
+        self._catalog.show()
+
     def _add_entity(self, index, entity):
-        self._catalog[index].add(entity)
-        return self._catalog.ref(index, entity)
+        if self._catalog[index][entity.get_uuid()] is None:
+            self._catalog[index].add(entity)
+        c_r = self._catalog.ref(index, entity)
+        if c_r.entity() is not None:
+            return c_r
+        return None
 
     def cat(self, i):
         """
@@ -134,6 +144,12 @@ class ForegroundManager(object):
 
     def add_catalog(self, ref, ds_type, nick=None, **kwargs):
         self._catalog.load_archive(ref, ds_type, nick=nick, **kwargs)
+
+    def get_flow(self, flow):
+        return self._flowdb.flow(flow)
+
+    def get_quantity(self, q):
+        return self._flowdb.quantity(q)
 
     def foreground_flow(self, cat_ref):
         if cat_ref.entity_type == 'flow':

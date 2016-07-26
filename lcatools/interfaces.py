@@ -196,15 +196,17 @@ class ArchiveInterface(object):
                               bool(re.search(vv, _recurse_expand_subtag(r[k]), flags=re.IGNORECASE))]
         return result_set
 
-    def search(self, *args, **kwargs):
+    def search(self, *args, upstream=False, **kwargs):
         """
         Find entities by search term, either full or partial uuid or entity property like 'Name', 'CasNumber',
         or so on.
         :param uuid: optional positional argument is a fragmentary (or complete) uuid string. (additional positional
          params are ignored)
+        :param upstream: (False) if upstream archive exists, search there too
         :param kwargs: regex search through entities' properties as named in the kw arguments
         :return:
         """
+        etype = None
         uid = None if len(args) == 0 else args[0]
         if uid is not None:
             # search on uuids
@@ -212,11 +214,13 @@ class ArchiveInterface(object):
                           if bool(re.search(uid, str(k), flags=re.IGNORECASE))]
         else:
             if 'entity_type' in kwargs.keys():
-                result_set = self._entities_by_type(kwargs.pop('entity_type'))
+                etype = kwargs.pop('entity_type')
+                result_set = self._entities_by_type(etype)
             else:
                 result_set = [self._get_entity(k) for k in self._entities.keys()]
         result_set = self._narrow_search(result_set, **kwargs)
-        if self._upstream is not None:
+        if upstream and self._upstream is not None:
+            kwargs['entity_type'] = etype  # need to reset for upstream search-- what an awkward interface
             result_set += self._upstream.search(*args, **kwargs)
         return result_set
 

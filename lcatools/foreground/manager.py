@@ -2,12 +2,11 @@ import os
 import json
 
 
-MANIFEST = ('catalog.json', 'entities.json', 'fragments.json', 'flows.json')
-
 from lcatools.catalog import CatalogInterface, CatalogRef
 from lcatools.foreground.flow_database import LcFlows
 from lcatools.providers.foreground import ForegroundArchive
 
+MANIFEST = ('catalog.json', 'entities.json', 'fragments.json', 'flows.json')
 
 
 class ForegroundManager(object):
@@ -140,7 +139,11 @@ class ForegroundManager(object):
         return self._catalog.search(*args, **kwargs)
 
     def terminate(self, *args, **kwargs):
-        return self._catalog.terminate(*args, **kwargs)
+        if len(args) == 1:
+            ref = args[0]
+            return self._catalog.terminate(ref.index, ref, **kwargs)
+        else:
+            return self._catalog.terminate(*args, **kwargs)
 
     def add_catalog(self, ref, ds_type, nick=None, **kwargs):
         self._catalog.load_archive(ref, ds_type, nick=nick, **kwargs)

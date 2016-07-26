@@ -362,7 +362,7 @@ class CatalogInterface(object):
             z = []
             for p in self[index].processes():
                 if any([x.flow.get_uuid() == flow_ref.id for x in p.exchanges()]):
-                    z.append(p)
+                    z.append(self.ref(index, p))
             if show:
                 self._show(z)
             return z

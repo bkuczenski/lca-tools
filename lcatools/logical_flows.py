@@ -8,12 +8,15 @@ ExchangeRef = namedtuple('ExchangeRef', ('index', 'exchange'))
 CharacterizationRef = namedtuple('FactorRef', ('index', 'characterization'))
 
 
-
 class CatalogMismatchError(Exception):
     pass
 
 
 class TypeMismatchError(Exception):
+    pass
+
+
+class EntityMismatchError(Exception):
     pass
 
 
@@ -223,6 +226,50 @@ class LogicalQuantity(Logical):
     """
     A LogicalQuantity is the same thing for catalogs, back-tracking characterizations.
     """
+    def __init__(self, *args):
+        """
+        A LogicalQuantity has just one reference quantity, but collects CFs for quantities that match it.
+        builds a k-v dictionary against which to test equality
+        :param args:
+        """
+        super(LogicalQuantity, self).__init__(*args)
+        self._quantity = None
+        self._d = dict()
+
+    def keys(self):
+        return self._d.keys()
+
+    def __getitem__(self, item='Name'):
+        return self._d[item]
+
+    def add_ref(self, catalog_ref, force=False):
+        """
+        Need to check for stronger condition of equality before adding-- new ref must match existing ref's k-v dict
+        We will only exclude if there is a conflict
+        :param catalog_ref:
+        :param force: [False] ignore mismatched entities and add anyway
+        :return:
+        """
+        e = catalog_ref.entity()
+        if self._quantity is None:
+            # first quantity
+            self._quantity = e
+
+        if e.reference_entity != self._quantity.reference_entity:
+            raise EntityMismatchError('conflicting reference (existing=%s, new=%s) - implement convert method'
+                                      % (self._quantity.reference_entity, e.reference_entity))
+
+        for k in e.keys():
+            if k in self._d.keys():
+                if self._d[k] != e.__getitem__(k):
+                    if force is False:
+                        raise EntityMismatchError('conflicting key %s (existing=%s, new=%s) - use force to ignore' %
+                                                  (k, self._d[k], e.__getitem__(k)))
+            else:
+                self._d[k] = e.__getitem__(k)
+
+        super(LogicalQuantity, self).add_ref(catalog_ref)
+
     def quantities(self):
         return iter(self)
 
@@ -249,5 +296,3 @@ class LogicalQuantity(Logical):
     def profile(self):
         for cf in sorted(self.cfs, key=lambda x: x[0].index):
             print('(%s) %s' % (cf[0].catalog.name(cf[0].index), cf[1].q_view()))
-
-

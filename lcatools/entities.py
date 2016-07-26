@@ -17,6 +17,14 @@ class OriginExists(Exception):
     pass
 
 
+class NoReferenceFound(Exception):
+    pass
+
+
+class MultipleReferencesFound(Exception):
+    pass
+
+
 class LcEntity(object):
     """
     All LC entities behave like dicts, but they all have some common properties, defined here.
@@ -248,18 +256,47 @@ class LcProcess(LcEntity):
 
         self.reference_entity.add(ref_entity)
 
-    def inventory(self):
-        for i in self.exchanges():
+    def find_reference(self, term, strict=False):
+        """
+        Select a reference based on a search term--- check against flow.  test get_uuid().startswith, or ['Name'].find()
+        If multiple results found- if strict, return None; if strict=False, return first
+        :param term:
+        :param strict: [False] raise error if ambiguous search term; otherwise return first
+        :return: the exchange entity
+        """
+        hits = [None] * len(self.reference_entity)
+        for i, e in enumerate(self.reference_entity):
+            if e.flow.get_uuid().startswith(term):
+                hits[i] = e
+            elif e.flow['Name'].find(term) >= 0:
+                hits[i] = e
+        hits = list(filter(None, hits))
+        if strict:
+            if len(hits) > 1:
+                raise MultipleReferencesFound('process:%s key: %s' % (self, term))
+        if len(hits) == 0:
+            raise NoReferenceFound('process:%s key: %s' % (self, term))
+        return hits[0]
+
+    def inventory(self, reference=None):
+        if reference is None:
+            it = self.exchanges()
+        else:
+            it = self.allocated_exchanges(reference)
+        for i in it:
             print('%s' % i)
 
     def exchanges(self):
         for i in sorted(self._exchanges, key=lambda x: x.direction):
             yield i
 
-    def allocated_exchanges(self, reference):
+    def allocated_exchanges(self, reference, strict=False):
+        # need to disambiguate the reference
+        ref = self.find_reference(reference, strict=strict)
+
         for i in sorted(self._exchanges, key=lambda x: x.direction):
             if isinstance(i, AllocatedExchange):
-                yield ExchangeValue.from_allocated(i, reference)
+                yield ExchangeValue.from_allocated(i, ref.flow.get_uuid())
 
     def add_reference(self, flow, dirn):
         rx = Exchange(self, flow, dirn)

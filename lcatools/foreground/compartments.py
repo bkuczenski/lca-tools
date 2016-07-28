@@ -16,14 +16,16 @@ def _ensure_list(var):
     return var
 
 
-
 class Compartment(object):
     """
     A hierarchical listing of compartments.  A compartment contains subcompartments, which are themselves compartments.
     """
     @classmethod
     def from_json(cls, j):
-        root = cls(j['name'], elementary=False)
+        rootname = j['name']
+        if not isinstance(rootname, list):
+            rootname = [rootname]
+        root = cls(rootname[0], elementary=False)
         root._add_subs_from_json(j['subcompartments'])
         return root
 
@@ -33,13 +35,30 @@ class Compartment(object):
                 elementary = bool(sub['elementary'])
             else:
                 elementary = False
-            sc = self.add_sub(sub['name'], elementary=elementary)
+            syns = sub['name']
+            if not isinstance(syns, list):
+                if syns is None or syns.lower() == 'unspecified':
+                    continue
+                syns = [syns]
+
+            sc = self.add_sub(syns[0], elementary=elementary)
+            for syn in syns[1:]:
+                sc.add_syn(syn)
             sc._add_subs_from_json(sub['subcompartments'])
 
     def __init__(self, name, elementary=False):
         self.name = name
+        self.synonyms = {name}
         self._elementary = elementary
         self._subcompartments = set()
+
+    def add_syn(self, syn):
+        self.synonyms.add(syn)
+
+    def _ensure_comp(self, item):
+        if isinstance(item, Compartment):
+            return item
+        return self.__getitem__(item)
 
     @property
     def elementary(self):
@@ -53,6 +72,17 @@ class Compartment(object):
         print('%s\nElementary: %s' % (self.name, self._elementary))
         for i in self.subcompartments():
             print('  sub: %s' % i.name)
+
+    def print_tree(self, up=''):
+        s = self.name
+        if s is None:
+            s = '##NONE##'
+        ls = self._names()
+        print(up + '; '.join(ls))
+        up += s
+        for x in self.subcompartments():
+            ls += x.print_tree(up=up + ' -- ')
+        return ls
 
     def set_elementary(self):
         self._elementary = True
@@ -73,11 +103,76 @@ class Compartment(object):
 
     def __getitem__(self, item):
         for x in self._subcompartments:
-            if x.name == item:
+            if item in x.synonyms:
                 return x
         raise KeyError('No subcompartment found')
 
+    def delete(self, item):
+        s1 = self._ensure_comp(item)
+        if len(s1._subcompartments) > 0:
+            raise ValueError('Subcompartment not empty')
+        self._subcompartments.remove(s1)
+
+    def merge_subs(self, n1, n2):
+        """
+        merge n1 into n2; n2 dominant
+        :param n1:
+        :param n2:
+        :return:
+        """
+        s1 = self._ensure_comp(n1)
+        s2 = self._ensure_comp(n2)
+
+        if s1 is s2:
+            print('Compartments are the same')
+            return
+
+        if s1._elementary != s2._elementary:
+            raise ValueError('elementary flag must match')
+        for i in s1.synonyms:
+            s2.add_syn(i)
+        for i in s1._subcompartments:
+            s2._merge_into(i)
+
+        if s1 in self._subcompartments:
+            self._subcompartments.remove(s1)
+
+    def _merge_into(self, comp):
+        """
+        take an existing compartment and make it a subcompartment of self
+        :param comp: existing compartment
+        :return:
+        """
+        merge = False
+        for i in self._subcompartments:
+            if i.synonyms.intersection(comp.synonyms):
+                i.synonyms = i.synonyms.union(comp.synonyms)
+                for j in comp._subcompartments:
+                    i._merge_into(j)
+                merge = True
+                break
+        if merge is False:
+            self._subcompartments.add(comp)
+
+    def merge(self, merged, merge_into):
+        """
+        Merge a subcompartment into another one downstream
+        :param merged: must be a subcompartment
+        :param merge_into:
+        :return:
+        """
+        s1 = self._ensure_comp(merged)
+        merge_into._merge_into(s1)
+        self._subcompartments.remove(s1)
+
     def add_sub(self, name, elementary=None, verbose=False):
+        """
+        make a new subcompartment based on name only
+        :param name:
+        :param elementary:
+        :param verbose:
+        :return:
+        """
         try:
             sub = self[name]
         except KeyError:
@@ -116,13 +211,16 @@ class Compartment(object):
         comps.extend(comps[0].traverse(subs[1:]))
         return comps
 
+    def _names(self):
+        a = [self.name]
+        a.extend(list(self.synonyms.difference({self.name})))
+        return a
+
     def serialize(self):
         j = {
-            "name": self.name,
+            "name": self._names(),
             "subcompartments": [x.serialize() for x in self._subcompartments]
         }
         if self._elementary:
             j['elementary'] = True
         return j
-
-

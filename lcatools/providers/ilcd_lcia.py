@@ -40,7 +40,7 @@ class IlcdLcia(IlcdArchive):
         dur = str(find_tag(o, 'duration', ns=ns)[0])
 
         r_uuid, r_uri = get_reference_quantity(o, ns=ns)
-        rq = self._check_or_retrieve_child(filename, r_uuid, r_uri)
+        rq = self._check_or_retrieve_child(r_uuid, r_uri)
 
         lcia = LcQuantity(u, Name=n, Comment=c, Method=m, Category=ic, Indicator=ii, ReferenceYear=ry, Duration=dur)
         lcia.set_external_ref('%s/%s' % (typeDirs['LCIAMethod'], u))
@@ -57,12 +57,12 @@ class IlcdLcia(IlcdArchive):
             loc = str(find_tag(factor, 'location', ns=ns)[0])
             if loc == '':
                 loc = None
-            flow = self._check_or_retrieve_child(filename, f_uuid, f_uri)
+            flow = self._check_or_retrieve_child(f_uuid, f_uri)
             # TODO: adjust CF for different reference units!!! do this when a live one is found
             flow.add_characterization(lcia, value=cf, location=loc)
 
-    def load_lcia_method(self, u):
-        self._create_lcia_quantity(self._build_entity_path('LCIAMethod', u))
+    def load_lcia_method(self, u, version=None):
+        self._create_lcia_quantity(self._path_from_parts('LCIAMethod', u, version=version))
 
     def load_lcia(self):
         for f in self.list_objects('LCIAMethod'):

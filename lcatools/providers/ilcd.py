@@ -54,13 +54,16 @@ def _check_dtype(dtype):
     return True
 
 
+def _extract_uuid(filename):
+    return uuid_regex.search(filename).groups()[0]
+
+
 def _extract_dtype(filename, pathtype=os.path):
     cands = [i for i in re.split(pathtype.sep, filename) if i in typeDirs.values()]
     dtype = [k for k, v in typeDirs.items() if v in cands]
     if len(dtype) == 0:
         dtype = [None]
-    uid = uuid_regex.search(filename).groups()[0]
-    return dtype[0], uid
+    return dtype[0]
 
 
 def get_flow_ref(exch, ns=None):
@@ -169,10 +172,22 @@ class IlcdArchive(LcArchive):
     def _de_prefix(self, file):
         return re.sub('^' + self._pathtype.join(self._build_prefix(), ''), '', file)
 
-    def _build_entity_path(self, dtype, uid):
+    def _path_from_parts(self, dtype, uid, version=None):
+        """
+        aka 'path from parts'
+        :param dtype: required
+        :param uid: required
+        :param version: optional [None]
+        :return: a single (prefixed) path
+        """
         assert _check_dtype(dtype)
         postpath = self._pathtype.join(self._build_prefix(), typeDirs[dtype], uid)
+        if version is not None:
+            postpath += '_' + version
         return postpath + '.xml'
+
+    def _path_from_search(self, search_result):
+        return self._pathtype.join(self._build_prefix(), search_result)
 
     def search_by_id(self, uid, dtype=None):
         return [i for i in self.list_objects(dtype=dtype) if re.search(uid, i, flags=re.IGNORECASE)]
@@ -188,11 +203,10 @@ class IlcdArchive(LcArchive):
     def _fetch_filename(self, filename):
         return self._archive.readfile(filename)
 
-    def _check_or_retrieve_child(self, filename, uid, uri):
+    def _check_or_retrieve_child(self, uid, uri):
         child = self._get_entity(uid)
         if child is None:
-            new_path = urljoin(filename, uri)
-            dtype, uid = _extract_dtype(new_path, self._pathtype)
+            dtype = _extract_dtype(uri, self._pathtype)
             child = self.retrieve_or_fetch_entity(uid, dtype=dtype)
         return child
 
@@ -201,7 +215,7 @@ class IlcdArchive(LcArchive):
 
     def objectify(self, uid, **kwargs):
         search_results = self.search_by_id(uid, **kwargs)
-        return [self._get_objectified_entity(k) for k in search_results]
+        return [self._get_objectified_entity(self._path_from_search(k)) for k in search_results]
 
     def _create_unit(self, unit_ref):
         """
@@ -209,8 +223,9 @@ class IlcdArchive(LcArchive):
         :param unit_ref:
         :return:
         """
-        dtype, uid = _extract_dtype(unit_ref, self._pathtype)
-        filename = self._build_entity_path(dtype, uid)
+        dtype = _extract_dtype(unit_ref, self._pathtype)
+        uid = _extract_uuid(unit_ref)
+        filename = self._path_from_parts(dtype, uid)
         o = self._get_objectified_entity(filename)
 
         ns = find_ns(o.nsmap, 'UnitGroup')
@@ -226,13 +241,12 @@ class IlcdArchive(LcArchive):
             unitconv[str(i['name'])] = 1.0 / float(i['meanValue'])
         return ref_unit, unitconv
 
-    def _create_quantity(self, filename):
+    def _create_quantity(self, o):
         """
 
-        :param filename:
+        :param o: objectified FlowProperty
         :return:
         """
-        o = self._get_objectified_entity(filename)
         ns = find_ns(o.nsmap, 'FlowProperty')
 
         u = str(find_common(o, 'UUID')[0])
@@ -242,7 +256,7 @@ class IlcdArchive(LcArchive):
 
         ug, ug_uri = get_reference_unit_group(o, ns=ns)
 
-        ug_path = urljoin(filename, '../unitgroups/' + ug)  # need the path without extension- I know- it's all sloppy
+        ug_path = self._pathtype.join('unitgroups', ug)  # need the path without extension- I know- it's all sloppy
 
         refunit, unitconv = self._create_unit(ug_path)
 
@@ -259,14 +273,12 @@ class IlcdArchive(LcArchive):
         print('Creating DUMMY flow (%s) with name %s' % (uid, n))
         return LcFlow(uid, Name=n, Comment='Dummy flow (HTTP or XML error)', Compartment=['dummy flows'])
 
-    def _create_flow(self, filename):
+    def _create_flow(self, o):
         """
 
-        :param filename: path to the data set relative to the archive
+        :param o: objectified flow
         :return: an LcFlow
         """
-        o = self._get_objectified_entity(filename)
-
         ns = find_ns(o.nsmap, 'Flow')
 
         u = str(find_common(o, 'UUID')[0])
@@ -301,17 +313,21 @@ class IlcdArchive(LcArchive):
             rfp_uri = ref.attrib['uri']
 
             try:
-                q = self._check_or_retrieve_child(filename, rfp_uuid, rfp_uri)
+                q = self._check_or_retrieve_child(rfp_uuid, rfp_uri)
             except (HTTPError, XMLSyntaxError, KeyError):
                 continue
 
             try:
                 f.add_characterization(q, reference=is_ref, value=val)
             except DuplicateCharacterizationError:
-                print('Duplicate Characterization in filename %s\n %s = %g' % (filename, q, val))
+                print('Duplicate Characterization in entity %s\n %s = %g' % (u, q, val))
                 # let it go
 
-        self.add(f)
+        try:
+            self.add(f)
+        except KeyError:
+            print('Found duplicate entity %s' % u)
+            raise
         return f
 
     def _create_process_entity(self, o, ns):
@@ -338,14 +354,12 @@ class IlcdArchive(LcArchive):
 
         return p
 
-    def _create_process(self, filename):
+    def _create_process(self, o):
         """
 
-        :param filename:
+        :param o: objectified process
         :return:
         """
-        o = self._get_objectified_entity(filename)
-
         ns = find_ns(o.nsmap, 'Process')
 
         try:
@@ -360,9 +374,10 @@ class IlcdArchive(LcArchive):
             # load all child flows
             f_id, f_uri, f_dir = get_flow_ref(exch, ns=ns)
             try:
-                f = self._check_or_retrieve_child(filename, f_id, f_uri)
+                f = self._check_or_retrieve_child(f_id, f_uri)
             except (HTTPError, XMLSyntaxError, KeyError):
-                print('In file %s:' % filename)
+                u = str(find_common(o, 'UUID')[0])
+                print('In UUID %s:' % u)
                 f = self._create_dummy_flow_from_exch(f_id, exch)
                 self.add(f)
             v = get_exch_value(exch, ns=ns)
@@ -378,54 +393,66 @@ class IlcdArchive(LcArchive):
 
         return p
 
-    def _fetch(self, uid, **kwargs):
+    def _search_for_term(self, term, dtype=None):
+        search_results = self.search_by_id(term, dtype=dtype)
+        if len(search_results) > 0:
+            self._print('Found Results:')
+            [print(i) for i in search_results]
+            if len(search_results) > 1:
+                print('Please refine search')
+                return None
+            result = self._path_from_search(search_results[0])
+            dtype = _extract_dtype(result, self._pathtype)
+            if dtype is None:
+                raise ValueError('Search result with no matching dtype')
+            return self._fetch(result, dtype=dtype)
+        print('No results.')
+        return None
+
+    def _fetch(self, term, dtype=None, version=None):
         """
-        fetch an object from the archive by ID.
+        fetch an object from the archive by reference.
+
+        term is either: a uid and a dtype (and optional version) OR a filename
         dtype MUST be specified as kwarg for remote archives; otherwise will search
-        :param uid:
+        :param term:
         :return:
         """
+        if dtype is None:
+            dtype = _extract_dtype(term, self._pathtype)
+
+        if dtype is None:
+            return self._search_for_term(term)
+
         try:
-            dtype = kwargs['dtype']
-        except KeyError:
-            dtype = None
+            uid = _extract_uuid(term)
+        except AttributeError:
+            # can't find UUID: search is required
+            return self._search_for_term(term, dtype=dtype)
 
-        if dtype is None:
-            dtype, uu = _extract_dtype(uid, self._pathtype)
-            if dtype is not None:
-                uid = uu
-
-        if dtype is None:
-            if self._archive.remote:
-                print('Cannot search on remote archives. Please supply a dtype')
-                return None
-            search_results = self.search_by_id(uid)
-            if len(search_results) > 0:
-                print('Found Results:')
-                [print(i) for i in search_results]
-                if len(search_results) > 1:
-                    print('Please specify dtype')
-                    return None
-                filename = search_results[0]
-                dtype, uid = _extract_dtype(filename, self._pathtype)
-            else:
-                print('No results.')
-                return None
-        else:
-            filename = self._build_entity_path(dtype, uid)
-
+        # if we get here, uid is valid and dtype is valid
         entity = self._get_entity(uid)
         if entity is not None:
             return entity
 
+        try:
+            # if we are a search result, this will succeed
+            o = self._get_objectified_entity(self._path_from_search(term))
+        except KeyError:
+            # we are not a search result-- let's build the entity path
+            o = self._get_objectified_entity(self._path_from_parts(dtype, uid, version=version))
+
         if dtype == 'Flow':
-            return self._create_flow(filename)
+            try:
+                return self._create_flow(o)
+            except KeyError:
+                print('KeyError on term %s dtype %s version %s'% (term, dtype, version))
         elif dtype == 'Process':
-            return self._create_process(filename)
+            return self._create_process(o)
         elif dtype == 'FlowProperty':
-            return self._create_quantity(filename)
+            return self._create_quantity(o)
         else:
-            return objectify.fromstring(self._archive.readfile(filename))
+            return o
 
     def _load_all(self):
         for i in self.list_objects('Process'):

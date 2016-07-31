@@ -444,7 +444,7 @@ class LcFlow(LcEntity):
         return '%s%s [%s]' % (self._d['Name'], cas, comp)
 
     def profile(self):
-        for cf in self._characterizations:
+        for cf in self._characterizations.values():
             print('%s' % cf)
 
     def add_characterization(self, quantity, reference=False, value=None, **kwargs):

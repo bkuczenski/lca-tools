@@ -6,7 +6,7 @@ from lcatools.providers.ecospold2 import EcospoldV2Archive
 from lcatools.providers.ilcd_lcia import IlcdLcia
 from lcatools.providers.ilcd import grab_flow_name
 from lcatools.providers.xml_widgets import find_tag, find_common, find_ns
-from lcatools.flowdb.synlist import SynList, InconsistentIndices
+from lcatools.flowdb.synlist import Flowables, InconsistentIndices, ConflictingCas
 
 
 ECOSPOLD = os.path.join('/data', 'Dropbox', 'data', 'Ecoinvent', '3.2', 'current_Version_3.2_cutoff_lci_ecoSpold02.7z')
@@ -77,6 +77,7 @@ def synonyms_from_ilcd_flow(flow):
     ns = find_ns(flow.nsmap, 'Flow')
     syns = set()
     syns.add(grab_flow_name(flow, ns=ns))
+    syns.add(str(find_common(flow, 'UUID')[0]).strip())
     cas = str(find_tag(flow, 'CASNumber', ns=ns)[0]).strip()
     if cas != '':
         syns.add(cas)
@@ -87,14 +88,22 @@ def synonyms_from_ilcd_flow(flow):
     return syns
 
 
+cas_regex = re.compile('^[0-9]{,6}-[0-9]{2}-[0-9]$')
+
+
 def _add_set(synlist, syns):
     try:
         synlist.add_set(syns)
+    except ConflictingCas:
+        synlist.new_set(syns)
     except InconsistentIndices:
-        print('Inconsistent indices found for set %s' % syns)
+        # print('Inconsistent indices found for set %s' % syns)
         dups = synlist.find_indices(syns)
-        synlist.merge_indices(dups)
-        synlist.add_set(syns)
+        try:
+            synlist.merge_indices(dups)
+        except ConflictingCas:
+            #print('Conflicting CAS on merge.. creating new group')
+            synlist.new_set(syns)
 
 
 def create_new_synonym_list():
@@ -102,7 +111,7 @@ def create_new_synonym_list():
     This just makes a SynList and populates it, first with ecoinvent, then with ILCD, and saves it to disk
     :return:
     """
-    synonyms = SynList()
+    synonyms = Flowables()
 
     # first, ecoinvent
     exchs = get_ecospold_exchanges()

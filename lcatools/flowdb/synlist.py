@@ -1,4 +1,11 @@
+import re
+
+
 class InconsistentIndices(Exception):
+    pass
+
+
+class ConflictingCas(Exception):
     pass
 
 
@@ -56,6 +63,26 @@ class SynList(object):
                 found.add(self._dict[i])
         return found
 
+    def merge_set_with_index(self, it, index):
+        for i in it:
+            self._new_key(i, index)
+
+    def new_set(self, it):
+        index = self._new_group()
+        printed = False
+        for i in it:
+            '''
+            if i in self._dict.keys() and self._dict[i] != index:
+                if printed is False:
+                    print('\n%s' % i)
+                    printed = True
+                #print('index %d: Ignoring duplicate term [%s] = %d ' % (index, i, self._dict[i]))
+            else:
+            '''
+            if i not in self._dict.keys():
+                self._new_key(i, index)
+        return index
+
     def add_set(self, it):
         """
         given an iterable of keys:
@@ -71,14 +98,10 @@ class SynList(object):
             raise InconsistentIndices('Keys found in indices: %s' % found)
         elif len(found) == 1:
             index = found.pop()
-            for i in it:
-                self._new_key(i, index)
-            return index
+            self.merge_set_with_index(it, index)
         else:
-            index = self._new_group()
-            for i in it:
-                self._new_key(i, index)
-            return index
+            index = self.new_set(it)
+        return index
 
     def _merge(self, merge, into):
         print('Merging\n## %s \ninto synonym set containing\n## %s' % (self._list[merge], self._list[into]))
@@ -120,4 +143,80 @@ class SynList(object):
         return {
             'synList': [self._serialize_set(i) for i in range(len(self._list))
                         if self._list[i] is not None]
+        }
+
+
+cas_regex = re.compile('^[0-9]{,6}-[0-9]{2}-[0-9]$')
+
+
+def find_cas(syns):
+    found = set()
+    for i in syns:
+        if bool(cas_regex.match(i)):
+            found.add(i)
+    if len(found) > 1:
+        raise ConflictingCas('Multiple CAS numbers found: %s' % found)
+    if len(found) == 0:
+        return None
+    return found.pop()
+
+
+class Flowables(SynList):
+    """
+    A SynList that enforces unique CAS numbers on sets
+    """
+
+    @classmethod
+    def from_json(cls, j):
+        s = cls()
+        for i in j['flowables']:
+            s.add_set(i)
+        return s
+
+    def __init__(self):
+        super(Flowables, self).__init__()
+        self._cas = []
+
+    def _new_group(self):
+        k = super(Flowables, self)._new_group()
+        self._cas.append(None)
+        return k
+
+    def _new_key(self, key, index):
+        if cas_regex.match(key):
+            if self._cas[index] is not None and self._cas[index] != key:
+                raise ConflictingCas('Index %d already has CAS %s' % (index, self._cas[index]))
+            else:
+                self._cas[index] = key
+        super(Flowables, self)._new_key(key, index)
+
+    def _merge(self, merge, into):
+        super(Flowables, self)._merge(merge, into)
+        if self._cas[merge] is not None:
+            if self._cas[into] is not None:
+                raise ConflictingCas('this should not happen')
+            self._cas[into] = self._cas[merge]
+            self._cas[merge] = None
+
+    def merge_indices(self, indices):
+        k = []
+        for i in indices:
+            if self._cas[i] is not None:
+                k.append((i, self._cas[i]))
+        if len(k) > 1:
+            raise ConflictingCas('Indices have conflicting CAS numbers: %s' % k)
+        super(Flowables, self).merge_indices(indices)
+
+    def merge_set_with_index(self, it, index):
+        cas = find_cas(it)
+        if cas is not None:
+            if self._cas[index] is not None and self._cas[index] != cas:
+                print('Conflicting CAS: incoming %s; existing [%s] = %d' % (cas, self._cas[index], index))
+                raise ConflictingCas('Incoming set has conflicting CAS %s' % cas)
+        super(Flowables, self).merge_set_with_index(it, index)
+
+    def serialize(self):
+        return {
+            'flowables': [self._serialize_set(i) for i in range(len(self._list))
+                          if self._list[i] is not None]
         }

@@ -43,10 +43,6 @@ elcd3_local_fallback = os.path.join(os.path.expanduser('~'), 'Dropbox', 'data',
 elcd3_remote_fallback = "http://eplca.jrc.ec.europa.eu/ELCD3/resource/"
 
 
-def find_ns(nsmap, dtype):
-    return next((k for k, v in nsmap.items() if re.search(dtype + '$', v)))
-
-
 def _check_dtype(dtype):
     if dtype not in typeDirs:
         print('Datatype %s not known.' % dtype)
@@ -71,6 +67,14 @@ def get_flow_ref(exch, ns=None):
     f_uri = find_tag(exch, 'referenceToFlowDataSet', ns=ns)[0].attrib['uri']
     f_dir = find_tag(exch, 'exchangeDirection', ns=ns)[0].text
     return f_uuid, f_uri, f_dir
+
+
+def grab_flow_name(o, ns=None):
+    return ', '.join(chain(filter(len, [str(find_tag(o, k, ns=ns)[0])
+                                        for k in ('baseName',
+                                                  'treatmentStandardsRoutes',
+                                                  'mixAndLocationTypes',
+                                                  'flowProperties')])))
 
 
 def get_reference_flow(process, ns=None):
@@ -213,9 +217,45 @@ class IlcdArchive(LcArchive):
     def _get_objectified_entity(self, filename):
         return objectify.fromstring(self._fetch_filename(filename))
 
-    def objectify(self, uid, **kwargs):
-        search_results = self.search_by_id(uid, **kwargs)
-        return [self._get_objectified_entity(self._path_from_search(k)) for k in search_results]
+    def _search_for_term(self, term, dtype=None):
+        search_results = self.search_by_id(term, dtype=dtype)
+        if len(search_results) > 0:
+            self._print('Found Results:')
+            [print(i) for i in search_results]
+            if len(search_results) > 1:
+                print('Please refine search')
+                return None
+            result = self._path_from_search(search_results[0])
+            dtype = _extract_dtype(result, self._pathtype)
+            if dtype is None:
+                raise ValueError('Search result with no matching dtype')
+            return self.objectify(result, dtype=dtype)
+        print('No results.')
+        return None
+
+    def objectify(self, term, dtype=None, version=None):
+        if dtype is None:
+            return self._search_for_term(term)
+
+        try:
+            uid = _extract_uuid(term)
+        except AttributeError:
+            # can't find UUID: search is required
+            return self._search_for_term(term, dtype=dtype)
+
+        # if we get here, uid is valid and dtype is valid
+        entity = self._get_entity(uid)
+        if entity is not None:
+            return entity
+
+        try:
+            # if we are a search result, this will succeed
+            o = self._get_objectified_entity(self._path_from_search(term))
+        except KeyError:
+            # we are not a search result-- let's build the entity path
+            o = self._get_objectified_entity(self._path_from_parts(dtype, uid, version=version))
+
+        return o
 
     def _create_unit(self, unit_ref):
         """
@@ -280,13 +320,9 @@ class IlcdArchive(LcArchive):
         :return: an LcFlow
         """
         ns = find_ns(o.nsmap, 'Flow')
+        n = grab_flow_name(o, ns=ns)
 
         u = str(find_common(o, 'UUID')[0])
-        n = ', '.join(chain(filter(len, [str(find_tag(o, k, ns=ns)[0])
-                                         for k in ('baseName',
-                                                   'treatmentStandardsRoutes',
-                                                   'mixAndLocationTypes',
-                                                   'flowProperties')])))
 
         c = str(find_common(o, 'generalComment')[0])
 
@@ -393,22 +429,6 @@ class IlcdArchive(LcArchive):
 
         return p
 
-    def _search_for_term(self, term, dtype=None):
-        search_results = self.search_by_id(term, dtype=dtype)
-        if len(search_results) > 0:
-            self._print('Found Results:')
-            [print(i) for i in search_results]
-            if len(search_results) > 1:
-                print('Please refine search')
-                return None
-            result = self._path_from_search(search_results[0])
-            dtype = _extract_dtype(result, self._pathtype)
-            if dtype is None:
-                raise ValueError('Search result with no matching dtype')
-            return self._fetch(result, dtype=dtype)
-        print('No results.')
-        return None
-
     def _fetch(self, term, dtype=None, version=None):
         """
         fetch an object from the archive by reference.
@@ -421,26 +441,9 @@ class IlcdArchive(LcArchive):
         if dtype is None:
             dtype = _extract_dtype(term, self._pathtype)
 
-        if dtype is None:
-            return self._search_for_term(term)
-
-        try:
-            uid = _extract_uuid(term)
-        except AttributeError:
-            # can't find UUID: search is required
-            return self._search_for_term(term, dtype=dtype)
-
-        # if we get here, uid is valid and dtype is valid
-        entity = self._get_entity(uid)
-        if entity is not None:
-            return entity
-
-        try:
-            # if we are a search result, this will succeed
-            o = self._get_objectified_entity(self._path_from_search(term))
-        except KeyError:
-            # we are not a search result-- let's build the entity path
-            o = self._get_objectified_entity(self._path_from_parts(dtype, uid, version=version))
+        o = self.objectify(term, dtype=dtype, version=version)
+        if o is None:
+            return None
 
         if dtype == 'Flow':
             try:

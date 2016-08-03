@@ -1,3 +1,8 @@
+import re
+
+
+def find_ns(nsmap, dtype):
+    return next((k for k, v in nsmap.items() if re.search(dtype + '$', v)))
 
 
 def find_tag(o, tag, ns=None):

@@ -1,5 +1,6 @@
 import os
 import json
+from uuid import uuid4
 
 
 COMPARTMENTS = os.path.join(os.path.dirname(__file__), 'compartments.json')
@@ -46,11 +47,13 @@ class Compartment(object):
                 sc.add_syn(syn)
             sc._add_subs_from_json(sub['subcompartments'])
 
-    def __init__(self, name, elementary=False):
+    def __init__(self, name, parent=None, elementary=False):
         self.name = name
         self.synonyms = {name}
         self._elementary = elementary
         self._subcompartments = set()
+        self._id = uuid4()
+        self.parent = parent
 
     def add_syn(self, syn):
         self.synonyms.add(syn)
@@ -96,10 +99,10 @@ class Compartment(object):
         return self.name
 
     def __hash__(self):
-        return hash(self.name)
+        return hash(self._id)
 
     def __eq__(self, other):
-        return (self.name == other.name) and (self._elementary == other.elementary)
+        return (self.name in other.synonyms) and (self.parent == other.parent)
 
     def __getitem__(self, item):
         for x in self._subcompartments:
@@ -180,7 +183,7 @@ class Compartment(object):
                 elementary = self._elementary
             if verbose:
                 print('New compartment %s [elementary: %s]' % (name, elementary))
-            sub = Compartment(name, elementary=elementary)
+            sub = Compartment(name, parent=self, elementary=elementary)
         self._subcompartments.add(sub)
         return sub
 

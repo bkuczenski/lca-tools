@@ -1,16 +1,28 @@
 
 from __future__ import print_function, unicode_literals
 
+import json
+import os
+
 from eight import *
 
-from collections import defaultdict  # , namedtuple
+from collections import defaultdict, namedtuple
 
 from lcatools.interfaces import to_uuid
 
-from lcatools.characterizations import CharacterizationSet  # , Characterization
-from lcatools.logical_flows import LogicalFlow, ExchangeRef
-from lcatools.entities import LcProcess, LcFlow
-from lcatools.tools import gz_files, split_nick, archive_from_json, archive_factory
+# from lcatools.characterizations import CharacterizationSet  # , Characterization
+# from lcatools.logical_flows import LogicalFlow, ExchangeRef
+# from lcatools.entities import LcProcess, LcFlow
+
+
+from lcatools.tools import split_nick, archive_from_json, archive_factory
+
+
+ExchangeRef = namedtuple('ExchangeRef', ('index', 'exchange'))
+CFRef = namedtuple('CFRef', ('index', 'characterization'))
+ArchiveRef = namedtuple('ArchiveRef', ['source', 'nicknames', 'dataSourceType', 'parameters'])
+
+DEFAULT_CATALOG = os.path.join(os.path.dirname(__file__), 'default_catalog.json')
 
 
 def get_entity_uuid(item):
@@ -82,7 +94,12 @@ class CatalogInterface(object):
     as CatalogRef objects
     """
     @classmethod
-    def from_json(cls, j):
+    def new(cls, fg_dir=None):
+        with open(DEFAULT_CATALOG) as fp:
+            return cls.from_json(json.load(fp), fg_dir=fg_dir)
+
+    @classmethod
+    def from_json(cls, j, fg_dir=None):
         """
         Create a catalog and populate it with archives as specified in a json file.
 
@@ -118,8 +135,8 @@ class CatalogInterface(object):
          be loaded.
         :return:
         """
-        catalog = cls()
-        for i in range(len(j['catalogs'])):
+        catalog = cls(foreground_dir=fg_dir)
+        for i in range(1, len(j['catalogs'])):
             try:
                 cat = [c for c in j['catalogs'] if c['index'] == i][0]
             except IndexError:
@@ -128,35 +145,78 @@ class CatalogInterface(object):
                 nicks = cat['nicknames']
             else:
                 nicks = [None]
-
-            source = cat['source']
-
-            assert i == len(catalog.archives), "something's wrong with archive loading: sequence is corrupted"
             if 'parameters' in cat.keys():
                 params = cat['parameters']
                 if params is None:
                     params = dict()
             else:
                 params = dict()
-            if cat['dataSourceType'].lower() == 'json':
-                catalog.load_json_archive(source, nick=nicks[0], **params)
-            else:
-                catalog.load_archive(source, cat['dataSourceType'], nick=nicks[0], **params)
 
-            if len(nicks) > 1:
-                for k in range(1, len(nicks)):
-                    catalog.alias(nicks[0], nicks[k])
+            catalog.add_archive(cat['source'], nicks, cat['dataSourceType'], **params)
+
         return catalog
 
-    def __init__(self):
-        self.archives = []  # a list of installed archives
+    def __init__(self, foreground_dir=None):
+        self.archives = []  # a list of archives
+        self._archive_refs = []  # archive references
         self._nicknames = dict()  # a mapping of nickname to archive index
         self._shortest = []  # a list of the shortest nickname for each archive
-        self._sources_loaded = dict()  # map input source to archive
+        self._sources = dict()  # map input source to archive
+
+        self._loaded = []  # list of booleans
         self._refs_loaded = dict()  # map archive.ref to archive
-        self._from_json = []
-        self._sources = []
-        self._params = []
+
+        self.add_archive(foreground_dir, 'FG', 'ForegroundArchive')
+
+    def foreground(self, fg_dir):
+        self._archive_refs[0].source = fg_dir
+
+    def _update_nicks(self, item):
+        index = self.get_index(item)
+        for nick in self._archive_refs[index].nicknames:
+            self._nicknames[nick] = index
+
+        self._shortest[item] = min([n for n in self._archive_refs[index].nicknames])
+
+    def _new_archive(self, archive_ref):
+        k = len(self.archives)
+        assert k == len(self._archive_refs) == len(self._shortest) == len(self._loaded)
+        assert isinstance(archive_ref, ArchiveRef)
+        self.archives.append(None)
+        self._loaded.append(False)
+        self._archive_refs.append(archive_ref)
+        self._shortest.append(None)
+        self._update_nicks(k)
+        self._sources[archive_ref.source] = k
+        return k
+
+    def add_archive(self, source, nicknames, ds_type, **kwargs):
+        if source in self._sources.keys():
+            print('Data source %s already listed as %s' % (source, [k for k, v in self._nicknames.items()
+                                                                    if v == self._sources[source]]))
+            return self._sources[source]
+        nicks = set()
+        if nicknames is None or len(nicknames) == 0:
+            nicks.add(split_nick(source))
+        elif isinstance(nicknames, str):
+            nicks.add(nicknames)
+        else:
+            for i in nicknames:
+                nicks.add(i)
+
+        ar = ArchiveRef(source=source, nicknames=nicks, dataSourceType=ds_type, parameters=kwargs)
+        k = self._new_archive(ar)
+        print('%s archive added in position %d' % (ds_type, k))
+        return k
+
+    def add_nick(self, item, nick):
+        index = self.get_index(item)
+        self._archive_refs[index].nicknames.add(nick)
+        self._update_nicks(index)
+
+    def update_params(self, item, **kwargs):
+        index = self.get_index(item)
+        self._archive_refs[index].parameters.update(**kwargs)
 
     def ref(self, index, item):
         return CatalogRef(self, index, item)
@@ -181,14 +241,6 @@ class CatalogInterface(object):
         """
         return self.archives[self.get_index(item)]
 
-    def _install_catalogs_from_dir(self, dr):
-        files = gz_files(dr)
-        for i, f in enumerate(files):
-            self.load_json_archive(f)
-
-    def _set_shortest(self, k):
-        self._shortest[k] = min([n for n, v in self._nicknames.items() if v == k], key=len)
-
     def _set_upstream(self, archive):
         ref = archive.query_upstream_ref()
         if ref is not None:
@@ -201,93 +253,52 @@ class CatalogInterface(object):
                 archive.truncate_upstream()
                 # [maybe this should be done in general?]
 
-    def _install_archive(self, a, source, nick=None, overwrite=False):
-        """
-        overwrite should always be false except on data reload
-        (i.e. changing sources inplace is a user error)
-        :param a:
-        :param nick:
-        :param overwrite:
-        :return:
-        """
-        if source in self._sources_loaded:
-            if overwrite:
-                print('Overwriting archive "%s" with %s')
-                self.archives[self._sources_loaded[source]] = a
-                self._set_shortest(self._sources_loaded[source])
-                return
-            else:
-                print('Archive already exists and overwrite is false.')
-                return
-        if nick is None:
-            nick = split_nick(source)
-        if nick in self._nicknames:
-            raise KeyError('Nickname %s already exists', nick)
-        print('Installing %s archive in position %d' %( a.__class__.__name__, len(self.archives)) )
-        self.archives.append(a)
-        self._sources.append(source)
-        self._shortest.append(nick)
-        assert len(self.archives) == len(self._shortest)
-        new_index = len(self.archives) - 1
-        self._nicknames[nick] = new_index
-        self._sources_loaded[source] = new_index
-        self._refs_loaded[a.ref] = new_index
-        self._params.append(None)
-        self._from_json.append(False)
-        return new_index
+    def _install(self, index, archive):
+        self.archives[index] = archive
+        self._refs_loaded[archive.ref] = index
+        self._loaded[index] = True
 
-    def install_archive(self, archive, **kwargs):
-        self._install_archive(archive, 'memory', **kwargs)
+    def install_archive(self, archive, nick, **kwargs):
+        index = self.add_archive(archive.ref, nick, archive.__class__.__name__, **kwargs)
+        self._install(index, archive)
 
-    def load_archive(self, ref, ds_type, overwrite=False, nick=None, **kwargs):
+    def load(self, item, reload=False):
+        index = self.get_index(item)
+        if self._loaded[index] is True and reload is False:
+            print('Archive already loaded; specify reload=True to rewrite')
+            return
+
+        source = self._archive_refs[index].source
+        ds_type = self._archive_refs[index].dataSourceType
+        params = self._archive_refs[index].parameters
         if ds_type.lower() == 'json':
-            self.load_json_archive(ref, overwrite=overwrite, nick=nick, **kwargs)
+            a = archive_from_json(source, **params)
         else:
-            a = archive_factory(ref, ds_type, **kwargs)
-            new_index = self._install_archive(a, ref, overwrite=overwrite, nick=nick)
-            self._params[new_index] = kwargs
+            a = archive_factory(source, ds_type, **params)
+        self._install(index, a)
 
-    def load_json_archive(self, f, nick=None, overwrite=False, **kwargs):
-        if f in self._sources_loaded:
-            print('source %s already loaded' % f)
-            if 'overwrite' not in kwargs or kwargs['overwrite'] is False:
-                print('overwrite=True to overwrite')
-                return
-            else:
-                # if overwrite is true- go ahead and load it
-                pass
-
-        a = archive_from_json(f, **kwargs)
-        new_index = self._install_archive(a, f, nick=nick, overwrite=overwrite)
-        self._set_upstream(a)
-        self._from_json[new_index] = True
-        self._params[new_index] = kwargs
-
-    def alias(self, nick, alias):
-        """
-        create an alias for an existing database, referenced by nickname
-        :param nick:
-        :param alias:
-        :return:
-        """
-        if nick in self._nicknames:
-            self._nicknames[alias] = self._nicknames[nick]
-            self._set_shortest(self._nicknames[nick])
-        else:
-            print('Nickname %s not in catalog!' % nick)
+    def load_all(self, item):
+        index = self.get_index(item)
+        if self._loaded[index] is False:
+            self.load(index)
+        self.archives[index].load_all()
 
     def show(self):
-        l = max([len(k) for k in self._nicknames])
-        nicks = defaultdict(list)
-        for k, v in self._nicknames.items():
-            nicks[v].append(k)
+        l = max([len(k) for k in self._shortest])
         print('LCA Catalog with the following archives:')
         for i, a in enumerate(self.archives):
-            n = nicks[i]
-            print('[%2d] %-*s: %s' % (i, l, n[0], a))
+            ldd = 'X' if self._loaded[i] else ' '
+            print('%s [%2d] %-*s: %s' % (ldd, i, l, self._shortest[i], a or self._archive_refs[i].source))
+            """
             n.remove(n[0])
             for k in n:
                 print('%*s (alias)' % (l, k))
+            """
+
+    def save_default(self):
+        with open(DEFAULT_CATALOG, 'w') as fp:
+            json.dump(self.serialize(), fp, indent=2)
+            print('Default catalog saved to %s' % DEFAULT_CATALOG)
 
     def retrieve(self, archive, key):
         """
@@ -370,27 +381,20 @@ class CatalogInterface(object):
             return [self.ref(index, p) for p in self[index].processes()
                     if any([x.flow.get_uuid() == flow_ref.id for x in p.exchanges()])]
 
-    def _serialize_archive(self, index):
-        nicks = [k for k, v in self._nicknames.items() if v == index]
-        if self._from_json[index]:
-            ds_type = 'JSON'
-        else:
-            ds_type = self.archives[index].__class__.__name__
-        return {
-            'index': index,
-            'dataSourceType': ds_type,
-            'source': self._sources[index],
-            'nicknames': nicks,
-            'parameters': self._params[index]
-        }
+    def _serialize_archive(self, item):
+        index = self.get_index(item)
+        ar = self._archive_refs[index]._asdict()
+        ar['index'] = index
+        ar['nicknames'] = list(ar['nicknames'])
+        return ar
 
     def serialize(self):
         return {
-            "catalogs": sorted([self._serialize_archive(index) for index in range(len(self.archives))],
+            "catalogs": sorted([self._serialize_archive(index) for index in range(1, len(self.archives))],
                                key=lambda x: x['index'])
         }
 
-
+'''
 class ProcessFlowInterface(object):
     """
     a ProcessFlow interface creates a standard mechanism to answer inventory queries.  The main purpose of the
@@ -488,3 +492,4 @@ class FlowQuantityInterface(object):
         if dataframe:
             pass  # return self._to_pandas(x, Characterization)
         return x
+'''

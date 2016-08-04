@@ -45,6 +45,15 @@ class SynList(object):
         self._list.append(set())
         return k
 
+    def __len__(self):
+        return len([x for x in self._list if x is not None])
+
+    def index(self, key):
+        return self._dict[key]
+
+    def keys(self):
+        return self._dict.keys()
+
     def add_key(self, key):
         """
         Given a single key--> return its index, either existing or new
@@ -83,7 +92,7 @@ class SynList(object):
                 self._new_key(i, index)
         return index
 
-    def add_set(self, it):
+    def add_set(self, it, merge=False):
         """
         given an iterable of keys:
          - if any of them are found:
@@ -91,12 +100,13 @@ class SynList(object):
           - elif they are found in one index, add all to the index
           - elif they are not found at all, add them to a new index
         :param it: an iterable of keys
+        :param merge: [False] whether to merge matching keys or to shunt off to a new index
         :return:
         """
         found = self.find_indices(it)
         if len(found) > 1:
             raise InconsistentIndices('Keys found in indices: %s' % found)
-        elif len(found) == 1:
+        elif len(found) == 1 and merge:
             index = found.pop()
             self.merge_set_with_index(it, index)
         else:
@@ -130,6 +140,13 @@ class SynList(object):
     def synonyms_for(self, key):
         return self.synonym_set(self._dict[key])
 
+    def search(self, term):
+        results = set()
+        for k in self._dict.keys():
+            if bool(re.search(term, k, flags=re.IGNORECASE)):
+                results.add(self.index(k))
+        return results
+
     def synonym_set(self, index):
         return self._list[index]
 
@@ -161,6 +178,10 @@ def find_cas(syns):
     return found.pop()
 
 
+def trim_cas(cas):
+    return re.sub('^(0*)', '', cas)
+
+
 class Flowables(SynList):
     """
     A SynList that enforces unique CAS numbers on sets
@@ -184,11 +205,21 @@ class Flowables(SynList):
 
     def _new_key(self, key, index):
         if cas_regex.match(key):
-            if self._cas[index] is not None and self._cas[index] != key:
+            if self._cas[index] is not None and trim_cas(self._cas[index]) != trim_cas(key):
                 raise ConflictingCas('Index %d already has CAS %s' % (index, self._cas[index]))
             else:
                 self._cas[index] = key
         super(Flowables, self)._new_key(key, index)
+        super(Flowables, self)._new_key(key.lower(), index)  # controversial?
+
+    def find_indices(self, it):
+        found = set()
+        for i in it:
+            if i in self._dict.keys():
+                found.add(self._dict[i])
+            if i.lower() in self._dict.keys():  # see, I told you it was controversial
+                found.add(self._dict[i.lower()])
+        return found
 
     def _merge(self, merge, into):
         super(Flowables, self)._merge(merge, into)
@@ -210,7 +241,7 @@ class Flowables(SynList):
     def merge_set_with_index(self, it, index):
         cas = find_cas(it)
         if cas is not None:
-            if self._cas[index] is not None and self._cas[index] != cas:
+            if self._cas[index] is not None and trim_cas(self._cas[index]) != trim_cas(cas):
                 print('Conflicting CAS: incoming %s; existing [%s] = %d' % (cas, self._cas[index], index))
                 raise ConflictingCas('Incoming set has conflicting CAS %s' % cas)
         super(Flowables, self).merge_set_with_index(it, index)

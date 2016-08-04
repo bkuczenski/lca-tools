@@ -12,7 +12,7 @@ from lcatools.flowdb.synlist import Flowables, InconsistentIndices, ConflictingC
 ECOSPOLD = os.path.join('/data', 'Dropbox', 'data', 'Ecoinvent', '3.2', 'current_Version_3.2_cutoff_lci_ecoSpold02.7z')
 ES_FILE = '00009573-c174-463a-8ebf-183ec587ba0d_7cb72345-4338-4f2d-830f-65bba3530fdb.spold'
 
-ELCD = os.path.join('/data', 'Dropbox', 'data', 'ELCD', 'ELCD3.2.zip')
+ELCD = os.path.join('/data', 'Dropbox', 'data', 'ELCD', 'ELCD3.2-a.zip')
 
 SYNONYMS = os.path.join(os.path.dirname(__file__), 'synonyms.json')
 
@@ -77,33 +77,44 @@ def synonyms_from_ilcd_flow(flow):
     ns = find_ns(flow.nsmap, 'Flow')
     syns = set()
     syns.add(grab_flow_name(flow, ns=ns))
-    syns.add(str(find_common(flow, 'UUID')[0]).strip())
+    uid = str(find_common(flow, 'UUID')[0]).strip()
+    syns.add(uid)
     cas = str(find_tag(flow, 'CASNumber', ns=ns)[0]).strip()
     if cas != '':
         syns.add(cas)
     for syn in find_common(flow, 'synonyms'):
         for x in str(syn).split(';'):
-            if x.strip() != '':
+            if x.strip() != '' and x.strip().lower() != 'wood':
                 syns.add(x.strip())
-    return syns
+    return syns, uid
 
 
 cas_regex = re.compile('^[0-9]{,6}-[0-9]{2}-[0-9]$')
 
 
-def _add_set(synlist, syns):
+def _add_set(synlist, syns, xid):
     try:
-        synlist.add_set(syns)
+        index = synlist.add_set(syns, merge=True)
     except ConflictingCas:
-        synlist.new_set(syns)
+        index = synlist.new_set(syns)
     except InconsistentIndices:
-        # print('Inconsistent indices found for set %s' % syns)
         dups = synlist.find_indices(syns)
+        matches = []
+        for i in dups:
+            for j in syns:
+                if j in synlist[i]:
+                    matches.append((j, i))
+                    break
+
         try:
-            synlist.merge_indices(dups)
+            index = synlist.merge_indices(dups)
+            print('Merged Inconsistent indices in ID %s, e.g.:' % xid)
+            for match in matches:
+                print('  [%s] = %d' % match)
         except ConflictingCas:
             #print('Conflicting CAS on merge.. creating new group')
-            synlist.new_set(syns)
+            index = synlist.new_set(syns)
+    return index
 
 
 def create_new_synonym_list():
@@ -117,13 +128,19 @@ def create_new_synonym_list():
     exchs = get_ecospold_exchanges()
     for exch in exchs:
         syns = synonyms_from_ecospold_exchange(exch)
-        _add_set(synonyms, syns)
+        _add_set(synonyms, syns, exch.get('id'))
 
     # next, ILCD - but hold off for now
     for flow in ilcd_flow_generator():
-        syns = synonyms_from_ilcd_flow(flow)
-        _add_set(synonyms, syns)
+        syns, uid = synonyms_from_ilcd_flow(flow)
+        _add_set(synonyms, syns, uid)
 
     with open(SYNONYMS, 'w') as fp:
         json.dump(synonyms.serialize(), fp)
+        print('Wrote synonym file to %s' % SYNONYMS)
     return synonyms
+
+
+def load_synonyms(file=SYNONYMS):
+    with open(file) as fp:
+        return Flowables.from_json(json.load(fp))

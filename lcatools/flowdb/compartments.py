@@ -1,20 +1,37 @@
 import os
 import json
+import re
 from uuid import uuid4
 
 
 COMPARTMENTS = os.path.join(os.path.dirname(__file__), 'compartments.json')
 
 
-def load_compartments():
-    with open(COMPARTMENTS, 'r') as fp:
-        return json.load(fp)
+def load_compartments(file=COMPARTMENTS):
+    with open(file, 'r') as fp:
+        return Compartment.from_json(json.load(fp))
 
 
 def _ensure_list(var):
     if isinstance(var, str):
         return [var]
     return var
+
+
+def traverse_compartments(compartment, clist):
+    while len(clist) > 0 and clist[0] in compartment:
+        clist.pop(0)
+    if len(clist) > 0:
+        if bool(re.search('unspecified$', clist[0], flags=re.IGNORECASE)):
+            clist.pop(0)
+    if len(clist) == 0:
+        return compartment
+    else:
+        for s in compartment.subcompartments():
+            n = traverse_compartments(s, clist)
+            if n is not None:
+                return n
+        return None
 
 
 class Compartment(object):
@@ -103,6 +120,11 @@ class Compartment(object):
 
     def __eq__(self, other):
         return (self.name in other.synonyms) and (self.parent == other.parent)
+
+    def __contains__(self, item):
+        if item in self.synonyms:
+            return True
+        return False
 
     def __getitem__(self, item):
         for x in self._subcompartments:

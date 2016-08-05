@@ -83,15 +83,20 @@ def _pick_list(items, *args):
 
 
 def pick_list(object_list):
-    l = list(object_list)
+    l = sorted(list(object_list), key=lambda x: str(x))
+    if len(l) == 1:
+        print('(selecting only choice)')
+        return l[0]
+    print('\nSelect item: ')
     c = _pick_list(l)
     if c == (None, None):
         return None
     return l[c[0]]
 
 
-def pick_from_group(groups):
+def pick_from_groups(groups):
     if len(groups) == 1:
+        print('(selecting only choice %s)' % groups[0][0])
         return None
     c = _pick_list(['(%d) %s' % (len(i[1]), i[0]) for i in groups], 'done (keep all)')
     print(c)
@@ -109,13 +114,21 @@ def _group_by(object_list, group_key):
     :return: keys, groups where keys is a list of unique group_keys and groups is a list of lists of objects per key
     """
     groups = []
-    for i, j in groupby(sorted(object_list, key=group_key), group_key):
+    try:
+        object_list = sorted(object_list, key=group_key)
+    except TypeError:
+        return [(None, object_list)]
+    for i, j in groupby(object_list, group_key):
         groups.append((i, list(j)))
 
     return groups
 
 
-def group_by_tag(entities, tag):
+def _metagroup(entities, func):
+    return pick_from_groups(sorted(_group_by(entities, func), key=lambda x: len(x[1]), reverse=True))
+
+
+def pick_by_tag(entities, tag):
     """
     sort by prevalence
     :param entities:
@@ -127,23 +140,36 @@ def group_by_tag(entities, tag):
             return ent[tag]
         return '(none)'
 
-    return sorted(_group_by(entities, get_tag), key=lambda x: len(x[1]), reverse=True)
+    return _metagroup(entities, get_tag) or entities
 
 
-def group_by_hier(entities, tag, level):
+def pick_by_hier(entities, tag, level):
     def get_cmp(ent):
         if level >= len(ent[tag]):
             return '(none)'
         return ent[tag][level]
-    return sorted(_group_by(entities, get_cmp), key=lambda x: len(x[1]), reverse=True)
+    return _metagroup(entities, get_cmp) or entities
+
+
+def descend_hier(entities, tag):
+    level = 0
+    while True:
+        subset = pick_by_hier(entities, tag, level)
+        if subset == entities:
+            return entities
+        entities = subset
+        level += 1
+
+
+def pick_by_etype(entities):
+    return _metagroup(entities, lambda x: x.entity_type)
 
 
 def select_subset(entities, tags):
     tag = tags.pop(0)
     print('Grouped by %s' % tag)
-    groups = group_by_tag(entities, tag)
-    subset = pick_from_group(groups)
-    if subset is None:
+    subset = pick_by_tag(entities, tag)
+    if subset == entities:
         return entities
     if len(tags) > 0:
         # as long as we have tags, narrow the selection
@@ -152,13 +178,52 @@ def select_subset(entities, tags):
 
 
 def flows_by_compartment(flows):
-    level = 0
-    while True:
-        print('Select compartment:')
-        groups = group_by_hier(flows, 'Compartment', level)
-        subset = pick_from_group(groups)
-        if subset is None:
-            break
-        flows = subset
-        level += 1
-    return flows
+    return descend_hier(flows, 'Compartment')
+
+
+def filter_processes(processes):
+    if len(processes) < 10:
+        return pick_list(processes)
+    # first, Classifications
+    if len([p for p in processes if 'Classifications' in p.keys()]) != 0:
+        processes = descend_hier(processes, 'Classifications')
+    if len(processes) < 10:
+        return pick_list(processes)
+    # next IsicClass - NOP if the field is not present
+    if len([p for p in processes if 'IsicClass' in p.keys()]) != 0:
+        processes = pick_by_tag(processes, 'IsicClass')
+    if len(processes) < 10:
+        return pick_list(processes)
+    processes = pick_by_tag(processes, 'SpatialScope')
+    return pick_list(processes)
+
+
+def filter_flows(flows):
+    if len(flows) < 10:
+        return pick_list(flows)
+    flows = flows_by_compartment(flows)
+    return pick_list(flows)
+
+
+def filter_quantities(quantities):
+    quantities = select_subset(quantities, ['Method', 'Category', 'Indicator'])
+    return pick_list(quantities)
+
+
+def pick_one(entities):
+    """
+    given a list of entities, allow the user to pick one by successive filtering
+    :param entities: a list of entities
+    :return:
+    """
+    if len(set([k.entity_type for k in entities])) > 1:
+        entities = pick_by_etype(entities)
+        if entities is None:
+            print('No item selected.')
+            return None
+    picker = {
+        "process": filter_processes,
+        "flow": filter_flows,
+        "quantity": filter_quantities
+    }[entities[0].entity_type]
+    return picker(entities)

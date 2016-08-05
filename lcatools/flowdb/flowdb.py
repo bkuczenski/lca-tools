@@ -63,7 +63,7 @@ class CLookup(object):
 
 
 def compartment_string(compartment):
-    return '; '.join(compartment)
+    return '; '.join(list(filter(None, compartment)))
 
 
 class FlowDB(object):

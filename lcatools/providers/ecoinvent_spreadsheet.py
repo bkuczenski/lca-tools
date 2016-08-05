@@ -3,6 +3,7 @@ from __future__ import print_function, unicode_literals
 from lcatools.providers.base import NsUuidArchive
 from lcatools.entities import LcProcess, LcFlow, LcQuantity
 from lcatools.providers.ecospold2 import EcospoldV2Archive
+from lcatools.interact import pick_reference
 
 import pandas as pd
 import uuid
@@ -68,14 +69,27 @@ class EcoinventSpreadsheet(NsUuidArchive):
             return fn
 
     def fg_lookup(self, process, flow=None):
+        """
+        Supply an exchange or a process-- if process, return a list; if exchange, return a dataset or None
+        :param process:
+        :param flow:
+        :return:
+        """
         if self.fg is None:
-            raise AttributeError('No foreground')
+            print('No foreground data')
+            return super(EcoinventSpreadsheet, self).fg_lookup(process)
         else:
             if flow is None:
-                if isinstance(process, str):
-                    return self.fg.retrieve_or_fetch_entity(process)
-                return self.fg.list_datasets(process.get_uuid())
-            return self.fg.retrieve_or_fetch_entity('_'.join([process.get_uuid(), flow.get_uuid()]) + '.spold')
+                for ds in self.fg.list_datasets(process.get_uuid()):
+                    self.fg.retrieve_or_fetch_entity(ds)
+                p = self.fg[process.get_uuid()]
+                ref = pick_reference(p)
+                if ref is None:
+                    return p.exchanges()
+                return p.allocated_exchanges(ref)
+            else:
+                p = self.fg.retrieve_or_fetch_entity('_'.join([process.get_uuid(), flow.get_uuid()]) + '.spold')
+                return p.allocated_exchanges(flow)
 
     def bg_lookup(self, process, flow=None):
         if self.bg is None:
@@ -268,4 +282,3 @@ class EcoinventSpreadsheet(NsUuidArchive):
             self.check_counter('flow')
         self.load_activities()
         self.check_counter('process')
-

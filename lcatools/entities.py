@@ -293,11 +293,19 @@ class LcProcess(LcEntity):
 
     def allocated_exchanges(self, reference, strict=False):
         # need to disambiguate the reference
-        ref = self.find_reference(reference, strict=strict)
+        if isinstance(reference, str):
+            x = self.find_reference(reference, strict=strict)
+            ref = x.flow
+        elif isinstance(reference, LcFlow):
+            ref = reference
+        elif isinstance(reference, Exchange):
+            ref = reference.flow
+        else:
+            raise NoReferenceFound('Unintelligible reference %s' % reference)
 
         for i in sorted(self._exchanges, key=lambda x: x.direction):
             if isinstance(i, AllocatedExchange):
-                yield ExchangeValue.from_allocated(i, ref.flow.get_uuid())
+                yield ExchangeValue.from_allocated(i, ref.get_uuid())
 
     def add_reference(self, flow, dirn):
         rx = Exchange(self, flow, dirn)
@@ -450,6 +458,11 @@ class LcFlow(LcEntity):
             print('%s' % cf)
 
     def add_characterization(self, quantity, reference=False, value=None, **kwargs):
+        if isinstance(quantity, Characterization):
+            for l in quantity.locations():
+                self.add_characterization(quantity.quantity, reference=reference,
+                                          value=quantity[l], location=l)
+            return
         if reference:
             self._set_reference(quantity)
             if value is None:

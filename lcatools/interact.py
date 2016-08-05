@@ -35,6 +35,7 @@ def get_kv_pairs(prompt='Key'):
 
 
 def cyoa(prompt, valid, default=None):
+    i = ''
     while True:
         if default is not None:
             i = ifinput('%s [%s]' % (prompt, valid), default)
@@ -96,10 +97,11 @@ def _pick_list(items, *args):
     print('%s %s' % ('-' * 6, '-' * 70))
 
     choice = None
-    while choice is None:
+    while True:
         c = input('Enter choice (or "None"): ')
         if c == 'None':
             choice = (None, None)
+            break
         else:
             try:
                 if int(c) < len(items):
@@ -166,6 +168,7 @@ def _group_by(object_list, group_key):
 def _show_groups(entities, func):
     for k, v in sorted(_group_by(entities, func), key=lambda x: len(x[1]), reverse=True):
         print('(%d) %s' % (len(v), k))
+
 
 def _metagroup(entities, func):
     return pick_from_groups(sorted(_group_by(entities, func), key=lambda x: len(x[1]), reverse=True))
@@ -301,3 +304,28 @@ def group(entities, level=0):
         "quantities": lambda x: group_by_tag(x, 'Method')
     }[entities[0].entity_type]
     shower(entities)
+
+
+def pick_compartment(compartment):
+    subs = sorted(s.name for s in compartment.subcompartments())
+    sub = None
+    c = _pick_list(subs, 'Cancel')
+    while c[0] is not None:
+        sub = compartment
+        compartment = sub[subs[c[0]]]
+        subs = sorted(s.name for s in compartment.subcompartments())
+        if len(subs) == 0:
+            return compartment
+        print('subcompartments of %s:' % compartment)
+        c = _pick_list(subs, 'Keep "%s"' % compartment)
+    return sub
+
+
+def pick_reference(process):
+    choices = sorted([x.flow for x in process.reference_entity], key=lambda x: x['Name'])
+    if len(choices) == 1:
+        return choices[0]
+    c = _pick_list([c['Name'] for c in choices])
+    if c[0] is None:
+        return None
+    return choices[c[0]]

@@ -230,6 +230,14 @@ class LcArchive(ArchiveInterface):
     def lcia_methods(self):
         return [q for q in self._entities_by_type('quantity') if q.is_lcia_method()]
 
+    def fg_lookup(self, process):
+        """
+        This is a template process that subclasses should override. By default, just returns the process's exchanges.
+        :param process:
+        :return:
+        """
+        return process.exchanges()
+
     def _quantities_with_unit(self, unitstring):
         """
         Generates a list of quantities that convert to/from the supplied unit string.

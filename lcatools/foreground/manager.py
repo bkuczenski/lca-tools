@@ -29,19 +29,35 @@ class ForegroundManager(object):
     The interface subclass provides UI for these activities
     """
     def __init__(self, catalog=None, cfs=('LCIA', 'EI-LCIA'), ):
+        import time
+        t0 = time.time()
         if catalog is None:
             catalog = CatalogInterface.new()
 
         self._catalog = catalog
         self._cfs = cfs
+        print('Generating flow-quantity database...')
         self._flowdb = FlowDB(catalog)
         self.unmatched_flows = dict()
-        for c in cfs:
-            self._catalog.load(c)
-            self.unmatched_flows[c] = self._flowdb.import_cfs(c)
+        if cfs is not None:
+            print('Loading LCIA data... (%.2f s)' % (time.time() - t0))
+            for c in cfs:
+                self._catalog.load(c)
+                print('Importing CFs... (%.2f s)' % (time.time() - t0))
+                self.unmatched_flows[c] = self._flowdb.import_cfs(c)
+                print('%d unmatched flows found from source %s... \n' %
+                      (len(self.unmatched_flows[c]), self._catalog.name(c)))
+
+        print('finished... (%.2f s)' % (time.time() - t0))
 
     def show(self):
         self._catalog.show()
+
+    def load(self, item):
+        self._catalog.load(item)
+
+    def save(self):
+        self._catalog[0].save()  # nothing else to save
 
     def __getitem__(self, item):
         return self._catalog.__getitem__(item)
@@ -50,11 +66,81 @@ class ForegroundManager(object):
         return self._catalog.search(*args, **kwargs)
 
     def terminate(self, *args, **kwargs):
-        if len(args) == 1:
-            ref = args[0]
-            return self._catalog.terminate(ref.index, ref, **kwargs)
-        else:
-            return self._catalog.terminate(*args, **kwargs)
+        return self._catalog.terminate(*args, **kwargs)
+
+    def workon(self, folder):
+        """
+        Select the current foreground.  Create folder if needed.
+        If folder/entities.json does not exist, creates and saves a new foreground in folder.
+        loads and installs archive from folder/entities.json
+        :param folder:
+        :return:
+        """
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        if not os.path.exists(os.path.join(folder, 'entities.json')):
+            ForegroundArchive.new(folder)
+        self._catalog.set_foreground_dir(folder)
+        self._catalog.load(0)
+
+    def add_to_foreground(self, ref):
+        print('Add to foreground: %s' % ref)
+        self._catalog[0].add(ref.entity())
+
+    # inspection methods
+    def _filter_exch(self, process_ref, elem=True):
+        return [x for x in process_ref.archive.fg_lookup(process_ref.entity())
+                if self._flowdb.is_elementary(x.flow) is elem]
+
+    def intermediate(self, process_ref):
+        exch = self._filter_exch(process_ref, elem=False)
+        if len(exch) == 0:
+            print('No intermediate exchanges')
+            return
+        print('Intermediate exchanges:')
+        for i in exch:
+            print('%s' % i)
+
+    def elementary(self, process_ref):
+        exch = self._filter_exch(process_ref, elem=True)
+        if len(exch) == 0:
+            print('No elementary exchanges')
+            return
+        print('Elementary exchanges:')
+        for i in exch:
+            print('%s' % i)
+
+    def fg_lcia(self, process_ref):
+        """
+        :param process_ref:
+        :return:
+        """
+        if self._catalog.fg is None:
+            print('Missing a foreground!')
+            return None
+        if not self._catalog.is_loaded(0):
+            self._catalog.load(0)
+        exch = self._filter_exch(process_ref, elem=True)
+        qs = self._catalog[0].lcia_methods()
+        if len(qs) == 0:
+            print('No foreground LCIA methods')
+            return None
+        results = dict()
+        for q in qs:
+            q_result = []
+            for x in exch:
+                if not x.flow.has_characterization(q):
+                    cf_ref = self._flowdb.lookup_single_cf(x.flow, q)
+                    if cf_ref is None:
+                        x.flow.add_characterization(q)
+                    else:
+                        x.flow.add_characterization(cf_ref.characterization)
+                fac = x.flow.cf(q)
+                if fac is not None and fac != 0.0:
+                    # TODO: make LCIA results a class (looking toward antelope)
+                    q_result.append((x, fac, x.value * fac))
+            results[q.get_uuid()] = q_result
+        return results
 
 
 class OldForegroundManager(object):

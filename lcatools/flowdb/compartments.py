@@ -21,6 +21,8 @@ def _ensure_list(var):
 def traverse_compartments(compartment, clist):
     while len(clist) > 0 and clist[0] in compartment:
         clist.pop(0)
+    while len(clist) > 0 and clist[0] is None:
+        clist.pop(0)
     if len(clist) > 0:
         if bool(re.search('unspecified$', clist[0], flags=re.IGNORECASE)):
             clist.pop(0)
@@ -92,6 +94,13 @@ class Compartment(object):
         print('%s\nElementary: %s' % (self.name, self._elementary))
         for i in self.subcompartments():
             print('  sub: %s' % i.name)
+
+    def to_list(self):
+        if self.parent is None:
+            return []  # non-parent node is root
+        l = self.parent.to_list()
+        l.append(self.name)
+        return l
 
     def print_tree(self, up=''):
         s = self.name

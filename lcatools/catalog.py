@@ -47,6 +47,7 @@ class CatalogRef(object):
         for k in (self.index, self.id):
             yield k
 
+    @property
     def archive(self):
         return self.catalog[self.index]
 
@@ -148,8 +149,28 @@ class CatalogInterface(object):
 
         self.add_archive(foreground_dir, 'FG', 'ForegroundArchive')
 
-    def foreground(self, fg_dir):
-        self._archive_refs[0].source = fg_dir
+    def __len__(self):
+        return len(self.archives)
+
+    @staticmethod
+    def _purge_entries_for(d, index):
+        old = [k for k, v in d.items() if v == index]
+        for o in old:
+            d.pop(o)
+
+    @property
+    def fg(self):
+        return self._archive_refs[0].source
+
+    def set_foreground_dir(self, fg_dir):
+        ar = ArchiveRef(source=fg_dir, nicknames=self._archive_refs[0].nicknames,
+                        dataSourceType='ForegroundArchive', parameters=dict())
+        self._purge_entries_for(self._sources, 0)
+        self._purge_entries_for(self._refs_loaded, 0)
+        self._loaded[0] = False
+        self._archive_refs[0] = ar
+        self.archives[0] = None
+        self._sources[fg_dir] = 0
 
     def _update_nicks(self, item):
         index = self.get_index(item)
@@ -367,15 +388,15 @@ class CatalogInterface(object):
             self._show(res_set)
         return res_set
 
-    def terminate(self, index, flow_ref, show=False):
+    def terminate(self, flow_ref, show=False):
         """
         flow must be a cat ref
         for some reason, doing this as a list comprehension didn't work
-        :param index:
         :param flow_ref:
         :param show: [False] display
         :return:
         """
+        index = flow_ref.index
         if True:
             z = []
             for p in self[index].processes():

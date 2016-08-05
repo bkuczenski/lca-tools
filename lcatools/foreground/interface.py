@@ -83,16 +83,23 @@ class ForegroundInterface(ForegroundManager):
     """
 
     inspections = {
-        'flow': {
+        'characterization': {
+            'show locations': []
+        },
+        'exchange': {
             'terminate': [],
-            'generate': [],
-            'lookup characterizations': []
+            'originate': []
+        },
+        'flow': {
+            'source': [],
+            'sink': [],
+            'show characterizations': []
         },
         'process': {
             'intermediate exchanges': lambda x: x.intermediate,
             'elementary exchanges': lambda x: x.elementary,
             'foreground lcia': lambda x: x.fg_lcia,
-            'background lcia': lambda x: x.bg_lcia
+            'background lcia': []  # lambda x: x.bg_lcia
         },
         'quantity': {
             'flowables': [],
@@ -101,16 +108,17 @@ class ForegroundInterface(ForegroundManager):
     }
 
     choices = {
-        # 33 handlers at first count for v0.1 - what, 20 minutes each?
+        # 33 handlers at first count for v0.1 - what, 20 minutes each? 2016-08-04 22:30
+        # 13 written (plus a lot of background work), 25 to go... 2016-08-05 13:42
         'Catalog': {
             'show catalog': lambda x: x.show,
             'add archive': lambda x: x.add_archive,
             'load archive': lambda x: x.load_archive,
             'choose archive': lambda x: x.choose_archive,
             'search entities': {
-                'processes': lambda x: x.isearch_p,
-                'flows': lambda x: x.isearch_f,
-                'quantities': lambda x: x.isearch_q
+                'processes': lambda x: x.isearch('process'),
+                'flows': lambda x: x.isearch('flow'),
+                'quantities': lambda x: x.isearch('quantity')
             },
             'browse entities': {
                 'processes': lambda x: x.browse_p,
@@ -118,7 +126,7 @@ class ForegroundInterface(ForegroundManager):
                 'quantities': lambda x: x.browse_q
             },
             'selection': {
-                'add to foreground': [],
+                'add to foreground': lambda x: x.add_selection,
                 'inspect': lambda x: x.inspect,
                 'compare': [],
                 'unselect': [],
@@ -127,7 +135,8 @@ class ForegroundInterface(ForegroundManager):
         'FlowDB': {
             'flowables': {
                 'search': [],
-                'add synonym': []
+                'add synonym': [],
+                'lookup characterizations': []
             },
             'compartments': {
                 'browse': [],
@@ -136,11 +145,13 @@ class ForegroundInterface(ForegroundManager):
             }
         },
         'Foreground': {
+            'work on foreground': lambda x: x.specify_foreground,
             'create flow': [],
             'edit flow': [],
             'add background': [],
         },
         'Fragments': {
+            'list fragments': [],
             'create fragment': [],
             'edit fragment': [],
             'fragment flows': [],
@@ -183,6 +194,13 @@ class ForegroundInterface(ForegroundManager):
 
         # now the fun part- writing the callables
 
+    '''
+    @staticmethod
+    def pass_input(self, func, *args):
+        i = input(*args)
+        return lambda: func(i)
+    '''
+
     def add_archive(self):
         print('Add a new archive by reference.')
         source = input('Source: ')
@@ -196,7 +214,7 @@ class ForegroundInterface(ForegroundManager):
         self.show()
         index = input('Enter choice: ')
         if not self._catalog.is_loaded(index):
-            self._catalog[index].load()
+            self._catalog[int(index)].load()
 
     def choose_archive(self):
         self.show()
@@ -206,12 +224,22 @@ class ForegroundInterface(ForegroundManager):
         else:
             self._current_archive = self._catalog.name(int(index))
 
+    def _prompt_add(self, entity):
+        p = ifinput('Add to selection? y/n', 'y')
+        if p == 'y':
+            self.selected.add(self._catalog.ref(self._current_archive, entity))
+        return entity
+
+    def add_selection(self):
+        for i in self.selected:
+            self.add_to_foreground(i)
+        self.selected.clear()
+
     @staticmethod
     def _narrow_search(result_set):
         key = ifinput('Enter search key', 'Name')
         val = input('Enter search expression (regexp): ')
-        n = [r for r in result_set if key in r.keys()
-             and bool(re.search(val, r[key], flags=re.IGNORECASE))]
+        n = [r for r in result_set if key in r.keys() and bool(re.search(val, r[key], flags=re.IGNORECASE))]
 
         if len(n) == 0:
             print('No results')
@@ -223,33 +251,38 @@ class ForegroundInterface(ForegroundManager):
         while 1:
             if len(result_set) == 0:
                 print('No results.')
-                return None
+                return
             print('\n')
             if len(result_set) > 20:
                 group(result_set)
-                i = cyoa('(B) Browse results, (A) select all, (N)arrow search, or (X) abandon search?', 'BANX', 'N')
+                i = cyoa('(B) Browse results, (A) select all, (N)arrow search, or (X) abandon search / finished?',
+                         'BANX', 'N')
             else:
                 show_res(result_set)
-                i = cyoa('(S) Select one, (A) select all, (N)arrow search, or (X) abandon search?', 'SANX', 'S')
+                i = cyoa('(S) Select one, (A) select all, (N)arrow search, or (X) abandon search / finished?',
+                         'SANX', 'S')
 
             if i.lower() == 'x':
-                return None
+                return
             elif i.lower() == 'a':
                 self.selected = self.selected.union(result_set)
-                return result_set
+                return
             elif i.lower() == 'n':
                 result_set = self._narrow_search(result_set)
+            elif i.lower() == 'b':
+                pick = pick_one(result_set)
+                self._prompt_add(pick)
             else:  # 'b' ad 's' are the same- browse and pick
                 pick = pick_one(result_set)
                 self.selected.add(pick)
-                return pick
 
     def isearch(self, etype):
         self._menu_position = self.choices['Catalog']
 
         string = input('Search term (regex):')
-        self._continue_search(self.search(self._current_archive, etype, Name=string, show=False))
+        return lambda: self._continue_search(self.search(self._current_archive, etype, Name=string, show=False))
 
+    '''
     def isearch_p(self):
         self.isearch('process')
 
@@ -258,13 +291,13 @@ class ForegroundInterface(ForegroundManager):
 
     def isearch_q(self):
         self.isearch('quantity')
+    '''
 
     def ibrowse(self, entities):
+        self._menu_position = self.choices['Catalog']
+
         g = pick_one(entities)
-        p = ifinput('Add to selection? y/n', 'y')
-        if p == 'y':
-            self.selected.add(g)
-        return g
+        return self._prompt_add(g)
 
     def browse_p(self):
         self.ibrowse(self._archive.processes())
@@ -281,48 +314,6 @@ class ForegroundInterface(ForegroundManager):
         uchoice = menu_list(*[k for k, v in self.inspections[sel.entity_type].items() if v != []])
         uchoice(self)(sel)
 
-    def _filter_exch(self, process_ref, elem=True):
-        return [x for x in process_ref.entity().exchanges() if self._flowdb.is_elementary(x.flow) is elem]
-
-    def intermediate(self, process_ref):
-        exch = self._filter_exch(process_ref, elem=False)
-        for i in exch:
-            print('%s' % i)
-
-    def elementary(self, process_ref):
-        exch = self._filter_exch(process_ref, elem=True)
-        for i in exch:
-            print('%s' % i)
-
-    def fg_lcia(self, process_ref):
-        """
-        this really belongs at a lower level
-        :param process_ref:
-        :return:
-        """
-        exch = self._filter_exch(process_ref, elem=True)
-        try:
-            qs = self._catalog[0].lcia_methods()
-        except TypeError:
-            print('No foreground.')
-            return None
-        if len(qs) == 0:
-            print('No foreground LCIA methods')
-            return None
-        results = dict()
-        for q in qs:
-            q_result = []
-            for x in exch:
-                if not x.flow.has_characterization(q):
-                    cf = self._flowdb.lookup_single_cf(x.flow, q)
-                    if cf is None:
-                        x.flow.add_characterization(q)
-                    else:
-                        x.flow.add_characterization(q, cf.value)
-                fac = x.flow.cf(q)
-                if fac != 0.0:
-                    q_result.append((x, fac, x.value * fac))
-            results[q.get_uuid()] = q_result
-        return results
-
-
+    def specify_foreground(self):
+        folder = ifinput('Choose foreground: ', self._catalog.fg)
+        self.workon(folder)

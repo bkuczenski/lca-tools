@@ -2,6 +2,7 @@
 This file includes a collection of functions to facilitate shell-style interaction with archives and
 catalogs.  Things like menus, input processing, and etc.
 """
+
 from string import ascii_uppercase
 from math import log10, ceil
 from eight import input
@@ -14,6 +15,35 @@ def ifinput(prompt, default):
     if len(g) == 0:
         g = default
     return g
+
+
+def get_kv_pair(prompt='Key'):
+    k = input('%s:' % prompt)
+    if k == '':
+        return {}
+    v = input('Value: ')
+    return {k: v}
+
+
+def get_kv_pairs(prompt='Key'):
+    d = dict()
+    a = get_kv_pair(prompt)
+    while a != {}:
+        d.update(a)
+        a = get_kv_pair(prompt)
+    return d
+
+
+def cyoa(prompt, valid, default=None):
+    while True:
+        if default is not None:
+            i = ifinput('%s [%s]' % (prompt, valid), default)
+        else:
+            i = input(prompt)
+        if i.lower() in valid.lower():
+            break
+        print('invalid choice')
+    return i
 
 
 def _pick_list(items, *args):
@@ -54,10 +84,11 @@ def _pick_list(items, *args):
     print('Choice Item')
     print('%s %s' % ('=' * 6, '=' * 70))
 
-    field_width = ceil(log10(len(items)))
+    if items is not None:
+        field_width = ceil(log10(len(items)))
 
-    for i, k in enumerate(items):
-        print(' [%*d]%s %s' % (field_width, i, ' ' * (3 - field_width), k))
+        for i, k in enumerate(items):
+            print(' [%*d]%s %s' % (field_width, i, ' ' * (3 - field_width), k))
 
     for i, k in enumerate(args):
         print('  (%s)  %s' % (menu[i], k))
@@ -76,7 +107,7 @@ def _pick_list(items, *args):
                     break
             except ValueError:
                 if c.upper() in menu:
-                    choice = (None, args[next(i for i, k in enumerate(menu) if k == c.upper())])
+                    choice = (None, next(i for i, k in enumerate(menu) if k == c.upper()))
                     break
         print('Invalid choice')
     return choice
@@ -94,13 +125,21 @@ def pick_list(object_list):
     return l[c[0]]
 
 
+def menu_list(*args):
+    choices = sorted(args)
+    choice = _pick_list(None, *choices)
+    if choice == (None, None):
+        return None
+    return choices[choice[1]]
+
+
 def pick_from_groups(groups):
     if len(groups) == 1:
         print('(selecting only choice %s)' % groups[0][0])
         return None
     c = _pick_list(['(%d) %s' % (len(i[1]), i[0]) for i in groups], 'done (keep all)')
     print(c)
-    if c == (None, 'done (keep all)') or c == (None, None):
+    if c == (None, 0) or c == (None, None):
         return None
     else:
         return groups[c[0]][1]
@@ -124,6 +163,10 @@ def _group_by(object_list, group_key):
     return groups
 
 
+def _show_groups(entities, func):
+    for k, v in sorted(_group_by(entities, func), key=lambda x: len(x[1]), reverse=True):
+        print('(%d) %s' % (len(v), k))
+
 def _metagroup(entities, func):
     return pick_from_groups(sorted(_group_by(entities, func), key=lambda x: len(x[1]), reverse=True))
 
@@ -143,12 +186,29 @@ def pick_by_tag(entities, tag):
     return _metagroup(entities, get_tag) or entities
 
 
+def group_by_tag(entities, tag):
+    def get_tag(ent):
+        if tag in ent.keys():
+            return ent[tag]
+        return '(none)'
+
+    _show_groups(entities, get_tag)
+
+
 def pick_by_hier(entities, tag, level):
     def get_cmp(ent):
         if level >= len(ent[tag]):
             return '(none)'
         return ent[tag][level]
     return _metagroup(entities, get_cmp) or entities
+
+
+def group_by_hier(entities, tag, level):
+    def get_cmp(ent):
+        if level >= len(ent[tag]):
+            return '(none)'
+        return ent[tag][level]
+    _show_groups(entities, get_cmp)
 
 
 def descend_hier(entities, tag):
@@ -227,3 +287,17 @@ def pick_one(entities):
         "quantity": filter_quantities
     }[entities[0].entity_type]
     return picker(entities)
+
+
+def group(entities, level=0):
+    if len(set([k.entity_type for k in entities])) > 1:
+        entities = pick_by_etype(entities)
+        if entities is None:
+            print('No item selected.')
+            return None
+    shower = {
+        "process": lambda x: group_by_tag(x, 'SpatialScope'),
+        "flows": lambda x: group_by_hier(x, 'Compartment', level),
+        "quantities": lambda x: group_by_tag(x, 'Method')
+    }[entities[0].entity_type]
+    shower(entities)

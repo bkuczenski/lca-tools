@@ -72,7 +72,7 @@ class Characterization(object):
 
     def __str__(self):
         if self.value is not None:
-            return '%s: [%.3g %s] %s' % (self.flow, self.value, self.quantity.reference_entity, self.quantity)
+            return '[%.3g %s] %s' % (self.value, self.quantity.reference_entity, self.quantity)
         else:
             return '%s has %s %s' % (self.flow, self.quantity, self.quantity.reference_entity)
 

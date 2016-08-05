@@ -227,6 +227,9 @@ class LcArchive(ArchiveInterface):
             pass  # return self._to_pandas(q, LcQuantity)
         return q
 
+    def lcia_methods(self):
+        return [q for q in self._entities_by_type('quantity') if q.is_lcia_method()]
+
     def _quantities_with_unit(self, unitstring):
         """
         Generates a list of quantities that convert to/from the supplied unit string.

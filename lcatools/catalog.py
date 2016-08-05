@@ -47,9 +47,18 @@ class CatalogRef(object):
         for k in (self.index, self.id):
             yield k
 
+    def archive(self):
+        return self.catalog[self.index]
+
     def names(self):
         for n in (self.id, str(self.entity()), self):
             yield n
+
+    def keys(self):
+        return self.entity().keys()
+
+    def __getitem__(self, item):
+        return self.entity().__getitem__(item)
 
     def entity(self):
         return self.catalog[self.index][self.id]
@@ -101,38 +110,9 @@ class CatalogInterface(object):
     @classmethod
     def from_json(cls, j, fg_dir=None):
         """
-        Create a catalog and populate it with archives as specified in a json file.
+        Create a catalog and populate it with archives as a set of ArchiveRefs specified in a json file.
 
-        The format should be as follows:
-        {
-          'catalogs': [
-            {
-              'index': 0,
-              'dataSourceType': '...',
-              'source': '/path/to/file',
-              'nicknames': [
-                ...
-              ],
-              'parameters':
-              {
-                'param': 'value',
-                ...
-              }
-            },
-            ...
-          ]
-        }
-
-        j['dataSourceType'].lower() should be either 'json' or something understood by archive_factory.
-
-         * If 'json', then source points to the json file and 'parameters' is ignored.
-
-         * else, source points to the archive ref, and 'parameters' are passed as keyword arguments to archive_factory
-
-        In either case, each nickname is associated with the catalog once it's loaded.
-
-        Every index from 0 up to len(j['catalogs']) must be present. Only sequential indices starting from 0 will
-         be loaded.
+        Foreground entry is omitted; index starts at 1. fg dir can be specified on the command line.
         :return:
         """
         catalog = cls(foreground_dir=fg_dir)
@@ -259,10 +239,23 @@ class CatalogInterface(object):
         self._loaded[index] = True
 
     def install_archive(self, archive, nick, **kwargs):
+        """
+        install an already-loaded archive currently in memory
+        :param archive:
+        :param nick:
+        :param kwargs:
+        :return:
+        """
         index = self.add_archive(archive.ref, nick, archive.__class__.__name__, **kwargs)
         self._install(index, archive)
 
     def load(self, item, reload=False):
+        """
+        instantiate the archive ref.
+        :param item:
+        :param reload:
+        :return:
+        """
         index = self.get_index(item)
         if self._loaded[index] is True and reload is False:
             print('Archive already loaded; specify reload=True to rewrite')
@@ -278,6 +271,11 @@ class CatalogInterface(object):
         self._install(index, a)
 
     def load_all(self, item):
+        """
+        run the archive's load_all() function
+        :param item:
+        :return:
+        """
         index = self.get_index(item)
         if self._loaded[index] is False:
             self.load(index)
@@ -294,6 +292,15 @@ class CatalogInterface(object):
             for k in n:
                 print('%*s (alias)' % (l, k))
             """
+
+    def is_loaded(self, index):
+        return self._loaded[self.get_index(index)]
+
+    def show_loaded(self):
+        l = max([len(k) for k in self._shortest])
+        for i, a in enumerate(self.archives):
+            if self._loaded[i]:
+                print('X [%2d] %-*s: %s' % (i, l, self._shortest[i], a or self._archive_refs[i].source))
 
     def save_default(self):
         with open(DEFAULT_CATALOG, 'w') as fp:

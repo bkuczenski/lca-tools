@@ -279,6 +279,7 @@ class LcProcess(LcEntity):
         return hits[0]
 
     def inventory(self, reference=None):
+        print('%s' % self)
         if reference is None:
             it = self.exchanges()
         else:
@@ -444,6 +445,7 @@ class LcFlow(LcEntity):
         return '%s%s [%s]' % (self._d['Name'], cas, comp)
 
     def profile(self):
+        print('%s' % self)
         for cf in self._characterizations.values():
             print('%s' % cf)
 
@@ -527,6 +529,9 @@ class LcQuantity(LcEntity):
     def __init__(self, entity_uuid, **kwargs):
         super(LcQuantity, self).__init__('quantity', entity_uuid, **kwargs)
 
+    def is_lcia_method(self):
+        return 'Indicator' in self.keys()
+
     def convert(self, from_unit, to=None):
         """
         Perform unit conversion within a quantity, using a 'UnitConversion' table stored in the object properties.
@@ -572,6 +577,11 @@ class LcQuantity(LcEntity):
                 return None
 
         return outbound / inbound
+
+    def __str__(self):
+        if self.is_lcia_method():
+            return '%s [LCIA]' % self._d['Name']
+        return '%s' % self._d['Name']
 
 
 class LcUnit(object):

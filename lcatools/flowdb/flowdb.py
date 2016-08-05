@@ -1,7 +1,7 @@
 from lcatools.flowdb.create_synonyms import load_synonyms, SYNONYMS
 from lcatools.flowdb.synlist import InconsistentIndices
 from lcatools.flowdb.compartments import load_compartments, traverse_compartments, Compartment, COMPARTMENTS
-from lcatools.catalog import CFRef
+from lcatools.catalog import CFRef, CatalogRef
 
 from collections import defaultdict, namedtuple
 
@@ -34,18 +34,31 @@ class CLookup(object):
         self._dict[key].add(value)
         return True
 
-    def find(self, item):
+    def find(self, item, dist=1):
         """
-        Hunt for a matching compartment. Checks compartment self, parent, and siblings. Returns a set.
+        Hunt for a matching compartment. 'dist' param controls the depth of search:
+          dist = 0: equivalent to __getitem__
+          dist = 1: also check compartment's children
+          dist = 2: also check compartment's parent
+          dist = 3: also check compartment's siblings
+        By default (dist==1), checks compartment self and children, parent, and siblings. Returns a set.
         :param item: a Compartment
+        :param dist: how far to search (with limits)
         :return:
         """
-        results = set()
-        if item.parent in self._dict.keys():
-            results = results.union(self._dict[item.parent])
-        for s in item.parent.subcompartments():
-            if s in self._dict.keys():
-                results = results.union(self._dict[s])
+        results = self.__getitem__(item)
+        if dist > 0:
+            for s in item.subcompartments():
+                if s in self._dict.keys():
+                    results = results.union(self._dict[s])
+        if dist > 1:
+            if item.parent in self._dict.keys():
+                results = results.union(self._dict[item.parent])
+
+        if dist > 2:
+            for s in item.parent.subcompartments():
+                if s in self._dict.keys():
+                    results = results.union(self._dict[s])
         return results
 
 
@@ -82,9 +95,13 @@ class FlowDB(object):
         self.flowables = load_synonyms(flows)
         self.compartments = load_compartments(compartments)
 
-        self._q_dict = defaultdict(set)  # dict of quantity to flowables
-        self._f_dict = defaultdict(CLookup)  # dict of (flowable, quantity) to c_lookup
+        self._q_dict = defaultdict(set)  # dict of quantity uuid to set of characterized flowables
+        self._f_dict = defaultdict(CLookup)  # dict of (flowable index, quantity uuid) to c_lookup
         self._c_dict = dict()  # dict of '; '.join(compartments) to Compartment
+
+    def is_elementary(self, flow):
+        comp = self.find_matching_compartment(flow['Compartment'])
+        return comp.elementary
 
     def find_matching_compartment(self, compartment):
         """
@@ -103,32 +120,57 @@ class FlowDB(object):
             self._c_dict[cs] = match
             return match
 
-    def _add_cf(self, flowable, comp, q, cf):
+    def _add_cf(self, flowables, comp, cf):
         """
         Herein lies the salvation of the fractured synonyms problem - duplicated CFs!
-        :param flowable:
+        :param flowables:
         :param comp:
-        :param q:
         :param cf:
         :return:
         """
-
-        self._q_dict[q].add(flowable)
-        self._f_dict[(flowable, q)][comp] = cf
-
-    def add_cf(self, cf):
-        """
-        This function updates all three dictionaries, but only if the flowable and compartment are found.
-        :param cf:
-        :return:
-        """
-        f = cf.characterization.flow
         q = cf.characterization.quantity.get_uuid()
-        terms = set(filter(None, (f['Name'], f['CasNumber'], f.get_uuid())))
-        flowables = self.flowables.find_indices(terms)
-        if len(flowables) == 0:
-            print('%s' % cf.characterization)
-            raise MissingFlow('%s / %s not found' % (f['Name'], f['CasNumber']))
-        comp = self.find_matching_compartment(f['Compartment'])  # will raise MissingCompartment if not found
         for i in flowables:
-            self._add_cf(i, comp, q, cf)
+            self._q_dict[q].add(i)
+            self._f_dict[(i, q)][comp] = cf
+
+    def _parse_flow(self, flow):
+        terms = set(filter(None, (flow['Name'], flow['CasNumber'], flow.get_uuid())))
+        flowables = self.flowables.find_indices(terms)
+        comp = self.find_matching_compartment(flow['Compartment'])  # will raise MissingCompartment if not found
+        return flowables, comp
+
+    def import_cfs(self, archive):
+        """
+        adds all CFs from flows found in the archive, specified as a nickname or index.
+         Returns a list of flows that did not match the flowable set.  For compartments that do not match,
+          MissingCompartment should be caught and corrected
+        :param archive:
+        :return: list of flows
+        """
+        missing_flows = []
+        idx = self._catalog.get_index(archive)
+        for f in self._catalog[archive].flows():
+            flowables, comp = self._parse_flow(f)
+            if len(flowables) == 0:
+                missing_flows.append(f)
+                continue
+            for cf in f.characterizations():
+                self._add_cf(flowables, comp, CFRef(idx, cf))
+
+        return missing_flows
+
+    def lookup_cfs(self, flow, quantity):
+        cfs = set()
+        flowables, comp = self._parse_flow(flow)
+        q = quantity.get_uuid()
+        for i in flowables:
+            if i in self._q_dict[q]:
+                cfs = cfs.union(self._f_dict[(i, q)][comp])
+
+        return cfs
+
+    def lookup_single_cf(self, flow, quantity):
+        cfs = self.lookup_cfs(flow, quantity)
+        if len(cfs) == 0:
+            return None
+        return cfs.pop()  # choose one at random- obv an early simplification

@@ -2,8 +2,8 @@ import os
 import json
 
 
-from lcatools.catalog import CatalogInterface, CatalogRef
-from lcatools.foreground.flow_database import LcFlows
+from lcatools.catalog import CatalogInterface, CatalogRef, CFRef
+from lcatools.flowdb.flowdb import FlowDB
 from lcatools.providers.foreground import ForegroundArchive
 
 MANIFEST = ('catalog.json', 'entities.json', 'fragments.json', 'flows.json')
@@ -11,21 +11,68 @@ MANIFEST = ('catalog.json', 'entities.json', 'fragments.json', 'flows.json')
 
 class ForegroundManager(object):
     """
+    This class is used for building LCA models based on catalog refs.
+
+    It consists of:
+
+     * a catalog containing inventory and LCIA data
+     * a Flow-Quantity database
+
+    It manages:
+     - adding and loading archives to the catalog
+     - searching the catalog
+
+    It maintains:
+     - a result set generated from search
+     - a select set for comparisons
+
+    The interface subclass provides UI for these activities
+    """
+    def __init__(self, catalog=None, cfs=('LCIA', 'EI-LCIA'), ):
+        if catalog is None:
+            catalog = CatalogInterface.new()
+
+        self._catalog = catalog
+        self._cfs = cfs
+        self._flowdb = FlowDB(catalog)
+        self.unmatched_flows = dict()
+        for c in cfs:
+            self._catalog.load(c)
+            self.unmatched_flows[c] = self._flowdb.import_cfs(c)
+
+    def show(self):
+        self._catalog.show()
+
+    def __getitem__(self, item):
+        return self._catalog.__getitem__(item)
+
+    def search(self, *args, **kwargs):
+        return self._catalog.search(*args, **kwargs)
+
+    def terminate(self, *args, **kwargs):
+        if len(args) == 1:
+            ref = args[0]
+            return self._catalog.terminate(ref.index, ref, **kwargs)
+        else:
+            return self._catalog.terminate(*args, **kwargs)
+
+
+class OldForegroundManager(object):
+    """
     The foreground manager is the one-liner that you load to start building and editing LCI foreground models.
 
     It consists of:
      * a catalog of LcArchives, of which the 0th one is a ForegroundArchive to store fragments;
 
-     * a logical database of flows, which tracks observed exchange values, quantities, and characterization factors.
+     * a database of flows, which functions as a FlowQuantity interface - tracks quantities, flowables, compartments
 
     A foreground is constructed from scratch by giving a directory specification. The directory is used for
     serializing the foreground; the same serialization can be used to invoke an Antelope instance.
 
     The directory contains:
-      - catalog.json: a serialization of the catalog
       - entities.json: the foreground archive
       - fragments.json: serialized FragmentFlows
-      - flows.json: a list of logical flows defined as a list of sets of synonymous catalog references
+      - catalog.json: a serialization of the catalog (optional - not necessary if it uses only reference data)
 
     The foreground manager directs the serialization process and writes the files, but the components serialize
     and de-serialize themselves.

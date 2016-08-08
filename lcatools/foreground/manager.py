@@ -5,8 +5,13 @@ import json
 from lcatools.catalog import CatalogInterface, CatalogRef, CFRef
 from lcatools.flowdb.flowdb import FlowDB
 from lcatools.providers.foreground import ForegroundArchive
+from lcatools.foreground.lcia_results import LciaResult
 
 MANIFEST = ('catalog.json', 'entities.json', 'fragments.json', 'flows.json')
+
+
+class NoLoadedArchives(Exception):
+    pass
 
 
 class ForegroundManager(object):
@@ -28,7 +33,11 @@ class ForegroundManager(object):
 
     The interface subclass provides UI for these activities
     """
-    def __init__(self, catalog=None, cfs=('LCIA', 'EI-LCIA'), ):
+    def __init__(self, *args, catalog=None, cfs=('LCIA', 'EI-LCIA')):
+        if len(args) > 0:
+            fg_dir = args[0]
+        else:
+            fg_dir = None
         import time
         t0 = time.time()
         if catalog is None:
@@ -48,16 +57,25 @@ class ForegroundManager(object):
                 print('%d unmatched flows found from source %s... \n' %
                       (len(self.unmatched_flows[c]), self._catalog.name(c)))
 
+        if fg_dir is not None:
+            self.workon(fg_dir)
         print('finished... (%.2f s)' % (time.time() - t0))
 
-    def show(self):
-        self._catalog.show()
+    def show(self, loaded=True):
+        if loaded:
+            n = self._catalog.show_loaded()
+            if n == 0:
+                raise NoLoadedArchives('No archives loaded!')
+        else:
+            self._catalog.show()
 
     def load(self, item):
         self._catalog.load(item)
 
     def save(self):
-        self._catalog[0].save()  # nothing else to save
+        if self._catalog.is_loaded(0):
+            print('Saving foreground')
+            self._catalog[0].save()  # nothing else to save
 
     def __getitem__(self, item):
         return self._catalog.__getitem__(item)
@@ -86,6 +104,17 @@ class ForegroundManager(object):
     def add_to_foreground(self, ref):
         print('Add to foreground: %s' % ref)
         self._catalog[0].add(ref.entity())
+        if ref.entity_type == 'quantity':
+            # reset unit strings- units are such a hack
+            ref.entity().reference_entity._external_ref = ref.entity().reference_entity._unitstring
+        elif ref.entity_type == 'flow':
+            # need to import all the flow's quantities
+            for cf in ref.entity().characterizations():
+                self._catalog[0].add(cf.quantity)
+        elif ref.entity_type == 'process':
+            # need to import all the process's flows
+            for x in ref.entity().exchanges():
+                self._catalog[0].add(x.flow)
 
     # inspection methods
     def _filter_exch(self, process_ref, elem=True):
@@ -110,9 +139,10 @@ class ForegroundManager(object):
         for i in exch:
             print('%s' % i)
 
-    def fg_lcia(self, process_ref):
+    def fg_lcia(self, process_ref, quantity=None):
         """
         :param process_ref:
+        :param quantity: defaults to foreground lcia quantities
         :return:
         """
         if self._catalog.fg is None:
@@ -121,13 +151,16 @@ class ForegroundManager(object):
         if not self._catalog.is_loaded(0):
             self._catalog.load(0)
         exch = self._filter_exch(process_ref, elem=True)
-        qs = self._catalog[0].lcia_methods()
-        if len(qs) == 0:
-            print('No foreground LCIA methods')
-            return None
+        if quantity is None:
+            qs = self._catalog[0].lcia_methods()
+            if len(qs) == 0:
+                print('No foreground LCIA methods')
+                return None
+        else:
+            qs = [quantity]
         results = dict()
         for q in qs:
-            q_result = []
+            q_result = LciaResult(q)
             for x in exch:
                 if not x.flow.has_characterization(q):
                     cf_ref = self._flowdb.lookup_single_cf(x.flow, q)
@@ -135,12 +168,70 @@ class ForegroundManager(object):
                         x.flow.add_characterization(q)
                     else:
                         x.flow.add_characterization(cf_ref.characterization)
-                fac = x.flow.cf(q)
-                if fac is not None and fac != 0.0:
+                fac = x.flow.factor(q)
+                if fac is not None:
                     # TODO: make LCIA results a class (looking toward antelope)
-                    q_result.append((x, fac, x.value * fac))
+                    q_result.add_score(process_ref, x, fac)
             results[q.get_uuid()] = q_result
         return results
+
+    def compare_lcia_results(self, p_refs):
+        """
+        p_refs should be an array of catalog_refs
+        :param p_refs:
+        :return:
+        """
+        results = []
+        n = len(p_refs)
+        for p in p_refs:
+            results.append(self.fg_lcia(p))
+        qids = results[0].keys()  # assume same qs for all processes
+        h_str = ''
+        for i in range(n):
+            h_str += '%-10s ' % '    P%d' % i
+        h_str += 'LCIA Method'
+        print(h_str)
+        print('-' * (len(h_str) + 10))
+
+        for qid in qids:
+            q_str = ''
+            for i in range(n):
+                q_str += '%10.3g ' % results[i][qid].total
+            print('%s %s' % (q_str, self[0][qid]))
+
+        print('\nProcess Ref%s:' % 's' * (len(p_refs) > 1))
+        for i in range(n):
+            print('P%d: %s' % (i, p_refs[i]))
+
+    def show_detailed_lcia(self, p_ref, quantity, show_all=False):
+        """
+
+        :param p_ref:
+        :param quantity:
+        :return:
+        """
+        result = self.fg_lcia(p_ref, quantity=quantity)[quantity.get_uuid()]
+        print('%s' % quantity)
+        print('-' * 60)
+        agg_lcia = result.LciaScores[p_ref.get_uuid()]
+        for x in sorted(agg_lcia.LciaDetails, key=lambda x: x.result):
+            if x.result != 0 or show_all:
+                print('%10.3g x %-10.3g = %-10.3g %s' % (x.exchange.value, x.factor.value, x.result, x.factor.flow))
+        print('=' * 60)
+        print('             Total score: %g [%s]' % (agg_lcia.cumulative_result,
+                                                     quantity.reference_entity.unitstring()))
+
+    @staticmethod
+    def profile(flow):
+        flow.profile()
+
+    def source(self, flow):
+        """
+        search current archives for processes that list the flow as an output
+        :param flow:
+        :return:
+        """
+
 
 
 class OldForegroundManager(object):
@@ -249,8 +340,11 @@ class OldForegroundManager(object):
     def __getitem__(self, item):
         return self._catalog.__getitem__(item)
 
-    def show(self):
-        self._catalog.show()
+    def show(self, loaded=True):
+        if loaded:
+            self._catalog.show_loaded()
+        else:
+            self._catalog.show()
 
     def _add_entity(self, index, entity):
         if self._catalog[index][entity.get_uuid()] is None:

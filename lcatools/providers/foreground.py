@@ -41,8 +41,8 @@ class ForegroundArchive(LcArchive):
         c.save()
 
     @classmethod
-    def load(cls, directory, ref=None):
-        c = cls(directory, ref=ref)
+    def load(cls, directory, ref=None, **kwargs):
+        c = cls(directory, ref=ref, **kwargs)
         c._load_json_file(c._archive_file)
         c._load_fragments()
         return c

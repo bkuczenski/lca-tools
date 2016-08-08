@@ -58,6 +58,13 @@ class CatalogRef(object):
     def keys(self):
         return self.entity().keys()
 
+    def show(self):
+        print('Catalog reference: %s' % self.catalog.label(self.index))
+        self.entity().show()
+
+    def get_uuid(self):
+        return self.id
+
     def __getitem__(self, item):
         return self.entity().__getitem__(item)
 
@@ -117,10 +124,11 @@ class CatalogInterface(object):
         :return:
         """
         catalog = cls(foreground_dir=fg_dir)
-        for i in range(1, len(j['catalogs'])):
+        for i in range(1, len(j['catalogs']) + 1):
             try:
                 cat = [c for c in j['catalogs'] if c['index'] == i][0]
             except IndexError:
+                print('Index error at %d' % i)
                 break
             if 'nicknames' in cat.keys():
                 nicks = cat['nicknames']
@@ -164,7 +172,7 @@ class CatalogInterface(object):
 
     def set_foreground_dir(self, fg_dir):
         ar = ArchiveRef(source=fg_dir, nicknames=self._archive_refs[0].nicknames,
-                        dataSourceType='ForegroundArchive', parameters=dict())
+                        dataSourceType='ForegroundArchive', parameters={'quiet': True})
         self._purge_entries_for(self._sources, 0)
         self._purge_entries_for(self._refs_loaded, 0)
         self._loaded[0] = False
@@ -232,6 +240,10 @@ class CatalogInterface(object):
 
     def name(self, index):
         return self._shortest[self.get_index(index)]
+
+    def label(self, item):
+        index = self.get_index(item)
+        return '%s' % self.archives[index] or self._archive_refs[index].source
 
     def __getitem__(self, item):
         """
@@ -304,7 +316,7 @@ class CatalogInterface(object):
 
     def show(self):
         l = max([len(k) for k in self._shortest])
-        print('LCA Catalog with the following archives:')
+        print('\nLCA Catalog with the following archives:')
         for i, a in enumerate(self.archives):
             ldd = 'X' if self._loaded[i] else ' '
             print('%s [%2d] %-*s: %s' % (ldd, i, l, self._shortest[i], a or self._archive_refs[i].source))
@@ -315,13 +327,19 @@ class CatalogInterface(object):
             """
 
     def is_loaded(self, index):
+        if index is None:
+            return True  # a bit smelly.  But 'None' really means 'all loaded archives' so it's true reflexively
         return self._loaded[self.get_index(index)]
 
     def show_loaded(self):
         l = max([len(k) for k in self._shortest])
+        print('\nCurrently loaded archives: ')
+        num_loaded = 0
         for i, a in enumerate(self.archives):
             if self._loaded[i]:
+                num_loaded += 1
                 print('X [%2d] %-*s: %s' % (i, l, self._shortest[i], a or self._archive_refs[i].source))
+        return num_loaded
 
     def save_default(self):
         with open(DEFAULT_CATALOG, 'w') as fp:
@@ -354,6 +372,18 @@ class CatalogInterface(object):
                     break
             return r
 
+    def processes_for(self, item):
+        index = self.get_index(item)
+        return [self.ref(index, p.get_uuid()) for p in self.archives[index].processes()]
+
+    def flows_for(self, item):
+        index = self.get_index(item)
+        return [self.ref(index, p.get_uuid()) for p in self.archives[index].flows()]
+
+    def quantities_for(self, item):
+        index = self.get_index(item)
+        return [self.ref(index, p.get_uuid()) for p in self.archives[index].quantities()]
+
     @staticmethod
     def _show(res):
         for i, k in enumerate(res):
@@ -370,7 +400,7 @@ class CatalogInterface(object):
         :return:
         """
         if archive is None:
-            archive = range(len(self.archives))
+            archive = [i for i, k in enumerate(self._loaded) if k is True]
         if etype is not None:
             if 'entity_type' in kwargs:
                 raise KeyError('colliding entity_type and etype!')
@@ -388,26 +418,41 @@ class CatalogInterface(object):
             self._show(res_set)
         return res_set
 
-    def terminate(self, flow_ref, show=False):
+    def _check_exchanges(self, index, flow_id, dirn, show=False):
+        z = []
+        for p in self[index].processes():
+            if any([x.flow.get_uuid() == flow_id and x.direction == dirn
+                    for x in p.exchanges()]):
+                z.append(self.ref(index, p))
+        if show:
+            self._show(z)
+        return z
+
+    def terminate(self, exch_ref, show=False):
         """
-        flow must be a cat ref
         for some reason, doing this as a list comprehension didn't work
-        :param flow_ref:
+        :param exch_ref: an ExchangeRef
         :param show: [False] display
         :return:
         """
-        index = flow_ref.index
-        if True:
-            z = []
-            for p in self[index].processes():
-                if any([x.flow.get_uuid() == flow_ref.id for x in p.exchanges()]):
-                    z.append(self.ref(index, p))
-            if show:
-                self._show(z)
-            return z
-        else:
-            return [self.ref(index, p) for p in self[index].processes()
-                    if any([x.flow.get_uuid() == flow_ref.id for x in p.exchanges()])]
+        return self._check_exchanges(exch_ref.index, exch_ref.exchange.flow.get_uuid(),
+                                     exch_ref.exchange.comp_dir, show=show)
+
+    def originate(self, exch_ref, show=False):
+        """
+        for some reason, doing this as a list comprehension didn't work
+        :param exch_ref: an ExchangeRef
+        :param show: [False] display
+        :return:
+        """
+        return self._check_exchanges(exch_ref.index, exch_ref.exchange.flow.get_uuid(),
+                                     exch_ref.exchange.direction, show=show)
+
+    def source(self, flow_ref, show=False):
+        return self._check_exchanges(flow_ref.index, flow_ref.id, 'Output', show=show)
+
+    def sink(self, flow_ref, show=False):
+        return self._check_exchanges(flow_ref.index, flow_ref.id, 'Output', show=show)
 
     def _serialize_archive(self, item):
         index = self.get_index(item)

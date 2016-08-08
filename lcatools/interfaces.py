@@ -80,6 +80,10 @@ class ArchiveInterface(object):
 
         self.catalog_names = dict()  # this is a place to store *some kind* of upstream reference to be determined
 
+    def entities(self):
+        for v in self._entities.values():
+            yield v
+
     def set_upstream(self, upstream):
         assert isinstance(upstream, ArchiveInterface)
         if upstream.ref != self.ref:

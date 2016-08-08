@@ -9,6 +9,10 @@ class DuplicateExchangeError(Exception):
     pass
 
 
+class AmbiguousReferenceError(Exception):
+    pass
+
+
 class Exchange(object):
     """
     An exchange is an affiliation of a process, a flow, and a direction. An exchange does
@@ -56,6 +60,12 @@ class Exchange(object):
                 self.flow.get_uuid() == other.flow.get_uuid() and
                 self.direction == other.direction and
                 self.termination == other.termination)
+
+    @property
+    def comp_dir(self):
+        if self.direction == 'Input':
+            return 'Output'
+        return 'Input'
 
     @property
     def tflow(self):
@@ -117,7 +127,11 @@ class ExchangeValue(Exchange):
         self.value = value
 
     def __str__(self):
-        return '%6.6s: [%.3g %s] %s' % (self.direction, self.value, self.unit, self.tflow)
+        if self in self.process.reference_entity:
+            ref = '{*}'
+        else:
+            ref = '   '
+        return '%6.6s: %s [%.3g %s] %s' % (self.direction, ref, self.value, self.unit, self.tflow)
 
     def f_view(self):
         return '%6.6s: [%.3g %s] %s' % (self.direction, self.value, self.unit, self.process)
@@ -127,6 +141,49 @@ class ExchangeValue(Exchange):
         if values:
             j['value'] = float(self.value)
         return j
+
+
+class DissipationExchange(ExchangeValue):
+    """
+    Composition / Dissipation mechanics can be encapsulated entirely into the exchange object- the problem
+     is reduced to a serialization / deserialization problem.
+
+    Composition / Dissipation probably conflicts with Allocation, i.e. it is not supported to add a dissipation
+    factor to an AllocatedExchange.
+
+    """
+    def __init__(self, *args, flow_quantity=None, scale=1.0, dissipation=1.0, value=None, **kwargs):
+        self.flow_quantity = flow_quantity
+        self.scale = scale
+        self.dissipation = dissipation
+        super(ExchangeValue, self).__init__(*args, **kwargs)
+        self._value = value  # used only when dissipation is not defined
+
+    def content(self, ref_flow=None):
+        """
+        :param ref_flow: a flow LcEntity
+        :return:
+        """
+        if ref_flow is None:
+            ref_flow = list(self.process.reference_entity)[0]
+            if len(self.process.reference_entity) > 1:
+                raise AmbiguousReferenceError
+        if ref_flow.cf(self.flow_quantity) != 0:
+            return ref_flow.cf(self.flow_quantity)
+        return None
+
+    @property
+    def value(self):
+        c = self.content()
+        if c is not None:
+            return c * self.scale * self.dissipation
+        return self._value
+
+    def __str__(self):
+        raise NotImplemented
+
+    def serialize(self, values=False):
+        raise NotImplemented
 
 
 class MarketExchange(Exchange):

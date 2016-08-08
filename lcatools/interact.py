@@ -47,7 +47,7 @@ def cyoa(prompt, valid, default=None):
     return i
 
 
-def _pick_list(items, *args):
+def _pick_list(items, *args, prompt=None):
     """
     enumerates items and asks the user to pick one. Additional options can be provided as positional
      arguments.  The first unique letter of positional arguments is chosen to represent them. If no unique
@@ -82,7 +82,7 @@ def _pick_list(items, *args):
                 mypick = j
         menu += mypick
 
-    print('Choice Item')
+    print('\nChoice Item')
     print('%s %s' % ('=' * 6, '=' * 70))
 
     if items is not None:
@@ -96,10 +96,13 @@ def _pick_list(items, *args):
 
     print('%s %s' % ('-' * 6, '-' * 70))
 
+    if prompt is not None:
+        print('%s' % prompt)
+
     choice = None
     while True:
         c = input('Enter choice (or "None"): ')
-        if c == 'None':
+        if c == 'None' or len(c) == 0:
             choice = (None, None)
             break
         else:
@@ -127,19 +130,24 @@ def pick_list(object_list):
     return l[c[0]]
 
 
-def menu_list(*args):
+def menu_list(*args, go_up=False):
     choices = sorted(args)
+    if go_up:
+        choices += ['<go up one level>']
     choice = _pick_list(None, *choices)
     if choice == (None, None):
         return None
+    if go_up and choice == (None, len(choices) - 1):
+        return -1
     return choices[choice[1]]
 
 
-def pick_from_groups(groups):
+def pick_from_groups(groups, prompt=None):
     if len(groups) == 1:
         print('(selecting only choice %s)' % groups[0][0])
         return None
-    c = _pick_list(['(%d) %s' % (len(i[1]), i[0]) for i in groups], 'done (keep all)')
+    c = _pick_list(['(%d) %s' % (len(i[1]), i[0]) for i in groups], 'done (keep all)',
+                   prompt=prompt)
     print(c)
     if c == (None, 0) or c == (None, None):
         return None
@@ -170,15 +178,17 @@ def _show_groups(entities, func):
         print('(%d) %s' % (len(v), k))
 
 
-def _metagroup(entities, func):
-    return pick_from_groups(sorted(_group_by(entities, func), key=lambda x: len(x[1]), reverse=True))
+def _metagroup(entities, func, prompt=None):
+    return pick_from_groups(sorted(_group_by(entities, func), key=lambda x: len(x[1]), reverse=True),
+                            prompt=prompt)
 
 
-def pick_by_tag(entities, tag):
+def pick_by_tag(entities, tag, prompt=None):
     """
     sort by prevalence
     :param entities:
     :param tag:
+    :param prompt:
     :return:
     """
     def get_tag(ent):
@@ -186,7 +196,7 @@ def pick_by_tag(entities, tag):
             return ent[tag]
         return '(none)'
 
-    return _metagroup(entities, get_tag) or entities
+    return _metagroup(entities, get_tag, prompt=prompt) or entities
 
 
 def group_by_tag(entities, tag):
@@ -198,12 +208,12 @@ def group_by_tag(entities, tag):
     _show_groups(entities, get_tag)
 
 
-def pick_by_hier(entities, tag, level):
+def pick_by_hier(entities, tag, level, prompt=None):
     def get_cmp(ent):
         if level >= len(ent[tag]):
             return '(none)'
         return ent[tag][level]
-    return _metagroup(entities, get_cmp) or entities
+    return _metagroup(entities, get_cmp, prompt=prompt) or entities
 
 
 def group_by_hier(entities, tag, level):
@@ -230,8 +240,7 @@ def pick_by_etype(entities):
 
 def select_subset(entities, tags):
     tag = tags.pop(0)
-    print('Grouped by %s' % tag)
-    subset = pick_by_tag(entities, tag)
+    subset = pick_by_tag(entities, tag, prompt='Grouped by %s' % tag)
     if subset == entities:
         return entities
     if len(tags) > 0:
@@ -279,6 +288,9 @@ def pick_one(entities):
     :param entities: a list of entities
     :return:
     """
+    if len(entities) == 0:
+        print('No entities.')
+        return None
     if len(set([k.entity_type for k in entities])) > 1:
         entities = pick_by_etype(entities)
         if entities is None:
@@ -300,8 +312,8 @@ def group(entities, level=0):
             return None
     shower = {
         "process": lambda x: group_by_tag(x, 'SpatialScope'),
-        "flows": lambda x: group_by_hier(x, 'Compartment', level),
-        "quantities": lambda x: group_by_tag(x, 'Method')
+        "flow": lambda x: group_by_hier(x, 'Compartment', level),
+        "quantity": lambda x: group_by_tag(x, 'Method')
     }[entities[0].entity_type]
     shower(entities)
 

@@ -1,7 +1,10 @@
+from math import ceil, log10
+
 from lcatools.flowdb.create_synonyms import load_synonyms, SYNONYMS
-from lcatools.flowdb.synlist import InconsistentIndices
+from lcatools.flowdb.synlist import InconsistentIndices, cas_regex
 from lcatools.flowdb.compartments import load_compartments, traverse_compartments, Compartment, COMPARTMENTS
 from lcatools.catalog import CFRef, CatalogRef
+from lcatools.interfaces import uuid_regex
 
 from collections import defaultdict, namedtuple
 
@@ -22,7 +25,9 @@ class CLookup(object):
         self._dict = defaultdict(set)
 
     def __getitem__(self, item):
-        return self._dict[item]
+        if isinstance(item, Compartment):
+            return self._dict[item]
+        return None
 
     def __setitem__(self, key, value):
         if not isinstance(value, CFRef):
@@ -33,6 +38,12 @@ class CLookup(object):
             return False
         self._dict[key].add(value)
         return True
+
+    def first(self, item):
+        return list(self._dict[item])[0]
+
+    def compartments(self):
+        return self._dict.keys()
 
     def find(self, item, dist=1):
         """
@@ -96,6 +107,7 @@ class FlowDB(object):
         self.compartments = load_compartments(compartments)
 
         self._q_dict = defaultdict(set)  # dict of quantity uuid to set of characterized flowables
+        self._q_id = dict()  # store the quantities themselves for reference
         self._f_dict = defaultdict(CLookup)  # dict of (flowable index, quantity uuid) to c_lookup
         self._c_dict = dict()  # dict of '; '.join(compartments) to Compartment
 
@@ -120,6 +132,70 @@ class FlowDB(object):
             self._c_dict[cs] = match
             return match
 
+    def friendly_flowable(self, i, width=4):
+        print('[%*d] %11s %.100s' % (width, i, self.flowables.cas(i),
+                                     sorted(
+                                         filter(lambda x: not bool(cas_regex.match(x)),
+                                         filter(lambda x: not bool(uuid_regex.match(x)),
+                                                self.flowables[i])))
+                                     )
+              )
+
+    def friendly_search(self, regex, max_hits=100):
+        """
+
+        :param regex:
+        :param max_hits: maximum number of results to return (default 100)
+        :return:
+        """
+        results = sorted(list(self.flowables.search(regex)))
+        g = int(ceil(log10(max(results)+1)))
+        for i in results:
+            self.friendly_flowable(i, width=g)
+
+        return results
+
+    def factors_for_quantity(self, quantity):
+        """
+        Finally, my text mode chart expertise pays off!
+        :param quantity:
+        :return:
+        """
+        if isinstance(quantity, str):
+            q = quantity
+        else:
+            q = quantity.get_uuid()
+        f_set = sorted(self._q_dict[q], key=lambda x: self.flowables._name[x])
+        c_set = set()
+        for i in f_set:
+            for k in self._f_dict[(i, q)].compartments():
+                if isinstance(k, Compartment):
+                    c_set.add(k)
+        c_list = sorted(c_set, key=lambda x: x.name)
+        print('%s' % self._q_id[q])
+        h_str = 'CAS Number  '
+        for i in range(len(c_list)):
+            h_str += '|%-8.8s' % ('  C%d' % i)
+        h_str += '  Flowable'
+        print('%s' % h_str)
+        print('-' * len(h_str))
+        for i in f_set:
+            f_str = '%11s  ' % self.flowables.cas(i)
+            for k in range(len(c_list)):
+                try:
+                    cfs = self._f_dict[(i, q)][c_list[k]]
+                    if len(cfs) > 1:
+                        f_str += '%-8s ' % ('*' * len(cfs))
+                    else:
+                        f_str += '%8.3g ' % list(cfs)[0].characterization.value
+                except IndexError:
+                    f_str += "   --    "
+            print('%s %s' % (f_str, self.flowables.name(i)))
+        print('%s' % h_str)
+        print('\nCompartments:')
+        for i in range(len(c_list)):
+            print('C%d: %s' % (i, c_list[i]))
+
     def _add_cf(self, flowables, comp, cf):
         """
         Herein lies the salvation of the fractured synonyms problem - duplicated CFs!
@@ -129,6 +205,7 @@ class FlowDB(object):
         :return:
         """
         q = cf.characterization.quantity.get_uuid()
+        self._q_id[q] = cf.characterization.quantity
         for i in flowables:
             self._q_dict[q].add(i)
             self._f_dict[(i, q)][comp] = cf

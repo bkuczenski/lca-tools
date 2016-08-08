@@ -188,6 +188,16 @@ class LcEntity(object):
     def keys(self):
         return self._d.keys()
 
+    def show(self):
+        print('%s Entity' % self.entity_type.title())
+        fix = ['Name', 'Comment']
+        postfix = set(self._d.keys()).difference(fix)
+        ml = len(max(self._d.keys(), key=len))
+        for k in fix:
+            print('%*s: %s' % (ml, k, self._d[k]))
+        for k in postfix:
+            print('%*s: %s' % (ml, k, self._d[k]))
+
     def __str__(self):
         return 'LC %s: %s' % (self.entity_type, self._d['Name'])
 
@@ -489,6 +499,11 @@ class LcFlow(LcEntity):
     def characterizations(self):
         for i in self._characterizations.values():
             yield i
+
+    def factor(self, quantity):
+        if quantity.get_uuid() in self._characterizations:
+            return self._characterizations[quantity.get_uuid()]
+        return None
 
     def cf(self, quantity, location='GLO'):
         if quantity.get_uuid() in self._characterizations:

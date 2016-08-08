@@ -3,12 +3,14 @@ from time import sleep
 
 from lcatools.foreground.manager import ForegroundManager, NoLoadedArchives
 from lcatools.foreground.ui_layout import choices, inspections
+from lcatools.catalog import ExchangeRef, CFRef
 from lcatools.interact import menu_list, pick_list, ifinput, cyoa, get_kv_pair, get_kv_pairs, \
     pick_one, flows_by_compartment, group, pick_compartment
 
 
 dataSourceTypes = ('JSON', 'IlcdArchive', 'IlcdLcia',
                    'EcospoldV1Archive', 'EcospoldV2Archive', 'EcoinventSpreadsheet')
+
 
 def show_res(res):
     for i, k in enumerate(res):
@@ -273,17 +275,22 @@ class ForegroundInterface(ForegroundManager):
             elif i.lower() == 'a':
                 self.selected = self.selected.union(result_set)
                 return True
+            elif int(i) < len(result_set):
+                pick = result_set[int(i)]
+                self.selected.add(pick)
+                result_set.remove(pick)
             elif i.lower() == 'n':
                 result_set = self._narrow_search(result_set)
             elif i.lower() == 'b':
                 pick = pick_one(result_set)
                 e = self._prompt_add(pick)
                 if e in result_set:
-                    result_set.pop(e)
+                    result_set.remove(e)
             else:  # 'b' ad 's' are the same- browse and pick
                 pick = pick_one(result_set)
-                self.selected.add(pick)
-                result_set.pop(pick)
+                if pick is not None:
+                    self.selected.add(pick)
+                    result_set.remove(pick)
 
     def isearch(self, etype):
         self._menu_position = [choices, choices['Catalog']]
@@ -348,6 +355,11 @@ class ForegroundInterface(ForegroundManager):
     def q_lcia(self, p_ref):
         q = pick_one(self[0].lcia_methods())
         self.show_detailed_lcia(p_ref, quantity=q)
+
+    def select_exchange(self, p_ref):
+        exch = self._filter_exch(p_ref, elem=False)
+        g = pick_one(exch)
+        self.terminate(ExchangeRef(p_ref.index, g))
 
     def originate(self, exch_ref):
         z = self._catalog.originate(exch_ref, show=False)

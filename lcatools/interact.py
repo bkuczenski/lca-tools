@@ -43,6 +43,11 @@ def cyoa(prompt, valid, default=None):
             i = input(prompt)
         if i.lower() in valid.lower():
             break
+        try:
+            int(i)
+            break
+        except ValueError:
+            pass
         print('invalid choice')
     return i
 

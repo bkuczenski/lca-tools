@@ -16,7 +16,8 @@ inspections = {
         'elementary exchanges': lambda x: x.elementary,
         'foreground lcia': lambda x: x.lcia,
         'lcia detailed results': lambda x: x.q_lcia,
-        'background lcia': []  # lambda x: x.bg_lcia
+        'background lcia': []  # lambda x: x.bg_lcia,
+        'select exchange to follow': lambda x: x.select_exchange
     },
     'quantity': {
         'flowables': lambda x: x.flowables,

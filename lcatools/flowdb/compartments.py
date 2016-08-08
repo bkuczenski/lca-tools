@@ -12,6 +12,11 @@ def load_compartments(file=COMPARTMENTS):
         return Compartment.from_json(json.load(fp))
 
 
+def save_compartments(compartments, file=COMPARTMENTS):
+    with open(file, 'w') as fp:
+        json.dump(compartments.serialize(), fp, indent=2, sort_keys=True)
+
+
 def _ensure_list(var):
     if isinstance(var, str):
         return [var]
@@ -198,6 +203,27 @@ class Compartment(object):
         s1 = self._ensure_comp(merged)
         merge_into._merge_into(s1)
         self._subcompartments.remove(s1)
+
+    def _collapse(self, subcompartment):
+        """
+        recursive collapse omits the removal to avoid 'set changed size' error
+        :param subcompartment:
+        :return:
+        """
+        for sub in subcompartment.subcompartments():
+            subcompartment._collapse(sub)
+        self.synonyms = self.synonyms.union(subcompartment.synonyms)
+
+    def collapse(self, subcompartment):
+        """
+        Collapse a subcompartment (and all its subcompartments recursively) into a set of synonyms for the
+        current compartment. This is written to deal with GaBi categories like "Group NMVOC to air" that are
+        not compartments.
+        :param subcompartment:
+        :return:
+        """
+        self._collapse(subcompartment)
+        self._subcompartments.remove(subcompartment)
 
     def add_sub(self, name, elementary=None, verbose=False):
         """

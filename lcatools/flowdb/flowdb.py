@@ -45,7 +45,7 @@ class CLookup(object):
     def compartments(self):
         return self._dict.keys()
 
-    def find(self, item, dist=1):
+    def find(self, item, dist=1, return_first=True):
         """
         Hunt for a matching compartment. 'dist' param controls the depth of search:
           dist = 0: equivalent to __getitem__
@@ -54,17 +54,28 @@ class CLookup(object):
           dist = 3: also check compartment's siblings
         By default (dist==1), checks compartment self and children, parent, and siblings. Returns a set.
         :param item: a Compartment
-        :param dist: how far to search (with limits)
+        :param dist: how far to search (with limits) (default: 1= compartment + children)
+        :param return_first: stop hunting as soon as a cf is found
         :return:
         """
+        def found(res):
+            return len(res) > 0 and return_first
         results = self.__getitem__(item)
+        if found(results):
+            return results
+
         if dist > 0:
             for s in item.subcompartments():
                 if s in self._dict.keys():
                     results = results.union(self._dict[s])
+        if found(results):
+            return results
+
         if dist > 1:
             if item.parent in self._dict.keys():
                 results = results.union(self._dict[item.parent])
+        if found(results):
+            return results
 
         if dist > 2:
             for s in item.parent.subcompartments():
@@ -196,6 +207,14 @@ class FlowDB(object):
         for i in range(len(c_list)):
             print('C%d: %s' % (i, c_list[i]))
 
+    def all_cfs(self, flowable, quantity=None):
+        """
+        generator - produces all characterizations matching the flowable, optionally filtering for a single quantity
+        :param flowable:
+        :param quantity:
+        :return:
+        """
+
     def _add_cf(self, flowables, comp, cf):
         """
         Herein lies the salvation of the fractured synonyms problem - duplicated CFs!
@@ -236,13 +255,13 @@ class FlowDB(object):
 
         return missing_flows
 
-    def lookup_cfs(self, flow, quantity):
+    def lookup_cfs(self, flow, quantity, dist=1):
         cfs = set()
         flowables, comp = self._parse_flow(flow)
         q = quantity.get_uuid()
         for i in flowables:
             if i in self._q_dict[q]:
-                cfs = cfs.union(self._f_dict[(i, q)][comp])
+                cfs = cfs.union(self._f_dict[(i, q)].find(comp, dist=dist, return_first=True))
 
         return cfs
 
@@ -250,4 +269,6 @@ class FlowDB(object):
         cfs = self.lookup_cfs(flow, quantity)
         if len(cfs) == 0:
             return None
+        if len(cfs) > 1:
+            print('Multiple CFs found: %s' % [cf.characterization.value for cf in cfs])
         return cfs.pop()  # choose one at random- obv an early simplification

@@ -29,10 +29,11 @@ class SynList(object):
     def from_json(cls, j):
         s = cls()
         for i in j['synList']:
-            s.add_set(i)
+            s.add_set(i['synonyms'], name=i['name'])
         return s
 
     def __init__(self):
+        self._name = []
         self._list = []
         self._dict = dict()
 
@@ -43,6 +44,7 @@ class SynList(object):
     def _new_group(self):
         k = len(self._list)
         self._list.append(set())
+        self._name.append(None)
         return k
 
     def __len__(self):
@@ -53,6 +55,9 @@ class SynList(object):
 
     def keys(self):
         return self._dict.keys()
+
+    def name(self, index):
+        return self._name[index]
 
     def add_key(self, key):
         """
@@ -76,8 +81,9 @@ class SynList(object):
         for i in it:
             self._new_key(i, index)
 
-    def new_set(self, it):
+    def new_set(self, it, name=None):
         index = self._new_group()
+        self._name[index] = name
         printed = False
         for i in it:
             '''
@@ -92,7 +98,7 @@ class SynList(object):
                 self._new_key(i, index)
         return index
 
-    def add_set(self, it, merge=False):
+    def add_set(self, it, merge=False, name=None):
         """
         given an iterable of keys:
          - if any of them are found:
@@ -101,6 +107,7 @@ class SynList(object):
           - elif they are not found at all, add them to a new index
         :param it: an iterable of keys
         :param merge: [False] whether to merge matching keys or to shunt off to a new index
+        :param name: shortname for the synonym set
         :return:
         """
         found = self.find_indices(it)
@@ -110,7 +117,7 @@ class SynList(object):
             index = found.pop()
             self.merge_set_with_index(it, index)
         else:
-            index = self.new_set(it)
+            index = self.new_set(it, name=name)
         return index
 
     def _merge(self, merge, into):
@@ -154,7 +161,8 @@ class SynList(object):
         return self.synonym_set(item)
 
     def _serialize_set(self, index):
-        return [k for k in self._list[index]]
+        return {"name": self._name[index],
+                "synonyms": [k for k in self._list[index]]}
 
     def serialize(self):
         return {
@@ -191,12 +199,15 @@ class Flowables(SynList):
     def from_json(cls, j):
         s = cls()
         for i in j['flowables']:
-            s.add_set(i)
+            s.add_set(i['synonyms'], name=i['name'])
         return s
 
     def __init__(self):
         super(Flowables, self).__init__()
         self._cas = []
+
+    def cas(self, index):
+        return self._cas[index]
 
     def _new_group(self):
         k = super(Flowables, self)._new_group()
@@ -215,6 +226,7 @@ class Flowables(SynList):
     def find_indices(self, it):
         found = set()
         for i in it:
+            i = i.strip()
             if i in self._dict.keys():
                 found.add(self._dict[i])
             if i.lower() in self._dict.keys():  # see, I told you it was controversial

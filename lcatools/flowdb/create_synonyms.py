@@ -49,7 +49,8 @@ def synonyms_from_ecospold_exchange(exch):
     :return: set of synonyms (stripped)
     """
     syns = set()
-    syns.add(str(exch['name']))
+    name = str(exch['name'])
+    syns.add(name)
     cas = exch.get('casNumber')
     if cas is not None:
         syns.add(cas)
@@ -65,7 +66,7 @@ def synonyms_from_ecospold_exchange(exch):
         # multiple entries- allow embedded comma-space
         for syn in synonym_tag:
             _add_syn_if(str(syn), syns)
-    return syns
+    return name, syns
 
 
 def synonyms_from_ilcd_flow(flow):
@@ -76,7 +77,8 @@ def synonyms_from_ilcd_flow(flow):
     """
     ns = find_ns(flow.nsmap, 'Flow')
     syns = set()
-    syns.add(grab_flow_name(flow, ns=ns))
+    name = grab_flow_name(flow, ns=ns)
+    syns.add(name)
     uid = str(find_common(flow, 'UUID')[0]).strip()
     syns.add(uid)
     cas = str(find_tag(flow, 'CASNumber', ns=ns)[0]).strip()
@@ -86,17 +88,17 @@ def synonyms_from_ilcd_flow(flow):
         for x in str(syn).split(';'):
             if x.strip() != '' and x.strip().lower() != 'wood':
                 syns.add(x.strip())
-    return syns, uid
+    return name, syns, uid
 
 
 cas_regex = re.compile('^[0-9]{,6}-[0-9]{2}-[0-9]$')
 
 
-def _add_set(synlist, syns, xid):
+def _add_set(synlist, name, syns, xid):
     try:
-        index = synlist.add_set(syns, merge=True)
+        index = synlist.add_set(syns, merge=True, name=name)
     except ConflictingCas:
-        index = synlist.new_set(syns)
+        index = synlist.new_set(syns, name=name)
     except InconsistentIndices:
         dups = synlist.find_indices(syns)
         matches = []
@@ -113,7 +115,7 @@ def _add_set(synlist, syns, xid):
                 print('  [%s] = %d' % match)
         except ConflictingCas:
             #print('Conflicting CAS on merge.. creating new group')
-            index = synlist.new_set(syns)
+            index = synlist.new_set(syns, name=name)
     return index
 
 
@@ -127,13 +129,13 @@ def create_new_synonym_list():
     # first, ecoinvent
     exchs = get_ecospold_exchanges()
     for exch in exchs:
-        syns = synonyms_from_ecospold_exchange(exch)
-        _add_set(synonyms, syns, exch.get('id'))
+        name, syns = synonyms_from_ecospold_exchange(exch)
+        _add_set(synonyms, name, syns, exch.get('id'))
 
     # next, ILCD - but hold off for now
     for flow in ilcd_flow_generator():
-        syns, uid = synonyms_from_ilcd_flow(flow)
-        _add_set(synonyms, syns, uid)
+        name, syns, uid = synonyms_from_ilcd_flow(flow)
+        _add_set(synonyms, name, syns, uid)
 
     with open(SYNONYMS, 'w') as fp:
         json.dump(synonyms.serialize(), fp)

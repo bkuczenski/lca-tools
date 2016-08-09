@@ -234,6 +234,8 @@ class ForegroundInterface(ForegroundManager):
         return True
 
     def add_selection(self):
+        self._menu_position.pop()
+        
         if not self._catalog.is_loaded(0):
             return 'Foreground is not loaded.'
         for i in self.selected:
@@ -319,7 +321,7 @@ class ForegroundInterface(ForegroundManager):
         if len(entities) == 0:
             return lambda: 'No entities found'
         g = pick_one(entities)
-        return self._prompt_add(g)
+        return self._prompt_add(self._catalog.ref(ar, g))
 
     '''
     def _processes(self):

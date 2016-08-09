@@ -418,12 +418,23 @@ class CatalogInterface(object):
             self._show(res_set)
         return res_set
 
-    def _check_exchanges(self, index, flow_id, dirn, show=False):
+    def _check_exchanges(self, index, flow, dirn, show=False, termination=None):
+        """
+
+        :param index:
+        :param flow:
+        :param dirn:
+        :param show:
+        :param termination:
+        :return: a list of exchange refs, with ones matching termination ordered first
+        """
         z = []
         for p in self[index].processes():
-            if any([x.flow.get_uuid() == flow_id and x.direction == dirn
-                    for x in p.exchanges()]):
-                z.append(self.ref(index, p))
+            for i in (x for x in p.exchanges() if x.flow.match(flow) and x.direction == dirn):
+                if i.process.get_uuid() == termination:
+                    z[:0] = ExchangeRef(index, i)
+                else:
+                    z.append(ExchangeRef(index, i))
         if show:
             self._show(z)
         return z
@@ -435,8 +446,8 @@ class CatalogInterface(object):
         :param show: [False] display
         :return:
         """
-        return self._check_exchanges(exch_ref.index, exch_ref.exchange.flow.get_uuid(),
-                                     exch_ref.exchange.comp_dir, show=show)
+        return self._check_exchanges(exch_ref.index, exch_ref.exchange.flow,
+                                     exch_ref.exchange.comp_dir, show=show, termination=exch_ref.exchange.termination)
 
     def originate(self, exch_ref, show=False):
         """
@@ -445,14 +456,15 @@ class CatalogInterface(object):
         :param show: [False] display
         :return:
         """
-        return self._check_exchanges(exch_ref.index, exch_ref.exchange.flow.get_uuid(),
-                                     exch_ref.exchange.direction, show=show)
+        return self._check_exchanges(exch_ref.index, exch_ref.exchange.flow,
+                                     exch_ref.exchange.direction, show=show,
+                                     termination=exch_ref.exchange.process.get_uuid())
 
     def source(self, flow_ref, show=False):
-        return self._check_exchanges(flow_ref.index, flow_ref.id, 'Output', show=show)
+        return self._check_exchanges(flow_ref.index, flow_ref.entity(), 'Output', show=show)
 
     def sink(self, flow_ref, show=False):
-        return self._check_exchanges(flow_ref.index, flow_ref.id, 'Output', show=show)
+        return self._check_exchanges(flow_ref.index, flow_ref.entity(), 'Output', show=show)
 
     def _serialize_archive(self, item):
         index = self.get_index(item)

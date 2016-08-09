@@ -1,12 +1,14 @@
 from math import ceil, log10
 
 from lcatools.flowdb.create_synonyms import load_synonyms, SYNONYMS
-from lcatools.flowdb.synlist import InconsistentIndices, cas_regex
+from lcatools.flowdb.synlist import cas_regex
 from lcatools.flowdb.compartments import load_compartments, traverse_compartments, Compartment, COMPARTMENTS
-from lcatools.catalog import CFRef, CatalogRef
+from lcatools.catalog import CFRef, CatalogRef, get_entity_uuid
 from lcatools.interfaces import uuid_regex
+from lcatools.foreground.dynamic_grid import dynamic_grid
 
 from collections import defaultdict, namedtuple
+
 
 class MissingFlow(Exception):
     pass
@@ -166,35 +168,20 @@ class FlowDB(object):
 
         return results
 
-    def factors_for_quantity(self, quantity):
-        """
-        Finally, my text mode chart expertise pays off!
-        :param quantity:
-        :return:
-        """
-        if isinstance(quantity, str):
-            q = quantity
-        else:
-            q = quantity.get_uuid()
-        f_set = sorted(self._q_dict[q], key=lambda x: self.flowables._name[x])
-        c_set = set()
-        for i in f_set:
-            for k in self._f_dict[(i, q)].compartments():
-                if isinstance(k, Compartment):
-                    c_set.add(k)
-        c_list = sorted(c_set, key=lambda x: x.name)
-        print('%s' % self._q_id[q])
+    '''
+    def _compartment_grid(self, q_id, f_list, c_list):
+        print('%s' % self._q_id[q_id])
         h_str = 'CAS Number  '
         for i in range(len(c_list)):
             h_str += '|%-8.8s' % ('  C%d' % i)
         h_str += '  Flowable'
         print('%s' % h_str)
         print('-' * len(h_str))
-        for i in f_set:
+        for i in f_list:
             f_str = '%11s  ' % self.flowables.cas(i)
             for k in range(len(c_list)):
                 try:
-                    cfs = self._f_dict[(i, q)][c_list[k]]
+                    cfs = self._f_dict[(i, q_id)][c_list[k]]
                     if len(cfs) > 1:
                         f_str += '%-8s ' % ('*' * len(cfs))
                     else:
@@ -206,6 +193,41 @@ class FlowDB(object):
         print('\nCompartments:')
         for i in range(len(c_list)):
             print('C%d: %s' % (i, c_list[i]))
+    '''
+
+    def compartments_for(self, flowables, quantity):
+        """
+
+        :param flowables: an iterable of flowables
+        :param quantity: a quantity to inspect
+        :return: a sorted list of compartments (sorted by compartment.to_list()
+        """
+        q = get_entity_uuid(quantity)
+
+        cmps = set()
+        for i in flowables:
+            for k in self._f_dict[(i, q)].compartments():
+                if isinstance(k, Compartment):
+                    cmps.add(k)
+        return sorted(cmps, key=lambda x: x.to_list())
+
+    def factors_for_quantity(self, quantity):
+        """
+        Finally, my text mode chart expertise pays off!
+        :param quantity:
+        :return:
+        """
+        q = get_entity_uuid(quantity)
+
+        rows = sorted(self._q_dict[q], key=lambda x: self.flowables.name(x))
+        cols = self.compartments_for(rows, quantity)
+
+        print('%s' % quantity)
+        print('Characterization Factors\n ')
+        dynamic_grid(cols, rows, lambda x, y: self._f_dict[(x, q)][y],
+                     ('CAS Number ', lambda x: self.flowables.cas(x)),
+                     ('Flowable', lambda x: self.flowables.name(x)),
+                     returns_sets=True)
 
     def all_cfs(self, flowable, quantity=None):
         """
@@ -214,6 +236,7 @@ class FlowDB(object):
         :param quantity:
         :return:
         """
+        pass
 
     def _add_cf(self, flowables, comp, cf):
         """

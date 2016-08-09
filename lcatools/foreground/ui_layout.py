@@ -16,18 +16,26 @@ inspections = {
         'elementary exchanges': lambda x: x.elementary,
         'foreground lcia': lambda x: x.lcia,
         'lcia detailed results': lambda x: x.q_lcia,
-        'background lcia': []  # lambda x: x.bg_lcia,
+        'background lcia': [],  # lambda x: x.bg_lcia,
         'select exchange to follow': lambda x: x.select_exchange
     },
     'quantity': {
         'flowables': lambda x: x.flowables,
-        'factors': lambda x: x.factors
+        'by compartment': lambda x: x.factors,
+        'all factors': lambda x: x.all_factors
+    }
+}
+
+comparisons = {
+    'flow': {
+
     }
 }
 
 choices = {
     # 33 handlers at first count for v0.1 - what, 20 minutes each? 2016-08-04 22:30
     # 13 written (plus a lot of background work), 25 to go... 2016-08-05 13:42
+    # 26 written; 13 or so to go ... 2016-08-08 12:39
     'Catalog': {
         'show catalog': lambda x: x._show,
         'add archive': lambda x: x.add_archive,
@@ -42,8 +50,8 @@ choices = {
         'selection': {
             'add to foreground': lambda x: x.add_selection,
             'inspect': lambda x: x.inspect,
-            'compare': [],
-            'unselect': [],
+            'compare': lambda x: x.compare,
+            'unselect': []
         },
     },
     'FlowDB': {

@@ -1,6 +1,7 @@
 from __future__ import print_function, unicode_literals
 
 import uuid
+import re
 from itertools import chain
 
 from lcatools.exchanges import Exchange, ExchangeValue, AllocatedExchange, DuplicateExchangeError
@@ -9,6 +10,11 @@ from lcatools.characterizations import Characterization
 
 def concatenate(*lists):
     return chain(*lists)
+
+
+def trim_cas(cas):
+    return re.sub('^(0*)', '', cas)
+
 
 entity_types = ('process', 'flow', 'quantity')
 
@@ -452,6 +458,12 @@ class LcFlow(LcEntity):
 
     def set_local_unit(self, factor):
         self._ref_quantity_factor = factor
+
+    def match(self, other):
+        return (self.get_uuid() == other.get_uuid() or
+                self['Name'].lower() == other['Name'].lower() or
+                (trim_cas(self['CasNumber']) == trim_cas(other['CasNumber']) and len(self['CasNumber']) > 4) or
+                self.get_external_ref() == other.get_external_ref())
 
     def __str__(self):
         cas = self._d['CasNumber']

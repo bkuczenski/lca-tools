@@ -2,10 +2,10 @@ import re
 from time import sleep
 
 from lcatools.foreground.manager import ForegroundManager, NoLoadedArchives
-from lcatools.foreground.ui_layout import choices, inspections
+from lcatools.foreground.ui_layout import choices, inspections, comparisons
 from lcatools.catalog import ExchangeRef, CFRef
 from lcatools.interact import menu_list, pick_list, ifinput, cyoa, get_kv_pair, get_kv_pairs, \
-    pick_one, flows_by_compartment, group, pick_compartment
+    pick_one, flows_by_compartment, group, pick_compartment, pick_by_etype
 
 
 dataSourceTypes = ('JSON', 'IlcdArchive', 'IlcdLcia',
@@ -344,10 +344,14 @@ class ForegroundInterface(ForegroundManager):
         sel = pick_list(self.selected)
         sel.show()
         while True:
+            print('** Select Inspection **')
             uchoice = menu_list(*[k for k, v in inspections[sel.entity_type].items() if v != []], go_up=True)
-            if uchoice == -1:
+            if uchoice == -1 or uchoice is None:
                 return True
             inspections[sel.entity_type][uchoice](self)(sel)
+
+    def compare(self):
+        sel = pick_by_etype(self.selected) or self.selected
 
     def lcia(self, p_ref):
         self.compare_lcia_results([p_ref])

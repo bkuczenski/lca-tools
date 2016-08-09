@@ -83,6 +83,7 @@ class EcoinventSpreadsheet(NsUuidArchive):
                 for ds in self.fg.list_datasets(process.get_uuid()):
                     self.fg.retrieve_or_fetch_entity(ds)
                 p = self.fg[process.get_uuid()]
+                print('This process has multiple allocations. Select reference flow:')
                 ref = pick_reference(p)
                 if ref is None:
                     return p.exchanges()

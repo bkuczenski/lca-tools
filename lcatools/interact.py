@@ -304,7 +304,9 @@ def pick_one(entities):
     picker = {
         "process": filter_processes,
         "flow": filter_flows,
-        "quantity": filter_quantities
+        "quantity": filter_quantities,
+        "exchange": pick_list,
+        "characterization": pick_list
     }[entities[0].entity_type]
     return picker(entities)
 

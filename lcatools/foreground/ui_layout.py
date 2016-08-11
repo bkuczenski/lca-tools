@@ -20,9 +20,9 @@ inspections = {
         'select exchange to follow': lambda x: x.select_exchange
     },
     'quantity': {
-        'flowables': lambda x: x.flowables,
+        'flowables': [],  #lambda x: x.flowables,
         'by compartment': lambda x: x.factors,
-        'all factors': lambda x: x.all_factors
+        'all factors': []  #lambda x: x.all_factors
     }
 }
 
@@ -67,6 +67,7 @@ choices = {
         }
     },
     'Foreground': {
+        'view foreground entities': lambda x: x.view_foreground,
         'work on foreground': lambda x: x.specify_foreground,
         'add selection to foreground': lambda x: x.add_selection,
         'create flow': [],

@@ -147,6 +147,8 @@ class ForegroundInterface(ForegroundManager):
         pointer = self._menu_position.pop(-1)
 
         while True:
+            print('\n\n%s' % ('#' * 120))
+
             self._catalog.show_loaded()
             if self._current_archive is None:
                 print('\nSearching all loaded archives')
@@ -235,7 +237,7 @@ class ForegroundInterface(ForegroundManager):
 
     def add_selection(self):
         self._menu_position.pop()
-        
+
         if not self._catalog.is_loaded(0):
             return 'Foreground is not loaded.'
         for i in self.selected:
@@ -277,10 +279,6 @@ class ForegroundInterface(ForegroundManager):
             elif i.lower() == 'a':
                 self.selected = self.selected.union(result_set)
                 return True
-            elif int(i) < len(result_set):
-                pick = result_set[int(i)]
-                self.selected.add(pick)
-                result_set.remove(pick)
             elif i.lower() == 'n':
                 result_set = self._narrow_search(result_set)
             elif i.lower() == 'b':
@@ -288,11 +286,19 @@ class ForegroundInterface(ForegroundManager):
                 e = self._prompt_add(pick)
                 if e in result_set:
                     result_set.remove(e)
-            else:  # 'b' ad 's' are the same- browse and pick
+            elif i.lower() == 'b' or i.lower() == 's':  # 'b' ad 's' are the same- browse and pick
                 pick = pick_one(result_set)
                 if pick is not None:
                     self.selected.add(pick)
                     result_set.remove(pick)
+            else:
+                try:
+                    if int(i) < len(result_set):
+                        pick = result_set[int(i)]
+                        self.selected.add(pick)
+                        result_set.remove(pick)
+                except ValueError:
+                    pass
 
     def isearch(self, etype):
         self._menu_position = [choices, choices['Catalog']]

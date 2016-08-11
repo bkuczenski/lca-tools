@@ -6,6 +6,7 @@ from lcatools.flowdb.compartments import load_compartments, traverse_compartment
 from lcatools.catalog import CFRef, CatalogRef, get_entity_uuid
 from lcatools.interfaces import uuid_regex
 from lcatools.foreground.dynamic_grid import dynamic_grid
+from lcatools.interact import pick_one
 
 from collections import defaultdict, namedtuple
 
@@ -288,10 +289,40 @@ class FlowDB(object):
 
         return cfs
 
-    def lookup_single_cf(self, flow, quantity):
+    @staticmethod
+    def _reduce_cfs(flow, cfs, location='GLO'):
+        """
+        Take a list of CFs and try to find the best one--- failing all else, ask the user
+        :param flow:
+        :param cfs:
+        :param location:
+        :return:
+        """
+        if len(cfs) == 1:
+            return list(cfs)[0]
+        elif len(cfs) > 1:
+            cf1 = [cf for cf in cfs if cf.flow.match(flow)]
+            if len(cf1) == 1:
+                return cf1[0]
+            elif len(cf1) > 1:
+                cfs = cf1  # this reduces the list (presumably)
+
+        cf1 = [cf for cf in cfs if location in cf.locations()]
+        if len(cf1) == 1:
+            return cf1[0]
+        elif len(cf1) > 1:
+            cfs = cf1  # this reduces the list (presumably)
+
+        vals = [cf.characterization[location] for cf in cfs]
+        if len(set(vals)) > 1:
+            print('Multiple CFs found: %s' % vals)
+            print('Pick characterization to apply')
+            return pick_one(cfs)
+        print('All characterizations have the same value- picking first one')
+        return cfs[0]
+
+    def lookup_single_cf(self, flow, quantity, location='GLO'):
         cfs = self.lookup_cfs(flow, quantity)
         if len(cfs) == 0:
             return None
-        if len(cfs) > 1:
-            print('Multiple CFs found: %s' % [cf.characterization.value for cf in cfs])
-        return cfs.pop()  # choose one at random- obv an early simplification
+        return self._reduce_cfs(flow, cfs, location=location)

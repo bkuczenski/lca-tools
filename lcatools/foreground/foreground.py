@@ -1,9 +1,8 @@
 
 from lcatools.providers.base import LcArchive
-from lcatools.entities import LcFlow
+from lcatools.foreground.fragment_flows import LcFragment
 import json
 import os
-from collections import defaultdict
 
 
 class ForegroundError(Exception):
@@ -11,77 +10,6 @@ class ForegroundError(Exception):
 
 
 FG_TEMPLATE = os.path.join(os.path.dirname(__file__), 'data', 'foreground_template.json')
-
-
-class BgLciaCache(object):
-    def __init__(self):
-        self._ref_flow = None
-        self._exchange_ref = None
-
-    @property
-    def exchange(self):
-        return self._exchange_ref
-
-    @exchange.setter
-    def exchange(self, value):
-        if self._exchange_ref is not None:
-            raise ForegroundError('Exchange already set!')
-        else:
-            self._exchange_ref = value
-            self._ref_flow = value.exchange.flow
-
-    def bg_lookup(self, q, location=None):
-        if self._ref_flow.factor(q) is not None:
-            return self._ref_flow.factor(q)[location]
-        else:
-            if location is None:
-                location = self._exchange_ref.exchange.process['SpatialScope']
-            archive = self._exchange_ref.catalog[self._exchange_ref.index]
-            result = archive.bg_lookup(self._exchange_ref.exchange.process,
-                                       ref_flow = self._ref_flow,
-                                       quantities=[q],
-                                       location=location)
-            factor = result.factor(q)
-            if factor is not None:
-                self._ref_flow.add_characterization(q, value=factor[location], location=location)
-                return factor[location]
-            return None
-
-    def serialize(self):
-        return {
-            "source": self._exchange_ref.catalog.source(self._exchange_ref.index),
-            "process": self._exchange_ref.exchange.process.get_uuid(),
-            "flow": self._exchange_ref.exchange.flow.get_uuid(),
-            "direction": self._exchange_ref.exchange.direction
-        }
-
-
-class BgReference(object):
-    """
-    A BG Reference is a dict that translates geography to exchange.
-    The way it works is:
-     - a flow is specified as a background flow- so it's added to the foreground's _background dict.
-     - once identified as a background, the BgReference can be given different terminations for different
-       geographies.  The termination is created based on the incoming flow's geography.
-     - A termination is a CatalogRef and an exchange
-     - The BgReference computes LCIA scores by catalog lookup using the bg_lookup method. It can cache these if they
-       turn out to be slow.
-     - if the background flow instance's direction is opposite the stored ExchangeRef's direction, then the sign of
-       the LCIA result is inverted.
-    """
-    def __init__(self):
-        self._geog = defaultdict(BgLciaCache)
-
-    def add_bg_termination(self, location, exchange):
-        if location in self._geog.keys():
-            raise ForegroundError('Location already terminated for this background flow')
-        self._geog[location].exchange = exchange
-
-    def lookup_bg_lcia(self, location, q):
-        return self._geog[location].bg_lookup(q, location=location)
-
-    def serialize(self):
-        return {k: v.serialize() for k, v in self._geog.items()}
 
 
 class ForegroundArchive(LcArchive):
@@ -150,7 +78,6 @@ class ForegroundArchive(LcArchive):
         if ref is None:
             ref = folder
         self._folder = folder
-        self._background = defaultdict(BgReference)
         if upstream is not None:
             raise ForegroundError('Foreground archive not supposed to have an upstream')
         super(ForegroundArchive, self).__init__(ref, quiet=quiet, **kwargs)
@@ -166,44 +93,54 @@ class ForegroundArchive(LcArchive):
     def _fragment_file(self):
         return os.path.join(self._folder, 'fragments.json')
 
-    @property
-    def _background_file(self):
-        return os.path.join(self._folder, 'background.json')
-
     def add(self, entity):
         try:
             super(ForegroundArchive, self).add(entity)
         except KeyError:
             # merge incoming entity's properties with existing entity
             current = self._entities[self._key_to_id(entity.get_external_ref())]
-            print('Merging incoming entity with existing')
             current.merge(entity)
 
     def save(self):
         self.write_to_file(self._archive_file, gzip=False, exchanges=True, characterizations=True, values=True)
         self.save_fragments()
-        self.save_background()
 
     def save_fragments(self):
         with open(self._fragment_file, 'w') as fp:
             json.dump({'fragments': self.serialize_fragments()}, fp, indent=2)
 
-    def save_background(self):
-        with open(self._background_file, 'w') as fp:
-            json.dump({'background': self.serialize_background()}, fp, indent=2)
-
-    def create_fragment(self, flow, direction):
+    def create_fragment(self, flow, direction, name=None):
         """
         flow must present in self._entities.  This method is for creating new fragments- for appending
         fragment Flows (i.e. fragments with parent entries), use add_child_fragment_flow
         :param flow:
         :param direction:
+        :param name: the fragment name (defaults to flow name)
         :return:
         """
-        pass
+        f = LcFragment.new(name or flow['Name'], flow, direction)
+        self.add(f)
+        return f
+
+    def _fragments(self, show_all=False):
+        for f in self._entities_by_type('fragment'):
+            if (f.parent is None) or show_all:
+                yield f
+
+    def fragments(self, background=None, show_all=False):
+        if background is not None:
+            return [f for f in self._fragments(show_all=show_all) if f.is_background == background]
+        return [f for f in self._fragments(show_all=show_all)]
 
     def add_child_fragment_flow(self, ff, flow, direction):
-        pass
+        f = LcFragment.new(flow['Name'],flow, direction, parent=ff)
+        self.add(f)
+        return f
+
+    def add_child_ff_from_exchange(self, ff, exchange):
+        f = LcFragment.from_exchange(ff, exchange)
+        self.add(f)
+        return f
 
     def check_counter(self, entity_type=None):
         super(ForegroundArchive, self).check_counter(entity_type=entity_type)
@@ -216,9 +153,6 @@ class ForegroundArchive(LcArchive):
         :return:
         """
         return [f.serialize(**kwargs) for f in self._entities_by_type('fragment')]
-
-    def serialize_background(self):
-        return {"background": {k: v.serialize() for k, v in self._background.items()}}
 
     def fragment_from_json(self, j):
         pass

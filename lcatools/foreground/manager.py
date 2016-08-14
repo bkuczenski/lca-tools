@@ -1,11 +1,10 @@
-import os
 import json
+import os
 
-
-from lcatools.catalog import CatalogInterface, CatalogRef, CFRef
+from lcatools.foreground.foreground import ForegroundArchive
+from lcatools.catalog import CatalogInterface, CatalogRef
 from lcatools.flowdb.flowdb import FlowDB
-from lcatools.providers.foreground import ForegroundArchive
-from lcatools.foreground.lcia_results import LciaResult
+from lcatools.lcia_results import LciaResult
 
 MANIFEST = ('catalog.json', 'entities.json', 'fragments.json', 'flows.json')
 
@@ -76,6 +75,7 @@ class ForegroundManager(object):
         if self._catalog.is_loaded(0):
             print('Saving foreground')
             self._catalog[0].save()  # nothing else to save
+            self._catalog[0].save_background(self.serialize_background())
 
     def __getitem__(self, item):
         return self._catalog.__getitem__(item)
@@ -169,9 +169,7 @@ class ForegroundManager(object):
                     else:
                         x.flow.add_characterization(cf_ref.characterization)
                 fac = x.flow.factor(q)
-                if fac is not None:
-                    # TODO: make LCIA results a class (looking toward antelope)
-                    q_result.add_score(process_ref, x, fac)
+                q_result.add_score(process_ref, x, fac, process_ref['SpatialScope'])
             results[q.get_uuid()] = q_result
         return results
 
@@ -208,18 +206,32 @@ class ForegroundManager(object):
 
         :param p_ref:
         :param quantity:
+        :param show_all: [False] show all exchanges, or only characterized exchanges
         :return:
         """
         result = self.fg_lcia(p_ref, quantity=quantity)[quantity.get_uuid()]
         print('%s' % quantity)
         print('-' * 60)
         agg_lcia = result.LciaScores[p_ref.get_uuid()]
-        for x in sorted(agg_lcia.LciaDetails, key=lambda x: x.result):
+        for x in sorted(agg_lcia.LciaDetails, key=lambda t: t.result):
             if x.result != 0 or show_all:
                 print('%10.3g x %-10.3g = %-10.3g %s' % (x.exchange.value, x.factor.value, x.result, x.factor.flow))
         print('=' * 60)
         print('             Total score: %g [%s]' % (agg_lcia.cumulative_result,
                                                      quantity.reference_entity.unitstring()))
+
+    # fragment methods
+
+    def build_child_flows(self, fragment, scenario=None):
+        term = fragment.termination(scenario=scenario)
+        if fragment.is_background:
+            return None  # no child flows for background nodes
+        int_exch = [x for x in self._filter_exch(term.process_ref, elem=False)
+                    if not (x.flow == term.term_flow and x.direction == term.direction)]
+        for exch in int_exch:
+            self[0].add_child_ff_from_exchange(fragment, )
+
+
 
     @staticmethod
     def profile(flow):
@@ -233,7 +245,7 @@ class ForegroundManager(object):
         """
 
 
-
+'''
 class OldForegroundManager(object):
     """
     The foreground manager is the one-liner that you load to start building and editing LCI foreground models.
@@ -392,3 +404,4 @@ class OldForegroundManager(object):
             new_ref = self._add_entity(0, cat_ref.entity())
             self._flowdb.add_quantity(cat_ref)
             self._flowdb.add_ref(cat_ref, new_ref)
+'''

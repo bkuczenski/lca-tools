@@ -2,7 +2,9 @@ import re
 from time import sleep
 
 from lcatools.foreground.manager import ForegroundManager, NoLoadedArchives
+from lcatools.foreground.fragment_flows import LcFragment
 from lcatools.foreground.ui_layout import choices, inspections, comparisons
+from lcatools.entities import LcFlow
 from lcatools.catalog import ExchangeRef, CFRef
 from lcatools.interact import menu_list, pick_list, ifinput, cyoa, get_kv_pair, get_kv_pairs, \
     pick_one, flows_by_compartment, group, pick_compartment, pick_by_etype
@@ -94,6 +96,7 @@ class ForegroundInterface(ForegroundManager):
         self.selected = set()
         self._selected_flowable = None
         self._selected_compartment = None
+        self._selected_fragment = None
 
     def _show(self):
         self.show(loaded=False)
@@ -371,7 +374,7 @@ class ForegroundInterface(ForegroundManager):
     def select_exchange(self, p_ref):
         exch = self._filter_exch(p_ref, elem=False)
         g = pick_one(exch)
-        self.terminate(ExchangeRef(p_ref.index, g))
+        self.terminate(ExchangeRef(self._catalog, p_ref.index, g))
 
     def originate(self, exch_ref):
         z = self._catalog.originate(exch_ref, show=False)
@@ -434,3 +437,66 @@ class ForegroundInterface(ForegroundManager):
             return 'Nothing selected'
         self._selected_compartment = comp
         return '%s' % comp.to_list()
+
+    def view_foreground(self):
+        print('Foreground Entities \n\nProcesses:')
+        for i, p in enumerate(self._catalog[0].processes()):
+            print('%4d (%s) %s' % (i, self._catalog.name(0), p))
+        print('\nFlows:')
+        for i, f in enumerate(self._catalog[0].flows()):
+            print('%4d (%s) %s' % (i, self._catalog.name(0), f))
+        print('\nQuantities:')
+        for i, q in enumerate(self._catalog[0].quantities()):
+            print('%4d (%s) %s' % (i, self._catalog.name(0), q))
+
+    def view_background(self):
+        self[0].fragments(background=True, all=False)
+
+    def create_flow(self):
+        name = input('Enter flow name: ')
+        cas = ifinput('Enter CAS number (or none): ', '')
+        print('Choose reference quantity: ')
+        q = pick_one(self[0].quantities())
+        print('Choose compartment:')
+        comment = input('Enter comment: ')
+        c = pick_compartment(self._flowdb.compartments)
+        flow = LcFlow.new(name, q, CasNumber=cas, Compartment=c.to_list(), Comment=comment)
+        # flow.add_characterization(q, reference=True)
+        self[0].add(flow)
+        return flow
+
+    def edit_flow(self):
+        flow = pick_one(self[0].flows())
+        print('Select field to edit:')
+        field = menu_list(*flow.keys())
+        if field == -1 or field is None:
+            return True
+        new = ifinput('Enter new value for %s: ' % field, flow[field])
+        flow[field] = new
+
+    def list_fragments(self):
+        print('Fragments:')
+        for i, f in enumerate(self._catalog[0].fragments()):
+            print('%4d (%s) %s' % (i, self._catalog.name(0), f))
+
+    def create_fragment(self):
+        print('Create fragment.')
+        name = input('Name: ')
+        print('Select Reference flow:')
+        flow = pick_one(self[0].flows())
+        direction = menu_list('Input', 'Output')
+        self[0].create_fragment(name, flow, direction)
+
+    def add_child_fragment(self):
+        parent = self._selected_fragment
+        k = cyoa('use (N)ew or (E)xisting flow?', 'NE', 'N')
+        if k.lower() == 'e':
+            print('Select Reference flow:')
+            flow = pick_one(self[0].flows())
+            if flow is None:
+                print('Canceling child fragment')
+                return None
+        else:
+            flow = self.create_flow()
+        direction = menu_list('Input', 'Output')
+        self[0].add_child_fragment_flow(parent, flow, direction)

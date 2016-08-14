@@ -68,15 +68,16 @@ choices = {
     },
     'Foreground': {
         'view foreground entities': lambda x: x.view_foreground,
+        'view background entities': lambda x: x.view_background,
         'work on foreground': lambda x: x.specify_foreground,
         'add selection to foreground': lambda x: x.add_selection,
-        'create flow': [],
-        'edit flow': [],
-        'add background': [],
+        'create flow': lambda x: x.create_flow,
+        'edit flow': lambda x: x.edit_flow,
+        'add background': lambda x: x.add_background_flow,
     },
     'Fragments': {
-        'list fragments': [],
-        'create fragment': [],
+        'list fragments': lambda x: x.list_fragments,
+        'create fragment': lambda x: x.create_fragment,
         'edit fragment': [],
         'fragment flows': [],
         'fragment LCIA': []

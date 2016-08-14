@@ -92,15 +92,18 @@ class EcoinventSpreadsheet(NsUuidArchive):
                 p = self.fg.retrieve_or_fetch_entity('_'.join([process.get_uuid(), flow.get_uuid()]) + '.spold')
                 return p.allocated_exchanges(flow)
 
-    def bg_lookup(self, process, flow=None):
+    def bg_lookup(self, process, ref_flow=None, quantities=None, scenario=None, flowdb=None):
         if self.bg is None:
             raise AttributeError('No background')
         else:
-            if flow is None:
-                if isinstance(process, str):
-                    return self.bg.retrieve_lcia_scores(process)
-                return self.bg.list_datasets(process.get_uuid())
-            return self.bg.retrieve_lcia_scores('_'.join([process.get_uuid(), flow.get_uuid()]) + '.spold')
+            if ref_flow is None:
+                for ds in self.bg.list_datasets(process.get_uuid()):
+                    self.bg.retrieve_or_fetch_entity(ds)
+                p = self.bg[process.get_uuid()]
+                print('This process has multiple allocations. Select reference flow:')
+                ref_flow = pick_reference(p)
+            return self.bg.retrieve_lcia_scores('_'.join([process.get_uuid(), ref_flow.get_uuid()]) + '.spold',
+                                                quantities=quantities)
 
     def _create_quantity(self, unitstring):
         """

@@ -340,6 +340,7 @@ class EcospoldV2Archive(LcArchive):
 
         Only stores cfs for quantities that exist locally.
         :param filename:
+        :param quantities: list of quantity entities to look for (defaults to self.quantities())
         :return:
         """
         if quantities is None:

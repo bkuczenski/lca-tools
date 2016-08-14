@@ -4,7 +4,6 @@ Container for tools used to compute interesting things about / across archives
 
 from __future__ import print_function, unicode_literals
 
-from eight import *
 from eight import USING_PYTHON2
 
 import os
@@ -20,7 +19,7 @@ from lcatools.providers.ecospold2 import EcospoldV2Archive
 from lcatools.providers.ecoinvent_spreadsheet import EcoinventSpreadsheet
 from lcatools.providers.ecospold import EcospoldV1Archive
 from lcatools.providers.ecoinvent_lcia import EcoinventLcia
-from lcatools.providers.foreground import ForegroundArchive
+from lcatools.foreground.foreground import ForegroundArchive
 
 # from lcatools.db_catalog import from_json  # included for "from tools import *" by user
 

@@ -230,13 +230,35 @@ class LcArchive(ArchiveInterface):
     def lcia_methods(self):
         return [q for q in self._entities_by_type('quantity') if q.is_lcia_method()]
 
-    def fg_lookup(self, process):
+    def fg_lookup(self, process, ref_flow=None):
         """
         This is a template process that subclasses should override. By default, just returns the process's exchanges.
         :param process:
+        :param ref_flow: for
         :return:
         """
+        if ref_flow is not None:
+            return process.allocated_exchanges(reference=ref_flow)
         return process.exchanges()
+
+    def bg_lookup(self, process, reference=None, quantities=None, scenario=None, flowdb=None):
+        """
+        bg_lookup returns a flow representing the process's reference flow (must specify if the process is allocated)
+        containing characterizations for the LCIA quantities specified
+        :param process:
+        :param reference:
+        :param quantities:
+        :param scenario:
+        :param flowdb:
+        :return:
+        """
+        if quantities is None:
+            quantities = self.lcia_methods()
+        ref_flow = process.find_reference(reference)
+        for q in quantities:
+            result = process.lcia(q, ref_flow=ref_flow, scenario=scenario, flowdb=flowdb)
+            ref_flow.add_characterization(q, value=result.total, location=process['SpatialScope'])
+        return ref_flow
 
     def _quantities_with_unit(self, unitstring):
         """

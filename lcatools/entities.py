@@ -6,6 +6,7 @@ from itertools import chain
 
 from lcatools.exchanges import Exchange, ExchangeValue, AllocatedExchange, DuplicateExchangeError
 from lcatools.characterizations import Characterization
+from lcatools.lcia_results import LciaResult
 
 
 def concatenate(*lists):
@@ -50,6 +51,7 @@ class LcEntity(object):
 
         self.entity_type = entity_type
         self.reference_entity = None
+        self._scenarios = dict()
         self._origin = None
 
         self._d['Name'] = ''
@@ -191,6 +193,20 @@ class LcEntity(object):
         else:
             self._d[key] = value
 
+    def merge(self, other):
+        if self == other:
+            for k in other.keys():
+                if k not in self.keys():
+                    print('Merge: Adding key %s: %s' % (k, other[k]))
+                    self[k] = other[k]
+        else:
+            if self.entity_type != other.entity_type:
+                raise ValueError('Incoming entity type %s mismatch with %s' % (other.entity_type, self.entity_type))
+            if self.origin != other.origin:
+                raise ValueError('Incoming entity origin mismatch (TODO: prompt user for dominance)')
+            raise ValueError('Incoming External ref %s conflicts with existing %s' % (other.get_external_ref(),
+                                                                                      self.get_external_ref()))
+
     def keys(self):
         return self._d.keys()
 
@@ -250,6 +266,34 @@ class LcProcess(LcEntity):
     def __str__(self):
         return '%s [%s]' % (self._d['Name'], self._d['SpatialScope'])
 
+    def add_scenario(self, scenario, reference):
+        """
+        Here's how scenarios work:
+        a scenario acts equivalently to an alternative reference flow in an allocation exchange.
+        When a user wants to define a new scenario parameter- first the process needs to know it is parameterized
+        within that scenario- and what reference to use for un-parameterized exchanges. that's what add_scenario is for.
+        Then, the user can parameterize a specific exchange-> the exchange gets upgraded to an AllocatedExchange
+        if it is not already so, the scenario id is used as the reference flow, and the param value is installed
+        as the exchange value.
+        When a user makes an exchange query, they specify a reference flow (or no reference).  If the reference flow
+        shows up in the list of scenarios, then the internal exchange answering mechanism switches gears:
+         - if the scenario is a reference in the exchange, it uses that;
+         - otherwise it uses the reference pointed to by the process's scenarios dict (set here)
+
+        implication is that an allocated exchange should be earlier in inheritance than an exchange value- but the
+        current workaround is satisfactory for ff params and pf params excluding dissipation (dissipation
+        would inherit from exchangevalue). LCIA params (as
+        previously observed) should / could be new quantities- flow property params in general need a reworking
+         of the current [location] spec- which is the same as the param interface- but not today.
+
+         reference: fragment traversal- TODO
+        :param scenario:
+        :param reference:
+        :return:
+        """
+        if reference in self.reference_entity:
+            self._scenarios[scenario] = reference
+
     def _validate_reference(self, ref_set):
         for x in ref_set:
             if super(LcProcess, self)._validate_reference(x):
@@ -272,7 +316,7 @@ class LcProcess(LcEntity):
 
         self.reference_entity.add(ref_entity)
 
-    def find_reference(self, term, strict=False):
+    def find_reference_by_string(self, term, strict=False):
         """
         Select a reference based on a search term--- check against flow.  test get_uuid().startswith, or ['Name'].find()
         If multiple results found- if strict, return None; if strict=False, return first
@@ -303,14 +347,22 @@ class LcProcess(LcEntity):
         for i in it:
             print('%s' % i)
 
+    def exchange(self, flow):
+        if flow in self._scenarios:
+            return next(x for x in self._exchanges if x.flow.match(self._scenarios[flow]))
+        return next(x for x in self._exchanges if x.flow.match(flow))
+
     def exchanges(self):
         for i in sorted(self._exchanges, key=lambda x: x.direction):
             yield i
 
-    def allocated_exchanges(self, reference, strict=False):
-        # need to disambiguate the reference
-        if isinstance(reference, str):
-            x = self.find_reference(reference, strict=strict)
+    def find_reference(self, reference, strict=False):
+        if reference is None:
+            if len(self.reference_entity) > 1:
+                raise NoReferenceFound('Must specify reference!')
+            ref = list(self.reference_entity)[0].flow
+        elif isinstance(reference, str):
+            x = self.find_reference_by_string(reference, strict=strict)
             ref = x.flow
         elif isinstance(reference, LcFlow):
             ref = reference
@@ -318,10 +370,25 @@ class LcProcess(LcEntity):
             ref = reference.flow
         else:
             raise NoReferenceFound('Unintelligible reference %s' % reference)
+        return ref
 
-        for i in sorted(self._exchanges, key=lambda x: x.direction):
+    def allocated_exchanges(self, reference, strict=False):
+        # need to disambiguate the reference
+        in_scenario = False
+        if reference in self._scenarios.keys():
+            in_scenario = True
+            ref = self._scenarios[reference]
+        else:
+            ref = self.find_reference(reference, strict=strict)
+
+        for i in sorted(self._exchanges, key=lambda t: t.direction):
             if isinstance(i, AllocatedExchange):
-                yield ExchangeValue.from_allocated(i, ref.get_uuid())
+                if in_scenario:
+                    yield ExchangeValue.from_scenario(i, reference, ref)
+                else:
+                    yield ExchangeValue.from_allocated(i, ref.get_uuid())
+            else:
+                yield i
 
     def add_reference(self, flow, dirn):
         rx = Exchange(self, flow, dirn)
@@ -416,6 +483,20 @@ class LcProcess(LcEntity):
             self._exchanges.add(e)
             return e
 
+    def lcia(self, quantity, ref_flow=None, scenario=None, flowdb=None):
+        result = LciaResult(quantity, scenario)
+        result.add_entity(self)
+        for ex in self.allocated_exchanges(scenario or ref_flow):
+            if flowdb is None:
+                factor = ex.flow.factor(quantity)
+            else:
+                factor = flowdb.lookup_single_cf(ex.flow, quantity, self['SpatialScope'])
+            result.add_score(self, ex, factor, self['SpatialScope'])
+        return result
+
+    def merge(self, other):
+        raise NotImplemented('This should be done via fragment construction + aggregation')
+
     def serialize(self, exchanges=False, **kwargs):
         j = super(LcProcess, self).serialize()
         j.pop(self._ref_field)  # reference reported in exchanges
@@ -455,6 +536,10 @@ class LcFlow(LcEntity):
         for k in self._new_fields:
             if k not in self._d:
                 self._d[k] = ''
+
+        if self.reference_entity is not None:
+            if self.reference_entity.get_uuid() not in self._characterizations.keys():
+                self.add_characterization(self.reference_entity, reference=True, value=self._ref_quantity_factor)
 
     def set_local_unit(self, factor):
         self._ref_quantity_factor = factor
@@ -515,7 +600,7 @@ class LcFlow(LcEntity):
     def factor(self, quantity):
         if quantity.get_uuid() in self._characterizations:
             return self._characterizations[quantity.get_uuid()]
-        return None
+        return Characterization(self, quantity)
 
     def cf(self, quantity, location='GLO'):
         if quantity.get_uuid() in self._characterizations:
@@ -538,6 +623,13 @@ class LcFlow(LcEntity):
         out = self.cf(to or self.reference_entity, location=location)
         inn = self.cf(fr or self.reference_entity, location=location)
         return val * out / inn
+
+    def merge(self, other):
+        super(LcFlow, self).merge(other)
+        for k in other._characterizations.keys():
+            if k not in self._characterizations:
+                print('Merge: Adding characterization %s' % k)
+                self.add_characterization(other._characterizations[k])
 
     def serialize(self, characterizations=False, **kwargs):
         j = super(LcFlow, self).serialize()

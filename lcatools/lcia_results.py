@@ -17,9 +17,13 @@ class DetailedLciaResult(object):
     """
     Contains exchange, factor, result
     """
-    def __init__(self, exchange, factor):
+    def __init__(self, exchange, factor, location):
         self.exchange = exchange
         self.factor = factor
+        if location in factor.locations():
+            self.location = location
+        else:
+            self.location = 'GLO'
 
     @property
     def flow(self):
@@ -37,7 +41,7 @@ class DetailedLciaResult(object):
 
     @property
     def result(self):
-        return (self.exchange.value or 0.0) * (self.factor.value or 0.0)
+        return (self.exchange.value or 0.0) * (self.factor[self.location] or 0.0)
 
     def __hash__(self):
         return hash((self.exchange.flow.get_uuid(), self.factor.quantity.get_uuid()))
@@ -63,20 +67,21 @@ class AggregateLciaScore(object):
     def cumulative_result(self):
         return sum([i.result for i in self.LciaDetails])
 
-    def add_detailed_result(self, exchange, factor):
-        self.LciaDetails.add(DetailedLciaResult(exchange, factor))
+    def add_detailed_result(self, exchange, factor, location):
+        self.LciaDetails.add(DetailedLciaResult(exchange, factor, location))
 
 
 class LciaResult(object):
     """
-    An LCIA result object contains a collection of LCIA results for
+    An LCIA result object contains a collection of LCIA results for a related set of entities under a common scenario.
+    The exchanges and factors referenced in add_score should be stored post-scenario-lookup. (An LciaResult should be
+    static)
     """
     def __init__(self, quantity, scenario=None):
         self.quantity = quantity
         self.scenario = scenario
         self.LciaScores = dict()
 
-    @property
     def total(self):
         return sum([i.cumulative_result for i in self.LciaScores.values()])
 
@@ -84,9 +89,9 @@ class LciaResult(object):
         if entity.get_uuid() not in self.LciaScores.keys():
             self.LciaScores[entity.get_uuid()] = AggregateLciaScore(entity)
 
-    def add_score(self, entity, exchange, factor):
+    def add_score(self, entity, exchange, factor, location):
         self.add_entity(entity)
-        self.LciaScores[entity.get_uuid()].add_detailed_result(exchange, factor)
+        self.LciaScores[entity.get_uuid()].add_detailed_result(exchange, factor, location)
 
     def __add__(self, other):
         if self.quantity != other.quantity:

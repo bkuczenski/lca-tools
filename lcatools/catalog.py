@@ -9,6 +9,7 @@ from eight import *
 from collections import defaultdict, namedtuple
 
 from lcatools.interfaces import to_uuid
+from lcatools.exchanges import Exchange
 
 # from lcatools.characterizations import CharacterizationSet  # , Characterization
 # from lcatools.logical_flows import LogicalFlow, ExchangeRef
@@ -18,11 +19,14 @@ from lcatools.interfaces import to_uuid
 from lcatools.tools import split_nick, archive_from_json, archive_factory
 
 
-ExchangeRef = namedtuple('ExchangeRef', ('index', 'exchange'))
-CFRef = namedtuple('CFRef', ('index', 'characterization'))
+ExchangeRef = namedtuple('ExchangeRef', ('catalog', 'index', 'exchange'))
+CFRef = namedtuple('CFRef', ('catalog', 'index', 'characterization'))
 ArchiveRef = namedtuple('ArchiveRef', ['source', 'nicknames', 'dataSourceType', 'parameters'])
 
 DEFAULT_CATALOG = os.path.join(os.path.dirname(__file__), 'default_catalog.json')
+
+class CatalogError(Exception):
+    pass
 
 
 def get_entity_uuid(item):
@@ -230,6 +234,14 @@ class CatalogInterface(object):
     def ref(self, index, item):
         return CatalogRef(self, index, item)
 
+    def exch_ref(self, source, process, flow, direction):
+        index = self.index_for_source(source)
+        if not self._loaded[index]:
+            self.load(index)
+        p = self[index].retrieve_or_fetch_entity(process)
+        f = self[index].retrieve_or_fetch_entity(flow)
+        return ExchangeRef(self, index[0], Exchange(p, f, direction))
+
     def get_index(self, item):
         if isinstance(item, int):
             return item
@@ -341,6 +353,15 @@ class CatalogInterface(object):
                 print('X [%2d] %-*s: %s' % (i, l, self._shortest[i], a or self._archive_refs[i].source))
         return num_loaded
 
+    def source_for_index(self, index):
+        return self._archive_refs[index].source
+
+    def index_for_source(self, source):
+        index = [i for k, i in self._sources.items() if k == source]
+        if len(index) != 1:
+            raise CatalogError('%d sources found for %s!' % (len(index), source))
+        return index[0]
+
     def save_default(self):
         with open(DEFAULT_CATALOG, 'w') as fp:
             json.dump(self.serialize(), fp, indent=2)
@@ -432,9 +453,9 @@ class CatalogInterface(object):
         for p in self[index].processes():
             for i in (x for x in p.exchanges() if x.flow.match(flow) and x.direction == dirn):
                 if i.process.get_uuid() == termination:
-                    z[:0] = ExchangeRef(index, i)
+                    z[:0] = ExchangeRef(self, index, i)
                 else:
-                    z.append(ExchangeRef(index, i))
+                    z.append(ExchangeRef(self, index, i))
         if show:
             self._show(z)
         return z

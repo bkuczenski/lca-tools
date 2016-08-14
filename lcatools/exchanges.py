@@ -1,6 +1,16 @@
 directions = ('Input', 'Output')
 
 
+def comp_dir(direction):
+    if direction in directions:
+        return next(k for k in directions if k != direction)
+    raise InvalidDirection('%s' % direction)
+
+
+class InvalidDirection(Exception):
+    pass
+
+
 class DirectionlessExchangeError(Exception):
     pass
 
@@ -63,9 +73,7 @@ class Exchange(object):
 
     @property
     def comp_dir(self):
-        if self.direction == 'Input':
-            return 'Output'
-        return 'Input'
+        return comp_dir(self.direction)
 
     @property
     def tflow(self):
@@ -118,6 +126,15 @@ class ExchangeValue(Exchange):
         return cls(allocated.process, allocated.flow, allocated.direction, value=allocated[reference],
                    termination=allocated.termination)
 
+    @classmethod
+    def from_scenario(cls, allocated, scenario, fallback):
+        try:
+            value = allocated[scenario]
+        except KeyError:
+            value = allocated[fallback]
+        return cls(allocated.process, allocated.flow, allocated.direction, value=value,
+                   termination=allocated.termination)
+
     def add_to_value(self, value):
         self.value += value
 
@@ -150,6 +167,16 @@ class DissipationExchange(ExchangeValue):
 
     Composition / Dissipation probably conflicts with Allocation, i.e. it is not supported to add a dissipation
     factor to an AllocatedExchange.
+
+    This is a problem because the allocated exchange is also the secret sauce being used to implement processflow
+    parameters- and would presumably be the same mechanism to implement dissipation parameters.
+
+    best solution would be to fold reference spec higher up in inheritance- also need an ironclad way to determine
+     the input flow (or to not support dissipation for processes with more than one reference flow)
+    and simply make flow_quantity not None be the key to interpret the exchange value as a dissipation rate.
+    except that I don't want to squash the non-dissipation exchange value.
+
+    Maybe I should not be worrying about this right now.
 
     """
     def __init__(self, *args, flow_quantity=None, scale=1.0, dissipation=1.0, value=None, **kwargs):

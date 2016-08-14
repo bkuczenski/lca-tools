@@ -41,7 +41,9 @@ class Characterization(object):
         self._locations['GLO'] = val
 
     def __getitem__(self, item):
-        return self._locations[item]
+        if item in self._locations.keys():
+            return self._locations[item]
+        return self._locations['GLO']  # today is not the day to write a location best-match finder
 
     def __setitem__(self, key, value):
         if key in self._locations:

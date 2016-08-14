@@ -275,7 +275,7 @@ class FlowDB(object):
                 missing_flows.append(f)
                 continue
             for cf in f.characterizations():
-                self._add_cf(flowables, comp, CFRef(idx, cf))
+                self._add_cf(flowables, comp, CFRef(self._catalog, idx, cf))
 
         return missing_flows
 

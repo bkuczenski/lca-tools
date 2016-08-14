@@ -1,6 +1,7 @@
-from lcatools.catalog import CFRef, ExchangeRef  # , CatalogRef
-from lcatools.foreground.lcia_results import LciaResult
 from collections import defaultdict
+
+from lcatools.catalog import CFRef, ExchangeRef  # , CatalogRef
+from lcatools.lcia_results import LciaResult
 
 
 def _result_to_str(result, width=8):

@@ -482,10 +482,19 @@ class ForegroundInterface(ForegroundManager):
     def create_fragment(self):
         print('Create fragment.')
         name = input('Name: ')
-        print('Select Reference flow:')
-        flow = pick_one(self[0].flows())
+        k = cyoa('Reference flow: Use (F)oreground flow or (S)earch for flow?', 'FS', 'F')
+        if k.lower() == 'f':
+            print('Select Reference flow:')
+            flow = pick_one(self[0].flows())
+        else:
+            self.isearch('flow')()
+            flow = pick_one([f for f in self.selected if f.entity_type == 'flow'])
+            self.add_to_foreground(flow)
+            flow = flow.entity()
+        print('Direction w.r.t. upstream:')
         direction = menu_list('Input', 'Output')
-        self[0].create_fragment(name, flow, direction)
+        print('interface\nname: %s\nflow: %s\ndirn: %s' % (name, flow, direction))
+        self[0].create_fragment(flow, direction, name=name)
 
     def add_child_fragment(self):
         parent = self._selected_fragment
@@ -494,7 +503,7 @@ class ForegroundInterface(ForegroundManager):
             print('Select Reference flow:')
             flow = pick_one(self[0].flows())
             if flow is None:
-                print('Canceling child fragment')
+                print('Canceling child fragment flow')
                 return None
         else:
             flow = self.create_flow()

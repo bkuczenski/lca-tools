@@ -6,8 +6,7 @@
 import uuid
 
 from lcatools.entities import LcEntity
-from lcatools.exchanges import comp_dir, Exchange
-from lcatools.catalog import CatalogRef, ExchangeRef
+from lcatools.exchanges import comp_dir
 from lcatools.literate_float import LiterateFloat
 
 
@@ -136,11 +135,13 @@ class LcFragment(LcEntity):
     @classmethod
     def new(cls, name, *args, **kwargs):
         """
-        :param name: the name of the process
+        :param name: the name of the fragment
         :param args: need flow and direction
         :param kwargs: parent, exchange_value, private, balance_flow, background, termination
         :return:
         """
+        print('LcFragment - Name: %s:' % name)
+
         return cls(uuid.uuid4(), *args, Name=name, **kwargs)
 
     @classmethod
@@ -166,22 +167,21 @@ class LcFragment(LcEntity):
 
     @classmethod
     def from_exchange(cls, parent, exchange):
+        frag = cls(uuid.uuid4(), exchange.flow, exchange.direction, parent=parent, exchange_value=exchange.value,
+                   Name=exchange.flow['Name'])
+
         if exchange.termination is not None:
             parent_term = parent.termination(None)
             term = parent_term.process_ref.catalog.ref(parent_term.process_ref.index, exchange.termination)
             term_flow = exchange.flow
-        else:
-            term = None
-            term_flow = None
-        return cls(uuid.uuid4(), exchange.flow, exchange.direction, parent=parent, exchange_value=exchange.value,
-                   Name=exchange.flow['Name'], termination=term, term_flow=term_flow)
+            frag.terminate(term, flow=term_flow)
+        return frag
 
     def __init__(self, the_uuid, flow, direction, parent=None,
                  exchange_value=None,
                  private=False,
                  balance_flow=False,
                  background=False,
-                 termination=None, term_flow=None, term_direction=None,
                  **kwargs):
         """
         Required params:
@@ -193,7 +193,6 @@ class LcFragment(LcEntity):
         :param private: forces aggregation of subfragments
         :param balance_flow: if true, exch val is always ignored and calculated based on parent
         :param background: if true, fragment only returns LCIA results. implies parent=None; cannot be traversed
-        :param termination: default termination for the fragment
         :param kwargs:
         """
 
@@ -217,8 +216,6 @@ class LcFragment(LcEntity):
         self._cached_unit_scores = dict()  # of quantities
 
         self._terminations = dict()
-        if termination is not None:
-            self.terminate(termination, flow=term_flow, direction=term_direction)
 
         if 'Flow' not in self._d:
             self._d['Flow'] = flow['Name']
@@ -233,9 +230,8 @@ class LcFragment(LcEntity):
 
     def serialize(self):
         j = super(LcFragment, self).serialize()
+
         j.update({
-            'eXtityId': self.get_uuid(),
-            'pXrent': self._parent.get_uuid(),
             'flow': self.flow.get_uuid(),
             'direction': self.direction,
             'isPrivate': self._private,
@@ -328,10 +324,10 @@ class LcFragment(LcEntity):
     def unset_conserved_quantity(self):
         self._conserved_quantity = None
 
-    def terminate(self, ref, scenario=None, flow=None, direction=None):
+    def terminate(self, process_ref, scenario=None, flow=None, direction=None):
         """
         specify a termination.  background=True: if the flow has a parent, will create a new
-        :param ref: either a process ref or an exchange ref
+        :param process_ref: a process CatalogRef
         :param scenario:
         :param flow: if process_ref, specify term_flow (default fragment.flow)
         :param direction: if process_ref, specify term_direction (default comp_dir(fragment.direction))
@@ -339,10 +335,7 @@ class LcFragment(LcEntity):
         """
         if scenario in self._terminations:
             raise CacheAlreadySet('This scenario has already been specified')
-        if isinstance(ref, ExchangeRef):
-            self._terminations[scenario] = FlowTermination.from_exchange(self, ref)
-        elif isinstance(ref, CatalogRef):
-            self._terminations[scenario] = FlowTermination(self, ref, term_flow=flow, direction=direction)
+        self._terminations[scenario] = FlowTermination(self, process_ref, term_flow=flow, direction=direction)
 
     def term_from_json(self, catalog, scenario, j):
         self._terminations[scenario] = FlowTermination.from_json(catalog, self, j)

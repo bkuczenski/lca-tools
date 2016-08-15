@@ -17,7 +17,7 @@ def trim_cas(cas):
     return re.sub('^(0*)', '', cas)
 
 
-entity_types = ('process', 'flow', 'quantity')
+entity_types = ('process', 'flow', 'quantity', 'fragment')
 
 
 class OriginExists(Exception):

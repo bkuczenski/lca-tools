@@ -98,7 +98,7 @@ class ForegroundArchive(LcArchive):
             super(ForegroundArchive, self).add(entity)
         except KeyError:
             # merge incoming entity's properties with existing entity
-            current = self._entities[self._key_to_id(entity.get_external_ref())]
+            current = self[entity.get_uuid()]
             current.merge(entity)
 
     def save(self):
@@ -118,13 +118,15 @@ class ForegroundArchive(LcArchive):
         :param name: the fragment name (defaults to flow name)
         :return:
         """
-        f = LcFragment.new(name or flow['Name'], flow, direction)
+        if name is None:
+            name = flow['Name']
+        f = LcFragment.new(name, flow, direction)
         self.add(f)
         return f
 
     def _fragments(self, show_all=False):
         for f in self._entities_by_type('fragment'):
-            if (f.parent is None) or show_all:
+            if (f.reference_entity is None) or show_all:
                 yield f
 
     def fragments(self, background=None, show_all=False):

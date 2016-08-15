@@ -68,6 +68,9 @@ class ForegroundManager(object):
         else:
             self._catalog.show()
 
+    def show_all(self):
+        self.show(loaded=False)
+
     def load(self, item):
         self._catalog.load(item)
 
@@ -75,7 +78,6 @@ class ForegroundManager(object):
         if self._catalog.is_loaded(0):
             print('Saving foreground')
             self._catalog[0].save()  # nothing else to save
-            self._catalog[0].save_background(self.serialize_background())
 
     def __getitem__(self, item):
         return self._catalog.__getitem__(item)

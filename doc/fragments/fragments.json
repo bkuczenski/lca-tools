@@ -1,0 +1,33 @@
+{
+  "fragments": [
+    {
+      "direction": "Input",
+      "isBalanceFlow": false,
+      "Name": "USLCI - PET",
+      "entityType": "fragment",
+      "Flow": "Polyethylene terephthalate, resin, at plant",
+      "tags": {
+        "Direction": "Input",
+        "StageName": "",
+        "Comment": "",
+        "Name": "USLCI - PET",
+        "Flow": "Polyethylene terephthalate, resin, at plant"
+      },
+      "externalId": "572813aa-b8a3-4034-bff1-ff7e469d8726",
+      "origin": "fragments",
+      "isPrivate": false,
+      "entityId": "572813aa-b8a3-4034-bff1-ff7e469d8726",
+      "Direction": "Input",
+      "flow": "2a6b644c-519c-32e9-a7d8-521c3011df09",
+      "exchangeValues": {
+        "0": null,
+        "1": 1.0
+      },
+      "terminations": {},
+      "parent": "None",
+      "StageName": "",
+      "Comment": "",
+      "isBackground": false
+    }
+  ]
+}

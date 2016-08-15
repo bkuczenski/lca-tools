@@ -152,15 +152,18 @@ class LcFragment(LcEntity):
         else:
             parent = None
         frag = cls(j['entityId'], foreground[j['flow']], j['direction'], parent=parent,
-                   exchange_value=j['exchangeValues'].pop(0),
+                   exchange_value=j['exchangeValues'].pop('0'),
                    private=j['isPrivate'],
                    balance_flow=j['isBalanceFlow'],
                    background=j['isBackground'])
+        frag.observed_ev = j['exchangeValues'].pop('1')
         for i, v in j['exchangeValues'].items():
             frag.set_exchange_value(i, v)
-        frag.term_from_json(catalog, None, j['terminations'].pop('null'))
-        for i, t in j['terminations']:
-            frag.term_from_json(catalog, i, t)
+        for k, v in j['terminations'].items():
+            if k == 'null':
+                frag.term_from_json(catalog, None, v)
+            else:
+                frag.term_from_json(catalog, k, t)
         for tag, val in j['tags'].items():
             frag[tag] = val  # just a fragtag group of values
         return frag

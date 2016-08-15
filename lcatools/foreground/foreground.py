@@ -24,6 +24,8 @@ class ForegroundArchive(LcArchive):
     When a foreground is used in an antelope instance, only the contents of the foreground archive are exposed.
      This means that the foreground archive should include all flows that are used in fragment flows, and all
      processes that terminate fragment flows.
+
+    Note that the foreground constructor can't load fragments- catalog reference must be passed in
     """
     @classmethod
     def new(cls, directory, ref=None):
@@ -44,7 +46,6 @@ class ForegroundArchive(LcArchive):
     def load(cls, directory, ref=None, **kwargs):
         c = cls(directory, ref=ref, **kwargs)
         c._load_json_file(c._archive_file)
-        c._load_fragments()
         return c
 
     def _load_json_file(self, filename):
@@ -57,13 +58,6 @@ class ForegroundArchive(LcArchive):
             self.entity_from_json(q)
         for q in j['processes']:
             self.entity_from_json(q)
-
-    def _load_fragments(self):
-        with open(self._fragment_file, 'r') as fp:
-            j = json.load(fp)
-
-        for f in j['fragments']:
-            self.fragment_from_json(f)
 
     def __init__(self, folder, ref, upstream=None, quiet=False, **kwargs):
         """
@@ -107,7 +101,7 @@ class ForegroundArchive(LcArchive):
 
     def save_fragments(self):
         with open(self._fragment_file, 'w') as fp:
-            json.dump({'fragments': self.serialize_fragments()}, fp, indent=2)
+            json.dump({'fragments': self.serialize_fragments()}, fp, indent=2, sort_keys=True)
 
     def create_fragment(self, flow, direction, name=None):
         """
@@ -156,5 +150,11 @@ class ForegroundArchive(LcArchive):
         """
         return [f.serialize(**kwargs) for f in self._entities_by_type('fragment')]
 
-    def fragment_from_json(self, j):
-        pass
+    def load_fragments(self, catalog):
+        with open(self._fragment_file, 'r') as fp:
+            j = json.load(fp)
+
+        for f in j['fragments']:
+            frag = LcFragment.from_json(catalog, f)
+            self.add(frag)
+

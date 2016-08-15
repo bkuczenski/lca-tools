@@ -103,6 +103,8 @@ class ForegroundManager(object):
         self._catalog.set_foreground_dir(folder)
         self._catalog.load(0)
 
+        self[0].load_fragments(self._catalog)
+
     def add_to_foreground(self, ref):
         print('Add to foreground: %s' % ref)
         self._catalog[0].add(ref.entity())

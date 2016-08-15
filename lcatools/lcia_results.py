@@ -41,6 +41,8 @@ class DetailedLciaResult(object):
 
     @property
     def result(self):
+        if self.factor.is_null:
+            return 0.0
         return (self.exchange.value or 0.0) * (self.factor[self.location] or 0.0)
 
     def __hash__(self):

@@ -321,8 +321,8 @@ class FlowDB(object):
         print('All characterizations have the same value- picking first one')
         return cfs[0]
 
-    def lookup_single_cf(self, flow, quantity, location='GLO'):
-        cfs = self.lookup_cfs(flow, quantity)
+    def lookup_single_cf(self, flow, quantity, location='GLO', dist=1):
+        cfs = self.lookup_cfs(flow, quantity, dist=dist)
         if len(cfs) == 0:
             return None
         return self._reduce_cfs(flow, cfs, location=location)

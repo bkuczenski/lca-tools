@@ -9,7 +9,7 @@ from eight import *
 from collections import defaultdict, namedtuple
 
 from lcatools.interfaces import to_uuid
-from lcatools.exchanges import Exchange
+from lcatools.exchanges import Exchange, comp_dir
 
 # from lcatools.characterizations import CharacterizationSet  # , Characterization
 # from lcatools.logical_flows import LogicalFlow, ExchangeRef
@@ -234,13 +234,14 @@ class CatalogInterface(object):
     def ref(self, index, item):
         return CatalogRef(self, index, item)
 
-    def exch_ref(self, source, process, flow, direction):
-        index = self.index_for_source(source)
+    def exch_ref(self, index, process, flow, direction):
+        if index in self._sources.keys():
+            index = self.index_for_source(index)
         if not self._loaded[index]:
             self.load(index)
         p = self[index].retrieve_or_fetch_entity(process)
         f = self[index].retrieve_or_fetch_entity(flow)
-        return ExchangeRef(self, index[0], Exchange(p, f, direction))
+        return ExchangeRef(self, index, Exchange(p, f, direction))
 
     def get_index(self, item):
         if isinstance(item, int):
@@ -459,6 +460,9 @@ class CatalogInterface(object):
         if show:
             self._show(z)
         return z
+
+    def terminate_fragment(self, index, frag, show=False):
+        return self._check_exchanges(index, frag.flow, comp_dir(frag.direction), show=show)
 
     def terminate(self, exch_ref, show=False):
         """

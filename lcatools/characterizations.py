@@ -28,6 +28,10 @@ class Characterization(object):
             self.add_value(**kwargs)
 
     @property
+    def is_null(self):
+        return len(self._locations) == 0 
+
+    @property
     def value(self):
         if 'GLO' in self._locations:
             return self._locations['GLO']

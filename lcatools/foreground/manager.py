@@ -2,7 +2,7 @@ import json
 import os
 
 from lcatools.foreground.foreground import ForegroundArchive
-from lcatools.catalog import CatalogInterface, CatalogRef
+from lcatools.catalog import CatalogInterface, ExchangeRef
 from lcatools.flowdb.flowdb import FlowDB
 from lcatools.lcia_results import LciaResult
 
@@ -51,14 +51,17 @@ class ForegroundManager(object):
             print('Loading LCIA data... (%.2f s)' % (time.time() - t0))
             for c in cfs:
                 self._catalog.load(c)
-                print('Importing CFs... (%.2f s)' % (time.time() - t0))
-                self.unmatched_flows[c] = self._flowdb.import_cfs(c)
-                print('%d unmatched flows found from source %s... \n' %
-                      (len(self.unmatched_flows[c]), self._catalog.name(c)))
+                self.load_lcia_cfs(c)
+                print('finished %s... (%.2f s)' % (c, time.time() - t0))
 
         if fg_dir is not None:
             self.workon(fg_dir)
         print('finished... (%.2f s)' % (time.time() - t0))
+
+    def load_lcia_cfs(self, nick):
+        self.unmatched_flows[nick] = self._flowdb.import_cfs(nick)
+        print('%d unmatched flows found from source %s... \n' %
+              (len(self.unmatched_flows[nick]), self._catalog.name(nick)))
 
     def show(self, loaded=True):
         if loaded:
@@ -143,7 +146,7 @@ class ForegroundManager(object):
         for i in exch:
             print('%s' % i)
 
-    def fg_lcia(self, process_ref, quantity=None):
+    def fg_lcia(self, process_ref, quantity=None, dist=1):
         """
         :param process_ref:
         :param quantity: defaults to foreground lcia quantities
@@ -167,7 +170,7 @@ class ForegroundManager(object):
             q_result = LciaResult(q)
             for x in exch:
                 if not x.flow.has_characterization(q):
-                    cf_ref = self._flowdb.lookup_single_cf(x.flow, q)
+                    cf_ref = self._flowdb.lookup_single_cf(x.flow, q, dist=dist)
                     if cf_ref is None:
                         x.flow.add_characterization(q)
                     else:

@@ -52,7 +52,7 @@ class FlowTermination(object):
         process_ref = catalog.ref(index, j['entityId'])
         term_flow = j.pop('termFlow', None)
         direction = j.pop('direction', None)
-        descend = j.pop('descend', None) or False
+        descend = j.pop('descend', None) or True
         return cls(fragment, process_ref, direction=direction, term_flow=term_flow, descend=descend)
 
     @classmethod
@@ -82,7 +82,7 @@ class FlowTermination(object):
         ref_qty = self._parent.flow.reference_entity
         if self.term_flow.cf(ref_qty) == 0:
             raise FlowConversionError('Missing cf for %s' % ref_qty)
-        self._flow_conversion = self.term_flow.convert(fr=ref_qty)
+        self._flow_conversion = self.term_flow.convert(1.0, fr=ref_qty)
 
     @property
     def flow_conversion(self):
@@ -118,8 +118,8 @@ class FlowTermination(object):
             j['termFlow'] = self.term_flow.get_uuid()
         if self.direction != comp_dir(self._parent.direction):
             j['direction'] = self.direction
-        if self._descend:
-            j['descend'] = True
+        if self._descend is False:
+            j['descend'] = False
         # don't serialize score cache- could, of course
         return j
 
@@ -163,7 +163,7 @@ class LcFragment(LcEntity):
             if k == 'null':
                 frag.term_from_json(catalog, None, v)
             else:
-                frag.term_from_json(catalog, k, t)
+                frag.term_from_json(catalog, k, v)
         for tag, val in j['tags'].items():
             frag[tag] = val  # just a fragtag group of values
         return frag
@@ -339,6 +339,11 @@ class LcFragment(LcEntity):
         if scenario in self._terminations:
             raise CacheAlreadySet('This scenario has already been specified')
         self._terminations[scenario] = FlowTermination(self, process_ref, term_flow=flow, direction=direction)
+
+    def term_from_exch(self, exch_ref, scenario=None):
+        if scenario in self._terminations:
+            raise CacheAlreadySet('This scenario has already been specified')
+        self._terminations[scenario] = FlowTermination.from_exchange(self, exch_ref)
 
     def term_from_json(self, catalog, scenario, j):
         self._terminations[scenario] = FlowTermination.from_json(catalog, self, j)

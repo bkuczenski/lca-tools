@@ -27,7 +27,12 @@
         "Name": "USLCI - PET",
         "StageName": ""
       },
-      "terminations": {}
+      "terminations": {
+        "null": {
+          "entityId": "42550686-82c9-3e19-b47d-fadc0037f6a8",
+          "source": "/data/GitHub/lca-tools-datafiles/catalogs/uslci_ecospold.json.gz"
+        }
+      }
     }
   ]
 }

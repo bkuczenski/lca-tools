@@ -227,8 +227,8 @@ class LcArchive(ArchiveInterface):
             pass  # return self._to_pandas(q, LcQuantity)
         return q
 
-    def lcia_methods(self):
-        return [q for q in self._entities_by_type('quantity') if q.is_lcia_method()]
+    def lcia_methods(self, **kwargs):
+        return [q for q in self._entities_by_type('quantity', **kwargs) if q.is_lcia_method()]
 
     def fg_lookup(self, process, ref_flow=None):
         """

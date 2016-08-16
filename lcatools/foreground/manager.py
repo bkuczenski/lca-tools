@@ -13,6 +13,18 @@ class NoLoadedArchives(Exception):
     pass
 
 
+class AmbiguousTermination(Exception):
+    pass
+
+
+class NoTermination(Exception):
+    pass
+
+
+class BackgroundError(Exception):
+    pass
+
+
 class ForegroundManager(object):
     """
     This class is used for building LCA models based on catalog refs.
@@ -50,7 +62,6 @@ class ForegroundManager(object):
         if cfs is not None:
             print('Loading LCIA data... (%.2f s)' % (time.time() - t0))
             for c in cfs:
-                self._catalog.load(c)
                 self.load_lcia_cfs(c)
                 print('finished %s... (%.2f s)' % (c, time.time() - t0))
 
@@ -59,6 +70,8 @@ class ForegroundManager(object):
         print('finished... (%.2f s)' % (time.time() - t0))
 
     def load_lcia_cfs(self, nick):
+        if self._catalog[nick] is None:
+            self._catalog.load(nick)
         self.unmatched_flows[nick] = self._flowdb.import_cfs(nick)
         print('%d unmatched flows found from source %s... \n' %
               (len(self.unmatched_flows[nick]), self._catalog.name(nick)))
@@ -110,18 +123,35 @@ class ForegroundManager(object):
 
     def add_to_foreground(self, ref):
         print('Add to foreground: %s' % ref)
-        self._catalog[0].add(ref.entity())
-        if ref.entity_type == 'quantity':
-            # reset unit strings- units are such a hack
-            ref.entity().reference_entity._external_ref = ref.entity().reference_entity._unitstring
-        elif ref.entity_type == 'flow':
-            # need to import all the flow's quantities
-            for cf in ref.entity().characterizations():
-                self._catalog[0].add(cf.quantity)
-        elif ref.entity_type == 'process':
-            # need to import all the process's flows
-            for x in ref.entity().exchanges():
-                self._catalog[0].add(x.flow)
+        self._catalog[0].add_entity_and_children(ref.entity())
+
+    def find_flowable(self, string):
+        return self._flowdb.flowables.search(string)
+
+    def parse_flow(self, flow):
+        return self._flowdb._parse_flow(flow)
+
+    def cfs_for_flowable(self, string, **kwargs):
+        flowables = self.find_flowable(string)
+        if len(flowables) > 1:
+            for f in flowables:
+                print('%6d %s [%s]' % (len(self._flowdb.all_cfs(f, **kwargs)), self._flowdb.flowables.name(f),
+                                       self._flowdb.flowables.cas(f)))
+        elif len(flowables) == 1:
+            f = flowables.pop()
+            print('%s [%s]' % (self._flowdb.flowables.name(f), self._flowdb.flowables.cas(f)))
+            for cf in self._flowdb.all_cfs(f, **kwargs):
+                print('%s' % cf)
+
+    def cfs_for_flowable_grid(self, string, **kwargs):
+        flowables = self.find_flowable(string)
+        if len(flowables) > 1:
+            for f in flowables:
+                print('%6d %s [%s]' % (len(self._flowdb.all_cfs(f, **kwargs)), self._flowdb.flowables.name(f),
+                                       self._flowdb.flowables.cas(f)))
+        elif len(flowables) == 1:
+            f = flowables.pop()
+            self._flowdb.cfs_for_flowable(f, **kwargs)
 
     # inspection methods
     def _filter_exch(self, process_ref, elem=True):
@@ -150,6 +180,7 @@ class ForegroundManager(object):
         """
         :param process_ref:
         :param quantity: defaults to foreground lcia quantities
+        :param dist: [1] how far afield to search for cfs (see CLookup.find() from flowdb)
         :return:
         """
         if self._catalog.fg is None:
@@ -157,6 +188,8 @@ class ForegroundManager(object):
             return None
         if not self._catalog.is_loaded(0):
             self._catalog.load(0)
+        if not self._catalog.is_loaded(process_ref.index):
+            self._catalog.load(process_ref.index)
         exch = self._filter_exch(process_ref, elem=True)
         if quantity is None:
             qs = self._catalog[0].lcia_methods()
@@ -201,12 +234,15 @@ class ForegroundManager(object):
         for qid in qids:
             q_str = ''
             for i in range(n):
-                q_str += '%10.3g ' % results[i][qid].total
+                q_str += '%10.3g ' % results[i][qid].total()
             print('%s %s' % (q_str, self[0][qid]))
 
         print('\nProcess Ref%s:' % 's' * (len(p_refs) > 1))
         for i in range(n):
             print('P%d: %s' % (i, p_refs[i]))
+
+    def lcia(self, p_ref):
+        self.compare_lcia_results([p_ref])
 
     def show_detailed_lcia(self, p_ref, quantity, show_all=False):
         """
@@ -217,6 +253,8 @@ class ForegroundManager(object):
         :return:
         """
         result = self.fg_lcia(p_ref, quantity=quantity)[quantity.get_uuid()]
+        result.show_details(p_ref, show_all=show_all)
+        '''
         print('%s' % quantity)
         print('-' * 60)
         agg_lcia = result.LciaScores[p_ref.get_uuid()]
@@ -226,30 +264,62 @@ class ForegroundManager(object):
         print('=' * 60)
         print('             Total score: %g [%s]' % (agg_lcia.cumulative_result,
                                                      quantity.reference_entity.unitstring()))
+        '''
 
     # fragment methods
+
+    def auto_terminate(self, index, fragment, scenario=None):
+        term = self._catalog.terminate_fragment(index, fragment)
+        if len(term) > 1:
+            raise AmbiguousTermination('%d found' % len(term))
+        elif len(term) == 0:
+            raise NoTermination
+        term = term[0]
+        fragment.term_from_exch(term, scenario=scenario)
 
     def build_child_flows(self, fragment, scenario=None):
         term = fragment.termination(scenario=scenario)
         if fragment.is_background:
             return None  # no child flows for background nodes
-        int_exch = [x for x in self._filter_exch(term.process_ref, elem=False)
+        int_exch = [x for x in self._filter_exch(term.term_node, elem=False)
                     if not (x.flow == term.term_flow and x.direction == term.direction)]
         for exch in int_exch:
-            self[0].add_child_ff_from_exchange(fragment, )
+            child = self[0].add_child_ff_from_exchange(fragment, exch)
+            try:
+                self.auto_terminate(term.index, child, scenario=scenario)
+            except AmbiguousTermination:
+                print('child fragment - multiple terminations: %s' % child['Name'])
+            except NoTermination:
+                print('child fragment - no termination found: %s' % child['Name'])
 
+    def child_flows(self, fragment):
+        """
+        If the fragment has a background termination, yield that. Otherwise, yield child flows
+        :param fragment:
+        :return:
+        """
+        bg = [x for x in self[0].fragments(background=True, show_all=True) if x.flow == fragment.flow]
+        if len(bg) > 0:
+            if len(bg) > 1:
+                raise BackgroundError('Too many backgrounds found - implement geographic filter')
+            yield bg
+        else:
+            for x in self[0].fragments(show_all=True):
+                if fragment is x.reference_entity:
+                    yield x
 
+    def add_background(self, fragment):
+        """
+        Create a background from an existing fragment. if the fragment is terminated, transfer the termination
+        to the background.
+        :param fragment:
+        :return:
+        """
+        self[0].add_background_ff_from_fragment(fragment)
 
     @staticmethod
     def profile(flow):
         flow.profile()
-
-    def source(self, flow):
-        """
-        search current archives for processes that list the flow as an output
-        :param flow:
-        :return:
-        """
 
 
 '''

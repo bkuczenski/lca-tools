@@ -95,6 +95,22 @@ class ForegroundArchive(LcArchive):
             current = self[entity.get_uuid()]
             current.merge(entity)
 
+    def add_entity_and_children(self, entity):
+        self.add(entity)
+        if entity.entity_type == 'quantity':
+            # reset unit strings- units are such a hack
+            entity.reference_entity._external_ref = entity.reference_entity._unitstring
+        elif entity.entity_type == 'flow':
+            # need to import all the flow's quantities
+            for cf in entity.characterizations():
+                self.add_entity_and_children(cf.quantity)
+        elif entity.entity_type == 'process':
+            # need to import all the process's flows
+            for x in entity.exchanges():
+                self.add_entity_and_children(x.flow)
+        elif entity.entity_type == 'fragment':
+            self.add_entity_and_children(entity.flow)
+
     def save(self):
         self.write_to_file(self._archive_file, gzip=False, exchanges=True, characterizations=True, values=True)
         self.save_fragments()
@@ -103,19 +119,19 @@ class ForegroundArchive(LcArchive):
         with open(self._fragment_file, 'w') as fp:
             json.dump({'fragments': self.serialize_fragments()}, fp, indent=2, sort_keys=True)
 
-    def create_fragment(self, flow, direction, name=None):
+    def create_fragment(self, flow, direction, Name=None, **kwargs):
         """
         flow must present in self._entities.  This method is for creating new fragments- for appending
         fragment Flows (i.e. fragments with parent entries), use add_child_fragment_flow
         :param flow:
         :param direction:
-        :param name: the fragment name (defaults to flow name)
+        :param Name: the fragment name (defaults to flow name)
         :return:
         """
-        if name is None:
-            name = flow['Name']
-        f = LcFragment.new(name, flow, direction)
-        self.add(f)
+        if Name is None:
+            Name = flow['Name']
+        f = LcFragment.new(Name, flow, direction, exchange_value=1.0, **kwargs)
+        self.add_entity_and_children(f)
         return f
 
     def _fragments(self, show_all=False):
@@ -129,14 +145,21 @@ class ForegroundArchive(LcArchive):
         return [f for f in self._fragments(show_all=show_all)]
 
     def add_child_fragment_flow(self, ff, flow, direction):
-        f = LcFragment.new(flow['Name'],flow, direction, parent=ff)
-        self.add(f)
+        f = LcFragment.new(flow['Name'], flow, direction, parent=ff)
+        self.add_entity_and_children(f)
         return f
 
     def add_child_ff_from_exchange(self, ff, exchange):
         f = LcFragment.from_exchange(ff, exchange)
-        self.add(f)
+        self.add_entity_and_children(f)
         return f
+
+    def add_background_ff_from_fragment(self, fragment):
+        bg = self[0].create_fragment(fragment.flow, fragment.direction, background=True)
+        self[0].add(bg)
+        for k, v in fragment._terminations.keys():
+            v = fragment._terminations.pop(k)
+            bg.terminate(v.term_node, scenario=k, term_flow=v.term_flow, direction=v.direction)
 
     def check_counter(self, entity_type=None):
         super(ForegroundArchive, self).check_counter(entity_type=entity_type)
@@ -157,4 +180,7 @@ class ForegroundArchive(LcArchive):
         for f in j['fragments']:
             frag = LcFragment.from_json(catalog, f)
             self.add(frag)
+        for f in j['fragments']:
+            frag = self[f['entityId']]
+            frag.reference_entity = self[f['parent']]
 

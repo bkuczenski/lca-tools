@@ -150,8 +150,8 @@ class FlowDB(object):
         print('[%*d] %11s %.100s' % (width, i, self.flowables.cas(i),
                                      sorted(
                                          filter(lambda x: not bool(cas_regex.match(x)),
-                                         filter(lambda x: not bool(uuid_regex.match(x)),
-                                                self.flowables[i])))
+                                                filter(lambda x: not bool(uuid_regex.match(x)),
+                                                       self.flowables[i])))
                                      )
               )
 
@@ -230,14 +230,35 @@ class FlowDB(object):
                      ('Flowable', lambda x: self.flowables.name(x)),
                      returns_sets=True)
 
-    def all_cfs(self, flowable, quantity=None):
+    def cfs_for_flowable(self, flowable, **kwargs):
+
+        rows = [cf.characterization for cf in self.all_cfs(flowable, **kwargs)]
+        cols = [self._q_id[k] for k, v in self._q_dict.items() if flowable in v]
+
+        print('%s [%s]' % (self.flowables.name(flowable), self.flowables.cas(flowable)))
+        print('Characterization Factors\n ')
+
+        dynamic_grid(cols, rows, lambda x, y: x if y == x.quantity else None,
+                     ('Locations', lambda x: x.list_locations()),
+                     ('Compartment', lambda x: x.flow['Compartment']))
+
+    def all_cfs(self, flowable, category=None):
         """
-        generator - produces all characterizations matching the flowable, optionally filtering for a single quantity
+        generator - produces all characterizations matching the flowable, optionally filtering for a single category
         :param flowable:
-        :param quantity:
+        :param category:
         :return:
         """
-        pass
+        qs = [k for k, v in self._q_dict.items() if flowable in v]
+        for q in qs:
+            comps = self._f_dict[(flowable, q)]
+            if category is None:
+                for k in comps.compartments():
+                    for cf in comps[k]:
+                        yield cf
+            else:
+                for cf in comps[category]:
+                    yield cf
 
     def _add_cf(self, flowables, comp, cf):
         """

@@ -19,7 +19,7 @@ def show_res(res):
         print('[%2d] %s ' % (i, k))
 
 
-class ForegroundInterface(ForegroundManager):
+class ForegroundInterface(object):
     """
     This class stores all the user functions for handling the foreground, all wrapped up in a tidy menu.
 
@@ -89,7 +89,13 @@ class ForegroundInterface(ForegroundManager):
     """
 
     def __init__(self, *args, **kwargs):
-        super(ForegroundInterface, self).__init__(*args, **kwargs)
+
+        # encapsulate fg manager
+        self._m = ForegroundManager(*args, **kwargs)
+        # some common / useful shortcuts
+        self._catalog = self._m._catalog
+        self._flowdb = self._m._flowdb
+
         self._menu_position = [choices]
         self._current_archive = None
         self._result_set = []
@@ -99,12 +105,12 @@ class ForegroundInterface(ForegroundManager):
         self._selected_fragment = None
 
     def _show(self):
-        self.show(loaded=False)
+        self._m.show(loaded=False)
         return True
 
     def _choose_archive(self, loaded=True, allow_all=True):
         try:
-            self.show(loaded=loaded)
+            self._m.show(loaded=loaded)
         except NoLoadedArchives:
             return -1
 
@@ -198,7 +204,7 @@ class ForegroundInterface(ForegroundManager):
 
             pointer = self._menu_position.pop(-1)
 
-        self.save()
+        self._m.save()
         # now the fun part- writing the callables
         # callables should specify new menu position to return to
 
@@ -226,7 +232,7 @@ class ForegroundInterface(ForegroundManager):
     def set_current_archive(self):
         self._current_archive = self._choose_archive(loaded=False, allow_all=True)
         if not self._catalog.is_loaded(self._current_archive):
-            self.load(self._current_archive)
+            self._m.load(self._current_archive)
         return True
 
     def _prompt_add(self, entity):
@@ -244,7 +250,7 @@ class ForegroundInterface(ForegroundManager):
         if not self._catalog.is_loaded(0):
             return 'Foreground is not loaded.'
         for i in self.selected:
-            self.add_to_foreground(i)
+            self._m.add_to_foreground(i)
         self.selected.clear()
         return True
 
@@ -307,7 +313,7 @@ class ForegroundInterface(ForegroundManager):
         self._menu_position = [choices, choices['Catalog']]
 
         string = input('Search term (regex):')
-        return lambda: self._continue_search(self.search(self._current_archive, etype, Name=string, show=False))
+        return lambda: self._continue_search(self._m.search(self._current_archive, etype, Name=string, show=False))
 
     '''
     def isearch_p(self):
@@ -365,14 +371,14 @@ class ForegroundInterface(ForegroundManager):
         sel = pick_by_etype(self.selected) or self.selected
 
     def lcia(self, p_ref):
-        self.compare_lcia_results([p_ref])
+        self._m.lcia(p_ref)
 
     def q_lcia(self, p_ref):
-        q = pick_one(self[0].lcia_methods())
-        self.show_detailed_lcia(p_ref, quantity=q)
+        q = pick_one(self._catalog[0].lcia_methods())
+        self._m.show_detailed_lcia(p_ref, quantity=q)
 
     def select_exchange(self, p_ref):
-        exch = self._filter_exch(p_ref, elem=False)
+        exch = self._m._filter_exch(p_ref, elem=False)
         g = pick_one(exch)
         self.terminate(ExchangeRef(self._catalog, p_ref.index, g))
 
@@ -401,7 +407,7 @@ class ForegroundInterface(ForegroundManager):
 
     def specify_foreground(self):
         folder = ifinput('Choose foreground: ', self._catalog.fg)
-        self.workon(folder)
+        self._m.workon(folder)
         return True
 
     def search_flowables(self):
@@ -450,23 +456,23 @@ class ForegroundInterface(ForegroundManager):
             print('%4d (%s) %s' % (i, self._catalog.name(0), q))
 
     def view_background(self):
-        self[0].fragments(background=True, all=False)
+        self._catalog[0].fragments(background=True, all=False)
 
     def create_flow(self):
         name = input('Enter flow name: ')
         cas = ifinput('Enter CAS number (or none): ', '')
         print('Choose reference quantity: ')
-        q = pick_one(self[0].quantities())
+        q = pick_one(self._catalog[0].quantities())
         print('Choose compartment:')
         comment = input('Enter comment: ')
         c = pick_compartment(self._flowdb.compartments)
         flow = LcFlow.new(name, q, CasNumber=cas, Compartment=c.to_list(), Comment=comment)
         # flow.add_characterization(q, reference=True)
-        self[0].add(flow)
+        self._catalog[0].add(flow)
         return flow
 
     def edit_flow(self):
-        flow = pick_one(self[0].flows())
+        flow = pick_one(self._catalog[0].flows())
         print('Select field to edit:')
         field = menu_list(*flow.keys())
         if field == -1 or field is None:
@@ -485,27 +491,27 @@ class ForegroundInterface(ForegroundManager):
         k = cyoa('Reference flow: Use (F)oreground flow or (S)earch for flow?', 'FS', 'F')
         if k.lower() == 'f':
             print('Select Reference flow:')
-            flow = pick_one(self[0].flows())
+            flow = pick_one(self._catalog[0].flows())
         else:
             self.isearch('flow')()
             flow = pick_one([f for f in self.selected if f.entity_type == 'flow'])
-            self.add_to_foreground(flow)
+            self._m.add_to_foreground(flow)
             flow = flow.entity()
         print('Direction w.r.t. upstream:')
         direction = menu_list('Input', 'Output')
         print('interface\nname: %s\nflow: %s\ndirn: %s' % (name, flow, direction))
-        self[0].create_fragment(flow, direction, name=name)
+        self._catalog[0].create_fragment(flow, direction, name=name)
 
     def add_child_fragment(self):
         parent = self._selected_fragment
         k = cyoa('use (N)ew or (E)xisting flow?', 'NE', 'N')
         if k.lower() == 'e':
             print('Select Reference flow:')
-            flow = pick_one(self[0].flows())
+            flow = pick_one(self._catalog[0].flows())
             if flow is None:
                 print('Canceling child fragment flow')
                 return None
         else:
             flow = self.create_flow()
         direction = menu_list('Input', 'Output')
-        self[0].add_child_fragment_flow(parent, flow, direction)
+        self._catalog[0].add_child_fragment_flow(parent, flow, direction)

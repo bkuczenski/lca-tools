@@ -24,6 +24,18 @@ def _ensure_list(var):
 
 
 def traverse_compartments(compartment, clist):
+    """
+    This is necessary because of pop()
+    :param compartment:
+    :param clist:
+    :return:
+    """
+    my_clist = []
+    my_clist.extend(clist)
+    return _traverse_compartments(compartment, my_clist)
+
+
+def _traverse_compartments(compartment, clist):
     while len(clist) > 0 and clist[0] in compartment:
         clist.pop(0)
     while len(clist) > 0 and clist[0] is None:
@@ -35,7 +47,7 @@ def traverse_compartments(compartment, clist):
         return compartment
     else:
         for s in compartment.subcompartments():
-            n = traverse_compartments(s, clist)
+            n = _traverse_compartments(s, clist)
             if n is not None:
                 return n
         return None

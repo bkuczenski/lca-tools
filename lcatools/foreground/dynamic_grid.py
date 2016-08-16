@@ -1,6 +1,7 @@
 from collections import defaultdict
 
 from lcatools.catalog import CFRef, ExchangeRef  # , CatalogRef
+from lcatools.characterizations import Characterization
 from lcatools.lcia_results import LciaResult
 
 
@@ -9,6 +10,8 @@ def _result_to_str(result, width=8):
         return '%-*.*s ' % (width, width, '  --')
     elif isinstance(result, CFRef):
         res = result.characterization.value
+    elif isinstance(result, Characterization):
+        res = result.value
     elif isinstance(result, ExchangeRef):
         res = result.exchange.value
     elif isinstance(result, LciaResult):
@@ -60,14 +63,14 @@ def dynamic_grid(comparands, comparators, func, near_label, far_label, returns_s
                 for k in func(row, comparands[col]):
                     data_sets[col].add(k)
             else:
-                data_sets[col].add({func(row, col)})
+                data_sets[col].add(func(row, comparands[col]))
         max_len = max([len(k) for k in data_sets.values()])
         for col in range(n):
             if len(data_sets[col]) > 0:
                 f_str += _result_to_str(data_sets[col].pop(), width=width)
             else:
                 f_str += _result_to_str(None, width=width)
-        max_len -=1
+        max_len -= 1
 
         print('%s %s' % (f_str, far_label[1](row)))
 
@@ -79,7 +82,7 @@ def dynamic_grid(comparands, comparators, func, near_label, far_label, returns_s
                 else:
                     n_str += ' ' * (width + 1)
             print('%s ' % n_str)
-            max_len -=1
+            max_len -= 1
     print('%s' % h_str)
     print('\nColumns:')
     for i in range(n):

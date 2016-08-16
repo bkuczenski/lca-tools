@@ -3,6 +3,15 @@ This object replaces the LciaResult types spelled out in Antelope-- instead, it 
 
 """
 from lcatools.exchanges import DissipationExchange
+from lcatools.interfaces import to_uuid
+
+
+def get_entity_uuid(item):
+    if to_uuid(item) is not None:
+        return item
+    if hasattr(item, 'get_uuid'):
+        return item.get_uuid()
+    raise TypeError('Don\'t know how to get ID from %s' % type(item))
 
 
 class InconsistentQuantity(Exception):
@@ -11,6 +20,13 @@ class InconsistentQuantity(Exception):
 
 class InconsistentScenario(Exception):
     pass
+
+
+def number(val):
+    try:
+        return '%10.3g' % val
+    except TypeError:
+        return '%10.10s' % '----'
 
 
 class DetailedLciaResult(object):
@@ -55,6 +71,10 @@ class DetailedLciaResult(object):
                 self.factor.quantity.get_uuid() == other.factor.quantity.get_uuid() and
                 self.result == other.result)
 
+    def __str__(self):
+        return '%s x %-s = %-s %s' % (number(self.exchange.value), number(self.factor.value), number(self.result),
+                                      self.factor.flow)
+
 
 class AggregateLciaScore(object):
     """
@@ -72,6 +92,16 @@ class AggregateLciaScore(object):
     def add_detailed_result(self, exchange, factor, location):
         self.LciaDetails.add(DetailedLciaResult(exchange, factor, location))
 
+    def show_detailed_result(self, key=lambda x: x.result, show_all=False):
+        for d in sorted(self.LciaDetails, key=key):
+            if d.result != 0 or show_all:
+                print('%s' % d)
+        print('=' * 60)
+        print('             Total score: %g ' % self.cumulative_result)
+
+    def __str__(self):
+        return '%s %s' % (number(self.cumulative_result), self.entity)
+
 
 class LciaResult(object):
     """
@@ -79,21 +109,56 @@ class LciaResult(object):
     The exchanges and factors referenced in add_score should be stored post-scenario-lookup. (An LciaResult should be
     static)
     """
-    def __init__(self, quantity, scenario=None):
+    def __init__(self, quantity, scenario=None, private=False):
+        """
+        If private, the LciaResult will not return any unaggregated results
+        :param quantity:
+        :param scenario:
+        :param private:
+        """
         self.quantity = quantity
         self.scenario = scenario
-        self.LciaScores = dict()
+        self._LciaScores = dict()
+        self._private = private
+
+    @property
+    def is_private(self):
+        return self._private
 
     def total(self):
-        return sum([i.cumulative_result for i in self.LciaScores.values()])
+        return sum([i.cumulative_result for i in self._LciaScores.values()])
 
     def add_entity(self, entity):
-        if entity.get_uuid() not in self.LciaScores.keys():
-            self.LciaScores[entity.get_uuid()] = AggregateLciaScore(entity)
+        if entity.get_uuid() not in self._LciaScores.keys():
+            self._LciaScores[entity.get_uuid()] = AggregateLciaScore(entity)
 
     def add_score(self, entity, exchange, factor, location):
         self.add_entity(entity)
-        self.LciaScores[entity.get_uuid()].add_detailed_result(exchange, factor, location)
+        self._LciaScores[entity.get_uuid()].add_detailed_result(exchange, factor, location)
+
+    def components(self):
+        if self._private:
+            return [None]
+        return [k.entity for k in self._LciaScores.values()]
+
+    def _header(self):
+        print('%s %s' % (self.quantity, self.quantity.reference_entity.unitstring()))
+        print('-' * 60)
+
+    def show_components(self):
+        self._header()
+        if not self._private:
+            for v in self._LciaScores.values():
+                print('%s' % v)
+            print('==========')
+        print('%s' % self)
+
+    def show_details(self, entity, **kwargs):
+        self._header()
+        if self._private:
+            print('%s' % self)
+        else:
+            self._LciaScores[get_entity_uuid(entity)].show_detailed_result(**kwargs)
 
     def __add__(self, other):
         if self.quantity != other.quantity:
@@ -101,8 +166,11 @@ class LciaResult(object):
         if self.scenario != other.scenario:
             raise InconsistentScenario
         s = LciaResult(self.quantity, self.scenario)
-        for k, v in self.LciaScores.items():
-            s.LciaScores[k] = v
+        for k, v in self._LciaScores.items():
+            s._LciaScores[k] = v
         for k, v in other.LciaScores.items():
-            s.LciaScores[k] = v
+            s._LciaScores[k] = v
         return s
+
+    def __str__(self):
+        return '%s %s' % (number(self.total()), self.quantity)

@@ -19,11 +19,11 @@ from lcatools.exchanges import Exchange, comp_dir
 from lcatools.tools import split_nick, archive_from_json, archive_factory
 
 
-ExchangeRef = namedtuple('ExchangeRef', ('catalog', 'index', 'exchange'))
 CFRef = namedtuple('CFRef', ('catalog', 'index', 'characterization'))
 ArchiveRef = namedtuple('ArchiveRef', ['source', 'nicknames', 'dataSourceType', 'parameters'])
 
 DEFAULT_CATALOG = os.path.join(os.path.dirname(__file__), 'default_catalog.json')
+
 
 class CatalogError(Exception):
     pass
@@ -107,6 +107,40 @@ class CatalogRef(object):
             'index': self.index,
             'entity': self.id
         }
+
+
+class ExchangeRef(object):
+    def __init__(self, catalog, index, exchange):
+        self.catalog = catalog
+        self.index = catalog.get_index(index)
+        self.exchange = exchange
+
+    @property
+    def process_ref(self):
+        return self.catalog.ref(self.index, self.exchange.process.get_uuid())
+
+    @property
+    def direction(self):
+        return self.exchange.direction
+
+    @property
+    def comp_dir(self):
+        return comp_dir(self.exchange.direction)
+
+    @property
+    def entity_type(self):
+        return 'exchange'
+
+    def __str__(self):
+        dr = {'Input': '->',
+              'Output': '<-'}[self.exchange.direction]
+        return '(%s) %s %s %s' % (self.catalog.name(self.index), self.exchange.flow, dr, self.exchange.process)
+
+    def __hash__(self):
+        return hash(self.index, self.exchange)
+
+    def __eq__(self, other):
+        return self.catalog is other.catalog and self.index == other.index and self.exchange == other.exchange
 
 
 class CatalogInterface(object):
@@ -421,7 +455,10 @@ class CatalogInterface(object):
         keys include 'Name', 'Comment', 'Compartment', 'Classification'
         :return:
         """
-        if archive is None:
+        if archive is not None:
+            if self[archive] is None:
+                self.load(archive)
+        else:
             archive = [i for i, k in enumerate(self._loaded) if k is True]
         if etype is not None:
             if 'entity_type' in kwargs:

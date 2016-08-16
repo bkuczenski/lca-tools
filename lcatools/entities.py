@@ -348,9 +348,12 @@ class LcProcess(LcEntity):
             print('%s' % i)
 
     def exchange(self, flow):
-        if flow in self._scenarios:
+        if isinstance(flow, LcFlow):
+            return next(x for x in self._exchanges if x.flow.match(flow))
+        elif flow in self._scenarios:
             return next(x for x in self._exchanges if x.flow.match(self._scenarios[flow]))
-        return next(x for x in self._exchanges if x.flow.match(flow))
+        else:
+            raise TypeError('LcProcess.exchange input %s %s' % (flow, type(flow)))
 
     def exchanges(self):
         for i in sorted(self._exchanges, key=lambda x: x.direction):
@@ -750,5 +753,6 @@ class LcUnit(object):
 entity_refs = {
     'process': 'exchange',
     'flow': 'quantity',
-    'quantity': 'unit'
+    'quantity': 'unit',
+    'fragment': 'fragment'
 }

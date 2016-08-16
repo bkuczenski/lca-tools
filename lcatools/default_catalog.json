@@ -33,9 +33,6 @@
         "EI-U"
       ],
       "dataSourceType": "JSON",
-      "parameters": {
-        "data_dir": "/data/LCI/Ecoinvent/3.2"
-      },
       "index": 4
     },
     {

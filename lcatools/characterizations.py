@@ -29,7 +29,7 @@ class Characterization(object):
 
     @property
     def is_null(self):
-        return len(self._locations) == 0 
+        return len(self._locations) == 0
 
     @property
     def value(self):
@@ -67,6 +67,9 @@ class Characterization(object):
     def locations(self):
         return self._locations.keys()
 
+    def list_locations(self):
+        return '; '.join([k for k in self.locations()])
+
     def __hash__(self):
         return hash((self.flow.get_uuid(), self.quantity.get_uuid()))
 
@@ -77,10 +80,10 @@ class Characterization(object):
                 (self.quantity.get_uuid() == other.quantity.get_uuid()))
 
     def __str__(self):
-        if self.value is not None:
-            return '[%.3g %s] %s' % (self.value, self.quantity.reference_entity, self.quantity)
-        else:
+        if self.is_null:
             return '%s has %s %s' % (self.flow, self.quantity, self.quantity.reference_entity)
+        return '%s %s %s' % ('\n'.join(['%.3g [%s]' % (v, k) for k,v in self._locations.items()]),
+                             self.quantity.reference_entity, self.quantity)
 
     def q_view(self):
         if self.value is not None:
@@ -110,6 +113,7 @@ class Characterization(object):
         return ['flow', 'quantity']
 
 
+'''
 class CharacterizationSet(object):
     """
     A dict of characterizations, whose key is the tupleized factor, for quick retrieval
@@ -152,3 +156,4 @@ class CharacterizationSet(object):
 
     def serialize(self):
         return sorted([cf.serialize() for cf in self], key=lambda x: x.flow)
+'''

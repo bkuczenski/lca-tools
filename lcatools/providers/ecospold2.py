@@ -22,7 +22,9 @@ from lcatools.providers.base import LcArchive
 from lcatools.interfaces import uuid_regex
 from lcatools.providers.archive import Archive
 from lcatools.entities import LcQuantity, LcFlow, LcProcess
-from lcatools.exchanges import Exchange, DirectionlessExchangeError
+from lcatools.exchanges import ExchangeValue, DirectionlessExchangeError
+from lcatools.characterizations import Characterization
+from lcatools.lcia_results import LciaResult
 
 if six.PY2:
     bytes = str
@@ -256,8 +258,7 @@ class EcospoldV2Archive(LcArchive):
             flowlist.append(EcospoldExchange(f, d, v, t))
         return flowlist
 
-    @staticmethod
-    def _collect_impact_scores(o):
+    def _collect_impact_scores(self, o, process, flow):
         """
         the old "1115"
         :param o:
@@ -265,13 +266,14 @@ class EcospoldV2Archive(LcArchive):
         """
 
         scores = []
+        exch = ExchangeValue(process, flow, 'Output', value=1.0)
 
-        for exch in find_tag(o, 'flowData')[0].getchildren():
-            if 'impactIndicator' in exch.tag:
-                m = exch.impactMethodName.text
-                c = exch.impactCategoryName.text
-                i = exch.name.text
-                v = float(exch.get('amount'))
+        for cf in find_tag(o, 'flowData')[0].getchildren():
+            if 'impactIndicator' in cf.tag:
+                m = cf.impactMethodName.text
+                c = cf.impactCategoryName.text
+                i = cf.name.text
+                v = float(cf.get('amount'))
                 scores.append(EcospoldLciaResult(m, c, i, v))
 
         return scores
@@ -341,7 +343,7 @@ class EcospoldV2Archive(LcArchive):
         Only stores cfs for quantities that exist locally.
         :param filename:
         :param quantities: list of quantity entities to look for (defaults to self.quantities())
-        :return:
+        :return: a dict of quantity uuid to score
         """
         if quantities is None:
             quantities = self.quantities()
@@ -349,10 +351,12 @@ class EcospoldV2Archive(LcArchive):
         import time
         start_time = time.time()
         o = self.objectify(filename)
+
         self._print('%30.30s -- %5f' % ('Objectified', time.time() - start_time))
+        p = self._create_process_entity(o)
         rf = self._grab_reference_flow(o, spold_reference_flow(filename))
-        cfs = self._collect_impact_scores(o)
-        self._print('%30.30s -- %5f' % ('Impact scores collected', time.time() - start_time))
+
+        exch = ExchangeValue(p, rf, 'Output', value=1.0)
 
         tags = dict()
         for q in quantities:
@@ -362,14 +366,25 @@ class EcospoldV2Archive(LcArchive):
                 tags[q['Name']] = q
         self._print('%30.30s -- %5f' % ('Method names extracted', time.time() - start_time))
 
-        for cf in cfs:
-            my_tag = ', '.join([cf.Method, cf.Category, cf.Indicator])
-            if my_tag in tags:
-                if not rf.has_characterization(tags[my_tag]):
-                    self._print('Adding LCIA score: %s' % my_tag)
-                    rf.add_characterization(tags[my_tag], value=cf.score)
-        self._print('%30.30s -- %5f' % ('cfs added- finished', time.time() - start_time))
-        return rf
+        results = dict()
+
+        for char in find_tag(o, 'flowData')[0].getchildren():
+            if 'impactIndicator' in char.tag:
+                m = char.impactMethodName.text
+                c = char.impactCategoryName.text
+                i = char.name.text
+                v = float(char.get('amount'))
+                my_tag = ', '.join([m, c, i])
+                if my_tag in tags:
+                    q = tags[my_tag]
+                    result = LciaResult(q)
+                    cf = Characterization(rf, q, value=v, location=p['SpatialScope'])
+                    result.add_score(p, exch, cf, p['SpatialScope'])
+                    results[q.get_uuid()] = result
+
+        self._print('%30.30s -- %5f' % ('Impact scores collected', time.time() - start_time))
+
+        return results
 
     def _load_all(self, exchanges=True):
         now = time()

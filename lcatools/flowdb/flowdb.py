@@ -322,13 +322,13 @@ class FlowDB(object):
         if len(cfs) == 1:
             return list(cfs)[0]
         elif len(cfs) > 1:
-            cf1 = [cf for cf in cfs if cf.flow.match(flow)]
+            cf1 = [cf for cf in cfs if cf.characterization.flow.match(flow)]
             if len(cf1) == 1:
                 return cf1[0]
             elif len(cf1) > 1:
                 cfs = cf1  # this reduces the list (presumably)
 
-        cf1 = [cf for cf in cfs if location in cf.locations()]
+        cf1 = [cf for cf in cfs if location in cf.characterization.locations()]
         if len(cf1) == 1:
             return cf1[0]
         elif len(cf1) > 1:

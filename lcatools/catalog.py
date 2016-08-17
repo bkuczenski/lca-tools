@@ -79,6 +79,13 @@ class CatalogRef(object):
     def entity_type(self):
         return self.entity().entity_type
 
+    @property
+    def reference_entity(self):
+        return self.entity().reference_entity
+
+    def get_external_ref(self):
+        return self.entity().get_external_ref()
+
     def __str__(self):
         e = self.entity()
         if e is None:
@@ -109,6 +116,13 @@ class CatalogRef(object):
         }
 
 
+class NullExchange(object):
+    def __init__(self, flow, direction):
+        self.process = None
+        self.flow = flow
+        self.direction = direction
+
+
 class ExchangeRef(object):
     def __init__(self, catalog, index, exchange):
         self.catalog = catalog
@@ -117,6 +131,8 @@ class ExchangeRef(object):
 
     @property
     def process_ref(self):
+        if self.exchange.process is None:
+            return None
         return self.catalog.ref(self.index, self.exchange.process.get_uuid())
 
     @property
@@ -268,14 +284,19 @@ class CatalogInterface(object):
     def ref(self, index, item):
         return CatalogRef(self, index, item)
 
-    def exch_ref(self, index, process, flow, direction):
-        if index in self._sources.keys():
-            index = self.index_for_source(index)
+    def exch_ref(self, item, process, flow, direction):
+        if item in self._sources.keys():
+            index = self.index_for_source(item)
+        else:
+            index = self.get_index(item)
         if not self._loaded[index]:
             self.load(index)
-        p = self[index].retrieve_or_fetch_entity(process)
         f = self[index].retrieve_or_fetch_entity(flow)
-        return ExchangeRef(self, index, Exchange(p, f, direction))
+        if process is None:
+            return ExchangeRef(self, index, NullExchange(f, direction))
+        else:
+            p = self[index].retrieve_or_fetch_entity(process)
+            return ExchangeRef(self, index, Exchange(p, f, direction))
 
     def get_index(self, item):
         if isinstance(item, int):
@@ -510,6 +531,9 @@ class CatalogInterface(object):
         """
         return self._check_exchanges(exch_ref.index, exch_ref.exchange.flow,
                                      exch_ref.exchange.comp_dir, show=show, termination=exch_ref.exchange.termination)
+
+    def terminate_flow(self, flow_ref, direction, show=False):
+        return self._check_exchanges(flow_ref.index, flow_ref.entity(), direction, show=show)
 
     def originate(self, exch_ref, show=False):
         """

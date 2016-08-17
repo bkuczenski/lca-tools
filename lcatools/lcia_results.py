@@ -72,8 +72,10 @@ class DetailedLciaResult(object):
                 self.result == other.result)
 
     def __str__(self):
-        return '%s x %-s = %-s %s' % (number(self.exchange.value), number(self.factor.value), number(self.result),
-                                      self.factor.flow)
+        return '%s x %-s = %-s [%s] %s' % (number(self.exchange.value), number(self.factor.value[self.location]),
+                                           number(self.result),
+                                           self.location,
+                                           self.factor.flow)
 
 
 class AggregateLciaScore(object):
@@ -153,12 +155,15 @@ class LciaResult(object):
             print('==========')
         print('%s' % self)
 
-    def show_details(self, entity, **kwargs):
+    def show_details(self, entity=None, **kwargs):
         self._header()
-        if self._private:
-            print('%s' % self)
-        else:
-            self._LciaScores[get_entity_uuid(entity)].show_detailed_result(**kwargs)
+        if not self._private:
+            if entity is None:
+                for e in self.components():
+                    self._LciaScores[e.get_uuid()].show_detailed_result(**kwargs)
+            else:
+                self._LciaScores[get_entity_uuid(entity)].show_detailed_result(**kwargs)
+        print('%s' % self)
 
     def __add__(self, other):
         if self.quantity != other.quantity:

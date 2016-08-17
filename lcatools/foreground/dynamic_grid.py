@@ -2,6 +2,7 @@ from collections import defaultdict
 
 from lcatools.catalog import CFRef, ExchangeRef  # , CatalogRef
 from lcatools.characterizations import Characterization
+from lcatools.exchanges import Exchange
 from lcatools.lcia_results import LciaResult
 
 
@@ -12,16 +13,19 @@ def _result_to_str(result, width=8):
         res = result.characterization.value
     elif isinstance(result, Characterization):
         res = result.value
+    elif isinstance(result, Exchange):
+        res = result.value
     elif isinstance(result, ExchangeRef):
         res = result.exchange.value
     elif isinstance(result, LciaResult):
-        res = result.total
+        res = result.total()
     else:
         return '%s ' % ('!' * width)
     return '%*.3g ' % (width, float(res))
 
 
-def dynamic_grid(comparands, comparators, func, near_label, far_label, returns_sets=False, width=8):
+def dynamic_grid(comparands, comparators, func, near_label, far_label, returns_sets=False, width=8,
+                 suppress_col_list=False):
     """
     Construct a sparse table grid containing the output of a function with respect to two sets of inputs.
 
@@ -83,7 +87,8 @@ def dynamic_grid(comparands, comparators, func, near_label, far_label, returns_s
                     n_str += ' ' * (width + 1)
             print('%s ' % n_str)
             max_len -= 1
-    print('%s' % h_str)
-    print('\nColumns:')
-    for i in range(n):
-        print('C%d: %s' % (i, comparands[i]))
+    if suppress_col_list is False:
+        print('%s' % h_str)
+        print('\nColumns:')
+        for i in range(n):
+            print('C%d: %s' % (i, comparands[i]))

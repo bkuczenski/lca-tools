@@ -255,10 +255,13 @@ class LcArchive(ArchiveInterface):
         if quantities is None:
             quantities = self.lcia_methods()
         ref_flow = process.find_reference(reference)
+        cfs_out = dict()
         for q in quantities:
             result = process.lcia(q, ref_flow=ref_flow, scenario=scenario, flowdb=flowdb)
-            ref_flow.add_characterization(q, value=result.total, location=process['SpatialScope'])
-        return ref_flow
+            # ref_flow.add_characterization(q, value=result.total, location=process['SpatialScope'])
+            cfs_out[q.get_uuid()] = result
+        # return ref_flow
+        return cfs_out
 
     def _quantities_with_unit(self, unitstring):
         """

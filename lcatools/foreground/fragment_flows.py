@@ -48,6 +48,8 @@ class FlowTermination(object):
     """
     @classmethod
     def from_json(cls, catalog, fragment, j):
+        if len(j) == 0:
+            return cls.null(fragment)
         index = catalog.index_for_source(j['source'])
         process_ref = catalog.ref(index, j['entityId'])
         term_flow = j.pop('termFlow', None)
@@ -59,6 +61,10 @@ class FlowTermination(object):
     def from_exchange(cls, fragment, exchange_ref):
         return cls(fragment, exchange_ref.process_ref, direction=exchange_ref.direction,
                    term_flow=exchange_ref.exchange.flow)
+
+    @classmethod
+    def null(cls, fragment):
+        return cls(fragment, None)
 
     def __init__(self, fragment, process_ref, direction=None, term_flow=None, descend=True):
         self._parent = fragment
@@ -84,7 +90,13 @@ class FlowTermination(object):
         self._flow_conversion = self.term_flow.convert(1.0, fr=ref_qty)
 
     @property
+    def is_null(self):
+        return self._process_ref is None
+
+    @property
     def index(self):
+        if self._process_ref is None:
+            return 0
         return self._process_ref.index
 
     @property
@@ -97,6 +109,8 @@ class FlowTermination(object):
 
     @property
     def inbound_exchange_value(self):
+        if self._process_ref is None:
+            return 1.0
         return self._process_ref.entity().exchange(self.term_flow).value
 
     @property
@@ -116,7 +130,15 @@ class FlowTermination(object):
         self.term_flow = flow
         self._set_flow_conversion()
 
+    def set_score_cache(self, quantity, lcia_result):
+        self._score_cache[quantity.get_uuid()] = lcia_result
+
+    def score_cache(self, quantity):
+        return self._score_cache[quantity.get_uuid()]
+
     def serialize(self):
+        if self._process_ref is None:
+            return {}
         j = {
             'source': self._process_ref.catalog.source_for_index(self._process_ref.index),
             'entityId': self._process_ref.id
@@ -230,6 +252,7 @@ class LcFragment(LcEntity):
         self._cached_unit_scores = dict()  # of quantities
 
         self._terminations = dict()
+        self.terminate(None)
 
         if 'StageName' not in self._d:
             self._d['StageName'] = ''
@@ -286,7 +309,7 @@ class LcFragment(LcEntity):
             dirn = '<-- '
         else:
             dirn = ' ==>'
-        if len(self._terminations) == 0:
+        if self.termination(None).is_null:
             term = '--:'
         else:
             if self.is_background:
@@ -378,33 +401,57 @@ class LcFragment(LcEntity):
     def terminations(self):
         return self._terminations.keys()
 
+    def shift_terms_to_background(self, bg):
+        for k, v in self._terminations.items():
+            bg.terminate(v.term_node, scenario=k, term_flow=v.term_flow, direction=v.direction)
+            self._terminations[k] = FlowTermination.null(self)
+
     def node_weight(self, magnitude, scenario):
         term = self.termination(scenario)
         if term is None:
             return magnitude
         return magnitude * term.node_weight_multiplier
 
-    # TODO:
+    def _cache_balance_ev(self, _balance, scenario):
+        if scenario is None:
+            self.observed_ev = _balance
+        self.set_exchange_value(scenario, _balance)
+
+    def io_flows(self, childflows, scenario, observed=False, frags_seen=None):
+        ffs, _ = self.traverse(childflows, 1.0, scenario, observed=observed, frags_seen=frags_seen)
+        return [ff for ff in ffs if ff.term.is_null]
+
     def traverse(self, childflows, upstream_nw, scenario,
                  observed=False, frags_seen=None, conserved_qty=None, _balance=None):
+
         """
+        If the node has a non-null termination, use that; follow child flows.
 
-        :param childflows: this is a lambda that takes current frag and returns a child generator
-          - must be provided by calling environment
+        If the node's termination is null- then look for matching background fragments. If one is found, adopt its
+        termination, and return.
 
-        :param upstream_nw:
+        else: assume it is a null foreground node; follow child flows
+
+        :param childflows: this is a lambda that takes current frag (and background kwarg) and returns:
+        - a child generator if background=False (default)
+        - a matching background frag if one exists if background=True
+        - must be provided by calling environment
+
+        :param upstream_nw: upstream node weight
         :param scenario:
-        :param observed:
-        :param frags_seen:
-        :param conserved_qty:
-        :param _balance:
-        :return:
+        :param observed: whether to use observed or cached evs (overridden by scenario specification)
+        :param frags_seen: carried along to catch recursion loops
+        :param conserved_qty: in case the parent node is a conservation node
+        :param _balance: used when flow magnitude is determined during traversal, i.e. for balance flows and
+        children of fragment nodes
+        :return: an array of FragmentFlow records reporting the traversal
         """
 
         if _balance is None:
             magnitude = upstream_nw * self.exchange_value(scenario, observed=observed)
         else:
             magnitude = upstream_nw * _balance
+            self._cache_balance_ev(_balance, scenario)
 
         conserved_val = None
         conserved = False
@@ -418,49 +465,90 @@ class LcFragment(LcEntity):
                 conserved_val *= -1
 
         node_weight = self.node_weight(magnitude, scenario)
-
         term = self.termination(scenario)
-        if term is None:
-            term_node = None
-        else:
-            term_node = term.term_node
 
-        ff = [FragmentFlow(self, magnitude, node_weight, term_node, conserved)]
+        if self.termination(scenario).is_null:
+            if not self._background:
+                try:
+                    bg = next(childflows(self, background=True))
+                    ff, _ = bg.traverse(childflows, node_weight, scenario, observed=observed)
+                    return ff, conserved_val
+                except StopIteration:
+                    # must be foreground
+                    pass
+
+        ff = [FragmentFlow(self, magnitude, node_weight, term, conserved)]
 
         if self._background:
             return ff, conserved_val
 
         if frags_seen is None:
-            frags_seen = []
-        elif self in frags_seen:
+            frags_seen = set()
+        elif self.get_uuid() in frags_seen:
             raise InvalidParentChild('Frag seeing self')
-        frags_seen.append(self)
+        frags_seen.add(self.get_uuid())
 
         '''
         now looking forward: is our child node conserving?
         '''
-        stock = None
-        bal_f = None
-        if self._conserved_quantity is not None:
-            stock = self.exchange_value(scenario, observed=observed)
-            if self.direction == 'Input':  # convention: inputs to self are positive
-                stock *= -1
 
-        for f in childflows(self):
-            try:
-                child_ff, cons = f.traverse(childflows, node_weight, scenario, observed=observed,
-                                            frags_seen=frags_seen, conserved_qty=self._conserved_quantity)
-                if cons is not None:
-                    stock += cons
-            except BalanceFlowError:
-                bal_f = f
-                child_ff = []
-            ff.extend(child_ff)
+        if not term.is_null and term.term_node.entity_type == 'fragment':
+            # need to determine child flow magnitudes based on traversal record
+            flow_ffs = term.term_node.entity().io_flows(childflows, scenario,
+                                                        observed=observed, frags_seen=frags_seen)
 
-        if bal_f is not None:
-            bal_ff, cons = bal_f.traverse(childflows, node_weight, scenario, observed=observed,
-                                          frags_seen=frags_seen, conserved_qty=None, _balance=stock)
-            ff.extend(bal_ff)
+            # first, we adjust for any autoconsumption
+            in_ex = 1.0
+            matches = [ff for ff in flow_ffs if ff.fragment.flow == term.term_flow]
+            for m in matches:
+                if m.fragment.direction == term.direction:
+                    in_ex -= m.magnitude
+                else:
+                    in_ex += m.magnitude
+                flow_ffs.remove(m)
+
+            downstream_nw = node_weight / in_ex
+
+            for f in childflows(self, background=False):
+                ev = 0.0
+                matches = [ff for ff in flow_ffs if ff.flow == f.flow]
+                for m in matches:
+                    if m.direction == f.direction:
+                        ev += m.magnitude
+                    else:
+                        ev -= m.magnitude
+                    flow_ffs.remove(m)
+
+                child_ff, cons = f.traverse(childflows, downstream_nw, scenario, observed=observed,
+                                            frags_seen=frags_seen, _balance=ev)
+                ff.extend(child_ff)
+
+            ff.extend([x.scale(node_weight) for x in flow_ffs])  # any remaining
+
+        else:
+            stock = None
+            bal_f = None
+            if self._conserved_quantity is not None:
+                stock = self.exchange_value(scenario, observed=observed)
+                if self.direction == 'Input':  # convention: inputs to self are positive
+                    stock *= -1
+
+            for f in childflows(self, background=False):
+                try:
+                    child_ff, cons = f.traverse(childflows, node_weight, scenario, observed=observed,
+                                                frags_seen=frags_seen, conserved_qty=self._conserved_quantity)
+                    if cons is not None:
+                        stock += cons
+                except BalanceFlowError:
+                    bal_f = f
+                    child_ff = []
+
+                ff.extend(child_ff)
+
+            if bal_f is not None:
+                bal_ff, cons = bal_f.traverse(childflows, node_weight, scenario, observed=observed,
+                                              frags_seen=frags_seen, conserved_qty=None, _balance=stock)
+                ff.extend(bal_ff)
 
         return ff, conserved_val
 
@@ -498,12 +586,16 @@ class FragmentFlow(object):
     ]
 
     """
-    def __init__(self, fragment, magnitude, node_weight, term_ref, is_conserved):
+    def __init__(self, fragment, magnitude, node_weight, term, is_conserved):
         self.fragment = fragment
         self.magnitude = magnitude
         self.node_weight = node_weight
-        self.term_ref = term_ref
+        self.term = term
         self.is_conserved = is_conserved
+
+    def scale(self, x):
+        self.node_weight *= x
+        self.magnitude *= x
 
     def to_antelope(self, fragmentID, stageID):
         pass

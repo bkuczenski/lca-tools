@@ -156,10 +156,8 @@ class ForegroundArchive(LcArchive):
 
     def add_background_ff_from_fragment(self, fragment):
         bg = self[0].create_fragment(fragment.flow, fragment.direction, background=True)
-        self[0].add(bg)
-        for k, v in fragment._terminations.keys():
-            v = fragment._terminations.pop(k)
-            bg.terminate(v.term_node, scenario=k, term_flow=v.term_flow, direction=v.direction)
+        self[0].add_entity_and_children(bg)
+        fragment.shift_terms_to_background(bg)
 
     def check_counter(self, entity_type=None):
         super(ForegroundArchive, self).check_counter(entity_type=entity_type)

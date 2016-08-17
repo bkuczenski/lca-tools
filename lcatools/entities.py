@@ -14,7 +14,11 @@ def concatenate(*lists):
 
 
 def trim_cas(cas):
-    return re.sub('^(0*)', '', cas)
+    try:
+        return re.sub('^(0*)', '', cas)
+    except TypeError:
+        print('%s %s' % (cas, type(cas)))
+        return ''
 
 
 entity_types = ('process', 'flow', 'quantity', 'fragment')
@@ -378,7 +382,9 @@ class LcProcess(LcEntity):
     def allocated_exchanges(self, reference, strict=False):
         # need to disambiguate the reference
         in_scenario = False
-        if reference in self._scenarios.keys():
+        if isinstance(reference, LcFlow):
+            ref = self.find_reference(reference, strict=strict)
+        elif reference in self._scenarios.keys():
             in_scenario = True
             ref = self._scenarios[reference]
         else:

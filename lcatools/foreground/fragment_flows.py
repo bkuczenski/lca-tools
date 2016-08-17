@@ -432,7 +432,7 @@ class LcFragment(LcEntity):
 
         else: assume it is a null foreground node; follow child flows
 
-        :param childflows: this is a lambda that takes current frag (and background kwarg) and returns:
+        :param childflows: this is a lambda x, y that takes current frag and background=bool and returns:
         - a child generator if background=False (default)
         - a matching background frag if one exists if background=True
         - must be provided by calling environment
@@ -470,7 +470,7 @@ class LcFragment(LcEntity):
         if self.termination(scenario).is_null:
             if not self._background:
                 try:
-                    bg = next(childflows(self, background=True))
+                    bg = next(childflows(self, True))
                     ff, _ = bg.traverse(childflows, node_weight, scenario, observed=observed)
                     return ff, conserved_val
                 except StopIteration:
@@ -509,7 +509,7 @@ class LcFragment(LcEntity):
 
             downstream_nw = node_weight / in_ex
 
-            for f in childflows(self, background=False):
+            for f in childflows(self, False):
                 ev = 0.0
                 matches = [ff for ff in flow_ffs if ff.flow == f.flow]
                 for m in matches:
@@ -533,7 +533,7 @@ class LcFragment(LcEntity):
                 if self.direction == 'Input':  # convention: inputs to self are positive
                     stock *= -1
 
-            for f in childflows(self, background=False):
+            for f in childflows(self, False):
                 try:
                     child_ff, cons = f.traverse(childflows, node_weight, scenario, observed=observed,
                                                 frags_seen=frags_seen, conserved_qty=self._conserved_quantity)
@@ -596,6 +596,14 @@ class FragmentFlow(object):
     def scale(self, x):
         self.node_weight *= x
         self.magnitude *= x
+
+    def __str__(self):
+        if self.term.is_null:
+            term = '--:'
+        else:
+            term = '-# '
+        return '%.7s %10.3g [%6s] %s %s' % (self.fragment.get_uuid(), self.magnitude, self.fragment.direction,
+                                            term, self.fragment['Name'])
 
     def to_antelope(self, fragmentID, stageID):
         pass

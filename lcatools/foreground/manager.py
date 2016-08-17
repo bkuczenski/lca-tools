@@ -379,12 +379,13 @@ class ForegroundManager(object):
 
     def compute_fragment_unit_scores(self, fragment, scenario=None):
         term = fragment.termination(scenario)
-        if fragment.is_background:
-            results = self.bg_lcia(term.term_node, ref_flow=term.term_flow)
-        else:
-            results = self.fg_lcia(term.term_node, ref_flow=term.term_flow)
-        for v in results.values():
-            term.set_score_cache(v.quantity, v)
+        if not term.is_null:
+            if fragment.is_background:
+                results = self.bg_lcia(term.term_node, ref_flow=term.term_flow)
+            else:
+                results = self.fg_lcia(term.term_node, ref_flow=term.term_flow)
+            for v in results.values():
+                term.set_score_cache(v.quantity, v)
 
     def fragment_to_background(self, fragment):
         """

@@ -72,7 +72,7 @@ class DetailedLciaResult(object):
                 self.result == other.result)
 
     def __str__(self):
-        return '%s x %-s = %-s [%s] %s' % (number(self.exchange.value), number(self.factor.value[self.location]),
+        return '%s x %-s = %-s [%s] %s' % (number(self.exchange.value), number(self.factor[self.location]),
                                            number(self.result),
                                            self.location,
                                            self.factor.flow)
@@ -173,7 +173,7 @@ class LciaResult(object):
         s = LciaResult(self.quantity, self.scenario)
         for k, v in self._LciaScores.items():
             s._LciaScores[k] = v
-        for k, v in other.LciaScores.items():
+        for k, v in other._LciaScores.items():
             s._LciaScores[k] = v
         return s
 

@@ -6,6 +6,7 @@ from collections import defaultdict
 from lcatools.foreground.foreground import ForegroundArchive
 from lcatools.catalog import CatalogInterface, ExchangeRef
 from lcatools.exchanges import comp_dir, ExchangeValue
+from lcatools.entities import LcQuantity
 from lcatools.flowdb.flowdb import FlowDB
 from lcatools.lcia_results import LciaResult
 from lcatools.foreground.dynamic_grid import dynamic_grid
@@ -234,10 +235,10 @@ class ForegroundManager(object):
                      ('Direction', lambda x: x[1]),
                      ('Flow', lambda x: x[0]), returns_sets=True)
 
-    def fg_lcia(self, process_ref, quantity=None, dist=1, **kwargs):
+    def fg_lcia(self, process_ref, quantities=None, dist=1, scenario=None, **kwargs):
         """
         :param process_ref:
-        :param quantity: defaults to foreground lcia quantities
+        :param quantities: defaults to foreground lcia quantities
         :param dist: [1] how far afield to search for cfs (see CLookup.find() from flowdb)
         :return:
         """
@@ -249,13 +250,15 @@ class ForegroundManager(object):
         if not self._catalog.is_loaded(process_ref.index):
             self._catalog.load(process_ref.index)
         exch = self._filter_exch(process_ref, elem=True, **kwargs)
-        if quantity is None:
+        if quantities is None:
             qs = self._catalog[0].lcia_methods()
             if len(qs) == 0:
                 print('No foreground LCIA methods')
                 return None
+        elif isinstance(quantities, LcQuantity):
+            qs = [quantities]
         else:
-            qs = [quantity]
+            qs = quantities
         results = dict()
         for q in qs:
             q_result = LciaResult(q)
@@ -274,6 +277,8 @@ class ForegroundManager(object):
     def bg_lcia(self, p_ref, quantities=None, **kwargs):
         if quantities is None:
             quantities = self[0].lcia_methods()
+        if len(quantities) == 0:
+            return dict()
         if p_ref is None:
             # cutoff
             result = dict()
@@ -330,31 +335,22 @@ class ForegroundManager(object):
         return next(f for f in self[0].fragments(show_all=True) if f.get_uuid().startswith(string.lower()))
 
     def traverse(self, fragment, scenario=None, observed=False):
-        ffs, _ = fragment.traverse(lambda x, y: self.child_flows(x, background=y), 1.0, scenario, observed=observed)
+        ffs, _ = fragment.traverse(lambda x: self.child_flows(x), 1.0, scenario, observed=observed)
         return ffs
 
     def draw_fragment(self, fragment):
-        fragment.show_tree(lambda x, y: self.child_flows(x, background=y))
+        fragment.show_tree(lambda x: self.child_flows(x))
 
-    def child_flows(self, fragment, background=False):
+    def child_flows(self, fragment):
         """
         This is a lambda method used during traversal in order to generate the child fragment flows from
         a given fragment.
-        If the fragment has a background termination, yield that. Otherwise, yield child flows
         :param fragment:
-        :param background: [False] whether to look for background flows
         :return: fragments listing fragment as parent
         """
-        if background:
-            bg = [x for x in self[0].fragments(background=True, show_all=True) if x.flow == fragment.flow]
-            if len(bg) > 1:
-                raise BackgroundError('Too many backgrounds found - implement geographic filter')
-            for x in bg:
+        for x in self[0].fragments(show_all=True):
+            if fragment is x.reference_entity:
                 yield x
-        else:
-            for x in self[0].fragments(show_all=True):
-                if fragment is x.reference_entity:
-                    yield x
 
     def auto_terminate(self, index, fragment, scenario=None, use_first=False):
         """
@@ -365,14 +361,18 @@ class ForegroundManager(object):
         :param use_first: [False] if True, resolve AmbiguousTerminations by using the first result
         :return:
         """
-        term = self._catalog.terminate_fragment(index, fragment)
-        if len(term) > 1 and not use_first:
-            raise AmbiguousTermination('%d found' % len(term))
-        elif len(term) == 0:
+        term_exch = self._catalog.terminate_fragment(index, fragment)
+        if len(term_exch) > 1 and not use_first:
+            raise AmbiguousTermination('%d found' % len(term_exch))
+        elif len(term_exch) == 0:
             raise NoTermination
-        term = term[0]
-        fragment.term_from_exch(term, scenario=scenario)
-        self.build_child_flows(fragment, scenario=scenario)
+        term_exch = term_exch[0]
+        try:
+            bg = next(f for f in self[0].fragments(background=True) if f.term.matches(term_exch))
+            fragment.terminate(bg, scenario=scenario)
+        except StopIteration:
+            fragment.term_from_exch(term_exch, scenario=scenario)
+            self.build_child_flows(fragment, scenario=scenario)
 
     def create_fragment_from_process(self, process_ref, ref_flow=None):
         process = process_ref.fg()
@@ -401,7 +401,7 @@ class ForegroundManager(object):
         :param scenario:
         :return:
         """
-        io_ffs = term.term_node.entity().io_flows(lambda x, y: self.child_flows(x, background=y), scenario)
+        io_ffs = term.term_node.entity().io_flows(lambda x: self.child_flows(x), scenario)
         ref_dir = term.direction
         accum = defaultdict(float)
         ent = dict()
@@ -430,7 +430,7 @@ class ForegroundManager(object):
         if fragment.is_background:
             return None  # no child flows for background nodes
         term = fragment.termination(scenario=scenario)
-        if term.is_null or term.is_self:
+        if term.is_null or term.is_fg:
             return None
 
         if term.term_node.entity_type == 'process':
@@ -450,15 +450,20 @@ class ForegroundManager(object):
             children.append(self[0].add_child_ff_from_exchange(fragment, exch))
         return children
 
+    def compute_unit_scores(self, scenario=None):
+        for f in self[0].fragments(show_all=True):
+            self.compute_fragment_unit_scores(f, scenario=scenario)
+
     def compute_fragment_unit_scores(self, fragment, scenario=None):
         term = fragment.termination(scenario)
-        if not term.is_null:
-            if fragment.is_background:
-                results = self.bg_lcia(term.term_node, ref_flow=term.term_flow)
-            else:
-                results = self.fg_lcia(term.term_node, ref_flow=term.term_flow)
-            for v in results.values():
-                term.set_score_cache(v.quantity, v)
+        l_methods = [q for q in self[0].lcia_methods()]
+        if fragment.is_background:
+            def lcia(x, y, z):
+                return self.bg_lcia(x, ref_flow=y, quantities=z)
+        else:
+            def lcia(x, y, z):
+                return self.fg_lcia(x, ref_flow=y, quantities=z, scenario=scenario)
+        term.set_score_cache(lcia, l_methods)
 
     def fragment_to_background(self, fragment):
         """
@@ -467,10 +472,15 @@ class ForegroundManager(object):
         :param fragment:
         :return:
         """
-        try:
-            bg = next(self.child_flows(fragment, background=True))
-        except StopIteration:
-            bg = self[0].add_background_ff_from_fragment(fragment)
+        if fragment.term.is_null:
+            bg = self[0].add_background_ff_from_fragment(fragment)  # cutoff
+        else:
+            try:
+                term_exch = fragment.term.to_exchange()
+                bg = next(f for f in self[0].fragments(background=True) if f.term.matches(term_exch))
+                fragment.terminate(bg)
+            except StopIteration:
+                bg = self[0].add_background_ff_from_fragment(fragment)
         return bg
 
     @staticmethod

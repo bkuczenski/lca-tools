@@ -44,7 +44,7 @@ class Exchange(object):
         :param termination: string id of terminating process or None
         :return:
         """
-        assert process.entity_type == 'process', "'process' must be an LcProcess!"
+        # assert process.entity_type == 'process', "- we'll allow null exchanges and fragment-terminated exchanges"
         assert flow.entity_type == 'flow', "'flow' must be an LcFlow"
         assert direction in directions, "direction must be a string in (%s)" % ', '.join(directions)
 

@@ -1,6 +1,7 @@
 
 from lcatools.providers.base import LcArchive
 from lcatools.foreground.fragment_flows import LcFragment
+from lcatools.exchanges import comp_dir
 import json
 import os
 
@@ -150,7 +151,19 @@ class ForegroundArchive(LcArchive):
         return f
 
     def add_child_ff_from_exchange(self, ff, exchange):
-        f = LcFragment.from_exchange(ff, exchange)
+        """
+        Want to use a background flow if one exists already
+        :param ff:
+        :param exchange:
+        :return:
+        """
+        try:
+            bg = next(f for f in self.fragments(background=True) if f.term.matches(exchange))
+            f = LcFragment.new(exchange.flow['Name'], exchange.flow, comp_dir(exchange.direction),
+                               parent=ff, exchange_value=exchange.value)
+            f.terminate(bg)
+        except StopIteration:
+            f = LcFragment.from_exchange(ff, exchange)
         self.add_entity_and_children(f)
         return f
 

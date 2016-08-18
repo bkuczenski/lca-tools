@@ -6,7 +6,7 @@
 import uuid
 
 from lcatools.entities import LcEntity
-from lcatools.exchanges import comp_dir, AllocatedExchange
+from lcatools.exchanges import comp_dir, ExchangeValue, AllocatedExchange
 from lcatools.literate_float import LiterateFloat
 
 
@@ -42,26 +42,29 @@ class FlowTermination(object):
     these are stored by scenario in a dict on the mainland
 
     A fragment can have the following types of terminations:
-     * None - the termination is null- the flow enters the foreground and can be terminated to background
+     * None - the termination is null- the flow enters the foreground and becomes an i/o
      * Self - the flow enters a foreground node. The node can have children but has no LCIA impacts.
        (created with the yet-unwritten add child flow function if the node is null)
      * Process - the flow enters a process referenced by CatalogRef.  The node's LCIA impacts are fg_lcia. The
        node's children are the process's non-term intermediate exchanges. The node can also have other children.
        (created with terminate or term_from_exch)
      * Fragment - the flow enters a sub-fragment.  The sub-fragment must be traversable. The node's children are
-       the fragment's non-term io flows. The node cannot have other children.
+       the fragment's non-term io flows. The node cannot have other children.  If the sub-fragment is background,
+       then the background fragment flow supplants the foreground one during traversal.
 
-    IT IS THE FOREGROUND MANAGER'S RESPONSIBILITY to ensure that the process_ref points to a process in the
-    foreground for foreground nodes, or that the term_flow lives in the foreground for background nodes
-
-    LCIA results are always cached in the term_flow as [scenario-specific] CFs (scenario encoded in
+    LCIA results are always cached in the terminations, and are not (by default) persistent across instantiations.
     """
     @classmethod
     def from_json(cls, catalog, fragment, j):
         if len(j) == 0:
             return cls.null(fragment)
-        index = catalog.index_for_source(j['source'])
+        if j['source'] == 'foreground':
+            index = 0
+        else:
+            index = catalog.index_for_source(j['source'])
         process_ref = catalog.ref(index, j['entityId'])
+        if process_ref.entity_type == 'fragment':
+            process_ref = process_ref.entity()
         term_flow = j.pop('termFlow', None)
         direction = j.pop('direction', None)
         descend = j.pop('descend', None) or True
@@ -78,24 +81,20 @@ class FlowTermination(object):
 
     def __init__(self, fragment, process_ref, direction=None, term_flow=None, descend=True, inbound_ev=None):
         self._parent = fragment
-        self._process_ref = process_ref
+        self._process_ref = process_ref  # this is either a catalog_ref (for process) or just a fragment
         self._descend = descend
-        if term_flow is None:
-            self.term_flow = fragment.flow
-        else:
-            self.term_flow = term_flow
+        self.term_flow = None
+        self._cached_ev = None
+        self._score_cache = dict()
         if direction is None:
             self.direction = comp_dir(fragment.direction)
         else:
             self.direction = direction
 
-        self._score_cache = dict()
+        self.set_term_flow(term_flow)
+        self._set_inbound_ev(inbound_ev)
 
-        self._cached_ev = inbound_ev
-
-        self._set_flow_conversion()
-
-    def update(self, process_ref, direction=None, term_flow=None, descend=None):
+    def update(self, process_ref, direction=None, term_flow=None, descend=None, inbound_ev=None):
         self._process_ref = process_ref
         if direction is not None:
             self.direction = direction
@@ -104,17 +103,33 @@ class FlowTermination(object):
         if descend is not None:
             self._descend = descend
         self._score_cache = dict()
-        self._cached_ev = None
+        self._set_inbound_ev(inbound_ev)
 
-    def _set_flow_conversion(self):
-        ref_qty = self._parent.flow.reference_entity
-        if self.term_flow.cf(ref_qty) == 0:
-            raise FlowConversionError('Missing cf for %s' % ref_qty)
-        self._flow_conversion = self.term_flow.convert(1.0, fr=ref_qty)
+    def matches(self, exchange):
+        """
+        returns True if the exchange specifies the same process and flow as the term's process_ref and term_flow
+        :param exchange:
+        :return:
+        """
+        if self.is_null:
+            return False
+        if self.term_node.entity_type != 'process':
+            return False
+        return (self._process_ref.id == exchange.process.get_uuid()) and (self.term_flow.match(exchange.flow))
+
+    def to_exchange(self):
+        if self.is_null:
+            return None
+        elif self.term_node.entity_type == 'fragment':
+            return ExchangeValue(self.term_node, self.term_flow, self.direction, value=self._cached_ev)
+        return ExchangeValue(self.term_node.entity(), self.term_flow, self.direction, value=self._cached_ev)
 
     @property
-    def is_self(self):
-        return not self.is_null and self._process_ref is self._parent
+    def is_fg(self):
+        return (not self.is_null) and (self.term_node is self._parent)
+
+    def is_bg(self):
+        return (not self.is_null) and (self.term_node.entity_type == 'fragment') and self.term_node.is_background
 
     @property
     def is_null(self):
@@ -127,6 +142,8 @@ class FlowTermination(object):
     def index(self):
         if self._process_ref is None:
             return 0
+        elif self._process_ref.entity_type == 'fragment':
+            return 0
         return self._process_ref.index
 
     @property
@@ -135,25 +152,37 @@ class FlowTermination(object):
 
     @property
     def flow_conversion(self):
-        return self._flow_conversion
+        """
+        this gets computed at query time- raises an issue about parameterization (scenario must be known?)
+        # TODO: figure out flow conversion params
+        :return:
+        """
+        ref_qty = self._parent.flow.reference_entity
+        if self.term_flow.cf(ref_qty) == 0:
+            raise FlowConversionError('Missing cf for %s' % ref_qty)
+        return self.term_flow.convert(1.0, fr=ref_qty)
+
+    def _set_inbound_ev(self, inbound_ev):
+        if inbound_ev is None:
+            if self._process_ref is None:
+                inbound_ev = 1.0
+            elif self.term_node.entity_type == 'process':
+                process = self._process_ref.fg()
+                ex = next(x for x in process.exchange(self.term_flow)
+                          if x in process.reference_entity)
+                if isinstance(ex, AllocatedExchange):
+                    inbound_ev = ex[self.term_flow]
+                else:
+                    inbound_ev = ex.value
+            elif self.term_node.entity_type == 'fragment':
+                inbound_ev = 1.0  # the inbound ev must be applied at traversal time; not known at termination time
+            else:
+                raise TypeError('How did we get here??? %s' % self._process_ref)
+        self._cached_ev = inbound_ev
 
     @property
     def inbound_exchange_value(self):
-        if self._process_ref is None:
-            return 1.0
-        elif self._cached_ev is not None:
-            return self._cached_ev
-        elif self._process_ref.entity_type == 'process':
-            process = self._process_ref.fg()
-            ex = next(x for x in process.exchange(self.term_flow)
-                      if x in process.reference_entity)
-            if isinstance(ex, AllocatedExchange):
-                self._cached_ev = ex[self.term_flow]
-            else:
-                self._cached_ev = ex.value
-            return self._cached_ev
-        else:
-            raise ValueError("fragments don't know their inbound exchange values")
+        return self._cached_ev
 
     @property
     def node_weight_multiplier(self):
@@ -165,17 +194,43 @@ class FlowTermination(object):
         :param flow:
         :return:
         """
-        try:
-            self._process_ref.fg().exchange(flow)
-        except StopIteration:
-            raise MissingFlow('%s' % flow)
-        except TypeError:
-            print('Fragment: %s\nprocess_ref: %s' % (self._parent, self._process_ref))
+        if self.is_null:
+            flow = None
+        elif self._process_ref.entity_type == 'fragment':
+            # term flow must be sub-fragment's reference flow
+            flow = self.term_node.flow
+        else:
+            if flow is None:
+                flow = self._parent.flow
+            try:
+                next(self._process_ref.fg().exchange(flow))
+            except StopIteration:
+                raise MissingFlow('%s missing flow %s' % (self._process_ref, flow))
+            except TypeError:
+                print('Fragment: %s\nprocess_ref: %s' % (self._parent, self._process_ref))
+                raise
         self.term_flow = flow
-        self._set_flow_conversion()
 
-    def set_score_cache(self, quantity, lcia_result):
-        self._score_cache[quantity.get_uuid()] = lcia_result
+    def set_score_cache(self, lcia, quantities):
+        """
+
+        :param lcia: a lambda that takes as input a process ref and a ref flow and a list of quantities, and
+        returns a dict of LciaResults
+        fragment LCIA results are not cached, but instead are computed on demand. we'll see if that works for highly
+        nested models. we will have to cache traversals somewhere- but I think that can be done by the manager.
+        :param quantities:
+        :return:
+        """
+        if self.is_null:
+            return
+        if self.term_node.entity_type == 'process':
+            q_run = []
+            for q in quantities:
+                if q.get_uuid() not in self._score_cache.keys():
+                    q_run.append(q)
+            if len(q_run) != 0:
+                results = lcia(self.term_node, self.term_flow, q_run)
+                self._score_cache.update(results)
 
     def score_cache(self, quantity):
         if quantity.get_uuid() in self._score_cache:
@@ -185,8 +240,12 @@ class FlowTermination(object):
     def serialize(self):
         if self._process_ref is None:
             return {}
+        if self.index == 0:
+            source = 'foreground'
+        else:
+            source = self._process_ref.catalog.source_for_index(self._process_ref.index)
         j = {
-            'source': self._process_ref.catalog.source_for_index(self._process_ref.index),
+            'source': source,
             'entityId': self._process_ref.id
         }
         if self.term_flow != self._parent.flow:
@@ -197,6 +256,35 @@ class FlowTermination(object):
             j['descend'] = False
         # don't serialize score cache- could, of course
         return j
+
+    def __str__(self):
+        """
+
+        :return:
+          '--:' = fragment I/O
+          '-O ' = foreground node
+          '-* ' = process
+          '-# ' - sub-fragment
+          '-B#' - terminated background
+          '--C' - cut-off background
+        """
+        if self.is_null:
+            term = '---:'  # fragment IO
+        elif self.is_fg:
+            term = '-O  '
+        elif self.term_node.entity_type == 'process':
+            term = '-*  '
+        elif self.term_node.entity_type == 'fragment':
+            if self.term_node.is_background:
+                if self.term_node.term.is_null:
+                    term = '--C '
+                else:
+                    term = '-B  '
+            else:
+                term = '-#  '
+        else:
+            raise TypeError('I Do not understand this term for frag %.7s' % self._parent.get_uuid())
+        return term
 
 
 class LcFragment(LcEntity):
@@ -286,11 +374,13 @@ class LcFragment(LcEntity):
 
         self._private = private
         self._background = background
-        self._balance_flow = balance_flow
+        self._balance_flow = False
+        if balance_flow:
+            self.set_balance_flow()
 
         self._conserved_quantity = None
 
-        self.observed_magnitude = LiterateFloat(1.0)  # in flow's reference unit
+        self.observed_magnitude = LiterateFloat(1.0)  # in flow's reference unit - strictly documentary
 
         self._exchange_values = dict()
         self._exchange_values[0] = exchange_value
@@ -298,7 +388,7 @@ class LcFragment(LcEntity):
         self._cached_unit_scores = dict()  # of quantities
 
         self._terminations = dict()
-        self.terminate(None)
+        self._terminations[None] = FlowTermination.null(self)
 
         if 'StageName' not in self._d:
             self._d['StageName'] = ''
@@ -306,6 +396,17 @@ class LcFragment(LcEntity):
     @property
     def _parent(self):
         return self.reference_entity
+
+    @property
+    def term(self):
+        return self._terminations[None]
+
+    @property
+    def dirn(self):
+        return {
+            'Input': '-<-',
+            'Output': '=>='
+        }[self.direction]
 
     def serialize(self):
         j = super(LcFragment, self).serialize()
@@ -324,23 +425,25 @@ class LcFragment(LcEntity):
             j.pop(k)  # we put these together in tags
         return j
 
+    def __str__(self):
+        if self.reference_entity is None:
+            re = ' ** ref'
+        else:
+            re = self.reference_entity.get_uuid()[:7]
+        return '(%s) %s %s %s %s  %s' % (re, self.dirn, self.get_uuid()[:7], self.dirn, self.term, self.flow['Name'])
+
     def show_tree(self, childflows, prefix=''):
         dirn = {
             'Input': '-<-',
             'Output': '=>='
         }[self.direction]
-        try:
-            next(childflows(self, True))
-            term = '-B '
-            children = []
-        except StopIteration:
-            children = [c for c in childflows(self, False)]
-            if len(children) == 0:
-                term = '--:'
-            else:
-                term = '-* '
 
-        print('%s%s%s %.7s (%7.2g) %s' % (prefix, dirn, term, self.get_uuid(), self.exchange_value(0), self['Name']))
+        children = [c for c in childflows(self)]
+        if len(children) > 0 and self.term.is_null:
+            raise InvalidParentChild('null-terminated fragment %.7s has children' % self.get_uuid())
+
+        print('%s%s%s %.7s (%7.2g) %s' % (prefix, dirn, self.term, self.get_uuid(), self.exchange_value(0),
+                                          self['Name']))
         if prefix == '':
             prefix += '   '
         prefix += ' | '
@@ -368,27 +471,6 @@ class LcFragment(LcEntity):
     @property
     def is_background(self):
         return self._background
-
-    def __str__(self):
-        if self.reference_entity is None:
-            re = ' ** ref'
-        else:
-            re = self.reference_entity.get_uuid()[:7]
-        if self.direction == 'Input':
-            dirn = '<-- '
-        else:
-            dirn = ' ==>'
-        if self.termination(None).is_null:
-            if self.is_background:
-                term = '(C)  '
-            else:
-                term = '---:'
-        else:
-            if self.is_background:
-                term = '(B#)'
-            else:
-                term = '#   '
-        return '(%s) %s %s %s %s : %s' % (re, dirn, self.get_uuid()[:7], dirn, term, self.flow['Name'])
 
     def exchange_value(self, scenario=None, observed=False):
         """
@@ -475,21 +557,21 @@ class LcFragment(LcEntity):
         return self._terminations.keys()
 
     def shift_terms_to_background(self, bg):
-        print('shifting %s' % self)
+        # print('shifting %s' % self)
         for k, v in self._terminations.items():
-            print('%s %s' % (k, v.term_node))
+            # print('%s %s' % (k, v.term_node))
             if v.is_null:
-                print('v is Null')
+                # print('Naming background cutoff flow')
                 bg.terminate(None)
             else:
-                print('bg')
+                # print('bg %s' % v.term_node)
                 bg.terminate(v.term_node, scenario=k, flow=v.term_flow, direction=v.direction)
-                self._terminations[k] = FlowTermination.null(self)
-        print('BG: %s | %s' % (bg, bg.termination(None).term_node))
+                self.terminate(bg, scenario=k)
+        # print('BG: %s | %s' % (bg, bg.termination(None).term_node))
 
     def node_weight(self, magnitude, scenario):
         term = self.termination(scenario)
-        if term is None:
+        if term is None or term.is_null or term.is_fg:
             return magnitude
         return magnitude * term.node_weight_multiplier
 
@@ -513,9 +595,8 @@ class LcFragment(LcEntity):
 
         else: assume it is a null foreground node; follow child flows
 
-        :param childflows: this is a lambda x, y that takes current frag and background=bool and returns:
-        - a child generator if background=False (default)
-        - a matching background frag if one exists if background=True
+        :param childflows: this is a lambda that takes current frag and returns a generator of frags listing self
+        as parent
         - must be provided by calling environment
 
         :param upstream_nw: upstream node weight
@@ -528,6 +609,19 @@ class LcFragment(LcEntity):
         :return: an array of FragmentFlow records reporting the traversal
         """
 
+        '''
+        First handle the traversal entry
+        inputs:
+         _balance
+         conserved_qty
+         observed
+         scenario
+         upstream_nw
+
+        outputs:
+         own ff
+         conserved_val
+        '''
         if _balance is None:
             magnitude = upstream_nw * self.exchange_value(scenario, observed=observed)
         else:
@@ -548,20 +642,14 @@ class LcFragment(LcEntity):
         node_weight = self.node_weight(magnitude, scenario)
         term = self.termination(scenario)
 
-        if self.termination(scenario).is_null:
-            if not self._background:
-                try:
-                    bg = next(childflows(self, True))
-                    ff, _ = bg.traverse(childflows, node_weight, scenario, observed=observed)
-                    return ff, conserved_val
-                except StopIteration:
-                    # must be foreground
-                    pass
-
         ff = [FragmentFlow(self, magnitude, node_weight, term, conserved)]
 
-        if self._background:
+        if term.is_null or self._background:
             return ff, conserved_val
+
+        '''
+        now looking forward: is our child node conserving?
+        '''
 
         if frags_seen is None:
             frags_seen = set()
@@ -569,11 +657,11 @@ class LcFragment(LcEntity):
             raise InvalidParentChild('Frag seeing self')
         frags_seen.add(self.get_uuid())
 
-        '''
-        now looking forward: is our child node conserving?
-        '''
-
-        if term.is_null or term.is_self or term.term_node.entity_type == 'process':
+        if term.is_fg or term.term_node.entity_type == 'process':
+            '''
+            Handle foreground nodes and processes--> these can be quantity-conserving, but except for
+            balancing flows the flow magnitudes are determined at the time of construction
+            '''
             stock = None
             bal_f = None
             if self._conserved_quantity is not None:
@@ -581,7 +669,7 @@ class LcFragment(LcEntity):
                 if self.direction == 'Input':  # convention: inputs to self are positive
                     stock *= -1
 
-            for f in childflows(self, False):
+            for f in childflows(self):
                 try:
                     child_ff, cons = f.traverse(childflows, node_weight, scenario, observed=observed,
                                                 frags_seen=frags_seen, conserved_qty=self._conserved_quantity)
@@ -599,9 +687,18 @@ class LcFragment(LcEntity):
                 ff.extend(bal_ff)
 
         else:
-            # need to determine child flow magnitudes based on traversal record
-            flow_ffs = term.term_node.entity().io_flows(childflows, scenario,
-                                                        observed=observed, frags_seen=frags_seen)
+            '''
+            handle sub-fragments, including background flows--
+            for sub-fragments, the flow magnitudes are determined at the time of traversal and must be pushed out to
+             child flows
+            for background flows, the background ff should replace the current ff
+            '''
+            if term.term_node.is_background:
+                bg_ff, cons = term.term_node.traverse(childflows, node_weight, scenario, observed=observed)
+                return bg_ff, conserved_val
+
+            # for proper subfragments, need to determine child flow magnitudes based on traversal record
+            flow_ffs = term.term_node.io_flows(childflows, scenario, observed=observed, frags_seen=frags_seen)
 
             # first, we adjust for any autoconsumption
             in_ex = 1.0

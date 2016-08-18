@@ -19,7 +19,6 @@ from lcatools.exchanges import Exchange, comp_dir
 from lcatools.tools import split_nick, archive_from_json, archive_factory
 
 
-CFRef = namedtuple('CFRef', ('catalog', 'index', 'characterization'))
 ArchiveRef = namedtuple('ArchiveRef', ['source', 'nicknames', 'dataSourceType', 'parameters'])
 
 DEFAULT_CATALOG = os.path.join(os.path.dirname(__file__), 'default_catalog.json')
@@ -81,9 +80,11 @@ class CatalogRef(object):
     def entity_type(self):
         return self.entity().entity_type
 
-    @property
-    def reference_entity(self):
-        return self.entity().reference_entity
+    def fg(self):
+        return self.archive.fg_proxy(self.id)
+
+    def bg(self):
+        return self.archive.bg_proxy(self.id)
 
     def get_external_ref(self):
         return self.entity().get_external_ref()
@@ -155,10 +156,31 @@ class ExchangeRef(object):
         return '(%s) %s %s %s' % (self.catalog.name(self.index), self.exchange.flow, dr, self.exchange.process)
 
     def __hash__(self):
-        return hash(self.index, self.exchange)
+        return hash((self.index, self.exchange))
 
     def __eq__(self, other):
         return self.catalog is other.catalog and self.index == other.index and self.exchange == other.exchange
+
+
+class CFRef(object):
+    def __init__(self, catalog, index, characterization):
+        self.catalog = catalog
+        self.index = catalog.get_index(index)
+        self.characterization = characterization
+
+    @property
+    def entity_type(self):
+        return 'characterization'
+
+    def __str__(self):
+        return '(%s) %s' % (self.catalog.name(self.index), self.characterization)
+
+    def __hash__(self):
+        return hash((self.index, self.characterization))
+
+    def __eq__(self, other):
+        return self.catalog is other.catalog and self.index == other.index and \
+               self.characterization == other.characterization
 
 
 class CatalogInterface(object):

@@ -176,7 +176,7 @@ class EcospoldV2Archive(LcArchive):
         if 'casNumber' in exchange.attrib:
             cas = exchange.attrib['casNumber']
         else:
-            cas = None
+            cas = ''
 
         q = self._create_quantity(exchange)
 
@@ -350,6 +350,7 @@ class EcospoldV2Archive(LcArchive):
 
         import time
         start_time = time.time()
+        print('Loading LCIA results from %s' % filename)
         o = self.objectify(filename)
 
         self._print('%30.30s -- %5f' % ('Objectified', time.time() - start_time))
@@ -364,7 +365,6 @@ class EcospoldV2Archive(LcArchive):
                 if q['Name'] in tags:
                     raise KeyError('Name collision %s' % q['Name'])
                 tags[q['Name']] = q
-        self._print('%30.30s -- %5f' % ('Method names extracted', time.time() - start_time))
 
         results = dict()
 

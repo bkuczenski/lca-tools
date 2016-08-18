@@ -1,11 +1,15 @@
 import json
 import os
 
+from collections import defaultdict
+
 from lcatools.foreground.foreground import ForegroundArchive
 from lcatools.catalog import CatalogInterface, ExchangeRef
+from lcatools.exchanges import comp_dir, ExchangeValue
 from lcatools.flowdb.flowdb import FlowDB
 from lcatools.lcia_results import LciaResult
 from lcatools.foreground.dynamic_grid import dynamic_grid
+from lcatools.interact import pick_reference
 
 MANIFEST = ('catalog.json', 'entities.json', 'fragments.json', 'flows.json')
 
@@ -156,7 +160,7 @@ class ForegroundManager(object):
 
     # inspection methods
     def _filter_exch(self, process_ref, elem=True, **kwargs):
-        return [x for x in process_ref.archive.fg_lookup(process_ref.entity(), **kwargs)
+        return [x for x in process_ref.archive.fg_lookup(process_ref.id, **kwargs)
                 if self._flowdb.is_elementary(x.flow) is elem]
 
     def intermediate(self, process_ref, **kwargs):
@@ -276,9 +280,9 @@ class ForegroundManager(object):
             for q in quantities:
                 result[q.get_uuid()] = LciaResult(q)
             return result
-        return p_ref.archive.bg_lookup(p_ref.entity(), quantities=quantities, **kwargs)
+        return p_ref.archive.bg_lookup(p_ref.id, quantities=quantities, **kwargs)
 
-    def compare_lcia_results(self, p_refs, **kwargs):
+    def compare_lcia_results(self, p_refs, background=False, **kwargs):
         """
         p_refs should be an array of catalog_refs
         :param p_refs:
@@ -286,7 +290,10 @@ class ForegroundManager(object):
         """
         results = dict()
         for p in p_refs:
-            results[p] = self.fg_lcia(p, **kwargs)
+            if background:
+                results[p] = self.bg_lcia(p, **kwargs)
+            else:
+                results[p] = self.fg_lcia(p, **kwargs)
         qs = self[0].lcia_methods()  # assume same qs for all processes
 
         dynamic_grid(p_refs, qs, lambda x, y: results[y][x.get_uuid()],
@@ -319,6 +326,15 @@ class ForegroundManager(object):
         '''
 
     # fragment methods
+    def frag(self, string):
+        return next(f for f in self[0].fragments(show_all=True) if f.get_uuid().startswith(string.lower()))
+
+    def traverse(self, fragment, scenario=None, observed=False):
+        ffs, _ = fragment.traverse(lambda x, y: self.child_flows(x, background=y), 1.0, scenario, observed=observed)
+        return ffs
+
+    def draw_fragment(self, fragment):
+        fragment.show_tree(lambda x, y: self.child_flows(x, background=y))
 
     def child_flows(self, fragment, background=False):
         """
@@ -358,24 +374,81 @@ class ForegroundManager(object):
         fragment.term_from_exch(term, scenario=scenario)
         self.build_child_flows(fragment, scenario=scenario)
 
+    def create_fragment_from_process(self, process_ref, ref_flow=None):
+        process = process_ref.fg()
+        if ref_flow is None:
+            if len(process.reference_entity) > 1:
+                ref = pick_reference(process)
+            else:
+                ref = list(process.reference_entity)[0].flow
+        else:
+            try:
+                ref = next(x.flow for x in process.reference_entity if x.flow.match(ref_flow))
+            except StopIteration:
+                print('Reference flow not found in target process.')
+                return None
+        ref_exch = next(x for x in process.exchange(ref))
+        direction = comp_dir(ref_exch.direction)
+        frag = self[0].create_fragment(ref, direction, Name='%s' % process_ref.entity())
+        frag.terminate(process_ref, flow=ref)
+        self.build_child_flows(frag)
+        return frag
+
+    def _get_fragment_io_flows(self, term, scenario=None):
+        """
+        Aggregates inputs and outputs from a fragment; essentially converts a fragment into a set of exchanges
+        :param term:
+        :param scenario:
+        :return:
+        """
+        io_ffs = term.term_node.entity().io_flows(lambda x, y: self.child_flows(x, background=y), scenario)
+        ref_dir = term.direction
+        accum = defaultdict(float)
+        ent = dict()
+        accum[term.term_flow.get_uuid()] = 1.0
+        for i in io_ffs:
+            ent[i.fragment.flow.get_uuid()] = i.fragment.flow
+            if i.fragment.direction == ref_dir:
+                accum[i.fragment.flow.get_uuid()] += i.magnitude
+            else:
+                accum[i.fragment.flow.get_uuid()] -= i.magnitude
+
+        in_ex = accum.pop(term.term.term_flow.get_uuid())
+        if in_ex < 0:
+            raise ValueError('Fragment requires more input than it generates')
+        frag_exchs = []
+        for k, v in accum.items():
+            val = abs(v) / in_ex
+            if v < 0:
+                dirn = comp_dir(ref_dir)
+            else:
+                dirn = ref_dir
+            frag_exchs.append(ExchangeValue(term.term_node.entity(), ent[k], dirn, value=val))
+        return frag_exchs
+
     def build_child_flows(self, fragment, scenario=None):
-        term = fragment.termination(scenario=scenario)
         if fragment.is_background:
             return None  # no child flows for background nodes
+        term = fragment.termination(scenario=scenario)
+        if term.is_null or term.is_self:
+            return None
 
-        int_exch = [x for x in self._filter_exch(term.term_node, elem=False, ref_flow=term.term_flow)
-                    if not (x.flow == term.term_flow and x.direction == term.direction)]
+        if term.term_node.entity_type == 'process':
 
+            int_exch = [x for x in self._filter_exch(term.term_node, elem=False, ref_flow=term.term_flow)
+                        if not (x.flow.match(term.term_flow) and x.direction == term.direction)]
+
+        elif term.term_node.entity_type == 'fragment':
+
+            int_exch = self._get_fragment_io_flows(term, scenario=scenario)
+
+        else:
+            raise AmbiguousTermination('Cannot figure out entity type for %s' % term)
+
+        children = []
         for exch in int_exch:
-            self[0].add_child_ff_from_exchange(fragment, exch)
-            '''
-            try:
-                self.auto_terminate(term.index, child, scenario=scenario)
-            except AmbiguousTermination:
-                print('child fragment - multiple terminations: %s' % child['Name'])
-            except NoTermination:
-                print('child fragment - no termination found: %s' % child['Name'])
-            '''
+            children.append(self[0].add_child_ff_from_exchange(fragment, exch))
+        return children
 
     def compute_fragment_unit_scores(self, fragment, scenario=None):
         term = fragment.termination(scenario)
@@ -394,7 +467,11 @@ class ForegroundManager(object):
         :param fragment:
         :return:
         """
-        self[0].add_background_ff_from_fragment(fragment)
+        try:
+            bg = next(self.child_flows(fragment, background=True))
+        except StopIteration:
+            bg = self[0].add_background_ff_from_fragment(fragment)
+        return bg
 
     @staticmethod
     def profile(flow):

@@ -353,9 +353,13 @@ class LcProcess(LcEntity):
 
     def exchange(self, flow):
         if isinstance(flow, LcFlow):
-            return next(x for x in self._exchanges if x.flow.match(flow))
+            for x in self._exchanges:
+                if x.flow == flow:
+                    yield x
         elif flow in self._scenarios:
-            return next(x for x in self._exchanges if x.flow.match(self._scenarios[flow]))
+            for x in self._exchanges:
+                if x.flow == self._scenarios[flow]:
+                    yield x
         else:
             raise TypeError('LcProcess.exchange input %s %s' % (flow, type(flow)))
 
@@ -545,6 +549,9 @@ class LcFlow(LcEntity):
         for k in self._new_fields:
             if k not in self._d:
                 self._d[k] = ''
+
+        if self['CasNumber'] is None:
+            self['CasNumber'] = ''
 
         if self.reference_entity is not None:
             if self.reference_entity.get_uuid() not in self._characterizations.keys():

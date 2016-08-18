@@ -347,4 +347,5 @@ def pick_reference(process):
     c = _pick_list([c['Name'] for c in choices])
     if c[0] is None:
         return None
+    print('picked %s' % choices[c[0]])
     return choices[c[0]]

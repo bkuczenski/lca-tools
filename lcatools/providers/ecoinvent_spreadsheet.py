@@ -68,43 +68,58 @@ class EcoinventSpreadsheet(NsUuidArchive):
             print('Loading BG from %s' % fn)
             return fn
 
-    def fg_lookup(self, process, ref_flow=None):
+    def fg_proxy(self, proxy):
+        for ds in self.fg.list_datasets(proxy):
+            self.fg.retrieve_or_fetch_entity(ds)
+        return self.fg[proxy]
+
+    def bg_proxy(self, proxy):
+        for ds in self.bg.list_datasets(proxy):
+            self.bg.retrieve_or_fetch_entity(ds)
+        return self.bg[proxy]
+
+    def fg_lookup(self, process_id, ref_flow=None):
         """
-        Supply an exchange or a process-- if process, return a list; if exchange, return a dataset or None
-        :param process:
+        Supply a process and optional reference flow-- returns a list of exchanges
+        :param process_id:
         :param ref_flow:
         :return:
         """
         if self.fg is None:
             print('No foreground data')
-            return super(EcoinventSpreadsheet, self).fg_lookup(process)
+            return super(EcoinventSpreadsheet, self).fg_lookup(process_id)
         else:
-            for ds in self.fg.list_datasets(process.get_uuid()):
-                self.fg.retrieve_or_fetch_entity(ds)
-            p = self.fg[process.get_uuid()]
+            p = self.fg_proxy(process_id)
+            print('%s' % p)
             if ref_flow is None:
                 if len(p.reference_entity) > 1:
                     print('This process has multiple allocations. Select reference flow:')
-                ref = pick_reference(p)
+                    ref = pick_reference(p)
+                else:
+                    ref = list(p.reference_entity)[0].flow
                 if ref is None:
                     return p.exchanges()
                 return p.allocated_exchanges(ref)
+
             else:
                 rf = [x.flow for x in p.reference_entity if x.flow.match(ref_flow)][0]
-                p = self.fg.retrieve_or_fetch_entity('_'.join([process.get_uuid(), rf.get_uuid()]) + '.spold')
+                p = self.fg.retrieve_or_fetch_entity('_'.join([process_id, rf.get_uuid()]) + '.spold')
                 return p.allocated_exchanges(rf)
 
-    def bg_lookup(self, process, ref_flow=None, quantities=None, scenario=None, flowdb=None):
+    def bg_lookup(self, process_id, ref_flow=None, quantities=None, scenario=None, flowdb=None):
         if self.bg is None:
             raise AttributeError('No background')
         else:
+            p = self.bg_proxy(process_id)
             if ref_flow is None:
-                for ds in self.bg.list_datasets(process.get_uuid()):
-                    self.bg.retrieve_or_fetch_entity(ds)
-                p = self.bg[process.get_uuid()]
-                print('This process has multiple allocations. Select reference flow:')
-                ref_flow = pick_reference(p)
-            return self.bg.retrieve_lcia_scores('_'.join([process.get_uuid(), ref_flow.get_uuid()]) + '.spold',
+                if len(p.reference_entity) > 1:
+                    print('This process has multiple allocations. Select reference flow:')
+                    ref_flow = pick_reference(p)
+                else:
+                    ref_flow = list(p.reference_entity)[0].flow
+
+            rf = [x.flow for x in p.reference_entity if x.flow.match(ref_flow)][0]
+            return self.bg.retrieve_lcia_scores('_'.join([process_id, rf.get_uuid()]) + '.spold',
                                                 quantities=quantities)
 
     def _create_quantity(self, unitstring):

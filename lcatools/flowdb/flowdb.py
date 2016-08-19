@@ -274,7 +274,7 @@ class FlowDB(object):
             self._q_dict[q].add(i)
             self._f_dict[(i, q)][comp] = cf
 
-    def _parse_flow(self, flow):
+    def parse_flow(self, flow):
         terms = set(filter(None, (flow['Name'], flow['CasNumber'], flow.get_uuid())))
         flowables = self.flowables.find_indices(terms)
         comp = self.find_matching_compartment(flow['Compartment'])  # will raise MissingCompartment if not found
@@ -291,7 +291,7 @@ class FlowDB(object):
         missing_flows = []
         idx = self._catalog.get_index(archive)
         for f in self._catalog[archive].flows():
-            flowables, comp = self._parse_flow(f)
+            flowables, comp = self.parse_flow(f)
             if len(flowables) == 0:
                 missing_flows.append(f)
                 continue
@@ -302,7 +302,7 @@ class FlowDB(object):
 
     def lookup_cfs(self, flow, quantity, dist=1):
         cfs = set()
-        flowables, comp = self._parse_flow(flow)
+        flowables, comp = self.parse_flow(flow)
         q = quantity.get_uuid()
         for i in flowables:
             if i in self._q_dict[q]:

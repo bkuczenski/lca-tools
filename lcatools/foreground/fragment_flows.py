@@ -98,10 +98,9 @@ class FlowTermination(object):
         self._process_ref = process_ref
         if direction is not None:
             self.direction = direction
-        if term_flow is not None:
-            self.set_term_flow(term_flow)
         if descend is not None:
             self._descend = descend
+        self.set_term_flow(term_flow)
         self._score_cache = dict()
         self._set_inbound_ev(inbound_ev)
 
@@ -117,6 +116,25 @@ class FlowTermination(object):
             return False
         return (self._process_ref.id == exchange.process.get_uuid()) and (self.term_flow.match(exchange.flow))
 
+    def terminates(self, exchange):
+        """
+        Returns True if the exchange's termination matches the term's term_node, and the flows also match, and the
+        directions are complementary.
+        If the exchange does not specify a termination, returns True if the flows match and directions are comp.
+        :param exchange:
+        :return:
+        """
+        if self.is_null:
+            return False
+        if self.term_node.entity_type != 'process':
+            return False
+        if self.term_flow.match(exchange.flow) and self.direction == comp_dir(exchange.direction):
+            if exchange.termination is None:
+                return True
+            elif exchange.termination == self._process_ref.id:
+                return True
+        return False
+
     def to_exchange(self):
         if self.is_null:
             return None
@@ -128,6 +146,7 @@ class FlowTermination(object):
     def is_fg(self):
         return (not self.is_null) and (self.term_node is self._parent)
 
+    @property
     def is_bg(self):
         return (not self.is_null) and (self.term_node.entity_type == 'fragment') and self.term_node.is_background
 
@@ -179,6 +198,15 @@ class FlowTermination(object):
             else:
                 raise TypeError('How did we get here??? %s' % self._process_ref)
         self._cached_ev = inbound_ev
+
+    @property
+    def id(self):
+        if self.is_null:
+            return None
+        elif self._process_ref.entity_type == 'process':
+            return self._process_ref.id
+        else:
+            return self._process_ref.get_uuid()
 
     @property
     def inbound_exchange_value(self):
@@ -246,7 +274,7 @@ class FlowTermination(object):
             source = self._process_ref.catalog.source_for_index(self._process_ref.index)
         j = {
             'source': source,
-            'entityId': self._process_ref.id
+            'entityId': self.id
         }
         if self.term_flow != self._parent.flow:
             j['termFlow'] = self.term_flow.get_uuid()
@@ -309,12 +337,11 @@ class LcFragment(LcEntity):
 
     @classmethod
     def from_json(cls, catalog, j):
-        foreground = catalog[0]
         if j['parent'] is not None:
-            parent = foreground[j['parent']]
+            parent = catalog[0][j['parent']]
         else:
             parent = None
-        frag = cls(j['entityId'], foreground[j['flow']], j['direction'], parent=parent,
+        frag = cls(j['entityId'], catalog[0][j['flow']], j['direction'], parent=parent,
                    exchange_value=j['exchangeValues'].pop('0'),
                    private=j['isPrivate'],
                    balance_flow=j['isBalanceFlow'],
@@ -322,17 +349,28 @@ class LcFragment(LcEntity):
         frag.observed_ev = j['exchangeValues'].pop('1')
         for i, v in j['exchangeValues'].items():
             frag.set_exchange_value(i, v)
-        for k, v in j['terminations'].items():
-            if k == 'null':
-                frag.term_from_json(catalog, None, v)
-            else:
-                frag.term_from_json(catalog, k, v)
         for tag, val in j['tags'].items():
             frag[tag] = val  # just a fragtag group of values
         return frag
 
+    def finish_json_load(self, catalog, j):
+        self.reference_entity = catalog[0][j['parent']]
+        for k, v in j['terminations'].items():
+            if k == 'null':
+                self.term_from_json(catalog, None, v)
+            else:
+                self.term_from_json(catalog, k, v)
+
     @classmethod
     def from_exchange(cls, parent, exchange):
+        """
+        This method creates a child flow, positioning the parent node as the 'process' component of the exchange
+        and using the exchange's 'flow' and 'direction' components to define the child flow.  If the exchange
+        also includes a 'termination', then that is used to automatically terminate the child flow.
+        :param parent:
+        :param exchange:
+        :return:
+        """
         frag = cls(uuid.uuid4(), exchange.flow, exchange.direction, parent=parent, exchange_value=exchange.value,
                    Name=exchange.flow['Name'])
 
@@ -393,6 +431,13 @@ class LcFragment(LcEntity):
         if 'StageName' not in self._d:
             self._d['StageName'] = ''
 
+    def entity(self):
+        """
+        for compat with catalog_refs
+        :return:
+        """
+        return self
+
     @property
     def _parent(self):
         return self.reference_entity
@@ -449,6 +494,9 @@ class LcFragment(LcEntity):
         prefix += ' | '
         for c in children:
             c.show_tree(childflows, prefix=prefix)
+        if len(children) > 0:
+            prefix = prefix[:-3]
+            print('%s' % prefix)
 
     @property
     def cached_ev(self):
@@ -566,8 +614,9 @@ class LcFragment(LcEntity):
             else:
                 # print('bg %s' % v.term_node)
                 bg.terminate(v.term_node, scenario=k, flow=v.term_flow, direction=v.direction)
+                bg['Name'] = '%s' % v.term_node.entity()
                 self.terminate(bg, scenario=k)
-        # print('BG: %s | %s' % (bg, bg.termination(None).term_node))
+        print('BG: %s' % bg)
 
     def node_weight(self, magnitude, scenario):
         term = self.termination(scenario)

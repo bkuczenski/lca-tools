@@ -152,14 +152,16 @@ class ForegroundArchive(LcArchive):
 
     def add_child_ff_from_exchange(self, ff, exchange):
         """
+        Uses a process intermediate exchange to define a child flow to the process.  If the exchange's termination
+        is non-null, then the child exchange will also be terminated.
         Want to use a background flow if one exists already
         :param ff:
         :param exchange:
         :return:
         """
         try:
-            bg = next(f for f in self.fragments(background=True) if f.term.matches(exchange))
-            f = LcFragment.new(exchange.flow['Name'], exchange.flow, comp_dir(exchange.direction),
+            bg = next(f for f in self.fragments(background=True) if f.term.terminates(exchange))
+            f = LcFragment.new(exchange.flow['Name'], exchange.flow, exchange.direction,
                                parent=ff, exchange_value=exchange.value)
             f.terminate(bg)
         except StopIteration:
@@ -185,6 +187,13 @@ class ForegroundArchive(LcArchive):
         return [f.serialize(**kwargs) for f in self._entities_by_type('fragment')]
 
     def load_fragments(self, catalog):
+        """
+        This must be done in two steps, since fragments refer to other fragments in their definition.
+        First step: create all fragments.
+        Second step: set reference entities and terminations
+        :param catalog:
+        :return:
+        """
         with open(self._fragment_file, 'r') as fp:
             j = json.load(fp)
 
@@ -193,5 +202,5 @@ class ForegroundArchive(LcArchive):
             self.add(frag)
         for f in j['fragments']:
             frag = self[f['entityId']]
-            frag.reference_entity = self[f['parent']]
+            frag.finish_json_load(catalog, f)
 

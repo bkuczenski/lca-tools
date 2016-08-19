@@ -50,7 +50,7 @@ class ForegroundManager(object):
 
     The interface subclass provides UI for these activities
     """
-    def __init__(self, *args, catalog=None, cfs=('LCIA', 'EI-LCIA')):
+    def __init__(self, *args, catalog=None, cfs=('LCIA', 'EI-LCIA'), force_create_new=False):
         if len(args) > 0:
             fg_dir = args[0]
         else:
@@ -72,7 +72,7 @@ class ForegroundManager(object):
                 print('finished %s... (%.2f s)' % (c, time.time() - t0))
 
         if fg_dir is not None:
-            self.workon(fg_dir)
+            self.workon(fg_dir, force_create_new=force_create_new)
         print('finished... (%.2f s)' % (time.time() - t0))
 
     def load_lcia_cfs(self, nick):
@@ -110,22 +110,25 @@ class ForegroundManager(object):
     def terminate(self, *args, **kwargs):
         return self._catalog.terminate(*args, **kwargs)
 
-    def workon(self, folder):
+    def workon(self, folder, force_create_new=False):
         """
         Select the current foreground.  Create folder if needed.
         If folder/entities.json does not exist, creates and saves a new foreground in folder.
         loads and installs archive from folder/entities.json
         :param folder:
+        :param force_create_new: [False] if True, overwrite existing entities and fragments with a new
+         foreground from the template.
         :return:
         """
         if not os.path.exists(folder):
             os.makedirs(folder)
-        if not os.path.exists(os.path.join(folder, 'entities.json')):
+        if force_create_new or not os.path.exists(os.path.join(folder, 'entities.json')):
             ForegroundArchive.new(folder)
         self._catalog.set_foreground_dir(folder)
         self._catalog.load(0)
 
         self[0].load_fragments(self._catalog)
+        self.compute_unit_scores()
 
     def add_to_foreground(self, ref):
         print('Add to foreground: %s' % ref)
@@ -135,7 +138,7 @@ class ForegroundManager(object):
         return self._flowdb.flowables.search(string)
 
     def parse_flow(self, flow):
-        return self._flowdb._parse_flow(flow)
+        return self._flowdb.parse_flow(flow)
 
     def cfs_for_flowable(self, string, **kwargs):
         flowables = self.find_flowable(string)
@@ -163,6 +166,20 @@ class ForegroundManager(object):
     def _filter_exch(self, process_ref, elem=True, **kwargs):
         return [x for x in process_ref.archive.fg_lookup(process_ref.id, **kwargs)
                 if self._flowdb.is_elementary(x.flow) is elem]
+
+    def gen_exchanges(self, process_ref, ref_flow, direction):
+        """
+        This method takes in an exchange definition and gets all the complementary exchanges (i.e. the
+        process_ref's intermediate exchanges, excluding the reference flow
+
+        :param process_ref:
+        :param ref_flow:
+        :param direction:
+        :return: an exchange generator (NOT ExchangeRefs because I haven't figured out how to be consistent on that yet)
+        """
+        for x in self._filter_exch(process_ref, elem=False, ref_flow=ref_flow):
+            if not (x.flow == ref_flow and x.direction == direction):
+                yield x
 
     def intermediate(self, process_ref, **kwargs):
         exch = self._filter_exch(process_ref, elem=False, **kwargs)
@@ -240,6 +257,7 @@ class ForegroundManager(object):
         :param process_ref:
         :param quantities: defaults to foreground lcia quantities
         :param dist: [1] how far afield to search for cfs (see CLookup.find() from flowdb)
+        :param scenario: (not presently used) - some day the flow-quantity database will be scenario-sensitive
         :return:
         """
         if self._catalog.fg is None:
@@ -291,6 +309,7 @@ class ForegroundManager(object):
         """
         p_refs should be an array of catalog_refs
         :param p_refs:
+        :param background: whether to use bg_lcia instead of fg_lcia
         :return:
         """
         results = dict()
@@ -374,7 +393,15 @@ class ForegroundManager(object):
             fragment.term_from_exch(term_exch, scenario=scenario)
             self.build_child_flows(fragment, scenario=scenario)
 
-    def create_fragment_from_process(self, process_ref, ref_flow=None):
+    def create_fragment_from_process(self, process_ref, ref_flow=None, background_children=True):
+        """
+        The major entry into fragment building.  Given only a process ref, construct a fragment from the process,
+        using the process's reference exchange as the reference fragment flow.
+        :param process_ref:
+        :param ref_flow:
+        :param background_children: [True] automatically terminate child flows with background references.
+        :return:
+        """
         process = process_ref.fg()
         if ref_flow is None:
             if len(process.reference_entity) > 1:
@@ -391,7 +418,7 @@ class ForegroundManager(object):
         direction = comp_dir(ref_exch.direction)
         frag = self[0].create_fragment(ref, direction, Name='%s' % process_ref.entity())
         frag.terminate(process_ref, flow=ref)
-        self.build_child_flows(frag)
+        self.build_child_flows(frag, background_children=background_children)
         return frag
 
     def _get_fragment_io_flows(self, term, scenario=None):
@@ -426,7 +453,16 @@ class ForegroundManager(object):
             frag_exchs.append(ExchangeValue(term.term_node.entity(), ent[k], dirn, value=val))
         return frag_exchs
 
-    def build_child_flows(self, fragment, scenario=None):
+    def build_child_flows(self, fragment, scenario=None, background_children=False):
+        """
+        Given a terminated fragment, construct child flows corresponding to the termination's complementary
+        exchanges.
+
+        :param fragment: the parent fragment
+        :param scenario:
+        :param background_children: if true, automatically terminate child flows to background.
+        :return:
+        """
         if fragment.is_background:
             return None  # no child flows for background nodes
         term = fragment.termination(scenario=scenario)
@@ -435,8 +471,7 @@ class ForegroundManager(object):
 
         if term.term_node.entity_type == 'process':
 
-            int_exch = [x for x in self._filter_exch(term.term_node, elem=False, ref_flow=term.term_flow)
-                        if not (x.flow.match(term.term_flow) and x.direction == term.direction)]
+            int_exch = self.gen_exchanges(term.term_node, term.term_flow, term.direction)
 
         elif term.term_node.entity_type == 'fragment':
 
@@ -447,7 +482,10 @@ class ForegroundManager(object):
 
         children = []
         for exch in int_exch:
-            children.append(self[0].add_child_ff_from_exchange(fragment, exch))
+            child = self[0].add_child_ff_from_exchange(fragment, exch)
+            if background_children:
+                self.fragment_to_background(child)
+            children.append(child)
         return children
 
     def compute_unit_scores(self, scenario=None):
@@ -467,21 +505,39 @@ class ForegroundManager(object):
 
     def fragment_to_background(self, fragment):
         """
-        Create a background from an existing fragment. if the fragment is terminated, transfer the termination
-        to the background.
+        Given an existing fragment, create (or locate) a background reference that terminates it. If the fragment is
+        terminated, transfer the termination to the background reference.
         :param fragment:
         :return:
         """
-        if fragment.term.is_null:
+        if fragment.term.is_bg:
+            return fragment  # nothing to do
+        elif fragment.term.is_null:
             bg = self[0].add_background_ff_from_fragment(fragment)  # cutoff
         else:
             try:
                 term_exch = fragment.term.to_exchange()
-                bg = next(f for f in self[0].fragments(background=True) if f.term.matches(term_exch))
+                bg = next(f for f in self[0].fragments(background=True) if f.term.terminates(term_exch))
                 fragment.terminate(bg)
             except StopIteration:
                 bg = self[0].add_background_ff_from_fragment(fragment)
         return bg
+
+    def fragment_to_foreground(self, fragment, background_children=True):
+        """
+        Given a fragment that is terminated to background, recall the background termination and make it into a
+          foreground termination.  (the background reference will not be deleted).  Proceed to add the foreground
+          node's child flows.
+        :param fragment:
+        :param background_children:
+        :return:
+        """
+        if fragment.term.is_bg:
+            bg = fragment.term.term_node
+            fragment.terminate(bg.term.term_node, flow=bg.term.term_flow, direction=bg.term.direction)
+            self.build_child_flows(fragment, background_children=background_children)
+            return fragment
+        return fragment  # nothing to do
 
     @staticmethod
     def profile(flow):

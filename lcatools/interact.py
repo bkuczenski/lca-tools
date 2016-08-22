@@ -90,7 +90,7 @@ def _pick_list(items, *args, prompt=None):
     print('\nChoice Item')
     print('%s %s' % ('=' * 6, '=' * 70))
 
-    if items is not None:
+    if items is not None and items != []:
         field_width = ceil(log10(len(items)))
 
         for i, k in enumerate(items):

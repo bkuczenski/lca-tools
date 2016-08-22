@@ -92,6 +92,10 @@ class ForegroundArchive(LcArchive):
     def catalog_file(self):
         return os.path.join(self._folder, 'catalog.json')
 
+    @property
+    def compartment_file(self):
+        return os.path.join(self._folder, 'compartments.json')
+
     def add(self, entity):
         try:
             super(ForegroundArchive, self).add(entity)

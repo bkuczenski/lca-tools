@@ -199,8 +199,9 @@ class FlowTermination(object):
         else:
             raise ValueError('Descend setting must be True or False')
 
-    def self_terminate(self):
+    def self_terminate(self, term_flow=None):
         self._process_ref = self._parent
+        self.set_term_flow(term_flow)
 
     @property
     def index(self):
@@ -227,6 +228,10 @@ class FlowTermination(object):
         return self.term_flow.convert(1.0, fr=ref_qty)
 
     def _set_inbound_ev(self, inbound_ev):
+        if self.is_fg:
+            # foreground nodes can't have inbound EVs since there is no where to serialize them
+            self._cached_ev = 1.0
+            return
         if inbound_ev is None:
             if self._process_ref is None:
                 inbound_ev = 1.0
@@ -544,7 +549,7 @@ class LcFragment(LcEntity):
                 re = ' ** ref'
         else:
             re = self.reference_entity.get_uuid()[:7]
-        return '(%s) %s %s %s %s  %s' % (re, self.dirn, self.get_uuid()[:7], self.dirn, self.term, self.flow['Name'])
+        return '(%s) %s %s %s %s  %s' % (re, self.dirn, self.get_uuid()[:7], self.dirn, self.term, self['Name'])
 
     def show_tree(self, childflows, prefix=''):
         dirn = {
@@ -697,7 +702,7 @@ class LcFragment(LcEntity):
 
     def node_weight(self, magnitude, scenario):
         term = self.termination(scenario)
-        if term is None or term.is_null or term.is_fg:
+        if term is None or term.is_null:
             return magnitude
         return magnitude * term.node_weight_multiplier
 

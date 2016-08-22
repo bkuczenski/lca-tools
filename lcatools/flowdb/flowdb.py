@@ -2,11 +2,11 @@ from math import ceil, log10
 
 from lcatools.flowdb.create_synonyms import load_synonyms, SYNONYMS
 from lcatools.flowdb.synlist import cas_regex
-from lcatools.flowdb.compartments import load_compartments, traverse_compartments, Compartment, COMPARTMENTS
+from lcatools.flowdb.compartments import load_compartments, save_compartments, traverse_compartments, Compartment, COMPARTMENTS
 from lcatools.catalog import CFRef, CatalogRef, get_entity_uuid
 from lcatools.interfaces import uuid_regex
 from lcatools.foreground.dynamic_grid import dynamic_grid
-from lcatools.interact import pick_one
+from lcatools.interact import pick_one, _pick_list
 
 from collections import defaultdict, namedtuple
 
@@ -17,6 +17,34 @@ class MissingFlow(Exception):
 
 class MissingCompartment(Exception):
     pass
+
+
+def merge_compartment(compartment, missing):
+    my_missing = []
+    my_missing.extend(missing)
+    while len(my_missing) > 0:
+        sub = traverse_compartments(compartment, my_missing[:1])
+        if sub is not None:
+            my_missing.pop(0)
+            compartment = sub
+        else:
+            print('Missing compartment: %s' % my_missing[0])
+            subs = sorted(s.name for s in compartment.subcompartments())
+            print('subcompartments of %s:' % compartment)
+            c = _pick_list(subs, 'Merge "%s" into %s' % (my_missing[0], compartment),
+                           'Create new Subcompartment of %s' % compartment)
+            if c == (None, 0):
+                compartment.add_syn(my_missing.pop(0))
+            elif c == (None, 1):  # now we add all remaining compartments
+                while len(my_missing) > 0:
+                    new_sub = my_missing.pop(0)
+                    compartment.add_sub(new_sub)
+                    compartment = compartment[new_sub]
+            elif c == (None, None):
+                raise ValueError('User break')
+            else:
+                compartment = compartment[subs[c[0]]]
+    return compartment
 
 
 class CLookup(object):
@@ -129,10 +157,15 @@ class FlowDB(object):
         comp = self.find_matching_compartment(flow['Compartment'])
         return comp.elementary
 
-    def find_matching_compartment(self, compartment):
+    def load_compartments(self, file=COMPARTMENTS):
+        self.compartments = load_compartments(file)
+
+    def find_matching_compartment(self, compartment, interact=True, save_file=COMPARTMENTS):
         """
 
         :param compartment: should be an iterable, as-stored in an archive
+        :param interact: if true, interactively prompt user to merge and save missing compartments
+        :param save_file: where to save the updated compartments
         :return: the Compartment. Also adds it to self._c_dict
         """
         cs = compartment_string(compartment)
@@ -141,7 +174,16 @@ class FlowDB(object):
 
         match = traverse_compartments(self.compartments, compartment)
         if match is None:
-            raise MissingCompartment('%s' % cs)
+            if interact:
+                c = merge_compartment(self.compartments, compartment)
+                match = traverse_compartments(self.compartments, compartment)
+                if c is match and c is not None:
+                    print('match: %s' % match.to_list())
+                    print('Updating compartments...')
+                    save_compartments(self.compartments, file=save_file)
+
+            else:
+                raise MissingCompartment('%s' % cs)
         else:
             self._c_dict[cs] = match
             return match

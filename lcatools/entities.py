@@ -198,18 +198,20 @@ class LcEntity(object):
             self._d[key] = value
 
     def merge(self, other):
-        if self == other:
+        if not isinstance(other, LcEntity):
+            raise ValueError('Incoming is not an LcEntity: %s' % other)
+        elif self.entity_type != other.entity_type:
+            raise ValueError('Incoming entity type %s mismatch with %s' % (other.entity_type, self.entity_type))
+        elif self.get_external_ref() != other.get_external_ref():
+            raise ValueError('Incoming External ref %s conflicts with existing %s' % (other.get_external_ref(),
+                                                                                      self.get_external_ref()))
+        else:
+            # if self.origin != other.origin:
+            #     print('Merging entities with differing origin: \nnew: %s\nexisting: %s'% (other.origin, self.origin))
             for k in other.keys():
                 if k not in self.keys():
                     print('Merge: Adding key %s: %s' % (k, other[k]))
                     self[k] = other[k]
-        else:
-            if self.entity_type != other.entity_type:
-                raise ValueError('Incoming entity type %s mismatch with %s' % (other.entity_type, self.entity_type))
-            if self.origin != other.origin:
-                raise ValueError('Incoming entity origin mismatch (TODO: prompt user for dominance)')
-            raise ValueError('Incoming External ref %s conflicts with existing %s' % (other.get_external_ref(),
-                                                                                      self.get_external_ref()))
 
     def keys(self):
         return self._d.keys()

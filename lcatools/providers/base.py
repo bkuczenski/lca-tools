@@ -249,7 +249,7 @@ class LcArchive(ArchiveInterface):
         :param ref_flow: for
         :return:
         """
-        process = self.fg_process(process_id)
+        process = self.fg_proxy(process_id)
         if ref_flow is not None:
             return process.allocated_exchanges(reference=ref_flow)
         return process.exchanges()
@@ -265,7 +265,7 @@ class LcArchive(ArchiveInterface):
         :param flowdb:
         :return:
         """
-        process = self.fg_process(process_id)
+        process = self.fg_proxy(process_id)
         if quantities is None:
             quantities = self.lcia_methods()
         ref_flow = process.find_reference(reference)

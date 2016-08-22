@@ -71,7 +71,9 @@ class FlowTermination(object):
 
     A fragment can have the following types of terminations:
      * None - the termination is null- the flow enters the foreground and becomes an i/o
-     * Self - the flow enters a foreground node. The node can have children but has no LCIA impacts.
+     * Self - the flow enters a foreground node. The node can have children but only has LCIA impacts based on
+       the terminating flow, which have to be looked up in the database. fg-terminated nodes don't have scenarios
+       (e.g. the scenarios are in the exchange values)
        (created with the yet-unwritten add child flow function if the node is null)
      * Process - the flow enters a process referenced by CatalogRef.  The node's LCIA impacts are fg_lcia. The
        node's children are the process's non-term intermediate exchanges. The node can also have other children.
@@ -290,6 +292,9 @@ class FlowTermination(object):
         """
         self._score_cache = traversal_to_lcia(subfrags)
 
+    def flowdb_results(self, lcia_results):
+        self._score_cache = lcia_results
+
     def set_score_cache(self, lcia, quantities):
         """
 
@@ -318,6 +323,10 @@ class FlowTermination(object):
 
     def score_cache_items(self):
         return self._score_cache.items()
+
+    def lcia(self):
+        for k, v in self.score_cache_items():
+            print('%s' % v)
 
     def clear_score_cache(self):
         self._score_cache.clear()

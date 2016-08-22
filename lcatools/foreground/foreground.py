@@ -88,6 +88,10 @@ class ForegroundArchive(LcArchive):
     def _fragment_file(self):
         return os.path.join(self._folder, 'fragments.json')
 
+    @property
+    def catalog_file(self):
+        return os.path.join(self._folder, 'catalog.json')
+
     def add(self, entity):
         try:
             super(ForegroundArchive, self).add(entity)
@@ -145,9 +149,10 @@ class ForegroundArchive(LcArchive):
             return [f for f in self._fragments(show_all=show_all) if f.is_background == background]
         return sorted([f for f in self._fragments(show_all=show_all)], key=lambda x: x.is_background)
 
-    def add_child_fragment_flow(self, ff, flow, direction):
-        f = LcFragment.new(flow['Name'], flow, direction, parent=ff)
+    def add_child_fragment_flow(self, ff, flow, direction, **kwargs):
+        f = LcFragment.new(flow['Name'], flow, direction, parent=ff, **kwargs)
         self.add_entity_and_children(f)
+
         return f
 
     def add_child_ff_from_exchange(self, ff, exchange):

@@ -99,6 +99,8 @@ class CatalogRef(object):
         return hash((self.index, self.id))
 
     def __eq__(self, other):
+        if not isinstance(other, CatalogRef):
+            return False
         return (self.catalog is other.catalog) and (self.index == other.index) and (self.id == other.id)
 
     def validate(self, catalog):
@@ -197,7 +199,6 @@ class CatalogInterface(object):
     def from_json(cls, j, fg_dir=None):
         """
         Create a catalog and populate it with archives as a set of ArchiveRefs specified in a json file.
-
         Foreground entry is omitted; index starts at 1. fg dir can be specified on the command line.
         :return:
         """
@@ -208,20 +209,29 @@ class CatalogInterface(object):
             except IndexError:
                 print('Index error at %d' % i)
                 break
-            if 'nicknames' in cat.keys():
-                nicks = cat['nicknames']
-            else:
-                nicks = [None]
-            if 'parameters' in cat.keys():
-                params = cat['parameters']
-                if params is None:
-                    params = dict()
-            else:
-                params = dict()
-
-            catalog.add_archive(cat['source'], nicks, cat['dataSourceType'], **params)
+            catalog._parse_json(cat)
 
         return catalog
+
+    def open(self, file):
+        with open(file) as fp:
+            j = json.load(fp)
+        for cat in j['catalogs']:
+            self._parse_json(cat)
+
+    def _parse_json(self, cat):
+        if 'nicknames' in cat.keys():
+            nicks = cat['nicknames']
+        else:
+            nicks = [None]
+        if 'parameters' in cat.keys():
+            params = cat['parameters']
+            if params is None:
+                params = dict()
+        else:
+            params = dict()
+
+        self.add_archive(cat['source'], nicks, cat['dataSourceType'], **params)
 
     def __init__(self, foreground_dir=None):
         self.archives = []  # a list of archives
@@ -278,6 +288,14 @@ class CatalogInterface(object):
         return k
 
     def add_archive(self, source, nicknames, ds_type, **kwargs):
+        """
+        returns the index of the new or existing archive having given source
+        :param source:
+        :param nicknames:
+        :param ds_type:
+        :param kwargs:
+        :return:
+        """
         if source in self._sources.keys():
             print('Data source %s already listed as %s' % (source, [k for k, v in self._nicknames.items()
                                                                     if v == self._sources[source]]))
@@ -447,6 +465,16 @@ class CatalogInterface(object):
             json.dump(self.serialize(), fp, indent=2)
             print('Default catalog saved to %s' % DEFAULT_CATALOG)
 
+    def save_to_foreground(self):
+        """
+        write the current catalog to the foreground directory
+        :return:
+        """
+        if self.is_loaded(0):
+            with open(self[0].catalog_file, 'w') as fp:
+                json.dump(self.serialize(), fp, indent=2)
+                print('Default catalog saved to foreground')
+
     def retrieve(self, archive, key):
         """
         Method to retrieve a specific, concretely identified entity from a single archive.  the provided key
@@ -473,15 +501,15 @@ class CatalogInterface(object):
                     break
             return r
 
-    def processes_for(self, item):
+    def processes_from(self, item):
         index = self.get_index(item)
         return [self.ref(index, p.get_uuid()) for p in self.archives[index].processes()]
 
-    def flows_for(self, item):
+    def flows_from(self, item):
         index = self.get_index(item)
         return [self.ref(index, p.get_uuid()) for p in self.archives[index].flows()]
 
-    def quantities_for(self, item):
+    def quantities_from(self, item):
         index = self.get_index(item)
         return [self.ref(index, p.get_uuid()) for p in self.archives[index].quantities()]
 

@@ -2,7 +2,8 @@
 This object replaces the LciaResult types spelled out in Antelope-- instead, it serializes to an LCIA result directly.
 
 """
-from lcatools.exchanges import DissipationExchange
+from lcatools.exchanges import ExchangeValue, DissipationExchange
+from lcatools.characterizations import Characterization
 from lcatools.interfaces import to_uuid
 
 
@@ -117,6 +118,26 @@ class LciaResult(object):
     The exchanges and factors referenced in add_score should be stored post-scenario-lookup. (An LciaResult should be
     static)
     """
+    @classmethod
+    def from_cfs(cls, fragment, cfs, scenario=None, location=None):
+        """
+        for foreground-terminated elementary flows
+        returns a dict of LciaResults
+        :param fragment:
+        :param cfs: a dict of q-uuid to cf sets???
+        :param scenario:
+        :param location:
+        :return:
+        """
+        results = dict()
+        exch = ExchangeValue(fragment, fragment.flow, fragment.direction, value=1.0)
+        for q, cf in cfs.items():
+            results[q] = cls(cf.quantity, scenario=scenario)
+            results[q].add_component(fragment.get_uuid(), entity=fragment)
+            results[q].add_detailed_result(exch, cf, location)
+
+        return results
+
     def __init__(self, quantity, scenario=None, private=False):
         """
         If private, the LciaResult will not return any unaggregated results
@@ -200,3 +221,8 @@ class LciaResult(object):
 
     def __str__(self):
         return '%s %s' % (number(self.total()), self.quantity)
+
+
+
+
+

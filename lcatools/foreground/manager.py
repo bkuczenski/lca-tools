@@ -48,6 +48,8 @@ class ForegroundManager(object):
      - a result set generated from search
      - a select set for comparisons
 
+    Fragments also get tacked on here for now
+
     The interface subclass provides UI for these activities
     """
     def __init__(self, *args, catalog=None, cfs=('LCIA', 'EI-LCIA'), force_create_new=False):
@@ -126,6 +128,8 @@ class ForegroundManager(object):
             ForegroundArchive.new(folder)
         self._catalog.set_foreground_dir(folder)
         self._catalog.load(0)
+        if os.path.exists(self[0].catalog_file):
+            self._catalog.open(self[0].catalog_file)
 
         self[0].load_fragments(self._catalog)
         self.compute_unit_scores()
@@ -358,7 +362,7 @@ class ForegroundManager(object):
         return ffs
 
     def fragment_lcia(self, fragment, scenario=None, observed=False):
-        return fragment.fragment_lcia(lambda x:self.child_flows(x), scenario=scenario, observed=observed)
+        return fragment.fragment_lcia(lambda x: self.child_flows(x), scenario=scenario, observed=observed)
 
     def draw_fragment(self, fragment):
         fragment.show_tree(lambda x: self.child_flows(x))
@@ -396,6 +400,17 @@ class ForegroundManager(object):
             fragment.term_from_exch(term_exch, scenario=scenario)
             self.build_child_flows(fragment, scenario=scenario)
 
+    def new_fragment(self, flow_ref, direction, termination=None, **kwargs):
+        frag = self[0].create_fragment(flow_ref.entity(), direction, **kwargs)
+        if termination is not None:
+            frag.terminate(termination)  # None scenario
+
+    def terminate_to_foreground(self, fragment):
+        fragment.term.self_terminate()
+        if self._flowdb.is_elementary(fragment.flow):
+            cfs = self._flowdb.factors_for_flow(fragment.flow, [l for l in self[0].lcia_methods()])
+            fragment.term.flowdb_results(LciaResult.from_cfs(fragment, cfs))
+
     def create_fragment_from_process(self, process_ref, ref_flow=None, background_children=True):
         """
         The major entry into fragment building.  Given only a process ref, construct a fragment from the process,
@@ -424,10 +439,10 @@ class ForegroundManager(object):
         self.build_child_flows(frag, background_children=background_children)
         return frag
 
-    def _get_fragment_io_flows(self, term, scenario=None):
+    def _get_fragment_inventory(self, term, scenario=None):
         """
-        Aggregates inputs and outputs from a fragment; essentially converts a fragment into a set of exchanges
-        :param term:
+        Aggregates inputs and outputs (un-terminated flows) from a fragment; returns a list of exchanges.
+        :param term: ff
         :param scenario:
         :return:
         """
@@ -443,9 +458,9 @@ class ForegroundManager(object):
             else:
                 accum[i.fragment.flow.get_uuid()] -= i.magnitude
 
-        in_ex = accum.pop(term.term.term_flow.get_uuid())
+        in_ex = accum.pop(term.term_flow.get_uuid())
         if in_ex < 0:
-            raise ValueError('Fragment requires more input than it generates')
+            raise ValueError('Fragment requires more reference flow than it generates')
         frag_exchs = []
         for k, v in accum.items():
             val = abs(v) / in_ex
@@ -478,7 +493,7 @@ class ForegroundManager(object):
 
         elif term.term_node.entity_type == 'fragment':
 
-            int_exch = self._get_fragment_io_flows(term, scenario=scenario)
+            int_exch = self._get_fragment_inventory(term, scenario=scenario)
 
         else:
             raise AmbiguousTermination('Cannot figure out entity type for %s' % term)

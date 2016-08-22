@@ -498,13 +498,13 @@ class LcProcess(LcEntity):
 
     def lcia(self, quantity, ref_flow=None, scenario=None, flowdb=None):
         result = LciaResult(quantity, scenario)
-        result.add_entity(self)
+        result.add_component(self.get_uuid(), entity=self)
         for ex in self.allocated_exchanges(scenario or ref_flow):
             if flowdb is None:
                 factor = ex.flow.factor(quantity)
             else:
                 factor = flowdb.lookup_single_cf(ex.flow, quantity, self['SpatialScope'])
-            result.add_score(self, ex, factor, self['SpatialScope'])
+            result.add_score(self.get_uuid(), ex, factor, self['SpatialScope'])
         return result
 
     def merge(self, other):

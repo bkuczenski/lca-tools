@@ -379,7 +379,7 @@ class EcospoldV2Archive(LcArchive):
                     q = tags[my_tag]
                     result = LciaResult(q)
                     cf = Characterization(rf, q, value=v, location=p['SpatialScope'])
-                    result.add_score(p, exch, cf, p['SpatialScope'])
+                    result.add_score(p.get_uuid(), exch, cf, p['SpatialScope'])
                     results[q.get_uuid()] = result
 
         self._print('%30.30s -- %5f' % ('Impact scores collected', time.time() - start_time))

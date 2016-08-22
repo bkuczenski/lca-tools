@@ -47,6 +47,8 @@ class Characterization(object):
     def __getitem__(self, item):
         if item in self._locations.keys():
             return self._locations[item]
+        if len(self._locations) == 0:
+            return None
         return self._locations['GLO']  # today is not the day to write a location best-match finder
 
     def __setitem__(self, key, value):

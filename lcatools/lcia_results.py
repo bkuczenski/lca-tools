@@ -22,6 +22,10 @@ class InconsistentScenario(Exception):
     pass
 
 
+class DuplicateResult(Exception):
+    pass
+
+
 def number(val):
     try:
         return '%10.3g' % val
@@ -62,14 +66,13 @@ class DetailedLciaResult(object):
         return (self.exchange.value or 0.0) * (self.factor[self.location] or 0.0)
 
     def __hash__(self):
-        return hash((self.exchange.flow.get_uuid(), self.factor.quantity.get_uuid()))
+        return hash((self.exchange.process.get_uuid(), self.factor.flow.get_uuid()))
 
     def __eq__(self, other):
         if not isinstance(other, DetailedLciaResult):
             return False
-        return (self.exchange.flow.get_uuid() == other.exchange.flow.get_uuid() and
-                self.factor.quantity.get_uuid() == other.factor.quantity.get_uuid() and
-                self.result == other.result)
+        return (self.exchange.process.get_uuid() == other.exchange.process.get_uuid() and
+                self.factor.flow.get_uuid() == other.factor.flow.get_uuid())
 
     def __str__(self):
         return '%s x %-s = %-s [%s] %s' % (number(self.exchange.value), number(self.factor[self.location]),
@@ -92,10 +95,13 @@ class AggregateLciaScore(object):
         return sum([i.result for i in self.LciaDetails])
 
     def add_detailed_result(self, exchange, factor, location):
-        self.LciaDetails.add(DetailedLciaResult(exchange, factor, location))
+        d = DetailedLciaResult(exchange, factor, location)
+        if d in self.LciaDetails:
+            raise DuplicateResult()
+        self.LciaDetails.add(d)
 
     def show_detailed_result(self, key=lambda x: x.result, show_all=False):
-        for d in sorted(self.LciaDetails, key=key):
+        for d in sorted(self.LciaDetails, key=key, reverse=True):
             if d.result != 0 or show_all:
                 print('%s' % d)
         print('=' * 60)
@@ -130,18 +136,33 @@ class LciaResult(object):
     def total(self):
         return sum([i.cumulative_result for i in self._LciaScores.values()])
 
-    def add_entity(self, entity):
-        if entity.get_uuid() not in self._LciaScores.keys():
-            self._LciaScores[entity.get_uuid()] = AggregateLciaScore(entity)
+    def add_component(self, key, entity=None):
+        if entity is None:
+            entity = key
+        if key not in self._LciaScores.keys():
+            self._LciaScores[key] = AggregateLciaScore(entity)
 
-    def add_score(self, entity, exchange, factor, location):
-        self.add_entity(entity)
-        self._LciaScores[entity.get_uuid()].add_detailed_result(exchange, factor, location)
+    def add_score(self, key, exchange, factor, location):
+        if factor.quantity != self.quantity:
+            raise InconsistentQuantity('%s' % factor)
+        if key not in self._LciaScores.keys():
+            self.add_component(key)
+        self._LciaScores[key].add_detailed_result(exchange, factor, location)
+
+    def keys(self):
+        if self._private:
+            return [None]
+        return self._LciaScores.keys()
 
     def components(self):
         if self._private:
             return [None]
         return [k.entity for k in self._LciaScores.values()]
+
+    def component(self, key):
+        if self._private:
+            return self
+        return self._LciaScores[key]
 
     def _header(self):
         print('%s %s' % (self.quantity, self.quantity.reference_entity.unitstring()))
@@ -150,19 +171,19 @@ class LciaResult(object):
     def show_components(self):
         self._header()
         if not self._private:
-            for v in self._LciaScores.values():
+            for v in sorted(self._LciaScores.values(), key=lambda x: x.cumulative_result, reverse=True):
                 print('%s' % v)
             print('==========')
         print('%s' % self)
 
-    def show_details(self, entity=None, **kwargs):
+    def show_details(self, key=None, **kwargs):
         self._header()
         if not self._private:
-            if entity is None:
-                for e in self.components():
-                    self._LciaScores[e.get_uuid()].show_detailed_result(**kwargs)
+            if key is None:
+                for e in self._LciaScores.keys():
+                    self._LciaScores[e].show_detailed_result(**kwargs)
             else:
-                self._LciaScores[get_entity_uuid(entity)].show_detailed_result(**kwargs)
+                self._LciaScores[key].show_detailed_result(**kwargs)
         print('%s' % self)
 
     def __add__(self, other):

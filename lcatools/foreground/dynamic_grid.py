@@ -42,6 +42,7 @@ def dynamic_grid(comparands, comparators, func, near_label, far_label, returns_s
         if the function returns sets or lists of objects, returns_sets should be True
         if the function returns a mixture of sets and singles, WHAT, were you RAISED in a BARN?!!
     :param width: column width (default 8)
+    :param suppress_col_list: [False] don't print summary at the bottom- useful in case of multiple dynamic grids
     :return: NOTHING!
     """
     h_str = '%s  ' % near_label[0]

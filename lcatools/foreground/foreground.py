@@ -143,7 +143,7 @@ class ForegroundArchive(LcArchive):
     def fragments(self, background=None, show_all=False):
         if background is not None:
             return [f for f in self._fragments(show_all=show_all) if f.is_background == background]
-        return [f for f in self._fragments(show_all=show_all)]
+        return sorted([f for f in self._fragments(show_all=show_all)], key=lambda x: x.is_background)
 
     def add_child_fragment_flow(self, ff, flow, direction):
         f = LcFragment.new(flow['Name'], flow, direction, parent=ff)

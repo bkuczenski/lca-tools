@@ -7,7 +7,9 @@ import uuid
 
 from lcatools.entities import LcEntity
 from lcatools.exchanges import comp_dir, ExchangeValue, AllocatedExchange
+from lcatools.characterizations import Characterization
 from lcatools.literate_float import LiterateFloat
+from lcatools.lcia_results import LciaResult
 
 
 class InvalidParentChild(Exception):
@@ -35,6 +37,32 @@ class MissingFlow(Exception):
 
 class FlowConversionError(Exception):
     pass
+
+
+def traversal_to_lcia(ffs):
+    """
+    This function takes in a list of fragment flow records and aggregates their ScoreCaches into a set of LciaResults.
+    The function is surprisingly slow, because AggregateLciaScore objects contain sets, so there is a lot of container
+    checking. (I think that's why, anyway...)
+    :param ffs:
+    :return: dict of quantity uuid to LciaResult -> suitable for storing directly into a new term scorecache
+    """
+    results = dict()
+    for i in ffs:
+        if not i.term.is_null:
+            for q, v in i.term.score_cache_items():
+                quantity = v.quantity
+                if q not in results.keys():
+                    results[q] = LciaResult(quantity, scenario=v.scenario)
+                results[q].add_component(i.fragment.get_uuid(), entity=i.fragment)
+                x = ExchangeValue(i.term.term_node.entity(), i.term.term_flow, i.term.direction, value=i.node_weight)
+                try:
+                    l = i.term.term_node.entity()['SpatialScope']
+                except KeyError:
+                    l = None
+                f = Characterization(i.term.term_flow, quantity, value=i.term.score_cache(quantity).total(), location=l)
+                results[q].add_score(i.fragment.get_uuid(), x, f, l)
+    return results
 
 
 class FlowTermination(object):
@@ -67,7 +95,7 @@ class FlowTermination(object):
             process_ref = process_ref.entity()
         term_flow = j.pop('termFlow', None)
         direction = j.pop('direction', None)
-        descend = j.pop('descend', None) or True
+        descend = j.pop('descend', None)
         return cls(fragment, process_ref, direction=direction, term_flow=term_flow, descend=descend)
 
     @classmethod
@@ -82,7 +110,7 @@ class FlowTermination(object):
     def __init__(self, fragment, process_ref, direction=None, term_flow=None, descend=True, inbound_ev=None):
         self._parent = fragment
         self._process_ref = process_ref  # this is either a catalog_ref (for process) or just a fragment
-        self._descend = descend
+        self._descend = True
         self.term_flow = None
         self._cached_ev = None
         self._score_cache = dict()
@@ -91,6 +119,7 @@ class FlowTermination(object):
         else:
             self.direction = direction
 
+        self.descend = descend
         self.set_term_flow(term_flow)
         self._set_inbound_ev(inbound_ev)
 
@@ -153,6 +182,20 @@ class FlowTermination(object):
     @property
     def is_null(self):
         return self._process_ref is None
+
+    @property
+    def descend(self):
+        return self._descend
+
+    @descend.setter
+    def descend(self, value):
+        if value is None:
+            return
+        if isinstance(value, bool):
+            self._descend = value
+            self.clear_score_cache()
+        else:
+            raise ValueError('Descend setting must be True or False')
 
     def self_terminate(self):
         self._process_ref = self._parent
@@ -239,6 +282,14 @@ class FlowTermination(object):
                 raise
         self.term_flow = flow
 
+    def aggregate_subfragments(self, subfrags):
+        """
+        Performs an aggregation of the subfragment score caches to compute a fragment score cache. use with caution!
+        :param subfrags:
+        :return:
+        """
+        self._score_cache = traversal_to_lcia(subfrags)
+
     def set_score_cache(self, lcia, quantities):
         """
 
@@ -264,6 +315,12 @@ class FlowTermination(object):
         if quantity.get_uuid() in self._score_cache:
             return self._score_cache[quantity.get_uuid()]
         return None
+
+    def score_cache_items(self):
+        return self._score_cache.items()
+
+    def clear_score_cache(self):
+        self._score_cache.clear()
 
     def serialize(self):
         if self._process_ref is None:
@@ -382,7 +439,7 @@ class LcFragment(LcEntity):
         return frag
 
     def __init__(self, the_uuid, flow, direction, parent=None,
-                 exchange_value=None,
+                 exchange_value=1.0,
                  private=False,
                  balance_flow=False,
                  background=False,
@@ -422,7 +479,7 @@ class LcFragment(LcEntity):
 
         self._exchange_values = dict()
         self._exchange_values[0] = exchange_value
-        self._exchange_values[1] = LiterateFloat(1.0)  # w.r.t. parent activity level
+        self._exchange_values[1] = LiterateFloat(0.0)  # w.r.t. parent activity level
         self._cached_unit_scores = dict()  # of quantities
 
         self._terminations = dict()
@@ -472,7 +529,10 @@ class LcFragment(LcEntity):
 
     def __str__(self):
         if self.reference_entity is None:
-            re = ' ** ref'
+            if self.is_background:
+                re = '(B) ref'
+            else:
+                re = ' ** ref'
         else:
             re = self.reference_entity.get_uuid()[:7]
         return '(%s) %s %s %s %s  %s' % (re, self.dirn, self.get_uuid()[:7], self.dirn, self.term, self.flow['Name'])
@@ -489,13 +549,11 @@ class LcFragment(LcEntity):
 
         print('%s%s%s %.7s (%7.2g) %s' % (prefix, dirn, self.term, self.get_uuid(), self.exchange_value(0),
                                           self['Name']))
-        if prefix == '':
-            prefix += '   '
-        prefix += ' | '
-        for c in children:
+        prefix += '    | '
+        for c in sorted(children, key=lambda x: (not x.term.is_null, x.term.is_bg)):
             c.show_tree(childflows, prefix=prefix)
         if len(children) > 0:
-            prefix = prefix[:-3]
+            prefix = prefix[:-3] + ' x '
             print('%s' % prefix)
 
     @property
@@ -504,7 +562,7 @@ class LcFragment(LcEntity):
 
     @cached_ev.setter
     def cached_ev(self, value):
-        if self.cached_ev is not None:
+        if self.cached_ev != 1.0:
             raise CacheAlreadySet('Set Value: %g (new: %g)' % (self.cached_ev, value))
         self._exchange_values[0] = value
 
@@ -519,6 +577,11 @@ class LcFragment(LcEntity):
     @property
     def is_background(self):
         return self._background
+
+    def to_foreground(self):
+        self._background = False
+        for v in self._terminations.values():
+            v.clear_score_cache()
 
     def exchange_value(self, scenario=None, observed=False):
         """
@@ -578,13 +641,18 @@ class LcFragment(LcEntity):
         :param process_ref: a process CatalogRef
         :param scenario:
         :param flow: if process_ref, specify term_flow (default fragment.flow)
-        :param direction: if process_ref, specify term_direction (default comp_dir(fragment.direction))
         :return:
         """
         if scenario in self._terminations:
             self._terminations[scenario].update(process_ref, term_flow=flow, **kwargs)
         else:
             self._terminations[scenario] = FlowTermination(self, process_ref, term_flow=flow, **kwargs)
+        if scenario is None:
+            if self['StageName'] == '' and process_ref is not None:
+                try:
+                    self['StageName'] = process_ref['Classifications'][-1]
+                except (KeyError, TypeError):
+                    self['StageName'] = process_ref['Name']
 
     def term_from_exch(self, exch_ref, scenario=None):
         if scenario in self._terminations:
@@ -628,6 +696,10 @@ class LcFragment(LcEntity):
         if scenario is None:
             self.observed_ev = _balance
         self.set_exchange_value(scenario, _balance)
+
+    def fragment_lcia(self, childflows, scenario=None, observed=False):
+        ffs, _ = self.traverse(childflows, 1.0, scenario, observed=observed)
+        return traversal_to_lcia(ffs)
 
     def io_flows(self, childflows, scenario, observed=False, frags_seen=None):
         ffs, _ = self.traverse(childflows, 1.0, scenario, observed=observed, frags_seen=frags_seen)
@@ -693,7 +765,7 @@ class LcFragment(LcEntity):
 
         ff = [FragmentFlow(self, magnitude, node_weight, term, conserved)]
 
-        if term.is_null or self._background:
+        if term.is_null or self.is_background:
             return ff, conserved_val
 
         '''
@@ -740,43 +812,65 @@ class LcFragment(LcEntity):
             handle sub-fragments, including background flows--
             for sub-fragments, the flow magnitudes are determined at the time of traversal and must be pushed out to
              child flows
-            for background flows, the background ff should replace the current ff
+            for background flows, the background ff should replace the current ff, except maintaining self as fragment
             '''
             if term.term_node.is_background:
                 bg_ff, cons = term.term_node.traverse(childflows, node_weight, scenario, observed=observed)
+                bg_ff[0].fragment = self
                 return bg_ff, conserved_val
 
             # for proper subfragments, need to determine child flow magnitudes based on traversal record
-            flow_ffs = term.term_node.io_flows(childflows, scenario, observed=observed, frags_seen=frags_seen)
+            subfrag_ffs, cons = term.term_node.traverse(childflows, 1.0, scenario,
+                                                        observed=observed, frags_seen=frags_seen)
+            ios = [f for f in subfrag_ffs if f.term.is_null]
+            subfrags = [f for f in subfrag_ffs if not f.term.is_null]
 
-            # first, we adjust for any autoconsumption
+            # first, we determine subfragment activity level by adjusting for any autoconsumption
             in_ex = 1.0
-            matches = [ff for ff in flow_ffs if ff.fragment.flow == term.term_flow]
+            matches = [f for f in ios if f.fragment.flow == term.term_flow]
             for m in matches:
                 if m.fragment.direction == term.direction:
                     in_ex -= m.magnitude
                 else:
                     in_ex += m.magnitude
-                flow_ffs.remove(m)
+                ios.remove(m)
 
             downstream_nw = node_weight / in_ex
 
-            for f in childflows(self, False):
+            # then we add the results of the subfragment, either in aggregated or disaggregated form
+            if term.descend:
+                # if appending, we are traversing in situ, so do scale
+                print('descending')
+                for i in subfrags:
+                    i.scale(downstream_nw)
+                ff.extend(subfrags)
+            else:
+                # if aggregating, we are only setting unit scores- so don't scale
+                print('aggregating')
+                ff[0].term.aggregate_subfragments(subfrags)
+
+            # next we traverse our own child flows, determining the exchange values from the subfrag traversal
+            for f in childflows(self):
                 ev = 0.0
-                matches = [ff for ff in flow_ffs if ff.fragment.flow == f.flow]
+                matches = [j for j in ios if j.fragment.flow == f.flow]
+                # exchange values are per unit- so don't scale
                 for m in matches:
                     if m.direction == f.direction:
                         ev += m.magnitude
                     else:
                         ev -= m.magnitude
-                    flow_ffs.remove(m)
+                    ios.remove(m)
 
                 child_ff, cons = f.traverse(childflows, downstream_nw, scenario, observed=observed,
                                             frags_seen=frags_seen, _balance=ev)
                 ff.extend(child_ff)
 
-            ff.extend([x.scale(node_weight) for x in flow_ffs])  # any remaining
+            # remaining un-accounted io flows are getting appended, so do scale
+            for x in ios:
+                x.scale(node_weight)
+            ff.extend(ios)
 
+        # if descend is true- we give back everything- otherwise we aggregate
         return ff, conserved_val
 
 

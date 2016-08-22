@@ -288,7 +288,7 @@ class ForegroundManager(object):
                     else:
                         x.flow.add_characterization(cf_ref.characterization)
                 fac = x.flow.factor(q)
-                q_result.add_score(process_ref, x, fac, process_ref['SpatialScope'])
+                q_result.add_score(process_ref.id, x, fac, process_ref['SpatialScope'])
             results[q.get_uuid()] = q_result
         return results
 
@@ -335,7 +335,7 @@ class ForegroundManager(object):
         :param show_all: [False] show all exchanges, or only characterized exchanges
         :return:
         """
-        result = self.fg_lcia(p_ref, quantity=quantity)[quantity.get_uuid()]
+        result = self.fg_lcia(p_ref, quantity)[quantity.get_uuid()]
         result.show_details(p_ref, show_all=show_all)
         '''
         print('%s' % quantity)
@@ -356,6 +356,9 @@ class ForegroundManager(object):
     def traverse(self, fragment, scenario=None, observed=False):
         ffs, _ = fragment.traverse(lambda x: self.child_flows(x), 1.0, scenario, observed=observed)
         return ffs
+
+    def fragment_lcia(self, fragment, scenario=None, observed=False):
+        return fragment.fragment_lcia(lambda x:self.child_flows(x), scenario=scenario, observed=observed)
 
     def draw_fragment(self, fragment):
         fragment.show_tree(lambda x: self.child_flows(x))
@@ -525,6 +528,8 @@ class ForegroundManager(object):
 
     def fragment_to_foreground(self, fragment, background_children=True):
         """
+        Move a background fragment into the foreground. Add the node's child flows to the foreground.
+
         Given a fragment that is terminated to background, recall the background termination and make it into a
           foreground termination.  (the background reference will not be deleted).  Proceed to add the foreground
           node's child flows.
@@ -532,7 +537,11 @@ class ForegroundManager(object):
         :param background_children:
         :return:
         """
-        if fragment.term.is_bg:
+        if fragment.is_background:
+            fragment.to_foreground()
+            self.build_child_flows(fragment, background_children=background_children)
+            return fragment
+        elif fragment.term.is_bg:
             bg = fragment.term.term_node
             fragment.terminate(bg.term.term_node, flow=bg.term.term_flow, direction=bg.term.direction)
             self.build_child_flows(fragment, background_children=background_children)

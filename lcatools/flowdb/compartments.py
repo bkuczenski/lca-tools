@@ -286,13 +286,13 @@ class Compartment(object):
 
     def _names(self):
         a = [self.name]
-        a.extend(list(self.synonyms.difference({self.name})))
+        a.extend(sorted(list(self.synonyms.difference({self.name}))))
         return a
 
     def serialize(self):
         j = {
             "name": self._names(),
-            "subcompartments": [x.serialize() for x in self._subcompartments]
+            "subcompartments": sorted([x.serialize() for x in self._subcompartments], key=lambda x: x['name'][0])
         }
         if self._elementary:
             j['elementary'] = True

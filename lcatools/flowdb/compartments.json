@@ -13,225 +13,49 @@
         {
           "elementary": true,
           "name": [
-            "Resources",
-            "Water",
-            "natural resource",
-            "resource",
-            "renewable",
-            "Natural gas (resource)",
-            "Crude oil (resource)",
-            "Material resources",
-            "Renewable resources",
-            "Non renewable energy resources",
-            "Energy resources"
-          ],
-          "subcompartments": [
-            {
-              "elementary": true,
-              "name": [
-                "Resources from biosphere",
-                "Renewable energy resources from biosphere",
-                "biotic"
-              ],
-              "subcompartments": []
-            },
-            {
-              "elementary": true,
-              "name": [
-                "Land use",
-                "land"
-              ],
-              "subcompartments": [
-                {
-                  "elementary": true,
-                  "name": [
-                    "Transformation"
-                  ],
-                  "subcompartments": []
-                },
-                {
-                  "elementary": true,
-                  "name": [
-                    "Land transformation"
-                  ],
-                  "subcompartments": []
-                },
-                {
-                  "elementary": true,
-                  "name": [
-                    "Hemeroby"
-                  ],
-                  "subcompartments": []
-                },
-                {
-                  "elementary": true,
-                  "name": [
-                    "Land occupation"
-                  ],
-                  "subcompartments": []
-                },
-                {
-                  "elementary": true,
-                  "name": [
-                    "Occupation"
-                  ],
-                  "subcompartments": []
-                }
-              ]
-            },
-            {
-              "elementary": true,
-              "name": [
-                "Resources from air",
-                "Renewable element resources from air",
-                "in air",
-                "Renewable material resources from air",
-                "Renewable energy resources from air"
-              ],
-              "subcompartments": []
-            },
-            {
-              "elementary": true,
-              "name": [
-                "Resources from ground",
-                "Renewable energy resources from ground",
-                "ground-",
-                "Non-renewable energy resources from ground",
-                "in ground",
-                "Non-renewable material resources from ground",
-                "fossil-",
-                "Non-renewable element resources from ground",
-                "Renewable material resources from ground"
-              ],
-              "subcompartments": []
-            },
-            {
-              "elementary": true,
-              "name": [
-                "Resources from water",
-                "Renewable material resources from water",
-                "Renewable energy resources from water",
-                "Non-renewable element resources from water",
-                "in water"
-              ],
-              "subcompartments": []
-            }
-          ]
-        },
-        {
-          "elementary": true,
-          "name": [
             "Emissions"
           ],
           "subcompartments": [
             {
               "elementary": true,
               "name": [
-                "water",
-                "Emissions to water, unspecified",
-                "Emissions to water"
-              ],
-              "subcompartments": [
-                {
-                  "elementary": true,
-                  "name": [
-                    "Emissions to water, unspecified (long-term)"
-                  ],
-                  "subcompartments": []
-                },
-                {
-                  "elementary": true,
-                  "name": [
-                    "low population density, long-term"
-                  ],
-                  "subcompartments": []
-                },
-                {
-                  "elementary": true,
-                  "name": [
-                    "Emissions to fresh water",
-                    "Particles to fresh water",
-                    "Radioactive emissions to fresh water",
-                    "Analytical measures to fresh water",
-                    "Inorganic emissions to fresh water",
-                    "Heavy metals to fresh water",
-                    "Organic emissions to fresh water",
-                    "Other emissions to fresh water"
-                  ],
-                  "subcompartments": [
-                    {
-                      "elementary": true,
-                      "name": [
-                        "river"
-                      ],
-                      "subcompartments": []
-                    },
-                    {
-                      "elementary": true,
-                      "name": [
-                        "ground-, long-term"
-                      ],
-                      "subcompartments": []
-                    },
-                    {
-                      "elementary": true,
-                      "name": [
-                        "surface water"
-                      ],
-                      "subcompartments": []
-                    },
-                    {
-                      "elementary": true,
-                      "name": [
-                        "ecoinvent long-term to fresh water"
-                      ],
-                      "subcompartments": []
-                    },
-                    {
-                      "elementary": true,
-                      "name": [
-                        "ground-"
-                      ],
-                      "subcompartments": []
-                    },
-                    {
-                      "elementary": true,
-                      "name": [
-                        "lake"
-                      ],
-                      "subcompartments": []
-                    }
-                  ]
-                },
-                {
-                  "elementary": true,
-                  "name": [
-                    "ocean",
-                    "Heavy metals to sea water",
-                    "Other emissions to sea water",
-                    "Emissions to sea water"
-                  ],
-                  "subcompartments": []
-                }
-              ]
-            },
-            {
-              "elementary": true,
-              "name": [
                 "Emissions to air",
                 "Emissions to air, unspecified",
-                "Heavy metals to air",
-                "Halogenated organic emissions to air",
-                "fossil",
-                "Radioactive emissions to air",
-                "Organic emissions to air (group VOC)",
                 "Group NMVOC to air",
-                "air",
-                "Other emissions to air",
+                "Halogenated organic emissions to air",
+                "Heavy metals to air",
                 "Inorganic emissions to air",
-                "Particles to air"
+                "Organic emissions to air (group VOC)",
+                "Other emissions to air",
+                "Particles to air",
+                "Radioactive emissions to air",
+                "air",
+                "fossil"
               ],
               "subcompartments": [
+                {
+                  "elementary": true,
+                  "name": [
+                    "Emissions to air, unspecified (long-term)"
+                  ],
+                  "subcompartments": []
+                },
+                {
+                  "elementary": true,
+                  "name": [
+                    "Emissions to lower stratosphere and upper troposphere",
+                    "lower stratosphere + upper troposphere"
+                  ],
+                  "subcompartments": []
+                },
+                {
+                  "elementary": true,
+                  "name": [
+                    "Emissions to non-urban air or from high stacks",
+                    "non-urban air or from high stacks"
+                  ],
+                  "subcompartments": []
+                },
                 {
                   "elementary": true,
                   "name": [
@@ -250,29 +74,7 @@
                 {
                   "elementary": true,
                   "name": [
-                    "low population density, long-term"
-                  ],
-                  "subcompartments": []
-                },
-                {
-                  "elementary": true,
-                  "name": [
-                    "Emissions to non-urban air or from high stacks",
-                    "non-urban air or from high stacks"
-                  ],
-                  "subcompartments": []
-                },
-                {
-                  "elementary": true,
-                  "name": [
-                    "Emissions to air, unspecified (long-term)"
-                  ],
-                  "subcompartments": []
-                },
-                {
-                  "elementary": true,
-                  "name": [
-                    "stratosphere"
+                    "indoor"
                   ],
                   "subcompartments": []
                 },
@@ -287,15 +89,14 @@
                 {
                   "elementary": true,
                   "name": [
-                    "Emissions to lower stratosphere and upper troposphere",
-                    "lower stratosphere + upper troposphere"
+                    "low population density, long-term"
                   ],
                   "subcompartments": []
                 },
                 {
                   "elementary": true,
                   "name": [
-                    "indoor"
+                    "stratosphere"
                   ],
                   "subcompartments": []
                 }
@@ -312,20 +113,10 @@
                 {
                   "elementary": true,
                   "name": [
-                    "industrial",
-                    "Other emissions to industrial soil",
-                    "Emissions to non-agricultural soil",
-                    "Heavy metals to industrial soil"
-                  ],
-                  "subcompartments": []
-                },
-                {
-                  "elementary": true,
-                  "name": [
                     "agricultural",
+                    "Emissions to agricultural soil",
                     "Heavy metals to agricultural soil",
                     "Other emissions to agricultural soil",
-                    "Emissions to agricultural soil",
                     "Pesticides to agricultural soil"
                   ],
                   "subcompartments": []
@@ -336,8 +127,217 @@
                     "forestry"
                   ],
                   "subcompartments": []
+                },
+                {
+                  "elementary": true,
+                  "name": [
+                    "industrial",
+                    "Emissions to non-agricultural soil",
+                    "Heavy metals to industrial soil",
+                    "Other emissions to industrial soil"
+                  ],
+                  "subcompartments": []
                 }
               ]
+            },
+            {
+              "elementary": true,
+              "name": [
+                "water",
+                "Emissions to water",
+                "Emissions to water, unspecified"
+              ],
+              "subcompartments": [
+                {
+                  "elementary": true,
+                  "name": [
+                    "Emissions to fresh water",
+                    "Analytical measures to fresh water",
+                    "Heavy metals to fresh water",
+                    "Inorganic emissions to fresh water",
+                    "Organic emissions to fresh water",
+                    "Other emissions to fresh water",
+                    "Particles to fresh water",
+                    "Radioactive emissions to fresh water"
+                  ],
+                  "subcompartments": [
+                    {
+                      "elementary": true,
+                      "name": [
+                        "ecoinvent long-term to fresh water"
+                      ],
+                      "subcompartments": []
+                    },
+                    {
+                      "elementary": true,
+                      "name": [
+                        "ground-"
+                      ],
+                      "subcompartments": []
+                    },
+                    {
+                      "elementary": true,
+                      "name": [
+                        "ground-, long-term"
+                      ],
+                      "subcompartments": []
+                    },
+                    {
+                      "elementary": true,
+                      "name": [
+                        "lake"
+                      ],
+                      "subcompartments": []
+                    },
+                    {
+                      "elementary": true,
+                      "name": [
+                        "river"
+                      ],
+                      "subcompartments": []
+                    },
+                    {
+                      "elementary": true,
+                      "name": [
+                        "surface water"
+                      ],
+                      "subcompartments": []
+                    }
+                  ]
+                },
+                {
+                  "elementary": true,
+                  "name": [
+                    "Emissions to water, unspecified (long-term)"
+                  ],
+                  "subcompartments": []
+                },
+                {
+                  "elementary": true,
+                  "name": [
+                    "low population density, long-term"
+                  ],
+                  "subcompartments": []
+                },
+                {
+                  "elementary": true,
+                  "name": [
+                    "ocean",
+                    "Emissions to sea water",
+                    "Heavy metals to sea water",
+                    "Other emissions to sea water"
+                  ],
+                  "subcompartments": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "elementary": true,
+          "name": [
+            "Resources",
+            "Crude oil (resource)",
+            "Energy resources",
+            "Material resources",
+            "Natural gas (resource)",
+            "Non renewable energy resources",
+            "Renewable resources",
+            "natural resource",
+            "renewable",
+            "resource"
+          ],
+          "subcompartments": [
+            {
+              "elementary": true,
+              "name": [
+                "Land use",
+                "land"
+              ],
+              "subcompartments": [
+                {
+                  "elementary": true,
+                  "name": [
+                    "Hemeroby"
+                  ],
+                  "subcompartments": []
+                },
+                {
+                  "elementary": true,
+                  "name": [
+                    "Land occupation"
+                  ],
+                  "subcompartments": []
+                },
+                {
+                  "elementary": true,
+                  "name": [
+                    "Land transformation"
+                  ],
+                  "subcompartments": []
+                },
+                {
+                  "elementary": true,
+                  "name": [
+                    "Occupation"
+                  ],
+                  "subcompartments": []
+                },
+                {
+                  "elementary": true,
+                  "name": [
+                    "Transformation"
+                  ],
+                  "subcompartments": []
+                }
+              ]
+            },
+            {
+              "elementary": true,
+              "name": [
+                "Resources from air",
+                "Renewable element resources from air",
+                "Renewable energy resources from air",
+                "Renewable material resources from air",
+                "in air"
+              ],
+              "subcompartments": []
+            },
+            {
+              "elementary": true,
+              "name": [
+                "Resources from biosphere",
+                "Renewable energy resources from biosphere",
+                "biotic"
+              ],
+              "subcompartments": []
+            },
+            {
+              "elementary": true,
+              "name": [
+                "Resources from ground",
+                "Non-renewable element resources from ground",
+                "Non-renewable energy resources from ground",
+                "Non-renewable material resources from ground",
+                "Renewable energy resources from ground",
+                "Renewable material resources from ground",
+                "fossil-",
+                "ground-",
+                "in ground"
+              ],
+              "subcompartments": []
+            },
+            {
+              "elementary": true,
+              "name": [
+                "Resources from water",
+                "Non-renewable element resources from water",
+                "Renewable energy resources from water",
+                "Renewable material resources from water",
+                "Water",
+                "in water"
+              ],
+              "subcompartments": []
             }
           ]
         }
@@ -350,54 +350,12 @@
       "subcompartments": [
         {
           "name": [
-            "Energy carriers and technologies"
+            "Air Transportation"
           ],
           "subcompartments": [
             {
               "name": [
-                "Electricity"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Mechanical energy"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Lignite based fuels"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Crude oil based fuels"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Heat and steam"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Renewable fuels"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Hard coal based fuels"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Other non-renewable fuels"
+                "Scheduled Freight Air Transportation"
               ],
               "subcompartments": []
             }
@@ -405,22 +363,223 @@
         },
         {
           "name": [
-            "Rail Transportation"
+            "Biofuels Manufacturing"
           ],
           "subcompartments": [
             {
               "name": [
-                "Rail Transportation"
+                "Biodiesel"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Ethanol"
               ],
               "subcompartments": []
             }
           ]
+        },
+        {
+          "name": [
+            "By-product classification: Recyclable"
+          ],
+          "subcompartments": []
+        },
+        {
+          "name": [
+            "By-product classification: Waste"
+          ],
+          "subcompartments": []
+        },
+        {
+          "name": [
+            "By-product classification: allocatable product"
+          ],
+          "subcompartments": []
+        },
+        {
+          "name": [
+            "CPC: 17100: Electrical energy"
+          ],
+          "subcompartments": []
+        },
+        {
+          "name": [
+            "CPC: 37510: Non-refractory mortars and concretes"
+          ],
+          "subcompartments": []
         },
         {
           "name": [
             "CUTOFF Flows"
           ],
           "subcompartments": []
+        },
+        {
+          "name": [
+            "Chemical Manufacturing"
+          ],
+          "subcompartments": [
+            {
+              "name": [
+                "All Other Basic Inorganic Chemical Manufacturing"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "All Other Basic Organic Chemical Manufacturing"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Converting postconsumer PET to pellet"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Ethyl alcohol manufacturing"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Nitrogenous Fertilizer Manufacturing"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Petrochemical Manufacturing"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Phosphatic Fertilizer Manufacturing"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Plastics Material and Resin Manufacturing"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Processing postconsumer HDPE to pellet"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Processing postconsumer PET to flake"
+              ],
+              "subcompartments": []
+            }
+          ]
+        },
+        {
+          "name": [
+            "Crop Production"
+          ],
+          "subcompartments": [
+            {
+              "name": [
+                "Biomass"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Corn Farming"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Cotton Farming"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Oilseed (except Soybean) Farming"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Other Noncitrus Fruit Farming"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Potato Farming"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Rice Farming"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Soybean Farming"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Support activities for crop production"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Wheat Farming"
+              ],
+              "subcompartments": []
+            }
+          ]
+        },
+        {
+          "name": [
+            "Deposited goods"
+          ],
+          "subcompartments": [
+            {
+              "name": [
+                "Consumer waste"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Hazardous waste"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Radioactive waste"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Stockpile goods"
+              ],
+              "subcompartments": []
+            }
+          ]
         },
         {
           "name": [
@@ -444,24 +603,445 @@
         },
         {
           "name": [
-            "CPC: 17100: Electrical energy"
-          ],
-          "subcompartments": []
-        },
-        {
-          "name": [
-            "CPC: 37510: Non-refractory mortars and concretes"
-          ],
-          "subcompartments": []
-        },
-        {
-          "name": [
-            "Transport services"
+            "Elec. Equip., Appliance, and Comp. Manufacturing"
           ],
           "subcompartments": [
             {
               "name": [
-                "Other transport"
+                "Other material"
+              ],
+              "subcompartments": []
+            }
+          ]
+        },
+        {
+          "name": [
+            "End-of-life treatment"
+          ],
+          "subcompartments": [
+            {
+              "name": [
+                "Energy recycling"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Landfilling"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Waste water treatment"
+              ],
+              "subcompartments": []
+            }
+          ]
+        },
+        {
+          "name": [
+            "Energy carriers and technologies"
+          ],
+          "subcompartments": [
+            {
+              "name": [
+                "Crude oil based fuels"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Electricity"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Hard coal based fuels"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Heat and steam"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Lignite based fuels"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Mechanical energy"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Other non-renewable fuels"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Renewable fuels"
+              ],
+              "subcompartments": []
+            }
+          ]
+        },
+        {
+          "name": [
+            "Fabricated Metal Product Manufacturing"
+          ],
+          "subcompartments": [
+            {
+              "name": [
+                "Architectural and Structural Metals Manufacturing"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Misc. Fabricated Metal Product Manufacturing"
+              ],
+              "subcompartments": []
+            }
+          ]
+        },
+        {
+          "name": [
+            "Forestry and Logging"
+          ],
+          "subcompartments": [
+            {
+              "name": [
+                "Forest Nurseries, Gathering Forest Prod."
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Logging"
+              ],
+              "subcompartments": []
+            }
+          ]
+        },
+        {
+          "name": [
+            "ISIC rev.4 ecoinvent: 012:Growing of perennial crops"
+          ],
+          "subcompartments": []
+        },
+        {
+          "name": [
+            "Intermediate flow"
+          ],
+          "subcompartments": []
+        },
+        {
+          "name": [
+            "Materials production"
+          ],
+          "subcompartments": [
+            {
+              "name": [
+                "Glass and ceramics"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Inorganic chemicals"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Metals and semimetals"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Organic chemicals"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Other materials"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Other mineralic materials"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Plastics"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Water"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Wood"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "organic chemicals"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "organic matter"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "paper"
+              ],
+              "subcompartments": []
+            }
+          ]
+        },
+        {
+          "name": [
+            "Mining (except Oil and Gas)"
+          ],
+          "subcompartments": [
+            {
+              "name": [
+                "All Other Metal Ore Mining"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Anthracite Mining"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Bit. Coal and Lignite Surface Mining"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Coal Mining"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Limestone Mining and Quarrying"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Uranium-Radium-Vanadium Ore Mining"
+              ],
+              "subcompartments": []
+            }
+          ]
+        },
+        {
+          "name": [
+            "Nonmetallic Mineral Product Manufacturing"
+          ],
+          "subcompartments": [
+            {
+              "name": [
+                "Cement Manufacturing"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Glass and Glass Product Manufacturing"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Gypsum Product Manufacturing"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Lime Manufacturing"
+              ],
+              "subcompartments": []
+            }
+          ]
+        },
+        {
+          "name": [
+            "Oil and Gas Extraction"
+          ],
+          "subcompartments": [
+            {
+              "name": [
+                "Crude Petroleum and Natural Gas Extraction"
+              ],
+              "subcompartments": []
+            }
+          ]
+        },
+        {
+          "name": [
+            "Others"
+          ],
+          "subcompartments": [
+            {
+              "name": [
+                "Areas"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "CRIM-SAFRI"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Product model"
+              ],
+              "subcompartments": []
+            }
+          ]
+        },
+        {
+          "name": [
+            "Paper Manufacturing"
+          ],
+          "subcompartments": [
+            {
+              "name": [
+                "Converted Paper Product Manufacturing"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Pulp, Paper, and Paperboard Mills"
+              ],
+              "subcompartments": []
+            }
+          ]
+        },
+        {
+          "name": [
+            "Petroleum and Coal Products Manufacturing"
+          ],
+          "subcompartments": [
+            {
+              "name": [
+                "Petroleum Refineries"
+              ],
+              "subcompartments": []
+            }
+          ]
+        },
+        {
+          "name": [
+            "Plastics and Rubber Products Manufacturing"
+          ],
+          "subcompartments": [
+            {
+              "name": [
+                "Plastics Product Manufacturing"
+              ],
+              "subcompartments": []
+            }
+          ]
+        },
+        {
+          "name": [
+            "Primary Metal Manufacturing"
+          ],
+          "subcompartments": [
+            {
+              "name": [
+                "Alumina Refining"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Aluminum Foundries (except Die-Casting)"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Iron and Steel Mills"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Other Aluminum Rolling and Drawing"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Primary Aluminum Production"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Primary Metal Manufacturing"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Rolled Steel Shape Manufacturing"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Rolling and Drawing of Purchased Steel"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Secondary Smelting and Alloying of Aluminum"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Steel Foundries (except investment)"
               ],
               "subcompartments": []
             }
@@ -474,24 +1054,18 @@
           "subcompartments": [
             {
               "name": [
-                "Waste for recovery"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
                 "Hazardous waste for disposal"
               ],
               "subcompartments": [
                 {
                   "name": [
-                    "Hazardous organic waste for disposal"
+                    "Hazardous non organic waste for disposal"
                   ],
                   "subcompartments": []
                 },
                 {
                   "name": [
-                    "Hazardous non organic waste for disposal"
+                    "Hazardous organic waste for disposal"
                   ],
                   "subcompartments": []
                 }
@@ -515,23 +1089,10 @@
                   "subcompartments": []
                 }
               ]
-            }
-          ]
-        },
-        {
-          "name": [
-            "final-waste-flow"
-          ],
-          "subcompartments": [
-            {
-              "name": [
-                "unspecified treatment"
-              ],
-              "subcompartments": []
             },
             {
               "name": [
-                " unspecified treatment"
+                "Waste for recovery"
               ],
               "subcompartments": []
             }
@@ -539,153 +1100,12 @@
         },
         {
           "name": [
-            "Primary Metal Manufacturing"
+            "Rail Transportation"
           ],
           "subcompartments": [
             {
               "name": [
-                "Alumina Refining"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Rolling and Drawing of Purchased Steel"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Rolled Steel Shape Manufacturing"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Aluminum Foundries (except Die-Casting)"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Steel Foundries (except investment)"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Primary Metal Manufacturing"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Secondary Smelting and Alloying of Aluminum"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Primary Aluminum Production"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Iron and Steel Mills"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Other Aluminum Rolling and Drawing"
-              ],
-              "subcompartments": []
-            }
-          ]
-        },
-        {
-          "name": [
-            "Others"
-          ],
-          "subcompartments": [
-            {
-              "name": [
-                "Product model"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Areas"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "CRIM-SAFRI"
-              ],
-              "subcompartments": []
-            }
-          ]
-        },
-        {
-          "name": [
-            "Deposited goods"
-          ],
-          "subcompartments": [
-            {
-              "name": [
-                "Stockpile goods"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Hazardous waste"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Consumer waste"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Radioactive waste"
-              ],
-              "subcompartments": []
-            }
-          ]
-        },
-        {
-          "name": [
-            "Transit and Ground Passenger Transportation"
-          ],
-          "subcompartments": [
-            {
-              "name": [
-                "Urban Transit Systems"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "School and Employee Bus Transportation"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Other Transit and Ground Passenger Transportation"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Interurban and Rural Bus Transportation"
+                "Rail Transportation"
               ],
               "subcompartments": []
             }
@@ -718,37 +1138,30 @@
         },
         {
           "name": [
-            "US LCI Database"
+            "Transit and Ground Passenger Transportation"
           ],
           "subcompartments": [
             {
               "name": [
-                "Products and Intermediates"
-              ],
-              "subcompartments": []
-            }
-          ]
-        },
-        {
-          "name": [
-            "ISIC rev.4 ecoinvent: 012:Growing of perennial crops"
-          ],
-          "subcompartments": []
-        },
-        {
-          "name": [
-            "Paper Manufacturing"
-          ],
-          "subcompartments": [
-            {
-              "name": [
-                "Pulp, Paper, and Paperboard Mills"
+                "Interurban and Rural Bus Transportation"
               ],
               "subcompartments": []
             },
             {
               "name": [
-                "Converted Paper Product Manufacturing"
+                "Other Transit and Ground Passenger Transportation"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "School and Employee Bus Transportation"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Urban Transit Systems"
               ],
               "subcompartments": []
             }
@@ -756,18 +1169,12 @@
         },
         {
           "name": [
-            "By-product classification: allocatable product"
-          ],
-          "subcompartments": []
-        },
-        {
-          "name": [
-            "Oil and Gas Extraction"
+            "Transport services"
           ],
           "subcompartments": [
             {
               "name": [
-                "Crude Petroleum and Natural Gas Extraction"
+                "Other transport"
               ],
               "subcompartments": []
             }
@@ -788,177 +1195,561 @@
         },
         {
           "name": [
-            "Crop Production"
-          ],
-          "subcompartments": [
-            {
-              "name": [
-                "Potato Farming"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Corn Farming"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Biomass"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Other Noncitrus Fruit Farming"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Soybean Farming"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Wheat Farming"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Rice Farming"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Cotton Farming"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Oilseed (except Soybean) Farming"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Support activities for crop production"
-              ],
-              "subcompartments": []
-            }
-          ]
-        },
-        {
-          "name": [
-            "Chemical Manufacturing"
-          ],
-          "subcompartments": [
-            {
-              "name": [
-                "Phosphatic Fertilizer Manufacturing"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Processing postconsumer HDPE to pellet"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Plastics Material and Resin Manufacturing"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Processing postconsumer PET to flake"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Petrochemical Manufacturing"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "All Other Basic Inorganic Chemical Manufacturing"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Converting postconsumer PET to pellet"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Ethyl alcohol manufacturing"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Nitrogenous Fertilizer Manufacturing"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "All Other Basic Organic Chemical Manufacturing"
-              ],
-              "subcompartments": []
-            }
-          ]
-        },
-        {
-          "name": [
-            "Nonmetallic Mineral Product Manufacturing"
-          ],
-          "subcompartments": [
-            {
-              "name": [
-                "Gypsum Product Manufacturing"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Lime Manufacturing"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Cement Manufacturing"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Glass and Glass Product Manufacturing"
-              ],
-              "subcompartments": []
-            }
-          ]
-        },
-        {
-          "name": [
             "Truck Transportation"
           ],
           "subcompartments": [
             {
               "name": [
                 "General Freight Trucking"
+              ],
+              "subcompartments": []
+            }
+          ]
+        },
+        {
+          "name": [
+            "US LCI Database"
+          ],
+          "subcompartments": [
+            {
+              "name": [
+                "Products and Intermediates"
+              ],
+              "subcompartments": []
+            }
+          ]
+        },
+        {
+          "name": [
+            "Utilities"
+          ],
+          "subcompartments": [
+            {
+              "name": [
+                "Electric Power Distribution"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Fossil Fuel Electric Power Generation"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Nuclear Electric Power Generation"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Other Electric Power Generation"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Steam and Air-Conditioning Supply"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Utilities"
+              ],
+              "subcompartments": []
+            }
+          ]
+        },
+        {
+          "name": [
+            "Valuable substances"
+          ],
+          "subcompartments": [
+            {
+              "name": [
+                "Energy carrier"
+              ],
+              "subcompartments": [
+                {
+                  "name": [
+                    "Electric power"
+                  ],
+                  "subcompartments": [
+                    {
+                      "name": [
+                        "System-dependent"
+                      ],
+                      "subcompartments": []
+                    }
+                  ]
+                },
+                {
+                  "name": [
+                    "Fuels"
+                  ],
+                  "subcompartments": [
+                    {
+                      "name": [
+                        "Biomass fuels"
+                      ],
+                      "subcompartments": [
+                        {
+                          "name": [
+                            "Biomass for energy use"
+                          ],
+                          "subcompartments": []
+                        }
+                      ]
+                    },
+                    {
+                      "name": [
+                        "Crude oil products"
+                      ],
+                      "subcompartments": [
+                        {
+                          "name": [
+                            "Crude oil, at consumer"
+                          ],
+                          "subcompartments": []
+                        },
+                        {
+                          "name": [
+                            "Refinery products"
+                          ],
+                          "subcompartments": []
+                        }
+                      ]
+                    },
+                    {
+                      "name": [
+                        "Hard coal products"
+                      ],
+                      "subcompartments": [
+                        {
+                          "name": [
+                            "Coke, at production"
+                          ],
+                          "subcompartments": []
+                        },
+                        {
+                          "name": [
+                            "Hard coal, at consumer"
+                          ],
+                          "subcompartments": []
+                        },
+                        {
+                          "name": [
+                            "Hard coal, at production"
+                          ],
+                          "subcompartments": []
+                        }
+                      ]
+                    },
+                    {
+                      "name": [
+                        "Lignite products"
+                      ],
+                      "subcompartments": [
+                        {
+                          "name": [
+                            "Lignite, at consumer"
+                          ],
+                          "subcompartments": []
+                        },
+                        {
+                          "name": [
+                            "Lignite, at production"
+                          ],
+                          "subcompartments": []
+                        },
+                        {
+                          "name": [
+                            "Others"
+                          ],
+                          "subcompartments": []
+                        }
+                      ]
+                    },
+                    {
+                      "name": [
+                        "Natural gas products"
+                      ],
+                      "subcompartments": [
+                        {
+                          "name": [
+                            "LPG, at production"
+                          ],
+                          "subcompartments": []
+                        },
+                        {
+                          "name": [
+                            "Natural gas, at consumer"
+                          ],
+                          "subcompartments": []
+                        },
+                        {
+                          "name": [
+                            "Natural gas, at production"
+                          ],
+                          "subcompartments": []
+                        }
+                      ]
+                    },
+                    {
+                      "name": [
+                        "Other fuels"
+                      ],
+                      "subcompartments": []
+                    },
+                    {
+                      "name": [
+                        "Uranium products"
+                      ],
+                      "subcompartments": []
+                    }
+                  ]
+                },
+                {
+                  "name": [
+                    "Mechanical energy"
+                  ],
+                  "subcompartments": []
+                },
+                {
+                  "name": [
+                    "Thermal energy"
+                  ],
+                  "subcompartments": [
+                    {
+                      "name": [
+                        "steam"
+                      ],
+                      "subcompartments": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": [
+                "Materials"
+              ],
+              "subcompartments": [
+                {
+                  "name": [
+                    "Agro chemicals"
+                  ],
+                  "subcompartments": []
+                },
+                {
+                  "name": [
+                    "Amino acids"
+                  ],
+                  "subcompartments": []
+                },
+                {
+                  "name": [
+                    "Intermediate products"
+                  ],
+                  "subcompartments": [
+                    {
+                      "name": [
+                        "Inorganic intermediate products"
+                      ],
+                      "subcompartments": []
+                    },
+                    {
+                      "name": [
+                        "Organic intermediate products"
+                      ],
+                      "subcompartments": []
+                    }
+                  ]
+                },
+                {
+                  "name": [
+                    "Leather production"
+                  ],
+                  "subcompartments": []
+                },
+                {
+                  "name": [
+                    "Materials from renewable raw materials"
+                  ],
+                  "subcompartments": []
+                },
+                {
+                  "name": [
+                    "Metals"
+                  ],
+                  "subcompartments": []
+                },
+                {
+                  "name": [
+                    "Minerals"
+                  ],
+                  "subcompartments": [
+                    {
+                      "name": [
+                        "Limestone"
+                      ],
+                      "subcompartments": []
+                    }
+                  ]
+                },
+                {
+                  "name": [
+                    "Operating materials"
+                  ],
+                  "subcompartments": []
+                },
+                {
+                  "name": [
+                    "Packaging"
+                  ],
+                  "subcompartments": []
+                },
+                {
+                  "name": [
+                    "Paints"
+                  ],
+                  "subcompartments": []
+                },
+                {
+                  "name": [
+                    "Plastics"
+                  ],
+                  "subcompartments": []
+                },
+                {
+                  "name": [
+                    "Renewable primary products"
+                  ],
+                  "subcompartments": []
+                },
+                {
+                  "name": [
+                    "Synthetic leather"
+                  ],
+                  "subcompartments": []
+                },
+                {
+                  "name": [
+                    "Textile"
+                  ],
+                  "subcompartments": []
+                },
+                {
+                  "name": [
+                    "Textiles and leather"
+                  ],
+                  "subcompartments": []
+                }
+              ]
+            },
+            {
+              "name": [
+                "Systems"
+              ],
+              "subcompartments": [
+                {
+                  "name": [
+                    "Assemblies"
+                  ],
+                  "subcompartments": [
+                    {
+                      "name": [
+                        "Automotive assemblies"
+                      ],
+                      "subcompartments": []
+                    },
+                    {
+                      "name": [
+                        "Building industry"
+                      ],
+                      "subcompartments": []
+                    },
+                    {
+                      "name": [
+                        "Electrical installation"
+                      ],
+                      "subcompartments": []
+                    },
+                    {
+                      "name": [
+                        "Elevator & escalator"
+                      ],
+                      "subcompartments": []
+                    },
+                    {
+                      "name": [
+                        "Heatings"
+                      ],
+                      "subcompartments": []
+                    },
+                    {
+                      "name": [
+                        "Lighting"
+                      ],
+                      "subcompartments": []
+                    },
+                    {
+                      "name": [
+                        "Other home appliances"
+                      ],
+                      "subcompartments": []
+                    },
+                    {
+                      "name": [
+                        "heat pumps"
+                      ],
+                      "subcompartments": []
+                    }
+                  ]
+                },
+                {
+                  "name": [
+                    "Infrastructure"
+                  ],
+                  "subcompartments": []
+                },
+                {
+                  "name": [
+                    "Material systems"
+                  ],
+                  "subcompartments": []
+                },
+                {
+                  "name": [
+                    "Non-material systems"
+                  ],
+                  "subcompartments": []
+                },
+                {
+                  "name": [
+                    "Paint-systems"
+                  ],
+                  "subcompartments": []
+                },
+                {
+                  "name": [
+                    "Parts"
+                  ],
+                  "subcompartments": [
+                    {
+                      "name": [
+                        "Electronic components"
+                      ],
+                      "subcompartments": [
+                        {
+                          "name": [
+                            "Components"
+                          ],
+                          "subcompartments": []
+                        }
+                      ]
+                    },
+                    {
+                      "name": [
+                        "Metal parts"
+                      ],
+                      "subcompartments": []
+                    },
+                    {
+                      "name": [
+                        "Other parts"
+                      ],
+                      "subcompartments": []
+                    },
+                    {
+                      "name": [
+                        "Parts from renewable materials"
+                      ],
+                      "subcompartments": []
+                    },
+                    {
+                      "name": [
+                        "Plastic parts"
+                      ],
+                      "subcompartments": []
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": [
+            "Waste Management and Remediation Services"
+          ],
+          "subcompartments": [
+            {
+              "name": [
+                "Collection of postconsumer containers"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Collection of postconsumer products"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Solid Waste Collection"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Sorting, separating mixed recyclables"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Waste Collection"
+              ],
+              "subcompartments": []
+            }
+          ]
+        },
+        {
+          "name": [
+            "Wastes"
+          ],
+          "subcompartments": [
+            {
+              "name": [
+                "Construction waste"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Mining waste"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Production residues"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "Radioactive waste"
+              ],
+              "subcompartments": []
+            },
+            {
+              "name": [
+                "heavy metals"
               ],
               "subcompartments": []
             }
@@ -985,171 +1776,12 @@
         },
         {
           "name": [
-            "By-product classification: Recyclable"
-          ],
-          "subcompartments": []
-        },
-        {
-          "name": [
-            "non-material"
-          ],
-          "subcompartments": []
-        },
-        {
-          "name": [
-            "Materials production"
-          ],
-          "subcompartments": [
-            {
-              "name": [
-                "organic chemicals"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "paper"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Other materials"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Other mineralic materials"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "organic matter"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Glass and ceramics"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Plastics"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Organic chemicals"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Inorganic chemicals"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Water"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Metals and semimetals"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Wood"
-              ],
-              "subcompartments": []
-            }
-          ]
-        },
-        {
-          "name": [
-            "Air Transportation"
-          ],
-          "subcompartments": [
-            {
-              "name": [
-                "Scheduled Freight Air Transportation"
-              ],
-              "subcompartments": []
-            }
-          ]
-        },
-        {
-          "name": [
-            "Waste Management and Remediation Services"
-          ],
-          "subcompartments": [
-            {
-              "name": [
-                "Sorting, separating mixed recyclables"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Solid Waste Collection"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Waste Collection"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Collection of postconsumer products"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Collection of postconsumer containers"
-              ],
-              "subcompartments": []
-            }
-          ]
-        },
-        {
-          "name": [
-            "By-product classification: Waste"
-          ],
-          "subcompartments": []
-        },
-        {
-          "name": [
             "Wood Product Manufacturing"
           ],
           "subcompartments": [
             {
               "name": [
-                "Engineered Wood Member (ex. Truss) Manufacturing"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
                 "Chemical Manufacturing"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Sawmills"
               ],
               "subcompartments": []
             },
@@ -1161,7 +1793,7 @@
             },
             {
               "name": [
-                "Support for Agriculture and Forestry"
+                "Engineered Wood Member (ex. Truss) Manufacturing"
               ],
               "subcompartments": []
             },
@@ -1173,7 +1805,7 @@
             },
             {
               "name": [
-                "Wood Preservation"
+                "Sawmills"
               ],
               "subcompartments": []
             },
@@ -1182,455 +1814,16 @@
                 "Softwood Veneer and Plywood Manufacturing"
               ],
               "subcompartments": []
-            }
-          ]
-        },
-        {
-          "name": [
-            "Valuable substances"
-          ],
-          "subcompartments": [
-            {
-              "name": [
-                "Energy carrier"
-              ],
-              "subcompartments": [
-                {
-                  "name": [
-                    "Fuels"
-                  ],
-                  "subcompartments": [
-                    {
-                      "name": [
-                        "Biomass fuels"
-                      ],
-                      "subcompartments": [
-                        {
-                          "name": [
-                            "Biomass for energy use"
-                          ],
-                          "subcompartments": []
-                        }
-                      ]
-                    },
-                    {
-                      "name": [
-                        "Other fuels"
-                      ],
-                      "subcompartments": []
-                    },
-                    {
-                      "name": [
-                        "Hard coal products"
-                      ],
-                      "subcompartments": [
-                        {
-                          "name": [
-                            "Hard coal, at consumer"
-                          ],
-                          "subcompartments": []
-                        },
-                        {
-                          "name": [
-                            "Hard coal, at production"
-                          ],
-                          "subcompartments": []
-                        },
-                        {
-                          "name": [
-                            "Coke, at production"
-                          ],
-                          "subcompartments": []
-                        }
-                      ]
-                    },
-                    {
-                      "name": [
-                        "Crude oil products"
-                      ],
-                      "subcompartments": [
-                        {
-                          "name": [
-                            "Refinery products"
-                          ],
-                          "subcompartments": []
-                        },
-                        {
-                          "name": [
-                            "Crude oil, at consumer"
-                          ],
-                          "subcompartments": []
-                        }
-                      ]
-                    },
-                    {
-                      "name": [
-                        "Uranium products"
-                      ],
-                      "subcompartments": []
-                    },
-                    {
-                      "name": [
-                        "Natural gas products"
-                      ],
-                      "subcompartments": [
-                        {
-                          "name": [
-                            "Natural gas, at production"
-                          ],
-                          "subcompartments": []
-                        },
-                        {
-                          "name": [
-                            "Natural gas, at consumer"
-                          ],
-                          "subcompartments": []
-                        },
-                        {
-                          "name": [
-                            "LPG, at production"
-                          ],
-                          "subcompartments": []
-                        }
-                      ]
-                    },
-                    {
-                      "name": [
-                        "Lignite products"
-                      ],
-                      "subcompartments": [
-                        {
-                          "name": [
-                            "Lignite, at production"
-                          ],
-                          "subcompartments": []
-                        },
-                        {
-                          "name": [
-                            "Lignite, at consumer"
-                          ],
-                          "subcompartments": []
-                        },
-                        {
-                          "name": [
-                            "Others"
-                          ],
-                          "subcompartments": []
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "name": [
-                    "Mechanical energy"
-                  ],
-                  "subcompartments": []
-                },
-                {
-                  "name": [
-                    "Electric power"
-                  ],
-                  "subcompartments": [
-                    {
-                      "name": [
-                        "System-dependent"
-                      ],
-                      "subcompartments": []
-                    }
-                  ]
-                },
-                {
-                  "name": [
-                    "Thermal energy"
-                  ],
-                  "subcompartments": [
-                    {
-                      "name": [
-                        "steam"
-                      ],
-                      "subcompartments": []
-                    }
-                  ]
-                }
-              ]
             },
             {
               "name": [
-                "Systems"
-              ],
-              "subcompartments": [
-                {
-                  "name": [
-                    "Material systems"
-                  ],
-                  "subcompartments": []
-                },
-                {
-                  "name": [
-                    "Infrastructure"
-                  ],
-                  "subcompartments": []
-                },
-                {
-                  "name": [
-                    "Assemblies"
-                  ],
-                  "subcompartments": [
-                    {
-                      "name": [
-                        "Automotive assemblies"
-                      ],
-                      "subcompartments": []
-                    },
-                    {
-                      "name": [
-                        "Heatings"
-                      ],
-                      "subcompartments": []
-                    },
-                    {
-                      "name": [
-                        "Building industry"
-                      ],
-                      "subcompartments": []
-                    },
-                    {
-                      "name": [
-                        "Lighting"
-                      ],
-                      "subcompartments": []
-                    },
-                    {
-                      "name": [
-                        "Elevator & escalator"
-                      ],
-                      "subcompartments": []
-                    },
-                    {
-                      "name": [
-                        "Other home appliances"
-                      ],
-                      "subcompartments": []
-                    },
-                    {
-                      "name": [
-                        "Electrical installation"
-                      ],
-                      "subcompartments": []
-                    },
-                    {
-                      "name": [
-                        "heat pumps"
-                      ],
-                      "subcompartments": []
-                    }
-                  ]
-                },
-                {
-                  "name": [
-                    "Parts"
-                  ],
-                  "subcompartments": [
-                    {
-                      "name": [
-                        "Parts from renewable materials"
-                      ],
-                      "subcompartments": []
-                    },
-                    {
-                      "name": [
-                        "Other parts"
-                      ],
-                      "subcompartments": []
-                    },
-                    {
-                      "name": [
-                        "Plastic parts"
-                      ],
-                      "subcompartments": []
-                    },
-                    {
-                      "name": [
-                        "Electronic components"
-                      ],
-                      "subcompartments": [
-                        {
-                          "name": [
-                            "Components"
-                          ],
-                          "subcompartments": []
-                        }
-                      ]
-                    },
-                    {
-                      "name": [
-                        "Metal parts"
-                      ],
-                      "subcompartments": []
-                    }
-                  ]
-                },
-                {
-                  "name": [
-                    "Non-material systems"
-                  ],
-                  "subcompartments": []
-                },
-                {
-                  "name": [
-                    "Paint-systems"
-                  ],
-                  "subcompartments": []
-                }
-              ]
-            },
-            {
-              "name": [
-                "Materials"
-              ],
-              "subcompartments": [
-                {
-                  "name": [
-                    "Materials from renewable raw materials"
-                  ],
-                  "subcompartments": []
-                },
-                {
-                  "name": [
-                    "Amino acids"
-                  ],
-                  "subcompartments": []
-                },
-                {
-                  "name": [
-                    "Renewable primary products"
-                  ],
-                  "subcompartments": []
-                },
-                {
-                  "name": [
-                    "Minerals"
-                  ],
-                  "subcompartments": [
-                    {
-                      "name": [
-                        "Limestone"
-                      ],
-                      "subcompartments": []
-                    }
-                  ]
-                },
-                {
-                  "name": [
-                    "Textiles and leather"
-                  ],
-                  "subcompartments": []
-                },
-                {
-                  "name": [
-                    "Packaging"
-                  ],
-                  "subcompartments": []
-                },
-                {
-                  "name": [
-                    "Intermediate products"
-                  ],
-                  "subcompartments": [
-                    {
-                      "name": [
-                        "Inorganic intermediate products"
-                      ],
-                      "subcompartments": []
-                    },
-                    {
-                      "name": [
-                        "Organic intermediate products"
-                      ],
-                      "subcompartments": []
-                    }
-                  ]
-                },
-                {
-                  "name": [
-                    "Metals"
-                  ],
-                  "subcompartments": []
-                },
-                {
-                  "name": [
-                    "Plastics"
-                  ],
-                  "subcompartments": []
-                },
-                {
-                  "name": [
-                    "Textile"
-                  ],
-                  "subcompartments": []
-                },
-                {
-                  "name": [
-                    "Leather production"
-                  ],
-                  "subcompartments": []
-                },
-                {
-                  "name": [
-                    "Synthetic leather"
-                  ],
-                  "subcompartments": []
-                },
-                {
-                  "name": [
-                    "Paints"
-                  ],
-                  "subcompartments": []
-                },
-                {
-                  "name": [
-                    "Agro chemicals"
-                  ],
-                  "subcompartments": []
-                },
-                {
-                  "name": [
-                    "Operating materials"
-                  ],
-                  "subcompartments": []
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "name": [
-            "Forestry and Logging"
-          ],
-          "subcompartments": [
-            {
-              "name": [
-                "Forest Nurseries, Gathering Forest Prod."
+                "Support for Agriculture and Forestry"
               ],
               "subcompartments": []
             },
             {
               "name": [
-                "Logging"
-              ],
-              "subcompartments": []
-            }
-          ]
-        },
-        {
-          "name": [
-            "Elec. Equip., Appliance, and Comp. Manufacturing"
-          ],
-          "subcompartments": [
-            {
-              "name": [
-                "Other material"
+                "Wood Preservation"
               ],
               "subcompartments": []
             }
@@ -1651,42 +1844,18 @@
         },
         {
           "name": [
-            "Utilities"
+            "final-waste-flow"
           ],
           "subcompartments": [
             {
               "name": [
-                "Utilities"
+                " unspecified treatment"
               ],
               "subcompartments": []
             },
             {
               "name": [
-                "Nuclear Electric Power Generation"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Steam and Air-Conditioning Supply"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Other Electric Power Generation"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Electric Power Distribution"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Fossil Fuel Electric Power Generation"
+                "unspecified treatment"
               ],
               "subcompartments": []
             }
@@ -1694,184 +1863,15 @@
         },
         {
           "name": [
-            "Intermediate flow"
+            "non-material"
           ],
           "subcompartments": []
-        },
-        {
-          "name": [
-            "Petroleum and Coal Products Manufacturing"
-          ],
-          "subcompartments": [
-            {
-              "name": [
-                "Petroleum Refineries"
-              ],
-              "subcompartments": []
-            }
-          ]
-        },
-        {
-          "name": [
-            "Fabricated Metal Product Manufacturing"
-          ],
-          "subcompartments": [
-            {
-              "name": [
-                "Architectural and Structural Metals Manufacturing"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Misc. Fabricated Metal Product Manufacturing"
-              ],
-              "subcompartments": []
-            }
-          ]
-        },
-        {
-          "name": [
-            "Biofuels Manufacturing"
-          ],
-          "subcompartments": [
-            {
-              "name": [
-                "Ethanol"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Biodiesel"
-              ],
-              "subcompartments": []
-            }
-          ]
-        },
-        {
-          "name": [
-            "Plastics and Rubber Products Manufacturing"
-          ],
-          "subcompartments": [
-            {
-              "name": [
-                "Plastics Product Manufacturing"
-              ],
-              "subcompartments": []
-            }
-          ]
         },
         {
           "name": [
             "others"
           ],
           "subcompartments": []
-        },
-        {
-          "name": [
-            "End-of-life treatment"
-          ],
-          "subcompartments": [
-            {
-              "name": [
-                "Landfilling"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Waste water treatment"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Energy recycling"
-              ],
-              "subcompartments": []
-            }
-          ]
-        },
-        {
-          "name": [
-            "Mining (except Oil and Gas)"
-          ],
-          "subcompartments": [
-            {
-              "name": [
-                "All Other Metal Ore Mining"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Anthracite Mining"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Coal Mining"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Uranium-Radium-Vanadium Ore Mining"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Bit. Coal and Lignite Surface Mining"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Limestone Mining and Quarrying"
-              ],
-              "subcompartments": []
-            }
-          ]
-        },
-        {
-          "name": [
-            "Wastes"
-          ],
-          "subcompartments": [
-            {
-              "name": [
-                "Mining waste"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Radioactive waste"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Construction waste"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "heavy metals"
-              ],
-              "subcompartments": []
-            },
-            {
-              "name": [
-                "Production residues"
-              ],
-              "subcompartments": []
-            }
-          ]
         }
       ]
     }

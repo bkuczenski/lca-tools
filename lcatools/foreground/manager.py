@@ -309,7 +309,7 @@ class ForegroundManager(object):
             q_result = LciaResult(q)
             for x in exch:
                 if not x.flow.has_characterization(q):
-                    cf_ref = self._flowdb.lookup_single_cf(x.flow, q, dist=dist)
+                    cf_ref = self._flowdb.lookup_single_cf(x.flow, q, dist=dist, location=process_ref['SpatialScope'])
                     if cf_ref is None:
                         x.flow.add_characterization(q)
                     else:

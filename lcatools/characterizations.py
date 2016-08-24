@@ -37,6 +37,8 @@ class Characterization(object):
             return self._locations['GLO']
         elif len(self._locations) == 0:
             return None
+        elif len(self._locations) == 1:
+            return list(self._locations.values())[0]
         else:
             return self._locations
 
@@ -49,7 +51,9 @@ class Characterization(object):
             return self._locations[item]
         if len(self._locations) == 0:
             return None
-        return self._locations['GLO']  # today is not the day to write a location best-match finder
+        if 'GLO' in self._locations.keys():
+            return self._locations['GLO']
+        return 0.0  # today is not the day to write a location best-match finder
 
     def __setitem__(self, key, value):
         if key in self._locations:

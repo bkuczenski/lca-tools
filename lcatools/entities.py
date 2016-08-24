@@ -603,7 +603,10 @@ class LcFlow(LcEntity):
         else:
             self._characterizations[q] = c
         if value is not None:
-            c.add_value(value=value, **kwargs)
+            if isinstance(value, dict):
+                c.update_values(**value)
+            else:
+                c.add_value(value=value, **kwargs)
 
     def has_characterization(self, quantity, location='GLO'):
         if quantity.get_uuid() in self._characterizations.keys():

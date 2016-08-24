@@ -1,7 +1,6 @@
 import os
 import json
 import re
-from uuid import uuid4
 
 
 COMPARTMENTS = os.path.join(os.path.dirname(__file__), 'compartments.json')
@@ -63,6 +62,8 @@ class Compartment(object):
         if not isinstance(rootname, list):
             rootname = [rootname]
         root = cls(rootname[0], elementary=False)
+        for i in rootname[1:]:
+            root.add_syn(i)
         root._add_subs_from_json(j['subcompartments'])
         return root
 
@@ -88,8 +89,8 @@ class Compartment(object):
         self.synonyms = {name}
         self._elementary = elementary
         self._subcompartments = set()
-        self._id = uuid4()
         self.parent = parent
+        self._id = '; '.join(self.to_list())
 
     def add_syn(self, syn):
         self.synonyms.add(syn)

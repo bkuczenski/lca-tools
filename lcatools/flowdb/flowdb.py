@@ -211,33 +211,6 @@ class FlowDB(object):
 
         return results
 
-    '''
-    def _compartment_grid(self, q_id, f_list, c_list):
-        print('%s' % self._q_id[q_id])
-        h_str = 'CAS Number  '
-        for i in range(len(c_list)):
-            h_str += '|%-8.8s' % ('  C%d' % i)
-        h_str += '  Flowable'
-        print('%s' % h_str)
-        print('-' * len(h_str))
-        for i in f_list:
-            f_str = '%11s  ' % self.flowables.cas(i)
-            for k in range(len(c_list)):
-                try:
-                    cfs = self._f_dict[(i, q_id)][c_list[k]]
-                    if len(cfs) > 1:
-                        f_str += '%-8s ' % ('*' * len(cfs))
-                    else:
-                        f_str += '%8.3g ' % list(cfs)[0].characterization.value
-                except IndexError:
-                    f_str += "   --    "
-            print('%s %s' % (f_str, self.flowables.name(i)))
-        print('%s' % h_str)
-        print('\nCompartments:')
-        for i in range(len(c_list)):
-            print('C%d: %s' % (i, c_list[i]))
-    '''
-
     def compartments_for(self, flowables, quantity):
         """
 
@@ -396,15 +369,21 @@ class FlowDB(object):
             cfs = cf1  # this reduces the list (presumably)
 
         vals = [cf.characterization[location] for cf in cfs]
-        if len(set(vals)) > 1:
-            print('Multiple CFs found: %s' % vals)
-            print('Pick characterization to apply')
-            return pick_one(cfs)
+        try:
+            if len(set(vals)) > 1:
+                print('Multiple CFs found: %s' % vals)
+                print('Pick characterization to apply')
+                return pick_one(cfs)
+        except TypeError:
+            print(vals)
+            raise
         print('All characterizations have the same value- picking first one')
         return cfs[0]
 
     def lookup_single_cf(self, flow, quantity, location='GLO', dist=1):
         cfs = self.lookup_cfs(flow, quantity, dist=dist)
+        if location == '':
+            location = 'GLO'
         if len(cfs) == 0:
             return None
         return self._reduce_cfs(flow, cfs, location=location)

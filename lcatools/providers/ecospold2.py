@@ -72,6 +72,14 @@ class EcospoldV2Archive(LcArchive):
 
         self._archive = Archive(self.ref)
 
+    def fg_proxy(self, proxy):
+        for ds in self.list_datasets(proxy):
+            self.retrieve_or_fetch_entity(ds)
+        return self[proxy]
+
+    def bg_proxy(self, proxy):
+        return self.fg_proxy(proxy)
+
     # no need for _key_to_id - keys in ecospold are uuids
     def _prefix(self, filename):
         if self.internal_prefix is not None:

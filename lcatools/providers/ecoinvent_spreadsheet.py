@@ -32,21 +32,23 @@ class EcoinventSpreadsheet(NsUuidArchive):
         self.internal = internal
 
         self._serialize_dict['version'] = version
-        self._serialize_dict['internal'] = version
+        self._serialize_dict['internal'] = internal
 
         # these things are query-only, for foreground use
         self._data_dir = data_dir
         self._model = model
+        self.fg = None
+        self.bg = None
+        self.lci = None
         if self._data_dir is not None:
             if model == 'undefined':
                 self.fg = EcospoldV2Archive(self._fg_filename, prefix='datasets - public')
-                self.bg = None
             else:
                 self.fg = EcospoldV2Archive(self._fg_filename, prefix='datasets')
                 self.bg = EcospoldV2Archive(self._bg_filename, prefix='datasets')
-        else:
-            self.fg = None
-            self.bg = None
+                if os.path.exists(self._lci_filename):
+                    print('Loading LCI from %s' % self._lci_filename)
+                    self.lci = EcospoldV2Archive(self._lci_filename, prefix='datasets')
 
     @property
     def _fg_filename(self):
@@ -68,15 +70,42 @@ class EcoinventSpreadsheet(NsUuidArchive):
             print('Loading BG from %s' % fn)
             return fn
 
+    @property
+    def _lci_filename(self):
+        if self._data_dir is None:
+            raise AttributeError('No data directory')
+        else:
+            fn = os.path.join(self._data_dir, '_'.join(['current_Version', self.version, self._model,
+                                                        'lci', 'ecoSpold02']) + '.7z')
+            return fn
+
     def fg_proxy(self, proxy):
         for ds in self.fg.list_datasets(proxy):
             self.fg.retrieve_or_fetch_entity(ds)
         return self.fg[proxy]
 
+    def lci_proxy(self, proxy):
+        print('Performing LCI lookup -- this is slow because of 7z')
+        for ds in self.lci.list_datasets(proxy):
+            print('retrieving %s' % ds)
+            self.lci.retrieve_or_fetch_entity(ds)
+        return self.lci[proxy]
+
     def bg_proxy(self, proxy):
         for ds in self.bg.list_datasets(proxy):
             self.bg.retrieve_or_fetch_entity(ds)
         return self.bg[proxy]
+
+    @staticmethod
+    def _find_rf(p, ref_flow=None):
+        if ref_flow is None:
+            if len(p.reference_entity) > 1:
+                print('This process has multiple allocations. Select reference flow:')
+                ref_flow = pick_reference(p)
+            else:
+                ref_flow = list(p.reference_entity)[0].flow
+
+        return [x.flow for x in p.reference_entity if x.flow.match(ref_flow)][0]
 
     def fg_lookup(self, process_id, ref_flow=None):
         """
@@ -90,37 +119,53 @@ class EcoinventSpreadsheet(NsUuidArchive):
             return super(EcoinventSpreadsheet, self).fg_lookup(process_id)
         else:
             p = self.fg_proxy(process_id)
-            print('%s' % p)
-            if ref_flow is None:
-                if len(p.reference_entity) > 1:
-                    print('This process has multiple allocations. Select reference flow:')
-                    ref = pick_reference(p)
-                else:
-                    ref = list(p.reference_entity)[0].flow
-                if ref is None:
-                    return p.exchanges()
-                return p.allocated_exchanges(ref)
-
+            print('FG: %s' % p)
+            rf = self._find_rf(p, ref_flow=ref_flow)
+            if rf is None:
+                return p.exchanges()
             else:
-                rf = [x.flow for x in p.reference_entity if x.flow.match(ref_flow)][0]
-                p = self.fg.retrieve_or_fetch_entity('_'.join([process_id, rf.get_uuid()]) + '.spold')
                 return p.allocated_exchanges(rf)
 
+    def lci_lookup(self, process_id):
+        if self.lci is None:
+            print('No LCI data')
+            return super(EcoinventSpreadsheet, self).fg_lookup(process_id)
+        else:
+            p = self.lci_proxy(process_id)
+            print('LCI: %s' % p)
+            return p
+
     def bg_lookup(self, process_id, ref_flow=None, quantities=None, scenario=None, flowdb=None):
+        """
+        now with fallback to LCI lookup!
+        :param process_id:
+        :param ref_flow:
+        :param quantities:
+        :param scenario:
+        :param flowdb:
+        :return:
+        """
         if self.bg is None:
-            raise AttributeError('No background')
+            print('No background')
+            missing_q = quantities
+            lcia = dict()
+            rf = ref_flow
         else:
             p = self.bg_proxy(process_id)
-            if ref_flow is None:
-                if len(p.reference_entity) > 1:
-                    print('This process has multiple allocations. Select reference flow:')
-                    ref_flow = pick_reference(p)
-                else:
-                    ref_flow = list(p.reference_entity)[0].flow
-
-            rf = [x.flow for x in p.reference_entity if x.flow.match(ref_flow)][0]
-            return self.bg.retrieve_lcia_scores('_'.join([process_id, rf.get_uuid()]) + '.spold',
+            rf = self._find_rf(p, ref_flow=ref_flow)
+            lcia = self.bg.retrieve_lcia_scores('_'.join([process_id, rf.get_uuid()]) + '.spold',
                                                 quantities=quantities)
+            missing_q = []
+            for q in quantities:
+                if q.get_uuid() not in lcia.keys():
+                    missing_q.append(q)
+
+        if len(missing_q) > 0:
+            lci = self.lci_lookup(process_id)
+            rf = self._find_rf(lci, ref_flow=rf)
+            for q in missing_q:
+                lcia[q.get_uuid()] = lci.lcia(q, ref_flow=rf, scenario=scenario, flowdb=flowdb)
+        return lcia
 
     def _create_quantity(self, unitstring):
         """
@@ -262,7 +307,7 @@ class EcoinventSpreadsheet(NsUuidArchive):
                     pass
 
                 try:
-                    p['IsicClass'] = row['ISIC class']
+                    p['Classifications'] = [row['ISIC class']]
                     p['IsicNumber'] = row['ISIC number']
                 except KeyError:
                     pass

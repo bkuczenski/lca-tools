@@ -498,14 +498,24 @@ class LcProcess(LcEntity):
             self._exchanges.add(e)
             return e
 
+    def lcias(self, quantities, **kwargs):
+        results = dict()
+        for q in quantities:
+            results[q.get_uuid()] = self.lcia(q, **kwargs)
+        return results
+
     def lcia(self, quantity, ref_flow=None, scenario=None, flowdb=None):
         result = LciaResult(quantity, scenario)
         result.add_component(self.get_uuid(), entity=self)
         for ex in self.allocated_exchanges(scenario or ref_flow):
-            if flowdb is None:
-                factor = ex.flow.factor(quantity)
-            else:
-                factor = flowdb.lookup_single_cf(ex.flow, quantity, self['SpatialScope'])
+            if not ex.flow.has_characterization(quantity):
+                if flowdb is not None:
+                    factor = flowdb.lookup_single_cf(ex.flow, quantity, self['SpatialScope'])
+                    if factor is None:
+                        ex.flow.add_characterization(quantity)
+                    else:
+                        ex.flow.add_characterization(factor)
+            factor = ex.flow.factor(quantity)
             result.add_score(self.get_uuid(), ex, factor, self['SpatialScope'])
         return result
 
@@ -588,6 +598,8 @@ class LcFlow(LcEntity):
                 self.add_characterization(quantity.quantity, reference=reference,
                                           value=quantity[l], location=l)
             return
+        if not isinstance(quantity, LcQuantity):  # assume it's a CatalogRef
+            quantity = quantity.entity()
         if reference:
             self._set_reference(quantity)
             if value is None:

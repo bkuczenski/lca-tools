@@ -23,8 +23,7 @@ class IlcdLcia(IlcdArchive):
     quantities + charaterizations
     """
 
-    def _create_lcia_quantity(self, filename):
-        o = self._get_objectified_entity(filename)
+    def _create_lcia_quantity(self, o, load_all_flows=False):
         ns = find_ns(o.nsmap, 'LCIAMethod')
 
         u = str(find_common(o, 'UUID')[0])
@@ -51,8 +50,9 @@ class IlcdLcia(IlcdArchive):
         for factor in o['characterisationFactors'].getchildren():  # British spelling! brits aren't even IN the EU anymore
             f_uuid, f_uri, f_dir = get_flow_ref(factor, ns=ns)
             if self[f_uuid] is None:
-                # don't bother loading factors for flows that don't exist
-                continue
+                if not load_all_flows:
+                    # don't bother loading factors for flows that don't exist
+                    continue
             cf = float(find_tag(factor, 'meanValue', ns=ns)[0])
             loc = str(find_tag(factor, 'location', ns=ns)[0])
             if loc == '':
@@ -61,14 +61,16 @@ class IlcdLcia(IlcdArchive):
             # TODO: adjust CF for different reference units!!! do this when a live one is found
             flow.add_characterization(lcia, value=cf, location=loc)
 
-    def load_lcia_method(self, u, version=None):
-        self._create_lcia_quantity(self._path_from_parts('LCIAMethod', u, version=version))
+    def load_lcia_method(self, u, version=None, load_all_flows=False):
+        o = self._get_objectified_entity(self._path_from_parts('LCIAMethod', u, version=version))
 
-    def load_lcia(self):
+        self._create_lcia_quantity(o, load_all_flows=load_all_flows)
+
+    def load_lcia(self, **kwargs):
         for f in self.list_objects('LCIAMethod'):
             u = uuid_regex.search(f).groups()[0]
             if self._get_entity(u) is not None:
                 continue
 
-            self.load_lcia_method(u)
+            self.load_lcia_method(u, **kwargs)
         self.check_counter()

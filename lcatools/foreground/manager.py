@@ -52,20 +52,34 @@ class ForegroundManager(object):
 
     The interface subclass provides UI for these activities
     """
-    def __init__(self, *args, catalog=None, cfs=('LCIA', 'EI-LCIA'), force_create_new=False):
-        if len(args) > 0:
-            fg_dir = args[0]
-        else:
-            fg_dir = None
+    def __init__(self, fg_dir, cfs=None, force_create_new=False):
+
         import time
         t0 = time.time()
-        if catalog is None:
-            catalog = CatalogInterface.new()
+        if fg_dir is None:
+            self._catalog = CatalogInterface.new()
+            self._flowdb = FlowDB()
+            print('Setup Catalog and FlowDB... (%.2f s)' % (time.time() - t0))
 
-        self._catalog = catalog
-        self._cfs = cfs
-        print('Generating flow-quantity database...')
-        self._flowdb = FlowDB(catalog)
+        else:
+            self._ensure_foreground(fg_dir, force_create_new=force_create_new)
+            cat_file = os.path.join(fg_dir, 'catalog.json')
+            if os.path.exists(cat_file):
+                self._catalog = CatalogInterface.new(fg_dir=fg_dir, catalog_file=cat_file)
+            else:
+                self._catalog = CatalogInterface.new(fg_dir=fg_dir)
+            self._catalog.load(0)
+            if os.path.exists(self[0].compartment_file):
+                self._flowdb = FlowDB(compartments=self[0].compartment_file)
+            else:
+                self._flowdb = FlowDB()
+            print('Setup Catalog and FlowDB... (%.2f s)' % (time.time() - t0))
+
+            self[0].load_fragments(self._catalog)
+            self.compute_unit_scores()
+            print('Fragments loaded... (%.2f s)' % (time.time() - t0))
+
+        self._cfs = []
         self.unmatched_flows = dict()
         if cfs is not None:
             print('Loading LCIA data... (%.2f s)' % (time.time() - t0))
@@ -73,16 +87,16 @@ class ForegroundManager(object):
                 self.load_lcia_cfs(c)
                 print('finished %s... (%.2f s)' % (c, time.time() - t0))
 
-        if fg_dir is not None:
-            self.workon(fg_dir, force_create_new=force_create_new)
         print('finished... (%.2f s)' % (time.time() - t0))
 
     def load_lcia_cfs(self, nick):
         if self._catalog[nick] is None:
             self._catalog.load(nick)
-        self.unmatched_flows[nick] = self._flowdb.import_cfs(nick)
+        self.merge_compartments(nick)
+        self.unmatched_flows[nick] = self._flowdb.import_cfs(self._catalog[nick])
         print('%d unmatched flows found from source %s... \n' %
               (len(self.unmatched_flows[nick]), self._catalog.name(nick)))
+        self._cfs.append(nick)
 
     def show(self, loaded=True):
         if loaded:
@@ -98,8 +112,11 @@ class ForegroundManager(object):
     def load(self, item):
         self._catalog.load(item)
 
+    def add_archive(self, *args, **kwargs):
+        self._catalog.add_archive(*args, **kwargs)
+
     def save(self):
-            self._catalog.save_foreground()
+        self._catalog.save_foreground()
 
     def __getitem__(self, item):
         return self._catalog.__getitem__(item)
@@ -109,6 +126,13 @@ class ForegroundManager(object):
 
     def terminate(self, *args, **kwargs):
         return self._catalog.terminate(*args, **kwargs)
+
+    @staticmethod
+    def _ensure_foreground(folder, force_create_new=False):
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        if force_create_new or not os.path.exists(os.path.join(folder, 'entities.json')):
+            ForegroundArchive.new(folder)
 
     def workon(self, folder, force_create_new=False):
         """
@@ -120,11 +144,8 @@ class ForegroundManager(object):
          foreground from the template.
         :return:
         """
-        if not os.path.exists(folder):
-            os.makedirs(folder)
-        if force_create_new or not os.path.exists(os.path.join(folder, 'entities.json')):
-            ForegroundArchive.new(folder)
-        self._catalog.set_foreground_dir(folder)
+        self._ensure_foreground(folder, force_create_new=force_create_new)
+        self._catalog.reset_foreground(folder)
         self._catalog.load(0)
         if os.path.exists(self[0].catalog_file):
             self._catalog.open(self[0].catalog_file)
@@ -136,14 +157,17 @@ class ForegroundManager(object):
 
     def add_to_foreground(self, ref):
         print('Add to foreground: %s' % ref)
-        self._catalog[0].add_entity_and_children(ref.entity())
+        if isinstance(ref, CatalogRef):
+            ref = ref.entity()
+        self._catalog[0].add_entity_and_children(ref)
 
     def merge_compartments(self, item):
+        if self._catalog.is_loaded(0):
+            self._flowdb.save_compartments(self[0].compartment_file)
         index = self._catalog.get_index(item)
         for f in self[index].flows():
             if self._catalog.is_loaded(0):
-                self._flowdb.find_matching_compartment(f['Compartment'], interact=True,
-                                                       save_file=self[0].compartment_file)
+                self._flowdb.find_matching_compartment(f['Compartment'], interact=True)
 
     def find_flowable(self, string):
         return self._flowdb.flowables.search(string)
@@ -306,14 +330,16 @@ class ForegroundManager(object):
             qs = quantities
         results = dict()
         for q in qs:
+            if not isinstance(q, LcQuantity):
+                q = q.entity()
             q_result = LciaResult(q)
             for x in exch:
                 if not x.flow.has_characterization(q):
-                    cf_ref = self._flowdb.lookup_single_cf(x.flow, q, dist=dist, location=process_ref['SpatialScope'])
-                    if cf_ref is None:
+                    cf = self._flowdb.lookup_single_cf(x.flow, q, dist=dist, location=process_ref['SpatialScope'])
+                    if cf is None:
                         x.flow.add_characterization(q)
                     else:
-                        x.flow.add_characterization(cf_ref.characterization)
+                        x.flow.add_characterization(cf)
                 fac = x.flow.factor(q)
                 q_result.add_score(process_ref.id, x, fac, process_ref['SpatialScope'])
             results[q.get_uuid()] = q_result
@@ -330,7 +356,7 @@ class ForegroundManager(object):
             for q in quantities:
                 result[q.get_uuid()] = LciaResult(q)
             return result
-        return p_ref.archive.bg_lookup(p_ref.id, quantities=quantities, **kwargs)
+        return p_ref.archive.bg_lookup(p_ref.id, quantities=quantities, flowdb=self._flowdb, **kwargs)
 
     def compare_lcia_results(self, p_refs, background=False, **kwargs):
         """
@@ -377,9 +403,17 @@ class ForegroundManager(object):
         '''
 
     # fragment methods
+    def _show_frag_children(self, frag, level=0):
+        level += 1
+        for k in self.child_flows(frag):
+            print('%s%s' % (' ' * level, k))
+            self._show_frag_children(k, level)
+
     def show_fragments(self, background=None, show_all=False):
-        for f in self[0].fragments(background=background, show_all=show_all):
+        for f in self[0].fragments(background=background, show_all=False):
             print('%s' % f)
+            if show_all:
+                self._show_frag_children(f)
 
     def frag(self, string):
         return next(f for f in self[0].fragments(show_all=True) if f.get_uuid().startswith(string.lower()))

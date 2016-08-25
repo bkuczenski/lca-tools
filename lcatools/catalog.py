@@ -191,8 +191,8 @@ class CatalogInterface(object):
     as CatalogRef objects
     """
     @classmethod
-    def new(cls, fg_dir=None):
-        with open(DEFAULT_CATALOG) as fp:
+    def new(cls, fg_dir=None, catalog_file=DEFAULT_CATALOG):
+        with open(catalog_file) as fp:
             return cls.from_json(json.load(fp), fg_dir=fg_dir)
 
     @classmethod
@@ -258,7 +258,7 @@ class CatalogInterface(object):
     def fg(self):
         return self._archive_refs[0].source
 
-    def set_foreground_dir(self, fg_dir):
+    def reset_foreground(self, fg_dir):
         ar = ArchiveRef(source=fg_dir, nicknames=self._archive_refs[0].nicknames,
                         dataSourceType='ForegroundArchive', parameters={'quiet': True})
         self._purge_entries_for(self._sources, 0)

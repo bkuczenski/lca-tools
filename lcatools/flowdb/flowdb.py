@@ -3,7 +3,8 @@ from math import ceil, log10
 from lcatools.flowdb.create_synonyms import load_synonyms, SYNONYMS
 from lcatools.flowdb.synlist import cas_regex
 from lcatools.flowdb.compartments import load_compartments, save_compartments, traverse_compartments, Compartment, COMPARTMENTS
-from lcatools.catalog import CFRef, CatalogRef, get_entity_uuid
+from lcatools.catalog import get_entity_uuid
+from lcatools.characterizations import Characterization
 from lcatools.interfaces import uuid_regex
 from lcatools.foreground.dynamic_grid import dynamic_grid
 from lcatools.interact import pick_one, _pick_list
@@ -61,11 +62,11 @@ class CLookup(object):
         return None
 
     def __setitem__(self, key, value):
-        if not isinstance(value, CFRef):
-            print('Value is not a CharacterizationRef')
+        if not isinstance(value, Characterization):
+            print('Value is not a Characterization')
             return False
         if not isinstance(key, Compartment):
-            print('Key is not a Compartment')
+            print('Key is not a Compartment: %s' % key)
             return False
         self._dict[key].add(value)
         return True
@@ -127,8 +128,7 @@ class FlowDB(object):
     collection.
 
     There are two main modes of operation:
-     - Adding characterization factors. Simply providing a CharacterizationRef is enough, since it includes the
-     characterization embedded.  The FlowDB will update a set of lookup systems for cross-reference
+     - Adding characterization factors. The FlowDB will update a set of lookup systems for cross-reference
 
      - Querying characterization factors. Provide a flow and a quantity. The flow's name, CAS number, and/or
       other identifying features will be mapped to a flowable, and the compartment matching will be used to find
@@ -137,16 +137,15 @@ class FlowDB(object):
      - It is entirely possible that the FlowDB can also be used to encapsulate LCIA lookups for intermediate
      flows, but this will be subject to development outcomes.
     """
-    def __init__(self, catalog, flows=SYNONYMS, compartments=COMPARTMENTS):
+    def __init__(self, flows=SYNONYMS, compartments=COMPARTMENTS):
         """
 
-        :param catalog: the CatalogInterface to which CharacterizationRefs refer
         :param flows: JSON file containing the Flowables set
         :param compartments: JSON file containing the Compartment hierarchy
         """
-        self._catalog = catalog
         self.flowables = load_synonyms(flows)
         self.compartments = load_compartments(compartments)
+        self._compartments_file = compartments
 
         self._q_dict = defaultdict(set)  # dict of quantity uuid to set of characterized flowables
         self._q_id = dict()  # store the quantities themselves for reference
@@ -159,8 +158,13 @@ class FlowDB(object):
 
     def load_compartments(self, file=COMPARTMENTS):
         self.compartments = load_compartments(file)
+        self._compartments_file = file
 
-    def find_matching_compartment(self, compartment, interact=True, save_file=COMPARTMENTS):
+    def save_compartments(self, file):
+        save_compartments(self.compartments, file)
+        self._compartments_file = file
+
+    def find_matching_compartment(self, compartment, interact=True):
         """
 
         :param compartment: should be an iterable, as-stored in an archive
@@ -180,7 +184,7 @@ class FlowDB(object):
                 if c is match and c is not None:
                     print('match: %s' % match.to_list())
                     print('Updating compartments...')
-                    save_compartments(self.compartments, file=save_file)
+                    save_compartments(self.compartments, file=self._compartments_file)
 
             else:
                 raise MissingCompartment('%s' % cs)
@@ -266,7 +270,7 @@ class FlowDB(object):
 
     def cfs_for_flowable(self, flowable, **kwargs):
 
-        rows = [cf.characterization for cf in self.all_cfs(flowable, **kwargs)]
+        rows = [cf for cf in self.all_cfs(flowable, **kwargs)]
         cols = [self._q_id[k] for k, v in self._q_dict.items() if flowable in v]
 
         print('%s [%s]' % (self.flowables.name(flowable), self.flowables.cas(flowable)))
@@ -302,8 +306,8 @@ class FlowDB(object):
         :param cf:
         :return:
         """
-        q = cf.characterization.quantity.get_uuid()
-        self._q_id[q] = cf.characterization.quantity
+        q = cf.quantity.get_uuid()
+        self._q_id[q] = cf.quantity
         for i in flowables:
             self._q_dict[q].add(i)
             self._f_dict[(i, q)][comp] = cf
@@ -316,21 +320,21 @@ class FlowDB(object):
 
     def import_cfs(self, archive):
         """
-        adds all CFs from flows found in the archive, specified as a nickname or index.
+        adds all CFs from flows found in the archive
          Returns a list of flows that did not match the flowable set.  For compartments that do not match,
           MissingCompartment should be caught and corrected
         :param archive:
         :return: list of flows
         """
         missing_flows = []
-        idx = self._catalog.get_index(archive)
-        for f in self._catalog[archive].flows():
+        for f in archive.flows():
             flowables, comp = self.parse_flow(f)
             if len(flowables) == 0:
                 missing_flows.append(f)
                 continue
             for cf in f.characterizations():
-                self._add_cf(flowables, comp, CFRef(self._catalog, idx, cf))
+                if cf is not f.reference_entity:
+                    self._add_cf(flowables, comp, cf)
 
         return missing_flows
 
@@ -356,19 +360,19 @@ class FlowDB(object):
         if len(cfs) == 1:
             return list(cfs)[0]
         elif len(cfs) > 1:
-            cf1 = [cf for cf in cfs if cf.characterization.flow.match(flow)]
+            cf1 = [cf for cf in cfs if cf.flow.match(flow)]
             if len(cf1) == 1:
                 return cf1[0]
             elif len(cf1) > 1:
                 cfs = cf1  # this reduces the list (presumably)
 
-        cf1 = [cf for cf in cfs if location in cf.characterization.locations()]
+        cf1 = [cf for cf in cfs if location in cf.locations()]
         if len(cf1) == 1:
             return cf1[0]
         elif len(cf1) > 1:
             cfs = cf1  # this reduces the list (presumably)
 
-        vals = [cf.characterization[location] for cf in cfs]
+        vals = [cf[location] for cf in cfs]
         try:
             if len(set(vals)) > 1:
                 print('Multiple CFs found: %s' % vals)

@@ -60,7 +60,7 @@ class ForegroundArchive(LcArchive):
         for q in j['processes']:
             self.entity_from_json(q)
 
-    def __init__(self, folder, ref, upstream=None, quiet=False, **kwargs):
+    def __init__(self, folder, ref, upstream=None, quiet=True, **kwargs):
         """
         A Foreground is a regular archive that can store fragments. Plus it has a background, which is a mapping
          from flow to exchange reference.
@@ -85,8 +85,8 @@ class ForegroundArchive(LcArchive):
         return os.path.join(self._folder, 'entities.json')
 
     @property
-    def _fragment_file(self):
-        return os.path.join(self._folder, 'fragments.json')
+    def _fragment_dir(self):
+        return os.path.join(self._folder, 'fragments')
 
     @property
     def catalog_file(self):
@@ -122,11 +122,30 @@ class ForegroundArchive(LcArchive):
 
     def save(self):
         self.write_to_file(self._archive_file, gzip=False, exchanges=True, characterizations=True, values=True)
+        if not os.path.isdir(self._fragment_dir):
+            os.makedirs(self._fragment_dir)
         self.save_fragments()
 
+    def _recurse_frags(self, frag):
+        frags = [frag]
+        for x in self._fragments(show_all=True):
+            if x.parent is frag:
+                frags.extend(self._recurse_frags(x))
+        return frags
+
     def save_fragments(self):
-        with open(self._fragment_file, 'w') as fp:
-            json.dump({'fragments': self.serialize_fragments()}, fp, indent=2, sort_keys=True)
+        current_files = os.listdir(self._fragment_dir)
+        for r in self._fragments(show_all=False):
+            frags = [t.serialize() for t in self._recurse_frags(r)]
+            fname = r.get_uuid() + '.json'
+            if fname in current_files:
+                current_files.remove(fname)
+            tgt_file = os.path.join(self._fragment_dir, fname)
+            with open(tgt_file, 'w') as fp:
+                json.dump({'fragments': frags}, fp, indent=2, sort_keys=True)
+        for leftover in current_files:
+            print('deleting %s' % leftover)
+            os.remove(os.path.join(self._fragment_dir, leftover))
 
     def create_fragment(self, flow, direction, Name=None, **kwargs):
         """
@@ -203,13 +222,17 @@ class ForegroundArchive(LcArchive):
         :param catalog:
         :return:
         """
-        with open(self._fragment_file, 'r') as fp:
-            j = json.load(fp)
+        fragments = []
+        for file in os.listdir(self._fragment_dir):
+            with open(os.path.join(self._fragment_dir, file), 'r') as fp:
+                j = json.load(fp)
 
-        for f in j['fragments']:
+            fragments.extend(j['fragments'])
+
+        for f in fragments:
             frag = LcFragment.from_json(catalog, f)
             self.add(frag)
-        for f in j['fragments']:
+
+        for f in fragments:
             frag = self[f['entityId']]
             frag.finish_json_load(catalog, f)
-

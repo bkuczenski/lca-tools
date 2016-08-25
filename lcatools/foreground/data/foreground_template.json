@@ -17,7 +17,7 @@
       "entityType": "quantity",
       "externalId": "flowproperties/01846770-4cfe-4a25-8ad9-919d8d378345",
       "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
-      "referenceUnit": "unitgroups/5beb6eed-33a9-47b8-9ede-1dfe8f679159"
+      "referenceUnit": "Item(s)"
     },
     {
       "Comment": "This is NOT an ILCD reference flow property.",
@@ -31,7 +31,7 @@
       "entityType": "quantity",
       "externalId": "flowproperties/1cc347a0-3bd1-46db-a308-2707c68d2351",
       "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
-      "referenceUnit": "unitgroups/5454b231-270e-45e6-89b2-7f4f3e482245"
+      "referenceUnit": "Items*km"
     },
     {
       "Comment": "",
@@ -51,7 +51,7 @@
       "entityType": "quantity",
       "externalId": "flowproperties/23911c86-d4d2-4e3e-a45e-8e392af1dc4e",
       "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
-      "referenceUnit": "unitgroups/93a60a57-a3c8-11da-a746-0800200c9a66"
+      "referenceUnit": "MJ"
     },
     {
       "Comment": "This is NOT an ILCD reference flow property.",
@@ -65,7 +65,7 @@
       "entityType": "quantity",
       "externalId": "flowproperties/4872c95a-5f78-4572-883b-e076187ad87c",
       "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
-      "referenceUnit": "unitgroups/5454b231-270e-45e6-89b2-7f4f3e482245"
+      "referenceUnit": "Items*km"
     },
     {
       "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
@@ -90,7 +90,7 @@
       "entityType": "quantity",
       "externalId": "flowproperties/52dcf2ff-c0f6-417f-a957-788688d67b86",
       "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
-      "referenceUnit": "unitgroups/93a60a57-a4c8-11da-a746-0800200c9a66"
+      "referenceUnit": "kg"
     },
     {
       "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
@@ -115,7 +115,7 @@
       "entityType": "quantity",
       "externalId": "flowproperties/62e503ce-544a-4599-b2ad-bcea15a7bf20",
       "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
-      "referenceUnit": "unitgroups/93a60a57-a4c8-11da-a746-0800200c9a66"
+      "referenceUnit": "kg"
     },
     {
       "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
@@ -140,7 +140,7 @@
       "entityType": "quantity",
       "externalId": "flowproperties/64b8e725-b0ba-4837-abb9-62dc0e7b9f6f",
       "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
-      "referenceUnit": "unitgroups/93a60a57-a4c8-11da-a746-0800200c9a66"
+      "referenceUnit": "kg"
     },
     {
       "Comment": "",
@@ -170,7 +170,7 @@
       "entityType": "quantity",
       "externalId": "flowproperties/79920f3d-77b3-4f12-8a8f-47accf832eca",
       "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
-      "referenceUnit": "unitgroups/de5104d8-3de0-4218-a29d-b7123ce9ca3c"
+      "referenceUnit": "MJ"
     },
     {
       "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
@@ -195,7 +195,7 @@
       "entityType": "quantity",
       "externalId": "flowproperties/7ec8d70e-4ffc-4024-86b7-6141cc0a2bf5",
       "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
-      "referenceUnit": "unitgroups/93a60a57-a4c8-11da-a746-0800200c9a66"
+      "referenceUnit": "kg"
     },
     {
       "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
@@ -212,7 +212,7 @@
       "entityType": "quantity",
       "externalId": "flowproperties/838aaa20-0117-11db-92e3-0800200c9a66",
       "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
-      "referenceUnit": "unitgroups/838aaa21-0117-11db-92e3-0800200c9a66"
+      "referenceUnit": "t*km"
     },
     {
       "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
@@ -233,7 +233,7 @@
       "entityType": "quantity",
       "externalId": "flowproperties/838aaa23-0117-11db-92e3-0800200c9a66",
       "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
-      "referenceUnit": "unitgroups/838aaa22-0117-11db-92e3-0800200c9a66"
+      "referenceUnit": "m"
     },
     {
       "Comment": "",
@@ -263,7 +263,7 @@
       "entityType": "quantity",
       "externalId": "flowproperties/8695e049-7a18-4b83-b3bd-035747039652",
       "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
-      "referenceUnit": "unitgroups/de5104d8-3de0-4218-a29d-b7123ce9ca3c"
+      "referenceUnit": "MJ"
     },
     {
       "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
@@ -288,7 +288,7 @@
       "entityType": "quantity",
       "externalId": "flowproperties/93a60a56-a3c8-11da-a746-0800200b9a66",
       "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
-      "referenceUnit": "unitgroups/93a60a57-a4c8-11da-a746-0800200c9a66"
+      "referenceUnit": "kg"
     },
     {
       "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
@@ -308,7 +308,7 @@
       "entityType": "quantity",
       "externalId": "flowproperties/93a60a56-a3c8-11da-a746-0800200c9a66",
       "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
-      "referenceUnit": "unitgroups/93a60a57-a3c8-11da-a746-0800200c9a66"
+      "referenceUnit": "MJ"
     },
     {
       "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
@@ -340,7 +340,7 @@
       "entityType": "quantity",
       "externalId": "flowproperties/93a60a56-a3c8-13da-a746-0800200c9a66",
       "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
-      "referenceUnit": "unitgroups/93a60a57-a3c8-12da-a746-0800200c9a66"
+      "referenceUnit": "m3"
     },
     {
       "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
@@ -360,7 +360,7 @@
       "entityType": "quantity",
       "externalId": "flowproperties/93a60a56-a3c8-14da-a746-0800200c9a66",
       "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
-      "referenceUnit": "unitgroups/93a60a57-a3c8-11da-a746-0800200c9a66"
+      "referenceUnit": "MJ"
     },
     {
       "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
@@ -381,7 +381,7 @@
       "entityType": "quantity",
       "externalId": "flowproperties/93a60a56-a3c8-19da-a746-0800200c9a66",
       "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
-      "referenceUnit": "unitgroups/93a60a57-a3c8-18da-a746-0800200c9a66"
+      "referenceUnit": "m2"
     },
     {
       "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
@@ -398,7 +398,7 @@
       "entityType": "quantity",
       "externalId": "flowproperties/93a60a56-a3c8-21da-a746-0800200c9a66",
       "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
-      "referenceUnit": "unitgroups/93a60a57-a3c8-20da-a746-0800200c9a66"
+      "referenceUnit": "m2*a"
     },
     {
       "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
@@ -430,7 +430,7 @@
       "entityType": "quantity",
       "externalId": "flowproperties/93a60a56-a3c8-22da-a746-0800200c9a66",
       "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
-      "referenceUnit": "unitgroups/93a60a57-a3c8-12da-a746-0800200c9a66"
+      "referenceUnit": "m3"
     },
     {
       "Comment": "",
@@ -450,7 +450,7 @@
       "entityType": "quantity",
       "externalId": "flowproperties/a182c00f-c0e5-4b7a-b2a1-a735fbee7f9a",
       "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
-      "referenceUnit": "unitgroups/93a60a57-a3c8-11da-a746-0800200c9a66"
+      "referenceUnit": "MJ"
     },
     {
       "Comment": "",
@@ -466,7 +466,7 @@
       "entityType": "quantity",
       "externalId": "flowproperties/bcf81c0a-9fe9-4b88-a25b-99e0dd64ddaa",
       "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
-      "referenceUnit": "unitgroups/03cc996d-7177-4738-aa32-1572a5172ccc"
+      "referenceUnit": "EUR"
     },
     {
       "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
@@ -482,7 +482,7 @@
       "entityType": "quantity",
       "externalId": "flowproperties/c0447923-0e60-4b3c-97c2-a86dddd9eea5",
       "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
-      "referenceUnit": "unitgroups/af638906-3ec7-4314-8de7-f76039f2dd01"
+      "referenceUnit": "a"
     },
     {
       "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
@@ -507,7 +507,7 @@
       "entityType": "quantity",
       "externalId": "flowproperties/f3e1017d-1aa3-4763-b563-9494858e1ec7",
       "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
-      "referenceUnit": "unitgroups/93a60a57-a4c8-11da-a746-0800200c9a66"
+      "referenceUnit": "kg"
     },
     {
       "Comment": "Illustrative but fully operative flow property data set for monetary flow properties, provided by the European Platform on LCA.",
@@ -536,7 +536,7 @@
       "entityType": "quantity",
       "externalId": "flowproperties/fdfecf14-ff8a-4e17-b2b2-f938c4b5cc27",
       "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
-      "referenceUnit": "unitgroups/da299c4d-1741-4da8-9fbd-5ccfb5e1d688"
+      "referenceUnit": "EUR"
     }
   ]
 }

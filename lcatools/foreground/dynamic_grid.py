@@ -21,6 +21,8 @@ def _result_to_str(result, width=8):
         res = result.total()
     else:
         return '%s ' % ('!' * width)
+    if isinstance(res, dict):
+        return '%*s' % '{{==}}'
     return '%*.3g ' % (width, float(res))
 
 

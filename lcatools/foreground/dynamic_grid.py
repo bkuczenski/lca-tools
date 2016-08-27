@@ -22,7 +22,7 @@ def _result_to_str(result, width=8):
     else:
         return '%s ' % ('!' * width)
     if isinstance(res, dict):
-        return '%*s' % '{{==}}'
+        return '%*s ' % (width, '{{==}}')
     return '%*.3g ' % (width, float(res))
 
 

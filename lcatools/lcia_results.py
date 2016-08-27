@@ -82,6 +82,43 @@ class DetailedLciaResult(object):
                                            self.factor.flow)
 
 
+class SummaryLciaResult(object):
+    """
+    like a DetailedLciaResult except omitting the exchange and factor information
+    """
+    def __init__(self, entity, node_weight, unit_score):
+        """
+        entity_id must either have get_uuid() or be hashable
+        :param entity: a hashable identifier
+        :param node_weight: stand-in for exchange value
+        :param unit_score: stand-in for factor value
+        """
+        self.entity = entity
+        self.node_weight = node_weight
+        self.unit_score = unit_score
+
+    @property
+    def result(self):
+        return self.node_weight * self.unit_score
+
+    def __hash__(self):
+        try:
+            h = self.entity.get_uuid()
+        except AttributeError:
+            h = self.entity
+        return hash(h)
+
+    def __eq__(self, other):
+        if not isinstance(other, SummaryLciaResult):
+            return False
+        return self.entity == other.entity
+
+    def __str__(self):
+        return '%s x %-s = %-s %s' % (number(self.node_weight), number(self.unit_score),
+                                      number(self.result),
+                                      self.entity)
+
+
 class AggregateLciaScore(object):
     """
     contains an entityId which should be either a process or a fragment (fragment stages show up as fragments??)
@@ -101,6 +138,12 @@ class AggregateLciaScore(object):
             raise DuplicateResult()
         self.LciaDetails.add(d)
 
+    def add_summary_result(self, entity, node_weight, unit_score):
+        d = SummaryLciaResult(entity, node_weight, unit_score)
+        if d in self.LciaDetails:
+            raise DuplicateResult()
+        self.LciaDetails.add(d)
+
     def show_detailed_result(self, key=lambda x: x.result, show_all=False):
         for d in sorted(self.LciaDetails, key=key, reverse=True):
             if d.result != 0 or show_all:
@@ -110,6 +153,17 @@ class AggregateLciaScore(object):
 
     def __str__(self):
         return '%s %s' % (number(self.cumulative_result), self.entity)
+
+
+def show_lcia(lcia_results):
+    """
+    Takes in a dict of uuids to lcia results, and summarizes them in a neat table
+    :param lcia_results:
+    :return:
+    """
+    print('LCIA Results\n%s' % ('-' * 60))
+    for r in lcia_results.values():
+        print('%10.5g %s' % (r.total(), r.quantity))
 
 
 class LciaResult(object):
@@ -150,6 +204,23 @@ class LciaResult(object):
         self._LciaScores = dict()
         self._private = private
 
+    def aggregate(self, key=lambda x: x['StageName']):
+        """
+        returns a new LciaResult object in which the components of the original LciaResult object are aggregated
+        according to a key.  The key is a lambda expression that is applied to each AggregateLciaScore component's
+        entity property (components where the lambda fails will all be grouped together).
+        :param key: default: lambda x: x['StageName']
+        :return:
+        """
+        agg_result = LciaResult(self.quantity, scenario=self.scenario, private=self._private)
+        for v in self._LciaScores.values():
+            keystring = 'other'
+            try:
+                keystring = key(v.entity)
+            finally:
+                agg_result.add_summary(keystring, v.entity, 1.0, v.cumulative_result)
+        return agg_result
+
     @property
     def is_private(self):
         return self._private
@@ -164,11 +235,18 @@ class LciaResult(object):
             self._LciaScores[key] = AggregateLciaScore(entity)
 
     def add_score(self, key, exchange, factor, location):
-        if factor.quantity != self.quantity:
-            raise InconsistentQuantity('%s' % factor)
+        if factor.quantity.get_uuid() != self.quantity.get_uuid():
+            raise InconsistentQuantity('%s\nfactor.quantity: %s\nself.quantity: %s' % (factor,
+                                                                                       factor.quantity.get_uuid(),
+                                                                                       self.quantity.get_uuid()))
         if key not in self._LciaScores.keys():
             self.add_component(key)
         self._LciaScores[key].add_detailed_result(exchange, factor, location)
+
+    def add_summary(self, key, entity, node_weight, unit_score):
+        if key not in self._LciaScores.keys():
+            self.add_component(key)
+        self._LciaScores[key].add_summary_result(entity, node_weight, unit_score)
 
     def keys(self):
         if self._private:

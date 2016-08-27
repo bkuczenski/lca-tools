@@ -10,7 +10,7 @@
       "index": 1
     },
     {
-      "source": "/data/GitHub/lca-tools-datafiles/catalogs/elcd_lcia.json.gz",
+      "source": "/data/GitHub/lca-tools-datafiles/catalogs/elcd_lcia_all.json.gz",
       "nicknames": [
         "LCIA"
       ],

@@ -164,6 +164,11 @@ class FlowDB(object):
         save_compartments(self.compartments, file)
         self._compartments_file = file
 
+    # inspection methods
+    def filter_exch(self, process_ref, elem=True, **kwargs):
+        return [x for x in process_ref.archive.fg_lookup(process_ref.id, **kwargs)
+                if self.is_elementary(x.flow) is elem]
+
     def find_matching_compartment(self, compartment, interact=True):
         """
 
@@ -313,7 +318,7 @@ class FlowDB(object):
             self._f_dict[(i, q)][comp] = cf
 
     def parse_flow(self, flow):
-        terms = set(filter(None, (flow['Name'], flow['CasNumber'], flow.get_uuid())))
+        terms = set(filter(None, (flow['Name'].strip(), flow['CasNumber'].strip(), flow.get_uuid())))
         flowables = self.flowables.find_indices(terms)
         comp = self.find_matching_compartment(flow['Compartment'])  # will raise MissingCompartment if not found
         return flowables, comp
@@ -349,10 +354,11 @@ class FlowDB(object):
         return cfs
 
     @staticmethod
-    def _reduce_cfs(flow, cfs, location='GLO'):
+    def _reduce_cfs(flow, quantity, cfs, location='GLO'):
         """
         Take a list of CFs and try to find the best one--- failing all else, ask the user
         :param flow:
+        :param quantity:
         :param cfs:
         :param location:
         :return:
@@ -376,13 +382,15 @@ class FlowDB(object):
         try:
             if len(set(vals)) > 1:
                 print('Multiple CFs found: %s' % vals)
+                print('Flow: %s' % flow)
+                print('Quantity: %s' % quantity)
                 print('Pick characterization to apply')
-                return pick_one(cfs)
+                return pick_one(list(cfs))
         except TypeError:
             print(vals)
             raise
         print('All characterizations have the same value- picking first one')
-        return cfs[0]
+        return list(cfs)[0]
 
     def lookup_single_cf(self, flow, quantity, location='GLO', dist=1):
         cfs = self.lookup_cfs(flow, quantity, dist=dist)
@@ -390,4 +398,4 @@ class FlowDB(object):
             location = 'GLO'
         if len(cfs) == 0:
             return None
-        return self._reduce_cfs(flow, cfs, location=location)
+        return self._reduce_cfs(flow, quantity, cfs, location=location)

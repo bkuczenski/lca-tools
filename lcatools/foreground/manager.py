@@ -1,14 +1,15 @@
 import json
 import os
+import re
 
 from collections import defaultdict
 
 from lcatools.foreground.foreground import ForegroundArchive
 from lcatools.catalog import CatalogInterface, ExchangeRef, CatalogRef
-from lcatools.exchanges import comp_dir, ExchangeValue
+from lcatools.exchanges import comp_dir, Exchange, ExchangeValue
 from lcatools.entities import LcQuantity, LcFlow
 from lcatools.flowdb.flowdb import FlowDB
-from lcatools.lcia_results import LciaResult
+from lcatools.lcia_results import LciaResult, InconsistentQuantity
 from lcatools.foreground.dynamic_grid import dynamic_grid
 from lcatools.interact import pick_reference, ifinput, pick_one, pick_compartment
 
@@ -58,7 +59,7 @@ class ForegroundManager(object):
         t0 = time.time()
         if fg_dir is None:
             self._catalog = CatalogInterface.new()
-            self._flowdb = FlowDB()
+            self.db = FlowDB()
             print('Setup Catalog and FlowDB... (%.2f s)' % (time.time() - t0))
 
         else:
@@ -70,9 +71,9 @@ class ForegroundManager(object):
                 self._catalog = CatalogInterface.new(fg_dir=fg_dir)
             self._catalog.load(0)
             if os.path.exists(self[0].compartment_file):
-                self._flowdb = FlowDB(compartments=self[0].compartment_file)
+                self.db = FlowDB(compartments=self[0].compartment_file)
             else:
-                self._flowdb = FlowDB()
+                self.db = FlowDB()
             print('Setup Catalog and FlowDB... (%.2f s)' % (time.time() - t0))
 
             self[0].load_fragments(self._catalog)
@@ -93,7 +94,7 @@ class ForegroundManager(object):
         if self._catalog[nick] is None:
             self._catalog.load(nick)
         self.merge_compartments(nick)
-        self.unmatched_flows[nick] = self._flowdb.import_cfs(self._catalog[nick])
+        self.unmatched_flows[nick] = self.db.import_cfs(self._catalog[nick])
         print('%d unmatched flows found from source %s... \n' %
               (len(self.unmatched_flows[nick]), self._catalog.name(nick)))
         self._cfs.append(nick)
@@ -127,12 +128,36 @@ class ForegroundManager(object):
     def terminate(self, *args, **kwargs):
         return self._catalog.terminate(*args, **kwargs)
 
+    def ref(self, *args):
+        return self._catalog.ref(*args)
+
     @staticmethod
     def _ensure_foreground(folder, force_create_new=False):
         if not os.path.exists(folder):
             os.makedirs(folder)
         if force_create_new or not os.path.exists(os.path.join(folder, 'entities.json')):
             ForegroundArchive.new(folder)
+
+    def _add_local_synonym(self, existing, new):
+        syns = self._load_local_synonyms()
+        syns[existing].append(new)
+        self.db.flowables.add_synonym(existing, new)
+
+    def _install_local_synonyms(self, syns):
+        for k, v in syns:
+            for val in v:
+                self.db.flowables.add_synonym(k, val)
+
+    def _load_local_synonyms(self):
+        if os.path.exists(self[0].synonyms_file):
+            with open(self[0].synonyms_file, 'r') as fp:
+                syns = json.load(fp)
+            return syns
+        return defaultdict(list)
+
+    def _save_local_synonyms(self, syns):
+        with open(self[0].synonyms_file, 'w') as fp:
+            json.dump(syns, fp)
 
     def workon(self, folder, force_create_new=False):
         """
@@ -150,9 +175,12 @@ class ForegroundManager(object):
         if os.path.exists(self[0].catalog_file):
             self._catalog.open(self[0].catalog_file)
         if os.path.exists(self[0].compartment_file):
-            self._flowdb.load_compartments(self[0].compartment_file)
+            self.db.load_compartments(self[0].compartment_file)
 
         self[0].load_fragments(self._catalog)
+        self._load_local_synonyms()
+
+        self.clear_unit_scores()
         self.compute_unit_scores()
 
     def add_to_foreground(self, ref):
@@ -163,40 +191,49 @@ class ForegroundManager(object):
 
     def merge_compartments(self, item):
         if self._catalog.is_loaded(0):
-            self._flowdb.save_compartments(self[0].compartment_file)
+            self.db.save_compartments(self[0].compartment_file)
         index = self._catalog.get_index(item)
         for f in self[index].flows():
             if self._catalog.is_loaded(0):
-                self._flowdb.find_matching_compartment(f['Compartment'], interact=True)
+                self.db.find_matching_compartment(f['Compartment'], interact=True)
 
     def find_flowable(self, string):
-        return self._flowdb.flowables.search(string)
+        return self.db.flowables.search(string)
+
+    def add_synonym(self, name, flow):
+        """
+        Set a flow UUID to be a synonym with an entry in the flow db.
+        :param name:
+        :param flow:
+        :return:
+        """
+        self._add_local_synonym(name, flow.get_uuid())
 
     def parse_flow(self, flow):
-        return self._flowdb.parse_flow(flow)
+        return self.db.parse_flow(flow)
 
     def cfs_for_flowable(self, string, **kwargs):
         flowables = self.find_flowable(string)
         if len(flowables) > 1:
             for f in flowables:
-                print('%6d %s [%s]' % (len(self._flowdb.all_cfs(f, **kwargs)), self._flowdb.flowables.name(f),
-                                       self._flowdb.flowables.cas(f)))
+                print('%6d %s [%s]' % (len(self.db.all_cfs(f, **kwargs)), self.db.flowables.name(f),
+                                       self.db.flowables.cas(f)))
         elif len(flowables) == 1:
             f = flowables.pop()
-            print('%s [%s]' % (self._flowdb.flowables.name(f), self._flowdb.flowables.cas(f)))
-            for cf in self._flowdb.all_cfs(f, **kwargs):
+            print('%s [%s]' % (self.db.flowables.name(f), self.db.flowables.cas(f)))
+            for cf in self.db.all_cfs(f, **kwargs):
                 print('%s' % cf)
 
     def cfs_for_flowable_grid(self, string, **kwargs):
         flowables = self.find_flowable(string)
         if len(flowables) > 1:
             for f in flowables:
-                print('%6d %s [%s]' % (len([cf for cf in self._flowdb.all_cfs(f, **kwargs)]),
-                                       self._flowdb.flowables.name(f),
-                                       self._flowdb.flowables.cas(f)))
+                print('%6d %s [%s]' % (len([cf for cf in self.db.all_cfs(f, **kwargs)]),
+                                       self.db.flowables.name(f),
+                                       self.db.flowables.cas(f)))
         elif len(flowables) == 1:
             f = flowables.pop()
-            self._flowdb.cfs_for_flowable(f, **kwargs)
+            self.db.cfs_for_flowable(f, **kwargs)
 
     def new_flow(self):
         name = input('Enter flow name: ')
@@ -205,17 +242,13 @@ class ForegroundManager(object):
         q = pick_one(self._catalog[0].quantities())
         print('Choose compartment:')
         comment = input('Enter comment: ')
-        c = pick_compartment(self._flowdb.compartments)
+        c = pick_compartment(self.db.compartments)
         flow = LcFlow.new(name, q, CasNumber=cas, Compartment=c.to_list(), Comment=comment)
         # flow.add_characterization(q, reference=True)
         self._catalog[0].add(flow)
         return flow
 
     # inspection methods
-    def _filter_exch(self, process_ref, elem=True, **kwargs):
-        return [x for x in process_ref.archive.fg_lookup(process_ref.id, **kwargs)
-                if self._flowdb.is_elementary(x.flow) is elem]
-
     def gen_exchanges(self, process_ref, ref_flow, direction):
         """
         This method takes in an exchange definition and gets all the complementary exchanges (i.e. the
@@ -226,12 +259,12 @@ class ForegroundManager(object):
         :param direction:
         :return: an exchange generator (NOT ExchangeRefs because I haven't figured out how to be consistent on that yet)
         """
-        for x in self._filter_exch(process_ref, elem=False, ref_flow=ref_flow):
+        for x in self.db.filter_exch(process_ref, elem=False, ref_flow=ref_flow):
             if not (x.flow == ref_flow and x.direction == direction):
                 yield x
 
     def intermediate(self, process_ref, **kwargs):
-        exch = self._filter_exch(process_ref, elem=False, **kwargs)
+        exch = self.db.filter_exch(process_ref, elem=False, **kwargs)
         if len(exch) == 0:
             print('No intermediate exchanges')
             return
@@ -240,7 +273,7 @@ class ForegroundManager(object):
             print('%s' % i)
 
     def elementary(self, process_ref, **kwargs):
-        exch = self._filter_exch(process_ref, elem=True, **kwargs)
+        exch = self.db.filter_exch(process_ref, elem=True, **kwargs)
         if len(exch) == 0:
             print('No elementary exchanges')
             return
@@ -257,9 +290,9 @@ class ForegroundManager(object):
         int_set = set()
         elem_set = set()
         for p in p_refs:
-            ints[p] = self._filter_exch(p, elem=False, **kwargs)
+            ints[p] = self.db.filter_exch(p, elem=False, **kwargs)
             int_set = int_set.union(_key(x) for x in ints[p])
-            elems[p] = self._filter_exch(p, elem=True, **kwargs)
+            elems[p] = self.db.filter_exch(p, elem=True, **kwargs)
             elem_set = elem_set.union(_key(x) for x in elems[p])
 
         int_rows = sorted(int_set, key=lambda x: x[1])
@@ -286,9 +319,9 @@ class ForegroundManager(object):
         cols = []
         for p in p_ref.entity().reference_entity:
             cols.append(p)
-            ints[p] = self._filter_exch(p_ref, elem=False, ref_flow=p.flow)
+            ints[p] = self.db.filter_exch(p_ref, elem=False, ref_flow=p.flow)
             int_set = int_set.union(_key(x) for x in ints[p])
-            elems[p] = self._filter_exch(p_ref, elem=True, ref_flow=p.flow)
+            elems[p] = self.db.filter_exch(p_ref, elem=True, ref_flow=p.flow)
             elem_set = elem_set.union(_key(x) for x in elems[p])
 
         int_rows = sorted(int_set, key=lambda x: x[1])
@@ -318,7 +351,7 @@ class ForegroundManager(object):
             self._catalog.load(0)
         if not self._catalog.is_loaded(process_ref.index):
             self._catalog.load(process_ref.index)
-        exch = self._filter_exch(process_ref, elem=True, **kwargs)
+        exch = self.db.filter_exch(process_ref, elem=True, **kwargs)
         if quantities is None:
             qs = self._catalog[0].lcia_methods()
             if len(qs) == 0:
@@ -335,7 +368,7 @@ class ForegroundManager(object):
             q_result = LciaResult(q)
             for x in exch:
                 if not x.flow.has_characterization(q):
-                    cf = self._flowdb.lookup_single_cf(x.flow, q, dist=dist, location=process_ref['SpatialScope'])
+                    cf = self.db.lookup_single_cf(x.flow, q, dist=dist, location=process_ref['SpatialScope'])
                     if cf is None:
                         x.flow.add_characterization(q)
                     else:
@@ -356,7 +389,7 @@ class ForegroundManager(object):
             for q in quantities:
                 result[q.get_uuid()] = LciaResult(q)
             return result
-        return p_ref.archive.bg_lookup(p_ref.id, quantities=quantities, flowdb=self._flowdb, **kwargs)
+        return p_ref.archive.bg_lookup(p_ref.id, quantities=quantities, flowdb=self.db, **kwargs)
 
     def compare_lcia_results(self, p_refs, background=False, **kwargs):
         """
@@ -409,8 +442,15 @@ class ForegroundManager(object):
             print('%s%s' % (' ' * level, k))
             self._show_frag_children(k, level)
 
-    def show_fragments(self, background=None, show_all=False):
-        for f in self[0].fragments(background=background, show_all=False):
+    def show_fragments(self, show_all=False, **kwargs):
+        """
+
+        :param background:
+        :param show_all:
+        :param match: a regex to test against the fragment name
+        :return:
+        """
+        for f in self[0].fragments(show_all=False, **kwargs):
             print('%s' % f)
             if show_all:
                 self._show_frag_children(f)
@@ -471,8 +511,8 @@ class ForegroundManager(object):
 
     def terminate_to_foreground(self, fragment):
         fragment.term.self_terminate()
-        if self._flowdb.is_elementary(fragment.flow):
-            cfs = self._flowdb.factors_for_flow(fragment.term.term_flow, [l for l in self[0].lcia_methods()])
+        if self.db.is_elementary(fragment.flow):
+            cfs = self.db.factors_for_flow(fragment.term.term_flow, [l for l in self[0].lcia_methods()])
             fragment.term.flowdb_results(LciaResult.from_cfs(fragment, cfs))
 
     def create_fragment_from_process(self, process_ref, ref_flow=None, background_children=True):
@@ -503,18 +543,18 @@ class ForegroundManager(object):
         self.build_child_flows(frag, background_children=background_children)
         return frag
 
-    def _get_fragment_inventory(self, term, scenario=None):
+    def get_fragment_inventory(self, fragment, scenario=None):
         """
         Aggregates inputs and outputs (un-terminated flows) from a fragment; returns a list of exchanges.
-        :param term: ff
+        :param fragment: ff
         :param scenario:
         :return:
         """
-        io_ffs = term.term_node.entity().io_flows(lambda x: self.child_flows(x), scenario)
-        ref_dir = term.direction
+        io_ffs = fragment.io_flows(lambda x: self.child_flows(x), scenario)
+        ref_dir = comp_dir(fragment.direction)
         accum = defaultdict(float)
         ent = dict()
-        accum[term.term_flow.get_uuid()] = 1.0
+        accum[fragment.flow.get_uuid()] = 1.0
         for i in io_ffs:
             ent[i.fragment.flow.get_uuid()] = i.fragment.flow
             if i.fragment.direction == ref_dir:
@@ -522,7 +562,7 @@ class ForegroundManager(object):
             else:
                 accum[i.fragment.flow.get_uuid()] -= i.magnitude
 
-        in_ex = accum.pop(term.term_flow.get_uuid())
+        in_ex = accum.pop(fragment.flow.get_uuid())
         if in_ex < 0:
             raise ValueError('Fragment requires more reference flow than it generates')
         frag_exchs = []
@@ -532,7 +572,7 @@ class ForegroundManager(object):
                 dirn = comp_dir(ref_dir)
             else:
                 dirn = ref_dir
-            frag_exchs.append(ExchangeValue(term.term_node.entity(), ent[k], dirn, value=val))
+            frag_exchs.append(ExchangeValue(fragment, ent[k], dirn, value=val))
         return frag_exchs
 
     def build_child_flows(self, fragment, scenario=None, background_children=False):
@@ -557,7 +597,7 @@ class ForegroundManager(object):
 
         elif term.term_node.entity_type == 'fragment':
 
-            int_exch = self._get_fragment_inventory(term, scenario=scenario)
+            int_exch = self.get_fragment_inventory(term.term_node, scenario=scenario)
 
         else:
             raise AmbiguousTermination('Cannot figure out entity type for %s' % term)
@@ -569,6 +609,15 @@ class ForegroundManager(object):
                 self.fragment_to_background(child)
             children.append(child)
         return children
+
+    def clear_unit_scores(self, scenario=None):
+        for f in self[0].fragments(show_all=True):
+            if scenario is None:
+                for term in f.terminations():
+                    f.termination(term).clear_score_cache()
+            else:
+                if scenario in f.terminations():
+                    f.termination(scenario).clear_score_cache()
 
     def compute_unit_scores(self, scenario=None):
         for f in self[0].fragments(show_all=True):
@@ -594,15 +643,37 @@ class ForegroundManager(object):
         """
         if fragment.term.is_bg:
             return fragment  # nothing to do
-        elif fragment.term.is_null:
-            bg = self[0].add_background_ff_from_fragment(fragment)  # cutoff
         else:
-            try:
+            if fragment.term.is_null:
+                frag_exch = Exchange(fragment, fragment.flow, fragment.direction)
+                try:
+                    bg = next(f for f in self[0].fragments(background=False) if f.term.terminates(frag_exch))
+                    print('found termination in foreground')
+                    fragment.terminate(bg)
+                except StopIteration:
+                    try:
+                        bg = next(f for f in self[0].fragments(background=True) if f.term.terminates(frag_exch))
+                        print('found cutoff flow')
+                        fragment.terminate(bg)
+                    except StopIteration:
+                        bg = self[0].add_background_ff_from_fragment(fragment)
+                        print('created null termination in background')
+                        fragment.terminate(bg)
+            else:
                 term_exch = fragment.term.to_exchange()
-                bg = next(f for f in self[0].fragments(background=True) if f.term.terminates(term_exch))
-                fragment.terminate(bg)
-            except StopIteration:
-                bg = self[0].add_background_ff_from_fragment(fragment)
+                try:
+                    bg = next(f for f in self[0].fragments(background=False) if f.term.matches(term_exch))
+                    print('found termination match in foreground')
+                    fragment.terminate(bg)
+                except StopIteration:
+                    try:
+                        bg = next(f for f in self[0].fragments(background=True) if f.term.matches(term_exch))
+                        print('found termination match in background')
+                        fragment.terminate(bg)
+                    except StopIteration:
+                        bg = self[0].add_background_ff_from_fragment(fragment)
+                        print('created termination in background')
+                        fragment.terminate(bg)
         return bg
 
     def fragment_to_foreground(self, fragment, background_children=True):

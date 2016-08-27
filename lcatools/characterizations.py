@@ -89,7 +89,7 @@ class Characterization(object):
         if self.is_null:
             return '%s has %s %s' % (self.flow, self.quantity, self.quantity.reference_entity)
         return '%s %s %s' % ('\n'.join(['%10.3g [%s]' % (v, k) for k,v in self._locations.items()]),
-                             self.quantity.reference_entity, self.quantity)
+                             self.quantity.reference_entity, self.flow)
 
     def q_view(self):
         if self.value is not None:

@@ -531,7 +531,7 @@ class CatalogInterface(object):
         :return:
         """
         if archive is not None:
-            if self[archive] is None:
+            if not self.is_loaded(archive):
                 self.load(archive)
         else:
             archive = [i for i, k in enumerate(self._loaded) if k is True]

@@ -144,7 +144,7 @@ class ExchangeValue(Exchange):
         self.value = value
 
     def __str__(self):
-        if self in self.process.reference_entity:
+        if self.process.reference_entity is not None and self in self.process.reference_entity:
             ref = '{*}'
         else:
             ref = '   '

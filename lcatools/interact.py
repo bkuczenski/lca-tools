@@ -49,7 +49,7 @@ def cyoa(prompt, valid, default=None):
         except ValueError:
             pass
         print('invalid choice')
-    return i
+    return i.lower()
 
 
 def _pick_list(items, *args, prompt=None):
@@ -278,6 +278,7 @@ def filter_processes(processes):
 def filter_flows(flows):
     if len(flows) < 10:
         return pick_list(flows)
+    print('%d results; choose by compartment:' % len(flows))
     flows = flows_by_compartment(flows)
     return pick_list(flows)
 

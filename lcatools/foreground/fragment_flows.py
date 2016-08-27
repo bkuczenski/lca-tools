@@ -155,15 +155,16 @@ class FlowTermination(object):
         :param exchange:
         :return:
         """
-        if self.is_null:
-            return False
-        if self.term_node.entity_type != 'process':
-            return False
         if self.term_flow.match(exchange.flow) and self.direction == comp_dir(exchange.direction):
             if exchange.termination is None:
                 return True
-            elif exchange.termination == self._process_ref.id:
-                return True
+            else:
+                if self.is_null:
+                    return False
+                if self.term_node.entity_type != 'process':
+                    return False
+                if exchange.termination == self._process_ref.id:
+                    return True
         return False
 
     def to_exchange(self):
@@ -273,7 +274,7 @@ class FlowTermination(object):
         :return:
         """
         if self.is_null:
-            flow = None
+            flow = self._parent.flow
         elif self._process_ref.entity_type == 'fragment':
             # term flow must be sub-fragment's reference flow
             flow = self.term_node.flow
@@ -669,7 +670,7 @@ class LcFragment(LcEntity):
                     self['StageName'] = process_ref['Name']
 
     def term_from_exch(self, exch_ref, scenario=None):
-        if scenario in self._terminations:
+        if scenario in self._terminations and not self._terminations[scenario].is_null:
             raise CacheAlreadySet('This scenario has already been specified')
         self._terminations[scenario] = FlowTermination.from_exchange(self, exch_ref)
 
@@ -788,9 +789,12 @@ class LcFragment(LcEntity):
 
         if frags_seen is None:
             frags_seen = set()
-        elif self.get_uuid() in frags_seen:
-            raise InvalidParentChild('Frag seeing self')
-        frags_seen.add(self.get_uuid())
+
+        if self.reference_entity is None:
+            if self.get_uuid() in frags_seen:
+                raise InvalidParentChild('Frag %s seeing self\n %s' % (self.get_uuid(), '; '.join(frags_seen)))
+            frags_seen.add(self.get_uuid())
+        print('Traversing %s\nfrags seen: %s\n' % (self, '; '.join(frags_seen)))
 
         if term.is_fg or term.term_node.entity_type == 'process':
             '''
@@ -807,7 +811,7 @@ class LcFragment(LcEntity):
             for f in childflows(self):
                 try:
                     child_ff, cons = f.traverse(childflows, node_weight, scenario, observed=observed,
-                                                frags_seen=frags_seen, conserved_qty=self._conserved_quantity)
+                                                frags_seen=set(frags_seen), conserved_qty=self._conserved_quantity)
                     if cons is not None:
                         stock += cons
                 except BalanceFlowError:
@@ -818,7 +822,7 @@ class LcFragment(LcEntity):
 
             if bal_f is not None:
                 bal_ff, cons = bal_f.traverse(childflows, node_weight, scenario, observed=observed,
-                                              frags_seen=frags_seen, conserved_qty=None, _balance=stock)
+                                              frags_seen=set(frags_seen), conserved_qty=None, _balance=stock)
                 ff.extend(bal_ff)
 
         else:
@@ -835,7 +839,7 @@ class LcFragment(LcEntity):
 
             # for proper subfragments, need to determine child flow magnitudes based on traversal record
             subfrag_ffs, cons = term.term_node.traverse(childflows, 1.0, scenario,
-                                                        observed=observed, frags_seen=frags_seen)
+                                                        observed=observed, frags_seen=set(frags_seen))
             ios = [f for f in subfrag_ffs if f.term.is_null]
             subfrags = [f for f in subfrag_ffs if not f.term.is_null]
 

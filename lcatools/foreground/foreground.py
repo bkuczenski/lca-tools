@@ -4,6 +4,7 @@ from lcatools.foreground.fragment_flows import LcFragment
 from lcatools.exchanges import comp_dir
 import json
 import os
+import re
 
 
 class ForegroundError(Exception):
@@ -96,6 +97,10 @@ class ForegroundArchive(LcArchive):
     def compartment_file(self):
         return os.path.join(self._folder, 'compartments.json')
 
+    @property
+    def synonyms_file(self):
+        return os.path.join(self._folder, 'synonyms.json')
+
     def add(self, entity):
         try:
             super(ForegroundArchive, self).add(entity)
@@ -129,7 +134,7 @@ class ForegroundArchive(LcArchive):
     def _recurse_frags(self, frag):
         frags = [frag]
         for x in self._fragments(show_all=True):
-            if x.parent is frag:
+            if x._parent is frag:
                 frags.extend(self._recurse_frags(x))
         return frags
 
@@ -162,15 +167,18 @@ class ForegroundArchive(LcArchive):
         self.add_entity_and_children(f)
         return f
 
-    def _fragments(self, show_all=False):
+    def _fragments(self, show_all=False, match=None):
         for f in self._entities_by_type('fragment'):
             if (f.reference_entity is None) or show_all:
+                if match is not None:
+                    if not bool(re.search(match, f['Name'], flags=re.IGNORECASE)):
+                        continue
                 yield f
 
-    def fragments(self, background=None, show_all=False):
+    def fragments(self, background=None, **kwargs):
         if background is not None:
-            return [f for f in self._fragments(show_all=show_all) if f.is_background == background]
-        return sorted([f for f in self._fragments(show_all=show_all)], key=lambda x: x.is_background)
+            return [f for f in self._fragments(**kwargs) if f.is_background == background]
+        return sorted([f for f in self._fragments(**kwargs)], key=lambda x: x.is_background)
 
     def add_child_fragment_flow(self, ff, flow, direction, **kwargs):
         f = LcFragment.new(flow['Name'], flow, direction, parent=ff, **kwargs)
@@ -201,6 +209,7 @@ class ForegroundArchive(LcArchive):
         bg = self.create_fragment(fragment.flow, fragment.direction, background=True)
         self.add_entity_and_children(bg)
         fragment.shift_terms_to_background(bg)
+        return bg
 
     def check_counter(self, entity_type=None):
         super(ForegroundArchive, self).check_counter(entity_type=entity_type)
@@ -223,6 +232,8 @@ class ForegroundArchive(LcArchive):
         :return:
         """
         fragments = []
+        if not os.path.exists(self._fragment_dir):
+            os.makedirs(self._fragment_dir)
         for file in os.listdir(self._fragment_dir):
             with open(os.path.join(self._fragment_dir, file), 'r') as fp:
                 j = json.load(fp)

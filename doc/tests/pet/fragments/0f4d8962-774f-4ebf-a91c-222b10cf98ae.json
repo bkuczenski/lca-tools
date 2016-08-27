@@ -1,0 +1,28 @@
+{
+  "fragments": [
+    {
+      "direction": "Input",
+      "entityId": "0f4d8962-774f-4ebf-a91c-222b10cf98ae",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 1.0,
+        "1": 0.0
+      },
+      "externalId": "0f4d8962-774f-4ebf-a91c-222b10cf98ae",
+      "flow": "180c6f74-8d7e-39c6-b640-f93060da031f",
+      "isBackground": true,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "None",
+      "tags": {
+        "Comment": "",
+        "Name": "CUTOFF Transport, pipeline, coal slurry",
+        "StageName": ""
+      },
+      "terminations": {
+        "null": {}
+      }
+    }
+  ]
+}

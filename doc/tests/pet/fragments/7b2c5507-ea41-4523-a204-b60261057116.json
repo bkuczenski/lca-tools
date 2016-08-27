@@ -1,0 +1,28 @@
+{
+  "fragments": [
+    {
+      "direction": "Input",
+      "entityId": "7b2c5507-ea41-4523-a204-b60261057116",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 1.0,
+        "1": 0.0
+      },
+      "externalId": "7b2c5507-ea41-4523-a204-b60261057116",
+      "flow": "2f7c0ad5-c1a4-3781-a54c-3e4a0fb65a9b",
+      "isBackground": true,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "None",
+      "tags": {
+        "Comment": "",
+        "Name": "CUTOFF Disposal, ash and flue gas desulfurization sludge, to unspecified reuse",
+        "StageName": ""
+      },
+      "terminations": {
+        "null": {}
+      }
+    }
+  ]
+}

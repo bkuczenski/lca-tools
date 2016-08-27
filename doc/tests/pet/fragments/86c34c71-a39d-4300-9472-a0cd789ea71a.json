@@ -1,0 +1,28 @@
+{
+  "fragments": [
+    {
+      "direction": "Input",
+      "entityId": "86c34c71-a39d-4300-9472-a0cd789ea71a",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 1.0,
+        "1": 0.0
+      },
+      "externalId": "86c34c71-a39d-4300-9472-a0cd789ea71a",
+      "flow": "59f33cd3-2a38-3f82-8111-f1de0f5de615",
+      "isBackground": true,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "None",
+      "tags": {
+        "Comment": "",
+        "Name": "Electricity, at grid, US, 2000",
+        "StageName": ""
+      },
+      "terminations": {
+        "null": {}
+      }
+    }
+  ]
+}

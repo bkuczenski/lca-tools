@@ -1,0 +1,28 @@
+{
+  "fragments": [
+    {
+      "direction": "Input",
+      "entityId": "f892bf82-a1af-467e-b10f-1d767caa1ea5",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 1.0,
+        "1": 0.0
+      },
+      "externalId": "f892bf82-a1af-467e-b10f-1d767caa1ea5",
+      "flow": "a5885b32-6dcd-31ed-86e7-20f157bee79c",
+      "isBackground": true,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "None",
+      "tags": {
+        "Comment": "",
+        "Name": "Methanol, at plant",
+        "StageName": ""
+      },
+      "terminations": {
+        "null": {}
+      }
+    }
+  ]
+}

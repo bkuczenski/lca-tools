@@ -1,0 +1,28 @@
+{
+  "fragments": [
+    {
+      "direction": "Input",
+      "entityId": "5dfdb2f8-6278-4ad6-b3d6-1e82524e9346",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 1.0,
+        "1": 0.0
+      },
+      "externalId": "5dfdb2f8-6278-4ad6-b3d6-1e82524e9346",
+      "flow": "538cc2ad-3914-34a2-93e5-ce9a3e1fd84f",
+      "isBackground": true,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "None",
+      "tags": {
+        "Comment": "",
+        "Name": "Bituminous coal, at mine",
+        "StageName": ""
+      },
+      "terminations": {
+        "null": {}
+      }
+    }
+  ]
+}

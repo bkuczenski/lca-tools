@@ -1,0 +1,28 @@
+{
+  "fragments": [
+    {
+      "direction": "Output",
+      "entityId": "4241562e-79c2-4e9b-976f-06d6893f467d",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 1.0,
+        "1": 0.0
+      },
+      "externalId": "4241562e-79c2-4e9b-976f-06d6893f467d",
+      "flow": "05b69a46-26e0-33f1-a7db-18bc8c86d928",
+      "isBackground": true,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "None",
+      "tags": {
+        "Comment": "",
+        "Name": "Recovered energy",
+        "StageName": ""
+      },
+      "terminations": {
+        "null": {}
+      }
+    }
+  ]
+}

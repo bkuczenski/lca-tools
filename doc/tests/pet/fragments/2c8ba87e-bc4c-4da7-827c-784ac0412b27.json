@@ -1,0 +1,85 @@
+{
+  "fragments": [
+    {
+      "direction": "Input",
+      "entityId": "2c8ba87e-bc4c-4da7-827c-784ac0412b27",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 1.0,
+        "1": 0.0
+      },
+      "externalId": "2c8ba87e-bc4c-4da7-827c-784ac0412b27",
+      "flow": "79bad894-210b-3a5a-b2ee-3f331c6e05ab",
+      "isBackground": false,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "None",
+      "tags": {
+        "Comment": "",
+        "Name": "Transport, barge, average fuel mix",
+        "StageName": ""
+      },
+      "terminations": {
+        "null": {
+          "entityId": "c91fb0df-a476-3408-9831-3b55968bafd0",
+          "source": "/data/GitHub/lca-tools-datafiles/catalogs/uslci_ecospold.json.gz"
+        }
+      }
+    },
+    {
+      "direction": "Input",
+      "entityId": "9e279425-09b3-4b41-bec7-feb3e99af765",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 0.78,
+        "1": 0.0
+      },
+      "externalId": "9e279425-09b3-4b41-bec7-feb3e99af765",
+      "flow": "88a88dbd-7da8-3aeb-8741-5c189411201d",
+      "isBackground": false,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "2c8ba87e-bc4c-4da7-827c-784ac0412b27",
+      "tags": {
+        "Comment": "",
+        "Name": "Transport, barge, residual fuel oil powered",
+        "StageName": "Transport, barge, residual fuel oil powered"
+      },
+      "terminations": {
+        "null": {
+          "entityId": "0a4588ec-13e9-441a-a091-4e108c2825b9",
+          "source": "foreground"
+        }
+      }
+    },
+    {
+      "direction": "Input",
+      "entityId": "6a856836-8b4b-4ddd-8072-44f1f0fb809c",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 0.22,
+        "1": 0.0
+      },
+      "externalId": "6a856836-8b4b-4ddd-8072-44f1f0fb809c",
+      "flow": "d405b84a-bf2d-32e3-a430-f306bb12235f",
+      "isBackground": false,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "2c8ba87e-bc4c-4da7-827c-784ac0412b27",
+      "tags": {
+        "Comment": "",
+        "Name": "Transport, barge, diesel powered",
+        "StageName": "Transport, barge, diesel powered"
+      },
+      "terminations": {
+        "null": {
+          "entityId": "cd48c3a7-9d88-4ae5-88c0-8188ee3d0cba",
+          "source": "foreground"
+        }
+      }
+    }
+  ]
+}

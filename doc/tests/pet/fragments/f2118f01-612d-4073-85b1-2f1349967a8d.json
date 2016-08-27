@@ -1,0 +1,58 @@
+{
+  "fragments": [
+    {
+      "direction": "Input",
+      "entityId": "f2118f01-612d-4073-85b1-2f1349967a8d",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 1.0,
+        "1": 0.0
+      },
+      "externalId": "f2118f01-612d-4073-85b1-2f1349967a8d",
+      "flow": "25d3acbf-467a-3de6-b296-32b9f8dfe4de",
+      "isBackground": false,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "None",
+      "tags": {
+        "Comment": "",
+        "Name": "Transport, pipeline, unspecified petroleum products",
+        "StageName": ""
+      },
+      "terminations": {
+        "null": {
+          "entityId": "c6248524-f3bf-349b-a5d4-684af89a613a",
+          "source": "/data/GitHub/lca-tools-datafiles/catalogs/uslci_ecospold.json.gz"
+        }
+      }
+    },
+    {
+      "direction": "Input",
+      "entityId": "a43c65db-5b54-4ac1-a0ff-c21ffd2ac49d",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 0.0149,
+        "1": 0.0
+      },
+      "externalId": "a43c65db-5b54-4ac1-a0ff-c21ffd2ac49d",
+      "flow": "0d9db990-e9d5-3e59-b484-56f512816098",
+      "isBackground": false,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "f2118f01-612d-4073-85b1-2f1349967a8d",
+      "tags": {
+        "Comment": "",
+        "Name": "Electricity, at grid, US, 2008",
+        "StageName": "Electricity, at grid, US, 2008"
+      },
+      "terminations": {
+        "null": {
+          "entityId": "8430bad0-ff62-402c-b9d1-5a0f6cd51e5b",
+          "source": "foreground"
+        }
+      }
+    }
+  ]
+}

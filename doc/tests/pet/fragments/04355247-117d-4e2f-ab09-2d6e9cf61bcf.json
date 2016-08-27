@@ -1,0 +1,28 @@
+{
+  "fragments": [
+    {
+      "direction": "Input",
+      "entityId": "04355247-117d-4e2f-ab09-2d6e9cf61bcf",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 1.0,
+        "1": 0.0
+      },
+      "externalId": "04355247-117d-4e2f-ab09-2d6e9cf61bcf",
+      "flow": "284f5c89-bab3-30a9-ac70-ea9ac8485fee",
+      "isBackground": true,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "None",
+      "tags": {
+        "Comment": "",
+        "Name": "Electricity, at cogen, for natural gas turbine",
+        "StageName": ""
+      },
+      "terminations": {
+        "null": {}
+      }
+    }
+  ]
+}

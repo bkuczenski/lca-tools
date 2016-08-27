@@ -1,0 +1,58 @@
+{
+  "fragments": [
+    {
+      "direction": "Input",
+      "entityId": "cd48c3a7-9d88-4ae5-88c0-8188ee3d0cba",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 1.0,
+        "1": 0.0
+      },
+      "externalId": "cd48c3a7-9d88-4ae5-88c0-8188ee3d0cba",
+      "flow": "d405b84a-bf2d-32e3-a430-f306bb12235f",
+      "isBackground": false,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "None",
+      "tags": {
+        "Comment": "",
+        "Name": "Transport, barge, diesel powered",
+        "StageName": ""
+      },
+      "terminations": {
+        "null": {
+          "entityId": "905534ff-7dcf-39e1-bcee-c61b5a849a74",
+          "source": "/data/GitHub/lca-tools-datafiles/catalogs/uslci_ecospold.json.gz"
+        }
+      }
+    },
+    {
+      "direction": "Input",
+      "entityId": "eb6caf18-074f-4265-956e-4c3ed4eba577",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 0.0095933,
+        "1": 0.0
+      },
+      "externalId": "eb6caf18-074f-4265-956e-4c3ed4eba577",
+      "flow": "eb16c394-cd99-37d3-a5ac-30fa6e5c3589",
+      "isBackground": false,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "cd48c3a7-9d88-4ae5-88c0-8188ee3d0cba",
+      "tags": {
+        "Comment": "",
+        "Name": "Diesel, at refinery",
+        "StageName": "Diesel, at refinery"
+      },
+      "terminations": {
+        "null": {
+          "entityId": "e436896d-bec3-4dfd-8879-08abd0184d94",
+          "source": "foreground"
+        }
+      }
+    }
+  ]
+}

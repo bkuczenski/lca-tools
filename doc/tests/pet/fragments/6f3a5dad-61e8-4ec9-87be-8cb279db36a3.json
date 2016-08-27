@@ -1,0 +1,28 @@
+{
+  "fragments": [
+    {
+      "direction": "Input",
+      "entityId": "6f3a5dad-61e8-4ec9-87be-8cb279db36a3",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 1.0,
+        "1": 0.0
+      },
+      "externalId": "6f3a5dad-61e8-4ec9-87be-8cb279db36a3",
+      "flow": "a65805e3-cd6c-32f9-a31e-02cabb9e4c14",
+      "isBackground": true,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "None",
+      "tags": {
+        "Comment": "",
+        "Name": "CUTOFF Disposal, solid waste, unspecified, to waste-to-energy",
+        "StageName": ""
+      },
+      "terminations": {
+        "null": {}
+      }
+    }
+  ]
+}

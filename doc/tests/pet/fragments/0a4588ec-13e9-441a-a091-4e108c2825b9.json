@@ -1,0 +1,58 @@
+{
+  "fragments": [
+    {
+      "direction": "Input",
+      "entityId": "0a4588ec-13e9-441a-a091-4e108c2825b9",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 1.0,
+        "1": 0.0
+      },
+      "externalId": "0a4588ec-13e9-441a-a091-4e108c2825b9",
+      "flow": "88a88dbd-7da8-3aeb-8741-5c189411201d",
+      "isBackground": false,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "None",
+      "tags": {
+        "Comment": "",
+        "Name": "Transport, barge, residual fuel oil powered",
+        "StageName": ""
+      },
+      "terminations": {
+        "null": {
+          "entityId": "4b6030c5-9bf4-3121-80a6-d85b96c3778a",
+          "source": "/data/GitHub/lca-tools-datafiles/catalogs/uslci_ecospold.json.gz"
+        }
+      }
+    },
+    {
+      "direction": "Input",
+      "entityId": "efbb5736-6ba1-4c56-9e81-f250c4f261a3",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 0.0088155,
+        "1": 0.0
+      },
+      "externalId": "efbb5736-6ba1-4c56-9e81-f250c4f261a3",
+      "flow": "9fe775e1-cc00-3b29-a6c9-9328218ef527",
+      "isBackground": false,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "0a4588ec-13e9-441a-a091-4e108c2825b9",
+      "tags": {
+        "Comment": "",
+        "Name": "Residual fuel oil, at refinery",
+        "StageName": "Residual fuel oil, at refinery"
+      },
+      "terminations": {
+        "null": {
+          "entityId": "4d264ea0-cbb3-4a25-a0a5-00879baf08e1",
+          "source": "foreground"
+        }
+      }
+    }
+  ]
+}

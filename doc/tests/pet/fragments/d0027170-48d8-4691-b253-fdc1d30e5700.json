@@ -1,0 +1,491 @@
+{
+  "fragments": [
+    {
+      "direction": "Input",
+      "entityId": "d0027170-48d8-4691-b253-fdc1d30e5700",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 1.0,
+        "1": 0.0
+      },
+      "externalId": "d0027170-48d8-4691-b253-fdc1d30e5700",
+      "flow": "c28410ff-163a-331f-a4bb-d97da54b23e8",
+      "isBackground": false,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "None",
+      "tags": {
+        "Comment": "",
+        "Name": "Acetic acid, at plant",
+        "StageName": ""
+      },
+      "terminations": {
+        "null": {
+          "entityId": "f9b7469a-98ea-3434-aedd-cee80a51e655",
+          "source": "/data/GitHub/lca-tools-datafiles/catalogs/uslci_ecospold.json.gz"
+        }
+      }
+    },
+    {
+      "direction": "Output",
+      "entityId": "38321376-c48a-4e92-a84e-d7104c578561",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 0.18841,
+        "1": 0.0
+      },
+      "externalId": "38321376-c48a-4e92-a84e-d7104c578561",
+      "flow": "a8e72482-28ab-30d9-b970-f1add067f2b1",
+      "isBackground": false,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "d0027170-48d8-4691-b253-fdc1d30e5700",
+      "tags": {
+        "Comment": "",
+        "Name": "Recovered energy, at acetic acid production",
+        "StageName": "Recovered energy, at acetic acid production"
+      },
+      "terminations": {
+        "null": {
+          "entityId": "5d4787c4-5264-4551-9f7d-bbed98e9b9b4",
+          "source": "foreground"
+        }
+      }
+    },
+    {
+      "direction": "Input",
+      "entityId": "fe0e0eb4-208a-4505-95e7-ab076a408548",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 0.0049246,
+        "1": 0.0
+      },
+      "externalId": "fe0e0eb4-208a-4505-95e7-ab076a408548",
+      "flow": "936b4e0a-0f4a-3bec-b493-7b3079f54725",
+      "isBackground": false,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "d0027170-48d8-4691-b253-fdc1d30e5700",
+      "tags": {
+        "Comment": "",
+        "Name": "Transport, combination truck, diesel powered",
+        "StageName": "Transport, combination truck, diesel powered"
+      },
+      "terminations": {
+        "null": {
+          "entityId": "114c1d57-f794-42bf-9f75-f5f3869eda73",
+          "source": "foreground"
+        }
+      }
+    },
+    {
+      "direction": "Input",
+      "entityId": "9e59df53-e491-4dae-8f71-9ead1c5c3e7e",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 0.4411,
+        "1": 0.0
+      },
+      "externalId": "9e59df53-e491-4dae-8f71-9ead1c5c3e7e",
+      "flow": "d563b0c1-6ac5-3353-8ca5-0afdee1f10fa",
+      "isBackground": false,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "d0027170-48d8-4691-b253-fdc1d30e5700",
+      "tags": {
+        "Comment": "",
+        "Name": "Natural gas, processed, at plant",
+        "StageName": "Natural gas, processed, at plant"
+      },
+      "terminations": {
+        "null": {
+          "entityId": "278d2e19-778c-468e-bcfa-950a2f685073",
+          "source": "foreground"
+        }
+      }
+    },
+    {
+      "direction": "Input",
+      "entityId": "eca925b2-53a0-42f6-9ac3-749824721a52",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 0.00056,
+        "1": 0.0
+      },
+      "externalId": "eca925b2-53a0-42f6-9ac3-749824721a52",
+      "flow": "98bf3c4a-6620-356a-ac49-c1020a130ea5",
+      "isBackground": false,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "d0027170-48d8-4691-b253-fdc1d30e5700",
+      "tags": {
+        "Comment": "",
+        "Name": "CUTOFF Disposal, solid waste, unspecified, to sanitary landfill",
+        "StageName": "CUTOFF Disposal, solid waste, unspecified, to sanitary landfill"
+      },
+      "terminations": {
+        "null": {
+          "entityId": "3976649a-91b7-4125-a3bf-f77ccc09d7da",
+          "source": "foreground"
+        }
+      }
+    },
+    {
+      "direction": "Input",
+      "entityId": "adc4c342-c0cf-47c0-9d97-3311554a945a",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 0.00086744,
+        "1": 0.0
+      },
+      "externalId": "adc4c342-c0cf-47c0-9d97-3311554a945a",
+      "flow": "25d3acbf-467a-3de6-b296-32b9f8dfe4de",
+      "isBackground": false,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "d0027170-48d8-4691-b253-fdc1d30e5700",
+      "tags": {
+        "Comment": "",
+        "Name": "Transport, pipeline, unspecified petroleum products",
+        "StageName": "Transport, pipeline, unspecified petroleum products"
+      },
+      "terminations": {
+        "null": {
+          "entityId": "f2118f01-612d-4073-85b1-2f1349967a8d",
+          "source": "foreground"
+        }
+      }
+    },
+    {
+      "direction": "Input",
+      "entityId": "e04627cb-1c44-4d4f-8193-6a2bbecf0cbf",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 0.539,
+        "1": 0.0
+      },
+      "externalId": "e04627cb-1c44-4d4f-8193-6a2bbecf0cbf",
+      "flow": "a5885b32-6dcd-31ed-86e7-20f157bee79c",
+      "isBackground": false,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "d0027170-48d8-4691-b253-fdc1d30e5700",
+      "tags": {
+        "Comment": "",
+        "Name": "Methanol, at plant",
+        "StageName": "Methanol, at plant"
+      },
+      "terminations": {
+        "null": {
+          "entityId": "f892bf82-a1af-467e-b10f-1d767caa1ea5",
+          "source": "foreground"
+        }
+      }
+    },
+    {
+      "direction": "Input",
+      "entityId": "c11ea91d-4489-42ae-bce1-5d6cacefe280",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 0.22355,
+        "1": 0.0
+      },
+      "externalId": "c11ea91d-4489-42ae-bce1-5d6cacefe280",
+      "flow": "cc17485c-0522-3a4c-9e0e-2c7e07c6d0e1",
+      "isBackground": false,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "d0027170-48d8-4691-b253-fdc1d30e5700",
+      "tags": {
+        "Comment": "",
+        "Name": "Natural gas, combusted in industrial boiler",
+        "StageName": "Natural gas, combusted in industrial boiler"
+      },
+      "terminations": {
+        "null": {
+          "entityId": "c6ab68fe-f77d-32ba-9b06-b03002d8ad32",
+          "source": "/data/GitHub/lca-tools-datafiles/catalogs/uslci_ecospold.json.gz"
+        }
+      }
+    },
+    {
+      "direction": "Input",
+      "entityId": "0af92c6d-9f62-4f8e-b5ec-7afeffc24390",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 0.011858,
+        "1": 0.0
+      },
+      "externalId": "0af92c6d-9f62-4f8e-b5ec-7afeffc24390",
+      "flow": "d52bbe64-4d4b-3d2a-883b-2015d4ebe138",
+      "isBackground": false,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "c11ea91d-4489-42ae-bce1-5d6cacefe280",
+      "tags": {
+        "Comment": "",
+        "Name": "Transport, train, diesel powered",
+        "StageName": "Transport, train, diesel powered"
+      },
+      "terminations": {
+        "null": {
+          "entityId": "e7ace8c0-1784-4db7-9bb8-74bdc9745a9d",
+          "source": "foreground"
+        }
+      }
+    },
+    {
+      "direction": "Input",
+      "entityId": "fb1c34d0-49ee-4192-9aff-1456a53dc480",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 1.186,
+        "1": 0.0
+      },
+      "externalId": "fb1c34d0-49ee-4192-9aff-1456a53dc480",
+      "flow": "065fa0d5-7072-33c1-8cb0-150567c907e3",
+      "isBackground": false,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "c11ea91d-4489-42ae-bce1-5d6cacefe280",
+      "tags": {
+        "Comment": "",
+        "Name": "Transport, pipeline, natural gas",
+        "StageName": "Transport, pipeline, natural gas"
+      },
+      "terminations": {
+        "null": {
+          "entityId": "1b76dbd1-5417-4f25-97d9-def594bca585",
+          "source": "foreground"
+        }
+      }
+    },
+    {
+      "direction": "Input",
+      "entityId": "14b5017f-ac87-400a-a7ae-9b868f5add19",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 0.1985,
+        "1": 0.0
+      },
+      "externalId": "14b5017f-ac87-400a-a7ae-9b868f5add19",
+      "flow": "42f37b1b-0447-3fd1-a117-4f9bf8af0ac8",
+      "isBackground": false,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "c11ea91d-4489-42ae-bce1-5d6cacefe280",
+      "tags": {
+        "Comment": "",
+        "Name": "Transport, combination truck, average fuel mix",
+        "StageName": "Transport, combination truck, average fuel mix"
+      },
+      "terminations": {
+        "null": {
+          "entityId": "68d264d3-2ad4-471c-84e9-1861af565dbf",
+          "source": "foreground"
+        }
+      }
+    },
+    {
+      "direction": "Input",
+      "entityId": "8d7f6feb-4560-40c3-842e-8925fc38bd7a",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 1.0,
+        "1": 0.0
+      },
+      "externalId": "8d7f6feb-4560-40c3-842e-8925fc38bd7a",
+      "flow": "d563b0c1-6ac5-3353-8ca5-0afdee1f10fa",
+      "isBackground": false,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "c11ea91d-4489-42ae-bce1-5d6cacefe280",
+      "tags": {
+        "Comment": "",
+        "Name": "Natural gas, processed, at plant",
+        "StageName": "Natural gas, processed, at plant"
+      },
+      "terminations": {
+        "null": {
+          "entityId": "278d2e19-778c-468e-bcfa-950a2f685073",
+          "source": "foreground"
+        }
+      }
+    },
+    {
+      "direction": "Input",
+      "entityId": "f151a3b2-2c52-4564-ae54-323e89bf4b8b",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 0.021826,
+        "1": 0.0
+      },
+      "externalId": "f151a3b2-2c52-4564-ae54-323e89bf4b8b",
+      "flow": "59f33cd3-2a38-3f82-8111-f1de0f5de615",
+      "isBackground": false,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "d0027170-48d8-4691-b253-fdc1d30e5700",
+      "tags": {
+        "Comment": "",
+        "Name": "Electricity, at grid, US, 2000",
+        "StageName": "Electricity, at grid, US, 2000"
+      },
+      "terminations": {
+        "null": {
+          "entityId": "86c34c71-a39d-4300-9472-a0cd789ea71a",
+          "source": "foreground"
+        }
+      }
+    },
+    {
+      "direction": "Input",
+      "entityId": "d9165a31-3c63-4af1-8891-03eb6c28ad67",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 0.03383,
+        "1": 0.0
+      },
+      "externalId": "d9165a31-3c63-4af1-8891-03eb6c28ad67",
+      "flow": "88a88dbd-7da8-3aeb-8741-5c189411201d",
+      "isBackground": false,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "d0027170-48d8-4691-b253-fdc1d30e5700",
+      "tags": {
+        "Comment": "",
+        "Name": "Transport, barge, residual fuel oil powered",
+        "StageName": "Transport, barge, residual fuel oil powered"
+      },
+      "terminations": {
+        "null": {
+          "entityId": "0a4588ec-13e9-441a-a091-4e108c2825b9",
+          "source": "foreground"
+        }
+      }
+    },
+    {
+      "direction": "Input",
+      "entityId": "cdead273-5241-4d1c-970f-cf27cd92765c",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 0.0049246,
+        "1": 0.0
+      },
+      "externalId": "cdead273-5241-4d1c-970f-cf27cd92765c",
+      "flow": "d52bbe64-4d4b-3d2a-883b-2015d4ebe138",
+      "isBackground": false,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "d0027170-48d8-4691-b253-fdc1d30e5700",
+      "tags": {
+        "Comment": "",
+        "Name": "Transport, train, diesel powered",
+        "StageName": "Transport, train, diesel powered"
+      },
+      "terminations": {
+        "null": {
+          "entityId": "e7ace8c0-1784-4db7-9bb8-74bdc9745a9d",
+          "source": "foreground"
+        }
+      }
+    },
+    {
+      "direction": "Input",
+      "entityId": "87e97ab0-723e-4462-9de0-f05ea3dd7a7c",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 0.0095418,
+        "1": 0.0
+      },
+      "externalId": "87e97ab0-723e-4462-9de0-f05ea3dd7a7c",
+      "flow": "d405b84a-bf2d-32e3-a430-f306bb12235f",
+      "isBackground": false,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "d0027170-48d8-4691-b253-fdc1d30e5700",
+      "tags": {
+        "Comment": "",
+        "Name": "Transport, barge, diesel powered",
+        "StageName": "Transport, barge, diesel powered"
+      },
+      "terminations": {
+        "null": {
+          "entityId": "cd48c3a7-9d88-4ae5-88c0-8188ee3d0cba",
+          "source": "foreground"
+        }
+      }
+    },
+    {
+      "direction": "Input",
+      "entityId": "d8020474-7546-4dec-9614-10dc72081238",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 0.0020503,
+        "1": 0.0
+      },
+      "externalId": "d8020474-7546-4dec-9614-10dc72081238",
+      "flow": "0af5de56-174b-35db-a233-895d968169ac",
+      "isBackground": false,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "d0027170-48d8-4691-b253-fdc1d30e5700",
+      "tags": {
+        "Comment": "",
+        "Name": "Electricity, at cogen, for natural gas turbine",
+        "StageName": "Electricity, at cogen, for natural gas turbine"
+      },
+      "terminations": {
+        "null": {
+          "entityId": "04355247-117d-4e2f-ab09-2d6e9cf61bcf",
+          "source": "foreground",
+          "termFlow": "284f5c89-bab3-30a9-ac70-ea9ac8485fee"
+        }
+      }
+    },
+    {
+      "direction": "Input",
+      "entityId": "88cca1e9-81c4-46bc-b546-f0b671c28beb",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 0.49246,
+        "1": 0.0
+      },
+      "externalId": "88cca1e9-81c4-46bc-b546-f0b671c28beb",
+      "flow": "065fa0d5-7072-33c1-8cb0-150567c907e3",
+      "isBackground": false,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "d0027170-48d8-4691-b253-fdc1d30e5700",
+      "tags": {
+        "Comment": "",
+        "Name": "Transport, pipeline, natural gas",
+        "StageName": "Transport, pipeline, natural gas"
+      },
+      "terminations": {
+        "null": {
+          "entityId": "1b76dbd1-5417-4f25-97d9-def594bca585",
+          "source": "foreground"
+        }
+      }
+    }
+  ]
+}

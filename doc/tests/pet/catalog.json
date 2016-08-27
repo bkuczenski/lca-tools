@@ -1,0 +1,103 @@
+{
+  "catalogs": [
+    {
+      "source": "/data/LCI/ELCD/ELCD3.2.zip",
+      "nicknames": [
+        "ELCD"
+      ],
+      "dataSourceType": "IlcdLcia",
+      "parameters": {},
+      "index": 1
+    },
+    {
+      "source": "/data/GitHub/lca-tools-datafiles/catalogs/elcd_lcia_all.json.gz",
+      "nicknames": [
+        "LCIA"
+      ],
+      "dataSourceType": "JSON",
+      "parameters": {},
+      "index": 2
+    },
+    {
+      "source": "/data/GitHub/lca-tools-datafiles/catalogs/ei_lcia.json.gz",
+      "nicknames": [
+        "EI-LCIA"
+      ],
+      "dataSourceType": "JSON",
+      "parameters": {},
+      "index": 3
+    },
+    {
+      "source": "/data/GitHub/lca-tools-datafiles/catalogs/ecoinvent_3.2_undefined_xlsx.json.gz",
+      "nicknames": [
+        "EI-U"
+      ],
+      "dataSourceType": "JSON",
+      "parameters": {},
+      "index": 4
+    },
+    {
+      "source": "/data/GitHub/lca-tools-datafiles/catalogs/ecoinvent_3.2_apos_xlsx.json.gz",
+      "nicknames": [
+        "EI_A"
+      ],
+      "dataSourceType": "JSON",
+      "parameters": {
+        "model": "apos",
+        "data_dir": "/data/LCI/Ecoinvent/3.2"
+      },
+      "index": 5
+    },
+    {
+      "source": "/data/GitHub/lca-tools-datafiles/catalogs/ecoinvent_3.2_consequential_xlsx.json.gz",
+      "nicknames": [
+        "EI_Q"
+      ],
+      "dataSourceType": "JSON",
+      "parameters": {
+        "model": "consequential_longterm",
+        "data_dir": "/data/LCI/Ecoinvent/3.2"
+      },
+      "index": 6
+    },
+    {
+      "source": "/data/GitHub/lca-tools-datafiles/catalogs/ecoinvent_3.2_cut-off_xlsx.json.gz",
+      "nicknames": [
+        "EI_C"
+      ],
+      "dataSourceType": "JSON",
+      "parameters": {
+        "model": "cutoff",
+        "data_dir": "/data/LCI/Ecoinvent/3.2"
+      },
+      "index": 7
+    },
+    {
+      "source": "/data/GitHub/lca-tools-datafiles/catalogs/uslci_ecospold.json.gz",
+      "nicknames": [
+        "USLCI"
+      ],
+      "dataSourceType": "JSON",
+      "parameters": {},
+      "index": 8
+    },
+    {
+      "source": "/data/GitHub/lca-tools-datafiles/catalogs/gabi_2016_professional-database-2016.json.gz",
+      "nicknames": [
+        "GaBi-P"
+      ],
+      "dataSourceType": "JSON",
+      "parameters": {},
+      "index": 9
+    },
+    {
+      "source": "/data/GitHub/lca-tools-datafiles/catalogs/gabi_2016_all-extensions.json.gz",
+      "nicknames": [
+        "GaBi-X"
+      ],
+      "dataSourceType": "JSON",
+      "parameters": {},
+      "index": 10
+    }
+  ]
+}

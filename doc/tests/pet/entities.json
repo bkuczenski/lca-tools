@@ -1,0 +1,1423 @@
+{
+  "@context": "https://bkuczenski.github.io/lca-tools-datafiles/context.jsonld",
+  "catalogNames": {},
+  "dataSourceReference": "pet",
+  "dataSourceType": "ForegroundArchive",
+  "flows": [
+    {
+      "CasNumber": "",
+      "Comment": "Credit for steam or heat co-product sold externally.",
+      "Compartment": [
+        "Chemical Manufacturing",
+        "Petrochemical Manufacturing"
+      ],
+      "Name": "Recovered energy",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "a82b133e-579b-3fbd-b56d-477785bff7a4",
+          "value": 1.0
+        }
+      ],
+      "entityId": "05b69a46-26e0-33f1-a7db-18bc8c86d928",
+      "entityType": "flow",
+      "externalId": 9218,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "Represents inbound transport of processed natural gas. Original data expressed thus: 500 tonmiles/1000lb natural gas",
+      "Compartment": [
+        "Utilities",
+        "Fossil Fuel Electric Power Generation"
+      ],
+      "Name": "Transport, pipeline, natural gas",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "3c919268-79ab-31d8-9156-470eb1fbabf2",
+          "value": 1.0
+        }
+      ],
+      "entityId": "065fa0d5-7072-33c1-8cb0-150567c907e3",
+      "entityType": "flow",
+      "externalId": 2178,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Utilities",
+        "Fossil Fuel Electric Power Generation"
+      ],
+      "Name": "Electricity, at cogen, for natural gas turbine",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "e5d21ea4-d78c-3add-8960-bff7d74e2705",
+          "value": 1.0
+        }
+      ],
+      "entityId": "0af5de56-174b-35db-a233-895d968169ac",
+      "entityType": "flow",
+      "externalId": 8421,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Utilities",
+        "Fossil Fuel Electric Power Generation"
+      ],
+      "Name": "Electricity, at grid, US, 2008",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "e5d21ea4-d78c-3add-8960-bff7d74e2705",
+          "value": 1.0
+        }
+      ],
+      "entityId": "0d9db990-e9d5-3e59-b484-56f512816098",
+      "entityType": "flow",
+      "externalId": 2186,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "Represents transportation from bituminous production/processing to industrial boiler.",
+      "Compartment": [
+        "CUTOFF Flows",
+        null
+      ],
+      "Name": "CUTOFF Transport, pipeline, coal slurry",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "3c919268-79ab-31d8-9156-470eb1fbabf2",
+          "value": 1.0
+        }
+      ],
+      "entityId": "180c6f74-8d7e-39c6-b640-f93060da031f",
+      "entityType": "flow",
+      "externalId": 14139,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "Represents inbound transport of methanol",
+      "Compartment": [
+        "Utilities",
+        "Fossil Fuel Electric Power Generation"
+      ],
+      "Name": "Transport, pipeline, unspecified petroleum products",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "3c919268-79ab-31d8-9156-470eb1fbabf2",
+          "value": 1.0
+        }
+      ],
+      "entityId": "25d3acbf-467a-3de6-b296-32b9f8dfe4de",
+      "entityType": "flow",
+      "externalId": 781,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Utilities",
+        "Fossil Fuel Electric Power Generation"
+      ],
+      "Name": "Electricity, at cogen, for natural gas turbine",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "e5d21ea4-d78c-3add-8960-bff7d74e2705",
+          "value": 1.0
+        }
+      ],
+      "entityId": "284f5c89-bab3-30a9-ac70-ea9ac8485fee",
+      "entityType": "flow",
+      "externalId": 9194,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Chemical Manufacturing",
+        "Petrochemical Manufacturing"
+      ],
+      "Name": "Polyethylene terephthalate, resin, at plant",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "bbe8f43d-c141-3e21-b8c2-3ba1ce556ad0",
+          "value": 1.0
+        }
+      ],
+      "entityId": "2a6b644c-519c-32e9-a7d8-521c3011df09",
+      "entityType": "flow",
+      "externalId": 30712,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "CUTOFF Flows",
+        null
+      ],
+      "Name": "CUTOFF Disposal, ash and flue gas desulfurization sludge, to unspecified reuse",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "bbe8f43d-c141-3e21-b8c2-3ba1ce556ad0",
+          "value": 1.0
+        }
+      ],
+      "entityId": "2f7c0ad5-c1a4-3781-a54c-3e4a0fb65a9b",
+      "entityType": "flow",
+      "externalId": 14141,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "Includes diesel fuel and distillate oil amounts.",
+      "Compartment": [
+        "Utilities",
+        "Steam and Air-Conditioning Supply"
+      ],
+      "Name": "Diesel, combusted in industrial equipment",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "21d34f33-b0af-3d82-9bef-3cf03e0db9dc",
+          "value": 1.0
+        }
+      ],
+      "entityId": "302e45ee-7376-3edb-97eb-bc1783c75f13",
+      "entityType": "flow",
+      "externalId": 5231,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "Represents transportation from coal production/processing to industrial boiler.",
+      "Compartment": [
+        "Truck Transportation",
+        "General Freight Trucking"
+      ],
+      "Name": "Transport, combination truck, average fuel mix",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "3c919268-79ab-31d8-9156-470eb1fbabf2",
+          "value": 1.0
+        }
+      ],
+      "entityId": "42f37b1b-0447-3fd1-a117-4f9bf8af0ac8",
+      "entityType": "flow",
+      "externalId": 785,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Mining (except Oil and Gas)",
+        "Coal Mining"
+      ],
+      "Name": "Bituminous coal, at mine",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "bbe8f43d-c141-3e21-b8c2-3ba1ce556ad0",
+          "value": 1.0
+        }
+      ],
+      "entityId": "538cc2ad-3914-34a2-93e5-ce9a3e1fd84f",
+      "entityType": "flow",
+      "externalId": 14020,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Utilities",
+        "Electric Power Distribution"
+      ],
+      "Name": "Electricity, at grid, US, 2000",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "e5d21ea4-d78c-3add-8960-bff7d74e2705",
+          "value": 1.0
+        }
+      ],
+      "entityId": "59f33cd3-2a38-3f82-8111-f1de0f5de615",
+      "entityType": "flow",
+      "externalId": 5084,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Chemical Manufacturing",
+        "Petrochemical Manufacturing"
+      ],
+      "Name": "Paraxylene, at plant",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "bbe8f43d-c141-3e21-b8c2-3ba1ce556ad0",
+          "value": 1.0
+        }
+      ],
+      "entityId": "6649b14d-1004-3738-9839-f0e512f73b3e",
+      "entityType": "flow",
+      "externalId": 31874,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Utilities",
+        "Steam and Air-Conditioning Supply"
+      ],
+      "Name": "Natural gas, combusted in industrial equipment",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "e5d21ea4-d78c-3add-8960-bff7d74e2705",
+          "value": 1.0
+        }
+      ],
+      "entityId": "6921d909-e65e-3eea-898a-9787b657ed32",
+      "entityType": "flow",
+      "externalId": 2176,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "Represents transportation from bituminous production/processing to industrial boiler.",
+      "Compartment": [
+        "Water Transportation",
+        "Inland Water Freight Transportation"
+      ],
+      "Name": "Transport, barge, average fuel mix",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "3c919268-79ab-31d8-9156-470eb1fbabf2",
+          "value": 1.0
+        }
+      ],
+      "entityId": "79bad894-210b-3a5a-b2ee-3f331c6e05ab",
+      "entityType": "flow",
+      "externalId": 779,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "Represents inbound transport of methanol",
+      "Compartment": [
+        "Water Transportation",
+        "Inland Water Freight Transportation"
+      ],
+      "Name": "Transport, barge, residual fuel oil powered",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "3c919268-79ab-31d8-9156-470eb1fbabf2",
+          "value": 1.0
+        }
+      ],
+      "entityId": "88a88dbd-7da8-3aeb-8741-5c189411201d",
+      "entityType": "flow",
+      "externalId": 6524,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "Represents inbound transport of processed natural gas. Original data expressed thus: 5 tonmiles/1000lb natural gas",
+      "Compartment": [
+        "Truck Transportation",
+        "General Freight Trucking"
+      ],
+      "Name": "Transport, combination truck, diesel powered",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "3c919268-79ab-31d8-9156-470eb1fbabf2",
+          "value": 1.0
+        }
+      ],
+      "entityId": "936b4e0a-0f4a-3bec-b493-7b3079f54725",
+      "entityType": "flow",
+      "externalId": 855,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "CUTOFF Flows",
+        null
+      ],
+      "Name": "CUTOFF Disposal, solid waste, unspecified, to sanitary landfill",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "bbe8f43d-c141-3e21-b8c2-3ba1ce556ad0",
+          "value": 1.0
+        }
+      ],
+      "entityId": "98bf3c4a-6620-356a-ac49-c1020a130ea5",
+      "entityType": "flow",
+      "externalId": 9206,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "All combusted on site.  Actually received at supplier, not refinery. (Converted from 0.6899 MJ using the conversion factor 40.15 MJ / liter)",
+      "Compartment": [
+        "Petroleum and Coal Products Manufacturing",
+        "Petroleum Refineries"
+      ],
+      "Name": "Residual fuel oil, at refinery",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "21d34f33-b0af-3d82-9bef-3cf03e0db9dc",
+          "value": 1.0
+        }
+      ],
+      "entityId": "9fe775e1-cc00-3b29-a6c9-9328218ef527",
+      "entityType": "flow",
+      "externalId": 16696,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Chemical Manufacturing",
+        "All Other Basic Organic Chemical Manufacturing"
+      ],
+      "Name": "Methanol, at plant",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "bbe8f43d-c141-3e21-b8c2-3ba1ce556ad0",
+          "value": 1.0
+        }
+      ],
+      "entityId": "a5885b32-6dcd-31ed-86e7-20f157bee79c",
+      "entityType": "flow",
+      "externalId": 5074,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "CUTOFF Flows",
+        null
+      ],
+      "Name": "CUTOFF Disposal, solid waste, unspecified, to waste-to-energy",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "bbe8f43d-c141-3e21-b8c2-3ba1ce556ad0",
+          "value": 1.0
+        }
+      ],
+      "entityId": "a65805e3-cd6c-32f9-a31e-02cabb9e4c14",
+      "entityType": "flow",
+      "externalId": 9208,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Chemical Manufacturing",
+        "All Other Basic Organic Chemical Manufacturing"
+      ],
+      "Name": "Recovered energy, at acetic acid production",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "a82b133e-579b-3fbd-b56d-477785bff7a4",
+          "value": 1.0
+        }
+      ],
+      "entityId": "a8e72482-28ab-30d9-b970-f1add067f2b1",
+      "entityType": "flow",
+      "externalId": 8439,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Utilities",
+        "Steam and Air-Conditioning Supply"
+      ],
+      "Name": "Residual fuel oil, combusted in industrial boiler",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "21d34f33-b0af-3d82-9bef-3cf03e0db9dc",
+          "value": 1.0
+        }
+      ],
+      "entityId": "b8e6e270-8a67-3863-972b-95872c2255bb",
+      "entityType": "flow",
+      "externalId": 5719,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "The energy and emissions data for ethylene glycol production is from a confidential source and is not shown to protect its confidentiality ",
+      "Compartment": [
+        "CUTOFF Flows",
+        null
+      ],
+      "Name": "CUTOFF Ethylene glycol, at plant",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "bbe8f43d-c141-3e21-b8c2-3ba1ce556ad0",
+          "value": 1.0
+        }
+      ],
+      "entityId": "c25522fd-c7bf-3fb2-a4df-ec082d208ab7",
+      "entityType": "flow",
+      "externalId": 33257,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Chemical Manufacturing",
+        "All Other Basic Organic Chemical Manufacturing"
+      ],
+      "Name": "Acetic acid, at plant",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "bbe8f43d-c141-3e21-b8c2-3ba1ce556ad0",
+          "value": 1.0
+        }
+      ],
+      "entityId": "c28410ff-163a-331f-a4bb-d97da54b23e8",
+      "entityType": "flow",
+      "externalId": 8437,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "CUTOFF Flows",
+        null
+      ],
+      "Name": "CUTOFF Disposal, solid waste, unspecified, to municipal incineration",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "bbe8f43d-c141-3e21-b8c2-3ba1ce556ad0",
+          "value": 1.0
+        }
+      ],
+      "entityId": "c6788794-9e74-32ad-aac0-e83d2585ffb6",
+      "entityType": "flow",
+      "externalId": 9204,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Utilities",
+        "Steam and Air-Conditioning Supply"
+      ],
+      "Name": "Natural gas, combusted in industrial boiler",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "93407830-6bb0-3cad-a0c8-c723c7d05296",
+          "value": 1.0
+        }
+      ],
+      "entityId": "cc17485c-0522-3a4c-9e0e-2c7e07c6d0e1",
+      "entityType": "flow",
+      "externalId": 5086,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "Represents inbound transport of methanol",
+      "Compartment": [
+        "Water Transportation",
+        "Inland Water Freight Transportation"
+      ],
+      "Name": "Transport, barge, diesel powered",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "3c919268-79ab-31d8-9156-470eb1fbabf2",
+          "value": 1.0
+        }
+      ],
+      "entityId": "d405b84a-bf2d-32e3-a430-f306bb12235f",
+      "entityType": "flow",
+      "externalId": 5380,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "Represents inbound transport of processed natural gas. Original data expressed thus: 5 tonmiles/1000lb natural gas",
+      "Compartment": [
+        "Rail Transportation",
+        "Rail Transportation"
+      ],
+      "Name": "Transport, train, diesel powered",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "3c919268-79ab-31d8-9156-470eb1fbabf2",
+          "value": 1.0
+        }
+      ],
+      "entityId": "d52bbe64-4d4b-3d2a-883b-2015d4ebe138",
+      "entityType": "flow",
+      "externalId": 783,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Chemical Manufacturing",
+        "Petrochemical Manufacturing"
+      ],
+      "Name": "Natural gas, processed, at plant",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "93407830-6bb0-3cad-a0c8-c723c7d05296",
+          "value": 1.0
+        }
+      ],
+      "entityId": "d563b0c1-6ac5-3353-8ca5-0afdee1f10fa",
+      "entityType": "flow",
+      "externalId": 19362,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Utilities",
+        "Steam and Air-Conditioning Supply"
+      ],
+      "Name": "Bituminous coal, combusted in industrial boiler",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "bbe8f43d-c141-3e21-b8c2-3ba1ce556ad0",
+          "value": 1.0
+        }
+      ],
+      "entityId": "ead037cb-1d63-3ce8-a604-d5277612daac",
+      "entityType": "flow",
+      "externalId": 6522,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "All combusted on site.  Actually received at supplier, not refinery. (converted from 0.1119 MJ using the conversion factor 37.3 MJ / liter)",
+      "Compartment": [
+        "Petroleum and Coal Products Manufacturing",
+        "Petroleum Refineries"
+      ],
+      "Name": "Diesel, at refinery",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "21d34f33-b0af-3d82-9bef-3cf03e0db9dc",
+          "value": 1.0
+        }
+      ],
+      "entityId": "eb16c394-cd99-37d3-a5ac-30fa6e5c3589",
+      "entityType": "flow",
+      "externalId": 775,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "CUTOFF Flows",
+        null
+      ],
+      "Name": "CUTOFF Disposal, solid waste, unspecified, to unspecified treatment",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "bbe8f43d-c141-3e21-b8c2-3ba1ce556ad0",
+          "value": 1.0
+        }
+      ],
+      "entityId": "ee3da8bd-5d31-391f-98d4-5ba85e669b46",
+      "entityType": "flow",
+      "externalId": 5833,
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip"
+    }
+  ],
+  "processes": [],
+  "quantities": [
+    {
+      "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
+      "Name": "Number of items",
+      "UnitConversion": {
+        "Dozen(s)": 0.08333333333333333,
+        "Item(s)": 1.0
+      },
+      "entityId": "01846770-4cfe-4a25-8ad9-919d8d378345",
+      "entityType": "quantity",
+      "externalId": "flowproperties/01846770-4cfe-4a25-8ad9-919d8d378345",
+      "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
+      "referenceUnit": "Item(s)"
+    },
+    {
+      "Comment": "This is NOT an ILCD reference flow property.",
+      "Name": "Vehicle transport",
+      "UnitConversion": {
+        "Items*km": 1.0,
+        "Items*mi": 0.621371192237334,
+        "Items*nmi": 0.5399568034557235
+      },
+      "entityId": "1cc347a0-3bd1-46db-a308-2707c68d2351",
+      "entityType": "quantity",
+      "externalId": "flowproperties/1cc347a0-3bd1-46db-a308-2707c68d2351",
+      "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
+      "referenceUnit": "Items*km"
+    },
+    {
+      "Comment": "EcoSpold01",
+      "Name": "EcoSpold Quantity l",
+      "entityId": "21d34f33-b0af-3d82-9bef-3cf03e0db9dc",
+      "entityType": "quantity",
+      "externalId": "l",
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip",
+      "referenceUnit": "l"
+    },
+    {
+      "Comment": "",
+      "Name": "Energy renewable and non renewable (gross calorific value)",
+      "UnitConversion": {
+        "GJ": 0.001,
+        "J": 1000000.0,
+        "MJ": 1.0,
+        "MWh": 0.0002777777777777778,
+        "TCE": 3.412084237535657e-05,
+        "TOE": 2.3884589662749594e-05,
+        "btu": 947.8169879134379,
+        "kWh": 0.2777777777777778,
+        "kcal": 238.85160149998808
+      },
+      "entityId": "23911c86-d4d2-4e3e-a45e-8e392af1dc4e",
+      "entityType": "quantity",
+      "externalId": "flowproperties/23911c86-d4d2-4e3e-a45e-8e392af1dc4e",
+      "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
+      "referenceUnit": "MJ"
+    },
+    {
+      "Category": "Climate change",
+      "Comment": "Factors issued from the baseline model of the IPCC (2007)",
+      "Duration": "100 years",
+      "Indicator": "Global Warming Potential calculating the radiative forcing over a time horizon of 100 years.",
+      "Method": "ILCD2011; ReCiPe2008",
+      "Name": "ILCD2011; Climate change; midpoint; GWP100; IPCC2007",
+      "ReferenceYear": "no time reference",
+      "entityId": "370960f4-0a3a-415d-bf3e-e5ce63160bb9",
+      "entityType": "quantity",
+      "externalId": "LCIAmethods/370960f4-0a3a-415d-bf3e-e5ce63160bb9",
+      "origin": "http://eplca.jrc.ec.europa.eu/ELCD3/resource/",
+      "referenceUnit": "kg"
+    },
+    {
+      "Comment": "EcoSpold01",
+      "Name": "EcoSpold Quantity t*km",
+      "entityId": "3c919268-79ab-31d8-9156-470eb1fbabf2",
+      "entityType": "quantity",
+      "externalId": "t*km",
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip",
+      "referenceUnit": "t*km"
+    },
+    {
+      "Category": "Terrestrial Eutrophication",
+      "Comment": "European country-dependent.",
+      "Duration": "indefinite",
+      "Indicator": "Accumulated Exceedance (AE) characterizing the change in critical load exceedance of the sensitive area, to which eutrophying substances deposit.",
+      "Method": "ILCD2011",
+      "Name": "ILCD2011; Eutrophication terrestrial; midpoint; Accumulated Exceedance; Seppala et al 2006, Posch et al 2008",
+      "ReferenceYear": "time independent",
+      "entityId": "40054970-5936-477c-9bec-29fa23b1cb77",
+      "entityType": "quantity",
+      "externalId": "LCIAmethods/40054970-5936-477c-9bec-29fa23b1cb77",
+      "origin": "http://eplca.jrc.ec.europa.eu/ELCD3/resource/",
+      "referenceUnit": "mol"
+    },
+    {
+      "Comment": "This is NOT an ILCD reference flow property.",
+      "Name": "Person transport",
+      "UnitConversion": {
+        "Items*km": 1.0,
+        "Items*mi": 0.621371192237334,
+        "Items*nmi": 0.5399568034557235
+      },
+      "entityId": "4872c95a-5f78-4572-883b-e076187ad87c",
+      "entityType": "quantity",
+      "externalId": "flowproperties/4872c95a-5f78-4572-883b-e076187ad87c",
+      "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
+      "referenceUnit": "Items*km"
+    },
+    {
+      "Category": "Aquatic Eutrophication",
+      "Comment": "European validity. Averaged characterization factors from country dependent characterization factors.",
+      "Duration": "indefinite",
+      "Indicator": "Nitrogen equivalents: Expression of the degree to which the emitted nutrients reaches the marine end compartment (nitrogen considered as limiting factor in marine water).",
+      "Method": "ILCD2011; ReCiPe2008",
+      "Name": "ILCD2011; Eutrophication marine; midpoint; N equivalents; ReCiPe",
+      "ReferenceYear": "time independent",
+      "entityId": "5296e2be-060b-4e50-b033-d45f85f6ac92",
+      "entityType": "quantity",
+      "externalId": "LCIAmethods/5296e2be-060b-4e50-b033-d45f85f6ac92",
+      "origin": "http://eplca.jrc.ec.europa.eu/ELCD3/resource/",
+      "referenceUnit": "kg"
+    },
+    {
+      "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
+      "Name": "Recycled content (mass)",
+      "UnitConversion": {
+        "Mg": 0.001,
+        "g": 1000.0,
+        "kg": 1.0,
+        "kt": 5000.0,
+        "lb av": 2.2046226218487757,
+        "long tn": 0.0009842065276110606,
+        "mg": 1000000.0,
+        "ng": 1000000000000.0,
+        "oz av": 35.27396194958041,
+        "oz t": 32.15074656862798,
+        "pg": 999999999999999.9,
+        "sh tn": 0.001102311310924388,
+        "t": 0.001,
+        "ug": 999999999.9999999
+      },
+      "entityId": "52dcf2ff-c0f6-417f-a957-788688d67b86",
+      "entityType": "quantity",
+      "externalId": "flowproperties/52dcf2ff-c0f6-417f-a957-788688d67b86",
+      "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
+      "referenceUnit": "kg"
+    },
+    {
+      "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
+      "Name": "Carbon content (biogenic)",
+      "UnitConversion": {
+        "Mg": 0.001,
+        "g": 1000.0,
+        "kg": 1.0,
+        "kt": 5000.0,
+        "lb av": 2.2046226218487757,
+        "long tn": 0.0009842065276110606,
+        "mg": 1000000.0,
+        "ng": 1000000000000.0,
+        "oz av": 35.27396194958041,
+        "oz t": 32.15074656862798,
+        "pg": 999999999999999.9,
+        "sh tn": 0.001102311310924388,
+        "t": 0.001,
+        "ug": 999999999.9999999
+      },
+      "entityId": "62e503ce-544a-4599-b2ad-bcea15a7bf20",
+      "entityType": "quantity",
+      "externalId": "flowproperties/62e503ce-544a-4599-b2ad-bcea15a7bf20",
+      "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
+      "referenceUnit": "kg"
+    },
+    {
+      "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
+      "Name": "Carbon content (fossil)",
+      "UnitConversion": {
+        "Mg": 0.001,
+        "g": 1000.0,
+        "kg": 1.0,
+        "kt": 5000.0,
+        "lb av": 2.2046226218487757,
+        "long tn": 0.0009842065276110606,
+        "mg": 1000000.0,
+        "ng": 1000000000000.0,
+        "oz av": 35.27396194958041,
+        "oz t": 32.15074656862798,
+        "pg": 999999999999999.9,
+        "sh tn": 0.001102311310924388,
+        "t": 0.001,
+        "ug": 999999999.9999999
+      },
+      "entityId": "64b8e725-b0ba-4837-abb9-62dc0e7b9f6f",
+      "entityType": "quantity",
+      "externalId": "flowproperties/64b8e725-b0ba-4837-abb9-62dc0e7b9f6f",
+      "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
+      "referenceUnit": "kg"
+    },
+    {
+      "Category": "Respiratory inorganics",
+      "Comment": "Includes the assessment of primary (PM10 and Pm2.5) and secondary PM (incl. creation of secondary PM due to Sox, NOx and NH3 emissions) and CO. Based on USEtox (Rosenbaum et al 2008), Greco et al. (2007) and RiskPoll (Rabl and Spadaro, 2004).",
+      "Duration": "Indefinite",
+      "Indicator": "Emission-weighted average PM2.5 equivalen.  Quantification of the impact of premature death or disability that particulates/respiratory inorganics have on the population, in comparison to PM2.5",
+      "Method": "ILCD2011",
+      "Name": "ILCD2011; Respiratory inorganics; midpoint; PM2.5eq; Rabl and Spadaro 2004-Greco et al 2007",
+      "ReferenceYear": "2005",
+      "entityId": "72ce3013-f678-4c6a-935b-f4752ff8901b",
+      "entityType": "quantity",
+      "externalId": "LCIAmethods/72ce3013-f678-4c6a-935b-f4752ff8901b",
+      "origin": "http://eplca.jrc.ec.europa.eu/ELCD3/resource/",
+      "referenceUnit": "kg"
+    },
+    {
+      "Comment": "",
+      "Name": "Exergy",
+      "UnitConversion": {
+        "Btu": 0.0010550971744497668,
+        "GJ": 1000.0,
+        "GWh": 3599971.200230398,
+        "J": 1e-06,
+        "MJ": 1.0,
+        "MMBtu": 1055.0,
+        "MWh": 3599.971200230398,
+        "Nm": 1e-06,
+        "PJ": 999999999.9999999,
+        "PSh": 2.6478142293536686e-06,
+        "TJ": 1000000.0,
+        "TOE": 41867.28072011723,
+        "TWh": 3599971200.230398,
+        "cal": 4.186728072011723e-06,
+        "eV": 1.6022046335758002e-25,
+        "erg": 1e-13,
+        "kJ": 0.001,
+        "kWh": 3.5999712002303976,
+        "kpm": 9.806805923310778e-06
+      },
+      "entityId": "79920f3d-77b3-4f12-8a8f-47accf832eca",
+      "entityType": "quantity",
+      "externalId": "flowproperties/79920f3d-77b3-4f12-8a8f-47accf832eca",
+      "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
+      "referenceUnit": "MJ"
+    },
+    {
+      "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
+      "Name": "Water content (mass)",
+      "UnitConversion": {
+        "Mg": 0.001,
+        "g": 1000.0,
+        "kg": 1.0,
+        "kt": 5000.0,
+        "lb av": 2.2046226218487757,
+        "long tn": 0.0009842065276110606,
+        "mg": 1000000.0,
+        "ng": 1000000000000.0,
+        "oz av": 35.27396194958041,
+        "oz t": 32.15074656862798,
+        "pg": 999999999999999.9,
+        "sh tn": 0.001102311310924388,
+        "t": 0.001,
+        "ug": 999999999.9999999
+      },
+      "entityId": "7ec8d70e-4ffc-4024-86b7-6141cc0a2bf5",
+      "entityType": "quantity",
+      "externalId": "flowproperties/7ec8d70e-4ffc-4024-86b7-6141cc0a2bf5",
+      "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
+      "referenceUnit": "kg"
+    },
+    {
+      "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
+      "Name": "Goods transport (mass*distance)",
+      "UnitConversion": {
+        "kg*km": 1000.0,
+        "lb*mi": 1369.889285547942,
+        "lb*nmi": 1190.4010818365032,
+        "t*km": 1.0,
+        "t*mi": 0.621371192237334,
+        "t*nmi": 0.5399568034557235
+      },
+      "entityId": "838aaa20-0117-11db-92e3-0800200c9a66",
+      "entityType": "quantity",
+      "externalId": "flowproperties/838aaa20-0117-11db-92e3-0800200c9a66",
+      "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
+      "referenceUnit": "t*km"
+    },
+    {
+      "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
+      "Name": "Length",
+      "UnitConversion": {
+        "cm": 100.0,
+        "ft": 3.280839895013123,
+        "in": 39.37007874015748,
+        "km": 0.001,
+        "m": 1.0,
+        "mi": 0.0006213700339330175,
+        "mm": 1000.0,
+        "nmi": 0.0005399568034557236,
+        "u": 1000000.0,
+        "yd": 1.0936132983377078
+      },
+      "entityId": "838aaa23-0117-11db-92e3-0800200c9a66",
+      "entityType": "quantity",
+      "externalId": "flowproperties/838aaa23-0117-11db-92e3-0800200c9a66",
+      "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
+      "referenceUnit": "m"
+    },
+    {
+      "Comment": "",
+      "Name": "Energy from renewable raw materials (net cal. value)",
+      "UnitConversion": {
+        "Btu": 0.0010550971744497668,
+        "GJ": 1000.0,
+        "GWh": 3599971.200230398,
+        "J": 1e-06,
+        "MJ": 1.0,
+        "MMBtu": 1055.0,
+        "MWh": 3599.971200230398,
+        "Nm": 1e-06,
+        "PJ": 999999999.9999999,
+        "PSh": 2.6478142293536686e-06,
+        "TJ": 1000000.0,
+        "TOE": 41867.28072011723,
+        "TWh": 3599971200.230398,
+        "cal": 4.186728072011723e-06,
+        "eV": 1.6022046335758002e-25,
+        "erg": 1e-13,
+        "kJ": 0.001,
+        "kWh": 3.5999712002303976,
+        "kpm": 9.806805923310778e-06
+      },
+      "entityId": "8695e049-7a18-4b83-b3bd-035747039652",
+      "entityType": "quantity",
+      "externalId": "flowproperties/8695e049-7a18-4b83-b3bd-035747039652",
+      "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
+      "referenceUnit": "MJ"
+    },
+    {
+      "Comment": "EcoSpold01",
+      "Name": "EcoSpold Quantity m3",
+      "entityId": "93407830-6bb0-3cad-a0c8-c723c7d05296",
+      "entityType": "quantity",
+      "externalId": "m3",
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip",
+      "referenceUnit": "m3"
+    },
+    {
+      "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
+      "Name": "Mass",
+      "UnitConversion": {
+        "Mg": 0.001,
+        "g": 1000.0,
+        "kg": 1.0,
+        "kt": 5000.0,
+        "lb av": 2.2046226218487757,
+        "long tn": 0.0009842065276110606,
+        "mg": 1000000.0,
+        "ng": 1000000000000.0,
+        "oz av": 35.27396194958041,
+        "oz t": 32.15074656862798,
+        "pg": 999999999999999.9,
+        "sh tn": 0.001102311310924388,
+        "t": 0.001,
+        "ug": 999999999.9999999
+      },
+      "entityId": "93a60a56-a3c8-11da-a746-0800200b9a66",
+      "entityType": "quantity",
+      "externalId": "flowproperties/93a60a56-a3c8-11da-a746-0800200b9a66",
+      "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
+      "referenceUnit": "kg"
+    },
+    {
+      "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
+      "Name": "Net calorific value",
+      "UnitConversion": {
+        "GJ": 0.001,
+        "J": 1000000.0,
+        "MJ": 1.0,
+        "MWh": 0.0002777777777777778,
+        "TCE": 3.412084237535657e-05,
+        "TOE": 2.3884589662749594e-05,
+        "btu": 947.8169879134379,
+        "kWh": 0.2777777777777778,
+        "kcal": 238.85160149998808
+      },
+      "entityId": "93a60a56-a3c8-11da-a746-0800200c9a66",
+      "entityType": "quantity",
+      "externalId": "flowproperties/93a60a56-a3c8-11da-a746-0800200c9a66",
+      "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
+      "referenceUnit": "MJ"
+    },
+    {
+      "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
+      "Name": "Normal Volume",
+      "UnitConversion": {
+        "US fl oz": 33814.022701842994,
+        "bbl": 6.289810770432105,
+        "bl (Imp)": 6.110256897196883,
+        "bl (US beer)": 8.521683850642152,
+        "bl (US dry)": 8.648409373989104,
+        "bl (US fl)": 8.38641436057614,
+        "bsh (Imp)": 27.496156037385973,
+        "bsh (US)": 28.377593255889252,
+        "cu ft": 35.31466672148859,
+        "fl oz (Imp)": 35195.07972785404,
+        "gal (Imp)": 219.96924829908778,
+        "gal (US dry)": 227.02074606721396,
+        "gal (US fl)": 264.1720523581484,
+        "gal (US liq)": 264.1720372841846,
+        "l": 1000.0,
+        "m3": 1.0,
+        "ml": 1000000.0,
+        "pt (Imp)": 1759.7539863927022,
+        "pt (US dry)": 1816.1659685377117,
+        "pt (US fl)": 2113.376418865187,
+        "ul": 999999999.9999999
+      },
+      "entityId": "93a60a56-a3c8-13da-a746-0800200c9a66",
+      "entityType": "quantity",
+      "externalId": "flowproperties/93a60a56-a3c8-13da-a746-0800200c9a66",
+      "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
+      "referenceUnit": "m3"
+    },
+    {
+      "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
+      "Name": "Gross calorific value",
+      "UnitConversion": {
+        "GJ": 0.001,
+        "J": 1000000.0,
+        "MJ": 1.0,
+        "MWh": 0.0002777777777777778,
+        "TCE": 3.412084237535657e-05,
+        "TOE": 2.3884589662749594e-05,
+        "btu": 947.8169879134379,
+        "kWh": 0.2777777777777778,
+        "kcal": 238.85160149998808
+      },
+      "entityId": "93a60a56-a3c8-14da-a746-0800200c9a66",
+      "entityType": "quantity",
+      "externalId": "flowproperties/93a60a56-a3c8-14da-a746-0800200c9a66",
+      "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
+      "referenceUnit": "MJ"
+    },
+    {
+      "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
+      "Name": "Area",
+      "UnitConversion": {
+        "a": 0.01,
+        "ac": 0.0002471054072593638,
+        "cm2": 10000.0,
+        "ft2": 10.763910416709722,
+        "ha": 0.0001,
+        "km2": 1e-06,
+        "m2": 1.0,
+        "mi2": 3.86102158592535e-07,
+        "nmi2": 2.9155334959812285e-07,
+        "yd2": 1.1959900463010802
+      },
+      "entityId": "93a60a56-a3c8-19da-a746-0800200c9a66",
+      "entityType": "quantity",
+      "externalId": "flowproperties/93a60a56-a3c8-19da-a746-0800200c9a66",
+      "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
+      "referenceUnit": "m2"
+    },
+    {
+      "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
+      "Name": "Area*time",
+      "UnitConversion": {
+        "ft2*a": 10.763910416709722,
+        "ha*a": 0.0001,
+        "km2*a": 1e-06,
+        "m2*a": 1.0,
+        "m2*d": 365.00000365000005,
+        "mi2*a": 3.8610216008328377e-07
+      },
+      "entityId": "93a60a56-a3c8-21da-a746-0800200c9a66",
+      "entityType": "quantity",
+      "externalId": "flowproperties/93a60a56-a3c8-21da-a746-0800200c9a66",
+      "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
+      "referenceUnit": "m2*a"
+    },
+    {
+      "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
+      "Name": "Volume",
+      "UnitConversion": {
+        "US fl oz": 33814.022701842994,
+        "bbl": 6.289810770432105,
+        "bl (Imp)": 6.110256897196883,
+        "bl (US beer)": 8.521683850642152,
+        "bl (US dry)": 8.648409373989104,
+        "bl (US fl)": 8.38641436057614,
+        "bsh (Imp)": 27.496156037385973,
+        "bsh (US)": 28.377593255889252,
+        "cu ft": 35.31466672148859,
+        "fl oz (Imp)": 35195.07972785404,
+        "gal (Imp)": 219.96924829908778,
+        "gal (US dry)": 227.02074606721396,
+        "gal (US fl)": 264.1720523581484,
+        "gal (US liq)": 264.1720372841846,
+        "l": 1000.0,
+        "m3": 1.0,
+        "ml": 1000000.0,
+        "pt (Imp)": 1759.7539863927022,
+        "pt (US dry)": 1816.1659685377117,
+        "pt (US fl)": 2113.376418865187,
+        "ul": 999999999.9999999
+      },
+      "entityId": "93a60a56-a3c8-22da-a746-0800200c9a66",
+      "entityType": "quantity",
+      "externalId": "flowproperties/93a60a56-a3c8-22da-a746-0800200c9a66",
+      "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
+      "referenceUnit": "m3"
+    },
+    {
+      "Comment": "",
+      "Name": "Energy renewable and non renewable (net calorific value)",
+      "UnitConversion": {
+        "GJ": 0.001,
+        "J": 1000000.0,
+        "MJ": 1.0,
+        "MWh": 0.0002777777777777778,
+        "TCE": 3.412084237535657e-05,
+        "TOE": 2.3884589662749594e-05,
+        "btu": 947.8169879134379,
+        "kWh": 0.2777777777777778,
+        "kcal": 238.85160149998808
+      },
+      "entityId": "a182c00f-c0e5-4b7a-b2a1-a735fbee7f9a",
+      "entityType": "quantity",
+      "externalId": "flowproperties/a182c00f-c0e5-4b7a-b2a1-a735fbee7f9a",
+      "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
+      "referenceUnit": "MJ"
+    },
+    {
+      "Category": "Aquatic Eutrophication",
+      "Comment": "European validity. Averaged characterization factors from country dependent characterization factors.",
+      "Duration": "indefinite",
+      "Indicator": "Phosphorus equivalents: Expression of the degree to which the emitted nutrients reaches the freshwater end compartment (phosphorus considered as limiting factor in freshwater).",
+      "Method": "ILCD2011; ReCiPe2008",
+      "Name": "ILCD2011; Eutrophication freshwater; midpoint; P equivalents; ReCiPe",
+      "ReferenceYear": "time independent",
+      "entityId": "a4630d5b-df2f-48ae-b3f2-5e5257606d68",
+      "entityType": "quantity",
+      "externalId": "LCIAmethods/a4630d5b-df2f-48ae-b3f2-5e5257606d68",
+      "origin": "http://eplca.jrc.ec.europa.eu/ELCD3/resource/",
+      "referenceUnit": "kg"
+    },
+    {
+      "Comment": "EcoSpold01",
+      "Name": "EcoSpold Quantity MJ",
+      "entityId": "a82b133e-579b-3fbd-b56d-477785bff7a4",
+      "entityType": "quantity",
+      "externalId": "MJ",
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip",
+      "referenceUnit": "MJ"
+    },
+    {
+      "Comment": "EcoSpold01",
+      "Name": "EcoSpold Quantity kg",
+      "entityId": "bbe8f43d-c141-3e21-b8c2-3ba1ce556ad0",
+      "entityType": "quantity",
+      "externalId": "kg",
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip",
+      "referenceUnit": "kg"
+    },
+    {
+      "Comment": "",
+      "Name": "Price",
+      "UnitConversion": {
+        "$": 0.8640774034952655,
+        "DM": 0.5112918811962185,
+        "EUR": 1.0,
+        "Yen": 0.01,
+        "sFr": 0.6017888952663761
+      },
+      "entityId": "bcf81c0a-9fe9-4b88-a25b-99e0dd64ddaa",
+      "entityType": "quantity",
+      "externalId": "flowproperties/bcf81c0a-9fe9-4b88-a25b-99e0dd64ddaa",
+      "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
+      "referenceUnit": "EUR"
+    },
+    {
+      "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
+      "Name": "Duration",
+      "UnitConversion": {
+        "a": 0.0027397260273972603,
+        "d": 1.0,
+        "h": 24.000003840000613,
+        "min": 1440.0000009216,
+        "s": 86400.00055296
+      },
+      "entityId": "c0447923-0e60-4b3c-97c2-a86dddd9eea5",
+      "entityType": "quantity",
+      "externalId": "flowproperties/c0447923-0e60-4b3c-97c2-a86dddd9eea5",
+      "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
+      "referenceUnit": "a"
+    },
+    {
+      "Comment": "EcoSpold01",
+      "Name": "EcoSpold Quantity kWh",
+      "entityId": "e5d21ea4-d78c-3add-8960-bff7d74e2705",
+      "entityType": "quantity",
+      "externalId": "kWh",
+      "origin": "/home/b/Dropbox/data/USLCI/USLCI_Processes_ecospold1.zip",
+      "referenceUnit": "kWh"
+    },
+    {
+      "Category": "Photochemical ozone creation",
+      "Comment": "Only for Europe. Includes spatial differentiation.",
+      "Duration": "indefinite",
+      "Indicator": "Photochemical ozone creation potential (POCP): Expression of the potential contribution to photochemical ozone formation.",
+      "Method": "ILCD2011; ReCiPe2008",
+      "Name": "ILCD2011; Photochemical ozone formation; midpoint - human health; POCP; Van Zelm et al. (2008)",
+      "ReferenceYear": "2009",
+      "entityId": "ec7836be-83eb-41da-bcda-1a6a3fe2d149",
+      "entityType": "quantity",
+      "externalId": "LCIAmethods/ec7836be-83eb-41da-bcda-1a6a3fe2d149",
+      "origin": "http://eplca.jrc.ec.europa.eu/ELCD3/resource/",
+      "referenceUnit": "kg"
+    },
+    {
+      "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
+      "Name": "Hydrogen content (mass)",
+      "UnitConversion": {
+        "Mg": 0.001,
+        "g": 1000.0,
+        "kg": 1.0,
+        "kt": 5000.0,
+        "lb av": 2.2046226218487757,
+        "long tn": 0.0009842065276110606,
+        "mg": 1000000.0,
+        "ng": 1000000000000.0,
+        "oz av": 35.27396194958041,
+        "oz t": 32.15074656862798,
+        "pg": 999999999999999.9,
+        "sh tn": 0.001102311310924388,
+        "t": 0.001,
+        "ug": 999999999.9999999
+      },
+      "entityId": "f3e1017d-1aa3-4763-b563-9494858e1ec7",
+      "entityType": "quantity",
+      "externalId": "flowproperties/f3e1017d-1aa3-4763-b563-9494858e1ec7",
+      "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
+      "referenceUnit": "kg"
+    },
+    {
+      "Category": "Land use",
+      "Comment": "Biodiversity impacts not covered by the data set.",
+      "Duration": "Indefinite",
+      "Indicator": "Soil Organic Matter (SOM) based on changes in SOM, measured in (kg C/m2/a).",
+      "Method": "ILCD2011",
+      "Name": "ILCD2011; Land use; midpoint; SOM loss; Mila i Canals et al. (2007)",
+      "ReferenceYear": "time independent",
+      "entityId": "f4602cba-f746-4351-b4da-e91181853e33",
+      "entityType": "quantity",
+      "externalId": "LCIAmethods/f4602cba-f746-4351-b4da-e91181853e33",
+      "origin": "http://eplca.jrc.ec.europa.eu/ELCD3/resource/",
+      "referenceUnit": "kg"
+    },
+    {
+      "Category": "Acidification",
+      "Comment": "European country-dependent.",
+      "Duration": "indefinite",
+      "Indicator": "Accumulated Exceedance (AE) characterizing the change in critical load exceedance of the sensitive area in terrestrial and main freshwater ecosystems, to which acidifying substances deposit.",
+      "Method": "ILCD2011",
+      "Name": "ILCD2011; Acidification terrestrial and freshwater; midpoint; Accumulated Exceedance; Sepp\u00e4l\u00e4 et al. 2006, Posch et al. 2008",
+      "ReferenceYear": "time independent",
+      "entityId": "f6cbd466-253f-4145-a4bb-8dae7d266e89",
+      "entityType": "quantity",
+      "externalId": "LCIAmethods/f6cbd466-253f-4145-a4bb-8dae7d266e89",
+      "origin": "http://eplca.jrc.ec.europa.eu/ELCD3/resource/",
+      "referenceUnit": "mol"
+    },
+    {
+      "Comment": "Illustrative but fully operative flow property data set for monetary flow properties, provided by the European Platform on LCA.",
+      "Name": "Market value US 2000, bulk prices",
+      "UnitConversion": {
+        "AUD": 1.5873015873015872,
+        "CAD": 1.36986301369863,
+        "CHF": 1.5625,
+        "CZK": 35.714285714285715,
+        "DKK": 7.462686567164178,
+        "EEK": 15.625,
+        "EUR": 1.0,
+        "GBP": 0.6060606060606061,
+        "HUF": 263.1578947368421,
+        "ISK": 73.52941176470588,
+        "JPY": 100.0,
+        "KRW": 1052.6315789473683,
+        "LTL": 3.7037037037037033,
+        "LVL": 0.5617977528089888,
+        "NOK": 8.333333333333334,
+        "SEK": 8.333333333333334,
+        "USD": 0.9090909090909091,
+        "ZAR": 6.410256410256411
+      },
+      "entityId": "fdfecf14-ff8a-4e17-b2b2-f938c4b5cc27",
+      "entityType": "quantity",
+      "externalId": "flowproperties/fdfecf14-ff8a-4e17-b2b2-f938c4b5cc27",
+      "origin": "/data/Dropbox/data/ELCD/ELCD3.2.zip",
+      "referenceUnit": "EUR"
+    }
+  ]
+}

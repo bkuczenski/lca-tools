@@ -1,0 +1,28 @@
+{
+  "fragments": [
+    {
+      "direction": "Output",
+      "entityId": "5d4787c4-5264-4551-9f7d-bbed98e9b9b4",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 1.0,
+        "1": 0.0
+      },
+      "externalId": "5d4787c4-5264-4551-9f7d-bbed98e9b9b4",
+      "flow": "a8e72482-28ab-30d9-b970-f1add067f2b1",
+      "isBackground": true,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "None",
+      "tags": {
+        "Comment": "",
+        "Name": "Recovered energy, at acetic acid production",
+        "StageName": ""
+      },
+      "terminations": {
+        "null": {}
+      }
+    }
+  ]
+}

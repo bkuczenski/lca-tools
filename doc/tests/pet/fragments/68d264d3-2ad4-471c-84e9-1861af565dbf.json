@@ -1,0 +1,58 @@
+{
+  "fragments": [
+    {
+      "direction": "Input",
+      "entityId": "68d264d3-2ad4-471c-84e9-1861af565dbf",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 1.0,
+        "1": 0.0
+      },
+      "externalId": "68d264d3-2ad4-471c-84e9-1861af565dbf",
+      "flow": "42f37b1b-0447-3fd1-a117-4f9bf8af0ac8",
+      "isBackground": false,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "None",
+      "tags": {
+        "Comment": "",
+        "Name": "Transport, combination truck, average fuel mix",
+        "StageName": ""
+      },
+      "terminations": {
+        "null": {
+          "entityId": "278c6d85-deae-3e37-8474-731318c329d1",
+          "source": "/data/GitHub/lca-tools-datafiles/catalogs/uslci_ecospold.json.gz"
+        }
+      }
+    },
+    {
+      "direction": "Input",
+      "entityId": "cf3ed881-b1d4-46eb-acb6-f901038e9e01",
+      "entityType": "fragment",
+      "exchangeValues": {
+        "0": 1.0,
+        "1": 0.0
+      },
+      "externalId": "cf3ed881-b1d4-46eb-acb6-f901038e9e01",
+      "flow": "936b4e0a-0f4a-3bec-b493-7b3079f54725",
+      "isBackground": false,
+      "isBalanceFlow": false,
+      "isPrivate": false,
+      "origin": "pet",
+      "parent": "68d264d3-2ad4-471c-84e9-1861af565dbf",
+      "tags": {
+        "Comment": "",
+        "Name": "Transport, combination truck, diesel powered",
+        "StageName": "Transport, combination truck, diesel powered"
+      },
+      "terminations": {
+        "null": {
+          "entityId": "114c1d57-f794-42bf-9f75-f5f3869eda73",
+          "source": "foreground"
+        }
+      }
+    }
+  ]
+}

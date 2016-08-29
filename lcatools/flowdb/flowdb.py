@@ -323,7 +323,16 @@ class FlowDB(object):
         comp = self.find_matching_compartment(flow['Compartment'])  # will raise MissingCompartment if not found
         return flowables, comp
 
-    def import_cfs(self, archive):
+    def import_cfs(self, flow):
+        flowables, comp = self.parse_flow(flow)
+        if len(flowables) == 0:
+            return flow
+        for cf in flow.characterizations():
+            if cf is not flow.reference_entity:
+                self._add_cf(flowables, comp, cf)
+        return None
+
+    def import_archive_cfs(self, archive):
         """
         adds all CFs from flows found in the archive
          Returns a list of flows that did not match the flowable set.  For compartments that do not match,
@@ -333,14 +342,9 @@ class FlowDB(object):
         """
         missing_flows = []
         for f in archive.flows():
-            flowables, comp = self.parse_flow(f)
-            if len(flowables) == 0:
-                missing_flows.append(f)
-                continue
-            for cf in f.characterizations():
-                if cf is not f.reference_entity:
-                    self._add_cf(flowables, comp, cf)
-
+            k = self.import_cfs(f)
+            if k is not None:
+                missing_flows.append(k)
         return missing_flows
 
     def lookup_cfs(self, flow, quantity, dist=1):

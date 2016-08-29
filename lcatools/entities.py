@@ -346,12 +346,15 @@ class LcProcess(LcEntity):
 
     def inventory(self, reference=None):
         print('%s' % self)
+        out = []
         if reference is None:
             it = self.exchanges()
         else:
             it = self.allocated_exchanges(reference)
         for i in it:
-            print('%s' % i)
+            print('%2d %s' % (len(out), i))
+            out.append(i)
+        return out
 
     def exchange(self, flow):
         if isinstance(flow, LcFlow):
@@ -569,6 +572,9 @@ class LcFlow(LcEntity):
             if self.reference_entity.get_uuid() not in self._characterizations.keys():
                 self.add_characterization(self.reference_entity, reference=True, value=self._ref_quantity_factor)
 
+    def unit(self):
+        return self.reference_entity.reference_entity.unitstring()
+
     def set_local_unit(self, factor):
         self._ref_quantity_factor = factor
 
@@ -589,8 +595,11 @@ class LcFlow(LcEntity):
 
     def profile(self):
         print('%s' % self)
+        out = []
         for cf in self._characterizations.values():
-            print('%s' % cf)
+            print('%2d %s' % (len(out), cf.q_view()))
+            out.append(cf)
+        return out
 
     def add_characterization(self, quantity, reference=False, value=None, **kwargs):
         if isinstance(quantity, Characterization):

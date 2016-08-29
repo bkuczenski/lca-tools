@@ -221,6 +221,9 @@ class LciaResult(object):
                 agg_result.add_summary(keystring, v.entity, 1.0, v.cumulative_result)
         return agg_result
 
+    def show_agg(self, **kwargs):
+        self.aggregate(**kwargs).show_components()  # deliberately don't return anything- or should return grouped?
+
     @property
     def is_private(self):
         return self._private
@@ -269,11 +272,14 @@ class LciaResult(object):
 
     def show_components(self):
         self._header()
+        out = []
         if not self._private:
             for v in sorted(self._LciaScores.values(), key=lambda x: x.cumulative_result, reverse=True):
-                print('%s' % v)
+                print('%2d %s' % (len(out), v))
+                out.append(v.entity)
             print('==========')
         print('%s' % self)
+        return out
 
     def show_details(self, key=None, **kwargs):
         self._header()

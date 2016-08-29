@@ -94,7 +94,7 @@ class ForegroundManager(object):
         if self._catalog[nick] is None:
             self._catalog.load(nick)
         self.merge_compartments(nick)
-        self.unmatched_flows[nick] = self.db.import_cfs(self._catalog[nick])
+        self.unmatched_flows[nick] = self.db.import_archive_cfs(self._catalog[nick])
         print('%d unmatched flows found from source %s... \n' %
               (len(self.unmatched_flows[nick]), self._catalog.name(nick)))
         self._cfs.append(nick)
@@ -465,8 +465,8 @@ class ForegroundManager(object):
     def fragment_lcia(self, fragment, scenario=None, observed=False):
         return fragment.fragment_lcia(lambda x: self.child_flows(x), scenario=scenario, observed=observed)
 
-    def draw_fragment(self, fragment):
-        fragment.show_tree(lambda x: self.child_flows(x))
+    def draw(self, fragment):
+        return fragment.show_tree(lambda x: self.child_flows(x))
 
     def child_flows(self, fragment):
         """
@@ -479,6 +479,7 @@ class ForegroundManager(object):
             if fragment is x.reference_entity:
                 yield x
 
+    '''
     def auto_terminate(self, index, fragment, scenario=None, use_first=False):
         """
 
@@ -500,6 +501,7 @@ class ForegroundManager(object):
         except StopIteration:
             fragment.term_from_exch(term_exch, scenario=scenario)
             self.build_child_flows(fragment, scenario=scenario)
+    '''
 
     def new_fragment(self, flow, direction, termination=None, **kwargs):
         if isinstance(flow, CatalogRef):

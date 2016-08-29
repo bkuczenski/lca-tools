@@ -552,7 +552,9 @@ class LcFragment(LcEntity):
             re = self.reference_entity.get_uuid()[:7]
         return '(%s) %s %s %s %s  %s' % (re, self.dirn, self.get_uuid()[:7], self.dirn, self.term, self['Name'])
 
-    def show_tree(self, childflows, prefix=''):
+    def show_tree(self, childflows, prefix='', enum=None):
+        if enum is None:
+            enum = []
         dirn = {
             'Input': '-<-',
             'Output': '=>='
@@ -562,14 +564,17 @@ class LcFragment(LcEntity):
         if len(children) > 0 and self.term.is_null:
             raise InvalidParentChild('null-terminated fragment %.7s has children' % self.get_uuid())
 
-        print('%s%s%s %.7s (%7.2g) %s' % (prefix, dirn, self.term, self.get_uuid(), self.exchange_value(0),
-                                          self['Name']))
+        print('%2d %s%s%s %.5s (%7.2g %s) %s' % (len(enum), prefix, dirn, self.term, self.get_uuid(),
+                                                 self.exchange_value(0), self.flow.unit(),
+                                                 self['Name']))
+        enum.append(self)
         prefix += '    | '
         for c in sorted(children, key=lambda x: (not x.term.is_null, x.term.is_bg)):
-            c.show_tree(childflows, prefix=prefix)
+            enum = c.show_tree(childflows, prefix=prefix, enum=enum)
         if len(children) > 0:
             prefix = prefix[:-3] + ' x '
-            print('%s' % prefix)
+            print('   %s' % prefix)
+        return enum
 
     @property
     def cached_ev(self):
@@ -794,7 +799,7 @@ class LcFragment(LcEntity):
             if self.get_uuid() in frags_seen:
                 raise InvalidParentChild('Frag %s seeing self\n %s' % (self.get_uuid(), '; '.join(frags_seen)))
             frags_seen.add(self.get_uuid())
-        print('Traversing %s\nfrags seen: %s\n' % (self, '; '.join(frags_seen)))
+        # print('Traversing %s\nfrags seen: %s\n' % (self, '; '.join(frags_seen)))
 
         if term.is_fg or term.term_node.entity_type == 'process':
             '''

@@ -247,3 +247,27 @@ class ForegroundArchive(LcArchive):
         for f in fragments:
             frag = self[f['entityId']]
             frag.finish_json_load(catalog, f)
+
+    def del_orphans(self, for_real=False):
+        """
+        self is a foreground archive
+        """
+        for f in self.fragments(show_all=True):
+            if f.reference_entity is not None:
+                continue
+            try:
+                next(self._find_links(f))
+                print('Found a link for %s' % f)
+            except StopIteration:
+                print('Deleting %s' % f)
+                if for_real:
+                    del self._entities[f._uuid]
+
+    def _find_links(self, frag):
+        for i in self.fragments(show_all=True):
+            if i.reference_entity is frag:
+                yield i
+            else:
+                for v in i._terminations.values():
+                    if v.term_node is frag:
+                        yield i

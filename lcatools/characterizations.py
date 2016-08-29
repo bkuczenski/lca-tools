@@ -93,11 +93,11 @@ class Characterization(object):
 
     def q_view(self):
         if self.value is not None:
-            return '%.3g %s == %s | %s' % (self.value, self.quantity.reference_entity.unitstring(),
-                                           self.flow.reference_entity.reference_entity.unitstring(), self.flow)
+            return '%10.3g %s == %s | %s' % (self.value, self.quantity.reference_entity.unitstring(),
+                                             self.flow.reference_entity.reference_entity.unitstring(), self.quantity)
         else:
-            return '  %s == %s | %s' % (self.quantity.reference_entity.unitstring(),
-                                        self.flow.reference_entity.reference_entity.unitstring(), self.flow)
+            return '%10s %s == %s | %s' % (' ', self.quantity.reference_entity.unitstring(),
+                                           self.flow.reference_entity.reference_entity.unitstring(), self.quantity)
 
     def tupleize(self):
         return self.flow.get_uuid(), self.quantity.get_uuid()

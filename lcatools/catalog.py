@@ -406,11 +406,14 @@ class CatalogInterface(object):
 
         source = self._archive_refs[index].source
         ds_type = self._archive_refs[index].dataSourceType
-        params = self._archive_refs[index].parameters
+        params = dict(**self._archive_refs[index].parameters)
+        load_all = params.pop('load_all', False)
         if ds_type.lower() == 'json':
             a = archive_from_json(source, **params)
         else:
             a = archive_factory(source, ds_type, **params)
+        if load_all:
+            a.load_all()
         self._install(index, a)
 
     def load_all(self, item):
@@ -474,7 +477,7 @@ class CatalogInterface(object):
             print('Saving foreground')
             self[0].save()
             with open(self[0].catalog_file, 'w') as fp:
-                json.dump(self.serialize(), fp, indent=2)
+                json.dump(self.serialize(), fp, indent=2, sort_keys=True)
                 print('Catalog file with %d archives saved to foreground' % len(self.archives))
 
     def retrieve(self, archive, key):
@@ -524,7 +527,7 @@ class CatalogInterface(object):
         """
         Search for a string in the catalog,
         :param archive: a nickname or a list of nicknames
-        :param etype: positional shortcut for entity_type=x
+        :param etype: positional shortcut for entity_type=x; use 'p', 'f' or 'q' for short
         :param show: [False] if True, print a tabular list of results to stdout
         :param kwargs: search arguments passed to the archives- must be in the form of key=value.  Some useful
         keys include 'Name', 'Comment', 'Compartment', 'Classification'
@@ -538,6 +541,7 @@ class CatalogInterface(object):
         if etype is not None:
             if 'entity_type' in kwargs:
                 raise KeyError('colliding entity_type and etype!')
+            etype = {'p': 'process', 'f': 'flow', 'q': 'quantity'}[etype[0]]
             kwargs['entity_type'] = etype
         if isinstance(archive, str) or isinstance(archive, int):
             # turn single references into a list

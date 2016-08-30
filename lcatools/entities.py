@@ -229,6 +229,9 @@ class LcEntity(object):
     def __str__(self):
         return 'LC %s: %s' % (self.entity_type, self._d['Name'])
 
+    def __hash__(self):
+        return hash(self._uuid)
+
     def __eq__(self, other):
         """
         two entities are equal if their types, origins, and external references are the same.
@@ -752,10 +755,13 @@ class LcQuantity(LcEntity):
 
         return outbound / inbound
 
+    def _name(self):
+        return '%s [%s]' % (self._d['Name'], self.reference_entity.unitstring())
+
     def __str__(self):
         if self.is_lcia_method():
-            return '%s [LCIA]' % self._d['Name']
-        return '%s' % self._d['Name']
+            return '%s [LCIA]' % self._name()
+        return '%s' % self._name()
 
 
 class LcUnit(object):

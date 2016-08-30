@@ -223,6 +223,15 @@ class ForegroundArchive(LcArchive):
         """
         return [f.serialize(**kwargs) for f in self._entities_by_type('fragment')]
 
+    def _do_load(self, catalog, fragments):
+        for f in fragments:
+            frag = LcFragment.from_json(catalog, f)
+            self.add(frag)
+
+        for f in fragments:
+            frag = self[f['entityId']]
+            frag.finish_json_load(catalog, f)
+
     def load_fragments(self, catalog):
         """
         This must be done in two steps, since fragments refer to other fragments in their definition.
@@ -239,14 +248,7 @@ class ForegroundArchive(LcArchive):
                 j = json.load(fp)
 
             fragments.extend(j['fragments'])
-
-        for f in fragments:
-            frag = LcFragment.from_json(catalog, f)
-            self.add(frag)
-
-        for f in fragments:
-            frag = self[f['entityId']]
-            frag.finish_json_load(catalog, f)
+        self._do_load(catalog, fragments)
 
     def del_orphans(self, for_real=False):
         """
@@ -271,3 +273,22 @@ class ForegroundArchive(LcArchive):
                 for v in i._terminations.values():
                     if v.term_node is frag:
                         yield i
+
+    '''
+    Load fragments from other folders
+
+    '''
+    def import_fragments(self, catalog, fg_dir):
+        if not os.path.exists(fg_dir):
+            print('No foreground found in specified directory %s' % fg_dir)
+        # first need to load flows
+        self._load_json_file(os.path.join(fg_dir, 'entities.json'))
+
+        fragments = []
+        for file in os.listdir(os.path.join(fg_dir, 'fragments')):
+            with open(os.path.join(fg_dir, 'fragments', file), 'r') as fp:
+                j = json.load(fp)
+
+            fragments.extend(j['fragments'])
+        self._do_load(catalog, fragments)
+

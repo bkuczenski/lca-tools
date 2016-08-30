@@ -123,6 +123,26 @@ def _pick_list(items, *args, prompt=None):
     return choice
 
 
+def pick_one_or(items, default=None):
+    print('\nChoice Item')
+    print('%s %s' % ('=' * 6, '=' * 70))
+
+    if items is not None and items != []:
+        field_width = ceil(log10(len(items)))
+
+        for i, k in enumerate(items):
+            print(' [%*d]%s %s' % (field_width, i, ' ' * (3 - field_width), k))
+    if default is not None:
+        c = ifinput('or enter new value: ', default)
+    else:
+        c = input('or enter new value: ')
+    try:
+        choice = items[int(c)]
+    except ValueError:
+        choice = c
+    return choice
+
+
 def pick_list(object_list):
     l = sorted(list(object_list), key=lambda x: str(x))
     if len(l) == 1:

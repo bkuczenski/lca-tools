@@ -122,8 +122,8 @@ class ForegroundManager(object):
     def __getitem__(self, item):
         return self._catalog.__getitem__(item)
 
-    def search(self, *args, **kwargs):
-        return self._catalog.search(*args, **kwargs)
+    def search(self, *args, show=True, **kwargs):
+        return self._catalog.search(*args, show=show, **kwargs)
 
     def terminate(self, *args, **kwargs):
         return self._catalog.terminate(*args, **kwargs)
@@ -240,8 +240,8 @@ class ForegroundManager(object):
         cas = ifinput('Enter CAS number (or none): ', '')
         print('Choose reference quantity: ')
         q = pick_one(self._catalog[0].quantities())
-        print('Choose compartment:')
         comment = input('Enter comment: ')
+        print('Choose compartment:')
         c = pick_compartment(self.db.compartments)
         flow = LcFlow.new(name, q, CasNumber=cas, Compartment=c.to_list(), Comment=comment)
         # flow.add_characterization(q, reference=True)
@@ -336,6 +336,10 @@ class ForegroundManager(object):
                      ('Direction', lambda x: x[1]),
                      ('Flow', lambda x: x[0]), returns_sets=True)
 
+    @property
+    def lcia_methods(self):
+        return [q for q in self[0].lcia_methods()]
+
     def fg_lcia(self, process_ref, quantities=None, dist=1, scenario=None, **kwargs):
         """
         :param process_ref:
@@ -391,10 +395,11 @@ class ForegroundManager(object):
             return result
         return p_ref.archive.bg_lookup(p_ref.id, quantities=quantities, flowdb=self.db, **kwargs)
 
-    def compare_lcia_results(self, p_refs, background=False, **kwargs):
+    def compare_lcia_results(self, p_refs, quantities=None, background=False, **kwargs):
         """
         p_refs should be an array of catalog_refs
         :param p_refs:
+        :param quantities: list of qs
         :param background: whether to use bg_lcia instead of fg_lcia
         :return:
         """
@@ -404,7 +409,10 @@ class ForegroundManager(object):
                 results[p] = self.bg_lcia(p, **kwargs)
             else:
                 results[p] = self.fg_lcia(p, **kwargs)
-        qs = self[0].lcia_methods()  # assume same qs for all processes
+        if quantities is None:
+            qs = self[0].lcia_methods()  # assume same qs for all processes
+        else:
+            qs = quantities
 
         dynamic_grid(p_refs, qs, lambda x, y: results[y][x.get_uuid()],
                      ('Ref Units', lambda x: x.reference_entity),
@@ -465,8 +473,10 @@ class ForegroundManager(object):
     def fragment_lcia(self, fragment, scenario=None, observed=False):
         return fragment.fragment_lcia(lambda x: self.child_flows(x), scenario=scenario, observed=observed)
 
-    def draw(self, fragment):
-        return fragment.show_tree(lambda x: self.child_flows(x))
+    def draw(self, fragment, scenario=None, observed=False):
+        fs = fragment.show_tree(lambda x: self.child_flows(x), scenario=scenario, observed=observed)
+        self.balance(fragment, scenario=scenario, observed=observed)
+        return fs
 
     def child_flows(self, fragment):
         """
@@ -528,7 +538,10 @@ class ForegroundManager(object):
         """
         process = process_ref.fg()
         if ref_flow is None:
-            if len(process.reference_entity) > 1:
+            if len(process.reference_entity) == 0:
+                ref = pick_one([x for x in self.db.filter_exch(process_ref, elem=False) if x.direction == 'Output']
+                               ).flow
+            elif len(process.reference_entity) > 1:
                 ref = pick_reference(process)
             else:
                 ref = list(process.reference_entity)[0].flow
@@ -699,6 +712,27 @@ class ForegroundManager(object):
             self.build_child_flows(fragment, background_children=background_children)
             return fragment
         return fragment  # nothing to do
+
+    def balance(self, frag, scenario=None, observed=False):
+        qs = defaultdict(float)
+        for cf in frag.flow.characterizations():
+            if cf.value is not None:
+                if frag.direction == 'Input':  # output from term
+                    qs[cf.quantity] -= 1.0
+                else:
+                    qs[cf.quantity] += 1.0
+        for c in self.child_flows(frag):
+            for cf in c.flow.characterizations():
+                mag = c.exchange_value(scenario, observed=observed) * cf.value
+                if mag != 0:
+                    if c.direction == 'Output':
+                        qs[cf.quantity] -= mag
+                    else:
+                        qs[cf.quantity] += mag
+
+        for k, v in qs.items():
+            print('%10.4g %s' % (v, k))
+        return qs
 
     @staticmethod
     def profile(flow):

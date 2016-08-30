@@ -254,7 +254,7 @@ class LcArchive(ArchiveInterface):
             return process.allocated_exchanges(reference=ref_flow)
         return process.exchanges()
 
-    def bg_lookup(self, process_id, reference=None, quantities=None, scenario=None, flowdb=None):
+    def bg_lookup(self, process_id, ref_flow=None, reference=None, quantities=None, scenario=None, flowdb=None):
         """
         bg_lookup returns a flow representing the process's reference flow (must specify if the process is allocated)
         containing characterizations for the LCIA quantities specified
@@ -268,7 +268,8 @@ class LcArchive(ArchiveInterface):
         process = self.fg_proxy(process_id)
         if quantities is None:
             quantities = self.lcia_methods()
-        ref_flow = process.find_reference(reference)
+        if ref_flow is None:
+            ref_flow = process.find_reference(reference)
         cfs_out = dict()
         for q in quantities:
             result = process.lcia(q, ref_flow=ref_flow, scenario=scenario, flowdb=flowdb)

@@ -67,7 +67,7 @@ class DetailedLciaResult(object):
         return (self.exchange.value or 0.0) * (self.factor[self.location] or 0.0)
 
     def __hash__(self):
-        return hash((self.exchange.process.get_uuid(), self.factor.flow.get_uuid()))
+        return hash((self.exchange.process.get_uuid(), self.exchange.direction, self.factor.flow.get_uuid()))
 
     def __eq__(self, other):
         if not isinstance(other, DetailedLciaResult):
@@ -135,7 +135,8 @@ class AggregateLciaScore(object):
     def add_detailed_result(self, exchange, factor, location):
         d = DetailedLciaResult(exchange, factor, location)
         if d in self.LciaDetails:
-            raise DuplicateResult()
+            if factor[location] != 0:
+                raise DuplicateResult('exchange: %s\n  factor: %s\nlocation: %s' % (exchange, factor, location))
         self.LciaDetails.add(d)
 
     def add_summary_result(self, entity, node_weight, unit_score):
@@ -183,7 +184,7 @@ class LciaResult(object):
         :param location:
         :return:
         """
-        results = dict()
+        results = LciaResults(fragment)
         exch = ExchangeValue(fragment, fragment.flow, fragment.direction, value=1.0)
         for q, cf in cfs.items():
             results[q] = cls(cf.quantity, scenario=scenario)
@@ -204,12 +205,18 @@ class LciaResult(object):
         self._LciaScores = dict()
         self._private = private
 
-    def aggregate(self, key=lambda x: x['StageName']):
+    '''
+    def __getitem__(self, item):
+        if isinstance(item, int):
+            return
+    '''
+
+    def aggregate(self, key=lambda x: x.fragment['StageName']):
         """
         returns a new LciaResult object in which the components of the original LciaResult object are aggregated
         according to a key.  The key is a lambda expression that is applied to each AggregateLciaScore component's
         entity property (components where the lambda fails will all be grouped together).
-        :param key: default: lambda x: x['StageName']
+        :param key: default: lambda x: x.fragment['StageName'] -- assuming the payload is a FragmentFlow
         :return:
         """
         agg_result = LciaResult(self.quantity, scenario=self.scenario, private=self._private)
@@ -277,8 +284,8 @@ class LciaResult(object):
             for v in sorted(self._LciaScores.values(), key=lambda x: x.cumulative_result, reverse=True):
                 print('%2d %s' % (len(out), v))
                 out.append(v.entity)
-            print('==========')
-        print('%s' % self)
+            print('   ==========')
+        print('   %s' % self)
         return out
 
     def show_details(self, key=None, **kwargs):
@@ -307,6 +314,36 @@ class LciaResult(object):
         return '%s %s' % (number(self.total()), self.quantity)
 
 
+class LciaResults(dict):
+    """
+    A dict of LciaResult objects, with some useful attachments
+    """
+    def __init__(self, entity, *args, **kwargs):
+        super(LciaResults, self).__init__(*args, **kwargs)
+        self.entity = entity
+        self._indices = []
 
+    def __getitem__(self, item):
+        try:
+            int(item)
+            return super(LciaResults, self).__getitem__(self._indices[item])
+        except ValueError:
+            return super(LciaResults, self).__getitem__(next(k for k in self.keys() if k.startswith(item)))
 
+    def __setitem__(self, key, value):
+        super(LciaResults, self).__setitem__(key, value)
+        self._indices = list(self.keys())
 
+    def show(self):
+        print('LCIA Results\n%s\n%s' % (self.entity, '-' * 60))
+        for i in range(len(self._indices)):
+            r = self[self._indices[i]]
+            print('%2d %10.5g %s' % (i, r.total(), r.quantity))
+
+    def clear(self):
+        super(LciaResults, self).clear()
+        self._indices = []
+
+    def update(self, *args, **kwargs):
+        super(LciaResults, self).update(*args, **kwargs)
+        self._indices = list(self.keys())

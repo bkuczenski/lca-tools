@@ -12,6 +12,19 @@ from lcatools.literate_float import LiterateFloat
 from lcatools.lcia_results import LciaResult, LciaResults
 from lcatools.interact import pick_one
 
+import ast
+
+
+def parse_math(expression):
+    try:
+        tree = ast.parse(expression, mode='eval')
+    except SyntaxError:
+        return    # not a Python expression
+    if not all(isinstance(node, (ast.Expression, ast.UnaryOp, ast.unaryop, ast.BinOp, ast.operator, ast.Num))
+               for node in ast.walk(tree)):
+        return    # not a mathematical expression (numbers and operators)
+    return eval(compile(tree, filename='', mode='eval'))
+
 
 class InvalidParentChild(Exception):
     pass
@@ -37,6 +50,10 @@ class MissingFlow(Exception):
 
 
 class FlowConversionError(Exception):
+    pass
+
+
+class ScenarioConflict(Exception):
     pass
 
 
@@ -127,6 +144,17 @@ class FlowTermination(object):
         self.descend = descend
         self.set_term_flow(term_flow)
         self._set_inbound_ev(inbound_ev)
+        try:
+            self.flow_conversion
+        except FlowConversionError:
+            print('Provide conversion factor %s (fragment) to %s (termination)' % (self._parent.flow.unit(),
+                                                                                   self.term_flow.unit()))
+            cf = parse_math(input('Enter conversion factor: '))
+            self._parent.flow.add_characterization(self.term_flow.reference_entity, value=cf)
+
+            # this is surely a hack!
+            self._process_ref.catalog[0].add(self.term_flow.reference_entity)
+            # funny, it doesn't look like that bad of a hack.
 
     def update(self, process_ref, direction=None, term_flow=None, descend=None, inbound_ev=None):
         self._process_ref = process_ref
@@ -224,12 +252,13 @@ class FlowTermination(object):
         """
         this gets computed at query time- raises an issue about parameterization (scenario must be known?)
         # TODO: figure out flow conversion params
+        flow conversion info must be saved in fragment's flow because it is guaranteed to live in foreground
         :return:
         """
-        ref_qty = self._parent.flow.reference_entity
-        if self.term_flow.cf(ref_qty) == 0:
-            raise FlowConversionError('Missing cf for %s' % ref_qty)
-        return self.term_flow.convert(1.0, fr=ref_qty)
+        tgt_qty = self.term_flow.reference_entity
+        if self._parent.flow.cf(tgt_qty) == 0:
+            raise FlowConversionError('Missing cf for %s' % tgt_qty)
+        return self._parent.flow.convert(1.0, to=tgt_qty)
 
     def _set_inbound_ev(self, inbound_ev):
         if self.is_fg:
@@ -447,7 +476,7 @@ class LcFragment(LcEntity):
     def finish_json_load(self, catalog, j):
         self.reference_entity = catalog[0][j['parent']]
         for k, v in j['terminations'].items():
-            if k == 'null':
+            if k == 'default' or k == 'null':
                 self.term_from_json(catalog, None, v)
             else:
                 self.term_from_json(catalog, k, v)
@@ -555,6 +584,15 @@ class LcFragment(LcEntity):
                 evs[k] = v
         return evs
 
+    def _serialize_terms(self):
+        terms = dict()
+        for k, v in self._terminations.items():
+            if k is None:
+                terms['default'] = v.serialize()
+            else:
+                terms[k] = v.serialize()
+        return terms
+
     def serialize(self):
         j = super(LcFragment, self).serialize()
 
@@ -565,7 +603,7 @@ class LcFragment(LcEntity):
             'isBackground': self._background,
             'isBalanceFlow': self._balance_flow,
             'exchangeValues': self._serialize_evs(),
-            'terminations': {k: v.serialize() for k, v in self._terminations.items()},
+            'terminations': self._serialize_terms(),
             'tags': self._d
         })
         for k in self._d.keys():
@@ -640,41 +678,74 @@ class LcFragment(LcEntity):
         for v in self._terminations.values():
             v.clear_score_cache()
 
+    def _match_scenario_ev(self, scenario):
+        match = None
+        if isinstance(scenario, tuple):
+            for scen in scenario:
+                if scen in self._exchange_values.keys():
+                    if match is not None:
+                        raise ScenarioConflict('fragment: %s\nexchange value: %s, %s' % (self, scenario, match))
+                    match = scen
+            return match
+        if scenario in self._exchange_values.keys():
+            return scenario
+        return None
+
+    def _match_scenario_term(self, scenario):
+        match = None
+        if isinstance(scenario, tuple):
+            for scen in scenario:
+                if scen in self._terminations.keys():
+                    if match is not None:
+                        raise ScenarioConflict('fragment: %s\ntermination: %s, %s' % (self, scenario, match))
+                    match = scen
+
+            return match
+        if scenario in self._terminations.keys():
+            return scenario
+        return None
+
     def exchange_value(self, scenario=None, observed=False):
         """
 
-        :param scenario:
+        :param scenario: None, a string, or a tuple of strings. If tuple, raises error if more than one match.
         :param observed:
         :return:
         """
-        if scenario not in self._exchange_values.keys():
+        match = self._match_scenario_ev(scenario)
+        if match is None:
             if observed or self._balance_flow:
                 ev = self.observed_ev
             else:
                 ev = self.cached_ev
         else:
-            ev = self._exchange_values[scenario]
+            ev = self._exchange_values[match]
         if ev is None:
             return 0.0
         return ev
 
+    def exchange_values(self):
+        return self._exchange_values.keys()
+
     def _mod(self, scenario):
         if self._balance_flow:
             return '='
-        if scenario is None:
-            return ' '
-        if scenario in self._exchange_values.keys():
-            if scenario in self._terminations.keys():
-                return '%'
-            return '*'
-        if scenario in self._terminations.keys():
-            return '+'
-        return ' '
+        match_e = self._match_scenario_ev(scenario)
+        match_t = self._match_scenario_term(scenario)
+        if match_e is None:
+            if match_t is None:
+                return ' '  # no scenario
+            return '+'  # term scenario
+        if match_t is None:
+            return '*'  # ev scenario
+        return '%'  # both scenario
 
     def set_exchange_value(self, scenario, value):
-        if scenario == 0:
+        if isinstance(scenario, tuple):
+            raise ScenarioConflict('Set EV must specify single scenario')
+        if scenario == 0 or scenario == '0':
             self.cached_ev = value
-        elif scenario == 1:
+        elif scenario == 1 or scenario == '1':
             self.observed_ev = value
         else:
             self._exchange_values[scenario] = value
@@ -718,6 +789,8 @@ class LcFragment(LcEntity):
         :param flow: if process_ref, specify term_flow (default fragment.flow)
         :return:
         """
+        if isinstance(scenario, tuple):
+            raise ScenarioConflict('Set termination must specify single scenario')
         if scenario in self._terminations:
             self._terminations[scenario].update(process_ref, term_flow=flow, **kwargs)
         else:
@@ -730,18 +803,23 @@ class LcFragment(LcEntity):
                     self['StageName'] = process_ref['Name']
 
     def term_from_exch(self, exch_ref, scenario=None):
+        if isinstance(scenario, tuple):
+            raise ScenarioConflict('Set termination must specify single scenario')
         if scenario in self._terminations and not self._terminations[scenario].is_null:
             raise CacheAlreadySet('This scenario has already been specified')
         self._terminations[scenario] = FlowTermination.from_exchange(self, exch_ref)
 
     def term_from_json(self, catalog, scenario, j):
+        if isinstance(scenario, tuple):
+            raise ScenarioConflict('Set termination must specify single scenario')
         self._terminations[scenario] = FlowTermination.from_json(catalog, self, j)
 
     def termination(self, scenario=None):
-        if scenario in self._terminations.keys():
-            return self._terminations[scenario]
-        if None in self._terminations.keys():
-            return self._terminations[None]
+        match = self._match_scenario_term(scenario)
+        if match in self._terminations.keys():
+            return self._terminations[match]
+        # if None in self._terminations.keys():  # this should be superfluous, as match will be None
+        #     return self._terminations[None]
         return None
 
     def terminations(self):
@@ -768,10 +846,11 @@ class LcFragment(LcEntity):
         return magnitude * term.node_weight_multiplier
 
     def _cache_balance_ev(self, _balance, scenario):
-        if scenario is None:
+        match = self._match_scenario_ev(scenario)
+        if match is None:
             self.observed_ev = _balance
         else:
-            self.set_exchange_value(scenario, _balance)
+            self.set_exchange_value(match, _balance)
 
     def fragment_lcia(self, childflows, scenario=None, observed=False):
         ffs, _ = self.traverse(childflows, 1.0, scenario, observed=observed)
@@ -797,7 +876,7 @@ class LcFragment(LcEntity):
         - must be provided by calling environment
 
         :param upstream_nw: upstream node weight
-        :param scenario:
+        :param scenario: string or tuple of strings
         :param observed: whether to use observed or cached evs (overridden by scenario specification)
         :param frags_seen: carried along to catch recursion loops
         :param conserved_qty: in case the parent node is a conservation node
@@ -839,7 +918,7 @@ class LcFragment(LcEntity):
         node_weight = self.node_weight(magnitude, scenario)
         term = self.termination(scenario)
 
-        print('%6f %6f %s' % (magnitude, node_weight, self))
+        # print('%6f %6f %s' % (magnitude, node_weight, self))
         ff = [FragmentFlow(self, magnitude, node_weight, term, conserved)]
 
         if term.is_null or self.is_background or magnitude == 0:

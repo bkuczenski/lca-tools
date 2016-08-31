@@ -593,7 +593,7 @@ class LcFlow(LcEntity):
             cas = ''
         if len(cas) > 0:
             cas = ' (CAS ' + cas + ')'
-        comp = ', '.join((i for i in self._d['Compartment'] if i is not None))
+        comp = self._d['Compartment'][-1]  # '', '.join((i for i in self._d['Compartment'] if i is not None))
         return '%s%s [%s]' % (self._d['Name'], cas, comp)
 
     def profile(self):

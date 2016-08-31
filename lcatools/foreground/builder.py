@@ -34,7 +34,7 @@ class ForegroundBuilder(ForegroundManager):
     def find_flow(self, name, index=None, elementary=False):
         if name is None:
             name = input('Enter flow name search string: ')
-        res = self.search(index, 'flow', Name=name)
+        res = self.search(index, 'flow', Name=name, show=False)
         if elementary is not None:
             res = list(filter(lambda x: self.db.is_elementary(x.entity()) == elementary, res))
         pick = pick_one(res)
@@ -86,7 +86,7 @@ class ForegroundBuilder(ForegroundManager):
         print('%s' % frag)
         print('Search for termination.')
         string = input('Enter search term: ')
-        return pick_one(self.search(index, 'p', Name=string))
+        return pick_one(self.search(index, 'p', Name=string, show=False))
 
     def add_termination(self, frag, term, scenario=None):
         if isinstance(term, ExchangeRef):
@@ -97,14 +97,14 @@ class ForegroundBuilder(ForegroundManager):
             frag.terminate(term, scenario=scenario)
         self.build_child_flows(frag, background_children=True)
 
-    def auto_terminate(self, frag, index=None):
-        if not frag.term.is_null:
+    def auto_terminate(self, frag, index=None, scenario=None):
+        if scenario is None and not frag.term.is_null:
             return  # nothing to do-- (ecoinvent) already terminated by exchange
         ex = self.find_termination(frag, index=index)
         if ex is None:
             ex = self.terminate_by_search(frag, index=index)
         if ex is not None:
-            self.add_termination(frag, ex)
+            self.add_termination(frag, ex, scenario=scenario)
         else:
             print('Not terminated.')
 
@@ -131,3 +131,16 @@ class ForegroundBuilder(ForegroundManager):
         frag['StageName'] = ch
         for c in self.child_flows(frag):
             self.curate_stages(c, stage_names=stage_names)
+
+    def background_scenario(self, scenario, index=None):
+        if index is None:
+            index = self.current_archive or select_archive(self)
+        for bg in self[0].fragments(background=True):
+            print('\nfragment %s' % bg)
+            if scenario in bg.terminations():
+                print('Terminated to %s' % bg.termination(scenario).term_node)
+            ch = cyoa('(K)eep current or (S)earch for termination? ', 'ks', 'k')
+            if ch == 's':
+                p_ref = self.terminate_by_search(bg, index=index)
+                if p_ref is not None:
+                    bg.terminate(p_ref, scenario=scenario)

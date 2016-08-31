@@ -404,7 +404,7 @@ class AllocatedExchange(Exchange):
             self._check_ref()
 
     def __str__(self):
-        if self._ref_flow in self._value_dict:
+        if self in self.process.reference_entity:
             ref = '{*}'
         else:
             ref = '   '

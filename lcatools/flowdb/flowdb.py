@@ -198,11 +198,12 @@ class FlowDB(object):
             return match
 
     def friendly_flowable(self, i, width=4):
-        print('[%*d] %11s %.100s' % (width, i, self.flowables.cas(i),
-                                     sorted(
-                                         filter(lambda x: not bool(cas_regex.match(x)),
-                                                filter(lambda x: not bool(uuid_regex.match(x)),
-                                                       self.flowables[i])))
+        print('(%*d) %11s %d %.95s' % (width, i, self.flowables.cas(i),
+                                        len([cf for cf in self.all_cfs(i)]),
+                                        sorted(
+                                            filter(lambda x: not bool(cas_regex.match(x)),
+                                                   filter(lambda x: not bool(uuid_regex.match(x)),
+                                                          self.flowables[i])))
                                      )
               )
 

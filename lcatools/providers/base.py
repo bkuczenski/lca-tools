@@ -38,6 +38,25 @@ class LcArchive(ArchiveInterface):
             else:
                 self._upstream_hash[self._upstream_flow_key(i)] = i
 
+    def add_entity_and_children(self, entity):
+        try:
+            self.add(entity)
+        except KeyError:
+            return
+        if entity.entity_type == 'quantity':
+            # reset unit strings- units are such a hack
+            entity.reference_entity._external_ref = entity.reference_entity._unitstring
+        elif entity.entity_type == 'flow':
+            # need to import all the flow's quantities
+            for cf in entity.characterizations():
+                self.add_entity_and_children(cf.quantity)
+        elif entity.entity_type == 'process':
+            # need to import all the process's flows
+            for x in entity.exchanges():
+                self.add_entity_and_children(x.flow)
+        elif entity.entity_type == 'fragment':
+            self.add_entity_and_children(entity.flow)
+
     @staticmethod
     def _upstream_flow_key(flow):
         return ', '.join([flow['Name']] + flow['Compartment'])
@@ -67,6 +86,19 @@ class LcArchive(ArchiveInterface):
 
                 pass  # already there- fine-
             return f
+
+    def load_json(self, j):
+        for e in j['quantities']:
+            self.entity_from_json(e)
+        for e in j['flows']:
+            self.entity_from_json(e)
+        for e in j['processes']:
+            self.entity_from_json(e)
+        if 'exchanges' in j:
+            self.handle_old_exchanges(j['exchanges'])
+        if 'characterizations' in j:
+            self.handle_old_characterizations(j['characterizations'])
+        self.check_counter()
 
     def entity_from_json(self, e):
         """
@@ -259,7 +291,8 @@ class LcArchive(ArchiveInterface):
         bg_lookup returns a flow representing the process's reference flow (must specify if the process is allocated)
         containing characterizations for the LCIA quantities specified
         :param process_id: the ID of the process
-        :param reference:
+        :param ref_flow: the literally-specified reference flow
+        :param reference: a keyword to use to find the reference flow among the process's exchanges
         :param quantities:
         :param scenario:
         :param flowdb:

@@ -24,7 +24,7 @@ from lcatools.providers.archive import Archive
 from lcatools.entities import LcQuantity, LcFlow, LcProcess
 from lcatools.exchanges import ExchangeValue, DirectionlessExchangeError
 from lcatools.characterizations import Characterization
-from lcatools.lcia_results import LciaResult
+from lcatools.lcia_results import LciaResult, LciaResults
 
 if six.PY2:
     bytes = str
@@ -374,7 +374,7 @@ class EcospoldV2Archive(LcArchive):
                     raise KeyError('Name collision %s' % q['Name'])
                 tags[q['Name']] = q
 
-        results = dict()
+        results = LciaResults(p)
 
         for char in find_tag(o, 'flowData')[0].getchildren():
             if 'impactIndicator' in char.tag:

@@ -4,14 +4,12 @@ Container for tools used to compute interesting things about / across archives
 
 from __future__ import print_function, unicode_literals
 
-from eight import USING_PYTHON2
-
 import os
 import re
-import gzip
-import json
 
 from collections import defaultdict, Counter
+
+from lcatools.from_json import from_json
 
 from lcatools.providers.ilcd import IlcdArchive
 from lcatools.providers.ilcd_lcia import IlcdLcia
@@ -62,32 +60,12 @@ def archive_factory(ref, ds_type, **kwargs):
     return init_fcn(ref, **kwargs)
 
 
-def _from_json(fname):
-    """
-    Routine to reconstruct a catalog from a json archive.
-    :param fname: json file, optionally gzipped
-    :return: a subclass of ArchiveInterface
-    """
-    print('Loading JSON data from %s:' % fname)
-    if bool(re.search('\.gz$', fname)):
-        if USING_PYTHON2:
-            with gzip.open(fname, 'r') as fp:
-                j = json.load(fp)
-        else:
-            with gzip.open(fname, 'rt') as fp:
-                j = json.load(fp)
-    else:
-        with open(fname, 'r') as fp:
-            j = json.load(fp)
-    return j
-
-
 def archive_from_json(fname, **archive_kwargs):
     """
     :param fname: JSON filename
     :return: an ArchiveInterface
     """
-    j = _from_json(fname)
+    j = from_json(fname)
     archive_kwargs['quiet'] = True
 
     if 'prefix' in j.keys():
@@ -112,19 +90,7 @@ def archive_from_json(fname, **archive_kwargs):
         print('**Upstream reference encountered: %s\n' % j['upstreamReference'])
         a._serialize_dict['upstreamReference'] = j['upstreamReference']
 
-    for e in j['quantities']:
-        a.entity_from_json(e)
-    for e in j['flows']:
-        a.entity_from_json(e)
-    for e in j['processes']:
-        a.entity_from_json(e)
-    if 'exchanges' in j:
-        a.handle_old_exchanges(j['exchanges'])
-    if 'characterizations' in j:
-        a.handle_old_characterizations(j['characterizations'])
-    a.check_counter('quantity')
-    a.check_counter('flow')
-    a.check_counter('process')
+    a.load_json(j)
     return a
 
 

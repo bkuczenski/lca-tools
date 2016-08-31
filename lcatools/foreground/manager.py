@@ -9,7 +9,7 @@ from lcatools.catalog import CatalogInterface, ExchangeRef, CatalogRef
 from lcatools.exchanges import comp_dir, Exchange, ExchangeValue
 from lcatools.entities import LcQuantity, LcFlow
 from lcatools.flowdb.flowdb import FlowDB
-from lcatools.lcia_results import LciaResult, InconsistentQuantity
+from lcatools.lcia_results import LciaResult, LciaResults, InconsistentQuantity
 from lcatools.foreground.dynamic_grid import dynamic_grid
 from lcatools.interact import pick_reference, ifinput, pick_one, pick_compartment
 
@@ -77,7 +77,6 @@ class ForegroundManager(object):
             print('Setup Catalog and FlowDB... (%.2f s)' % (time.time() - t0))
 
             self[0].load_fragments(self._catalog)
-            self.compute_unit_scores()
             print('Fragments loaded... (%.2f s)' % (time.time() - t0))
 
         self._cfs = []
@@ -88,6 +87,7 @@ class ForegroundManager(object):
                 self.load_lcia_cfs(c)
                 print('finished %s... (%.2f s)' % (c, time.time() - t0))
 
+        self.compute_unit_scores()
         print('finished... (%.2f s)' % (time.time() - t0))
 
     def load_lcia_cfs(self, nick):
@@ -389,7 +389,7 @@ class ForegroundManager(object):
             return dict()
         if p_ref is None:
             # cutoff
-            result = dict()
+            result = LciaResults(p_ref.entity())
             for q in quantities:
                 result[q.get_uuid()] = LciaResult(q)
             return result

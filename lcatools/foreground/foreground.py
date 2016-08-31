@@ -110,6 +110,12 @@ class ForegroundArchive(LcArchive):
             current.merge(entity)
 
     def add_entity_and_children(self, entity):
+        """
+        reimplementing here so that we merge instead of abandon if the child entity exists.. think about merging that
+        behavior up...
+        :param entity:
+        :return:
+        """
         self.add(entity)
         if entity.entity_type == 'quantity':
             # reset unit strings- units are such a hack

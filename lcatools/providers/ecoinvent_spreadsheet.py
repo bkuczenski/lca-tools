@@ -1,9 +1,11 @@
 from __future__ import print_function, unicode_literals
 
-from lcatools.providers.base import NsUuidArchive
+from lcatools.providers.base import LcArchive, NsUuidArchive
 from lcatools.entities import LcProcess, LcFlow, LcQuantity
 from lcatools.providers.ecospold2 import EcospoldV2Archive
 from lcatools.interact import pick_reference
+
+from lcatools.from_json import from_json
 
 import pandas as pd
 import uuid
@@ -47,8 +49,10 @@ class EcoinventSpreadsheet(NsUuidArchive):
                 self.fg = EcospoldV2Archive(self._fg_filename, prefix='datasets')
                 self.bg = EcospoldV2Archive(self._bg_filename, prefix='datasets')
                 if os.path.exists(self._lci_filename):
-                    print('Loading LCI from %s' % self._lci_filename)
-                    self.lci = EcospoldV2Archive(self._lci_filename, prefix='datasets')
+                    print('Accessing LCI from %s' % self._lci_filename)
+                    self.lci = LcArchive(self._lci_cache)
+                    if os.path.exists(self._lci_cache):
+                        self.lci.load_json(from_json(self._lci_cache))
 
     @property
     def _fg_filename(self):
@@ -79,6 +83,14 @@ class EcoinventSpreadsheet(NsUuidArchive):
                                                         'lci', 'ecoSpold02']) + '.7z')
             return fn
 
+    @property
+    def _lci_cache(self):
+        if self._data_dir is None:
+            raise AttributeError('No data directory')
+        else:
+            fn = os.path.join(self._data_dir, '_'.join(['lci', 'persist', self.version, self._model]) + '.json.gz')
+            return fn
+
     def fg_proxy(self, proxy):
         for ds in self.fg.list_datasets(proxy):
             self.fg.retrieve_or_fetch_entity(ds)
@@ -86,10 +98,12 @@ class EcoinventSpreadsheet(NsUuidArchive):
 
     def lci_proxy(self, proxy):
         print('Performing LCI lookup -- this is slow because of 7z')
-        for ds in self.lci.list_datasets(proxy):
+        # re-instantiate each time to avoid out-of-memory errors
+        lci = EcospoldV2Archive(self._lci_filename, prefix='datasets')
+        for ds in lci.list_datasets(proxy):
             print('retrieving %s' % ds)
-            self.lci.retrieve_or_fetch_entity(ds)
-        return self.lci[proxy]
+            lci.retrieve_or_fetch_entity(ds)
+        return lci[proxy]
 
     def bg_proxy(self, proxy):
         for ds in self.bg.list_datasets(proxy):
@@ -132,10 +146,12 @@ class EcoinventSpreadsheet(NsUuidArchive):
             return super(EcoinventSpreadsheet, self).fg_lookup(process_id)
         else:
             p = self.lci_proxy(process_id)
+            self.lci.add_entity_and_children(p)
+            self.lci.write_to_file(self._lci_cache, gzip=True, exchanges=True, values=True)
             print('LCI: %s' % p)
             return p
 
-    def bg_lookup(self, process_id, ref_flow=None, quantities=None, scenario=None, flowdb=None):
+    def bg_lookup(self, process_id, ref_flow=None, reference=None, quantities=None, scenario=None, flowdb=None):
         """
         now with fallback to LCI lookup!
         :param process_id:
@@ -161,7 +177,9 @@ class EcoinventSpreadsheet(NsUuidArchive):
                     missing_q.append(q)
 
         if len(missing_q) > 0:
-            lci = self.lci_lookup(process_id)
+            lci = self.lci[process_id]
+            if lci is None:
+                lci = self.lci_lookup(process_id)
             rf = self._find_rf(lci, ref_flow=rf)
             for q in missing_q:
                 lcia[q.get_uuid()] = lci.lcia(q, ref_flow=rf, scenario=scenario, flowdb=flowdb)

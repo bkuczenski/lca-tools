@@ -263,6 +263,10 @@ class ForegroundManager(object):
             if not (x.flow == ref_flow and x.direction == direction):
                 yield x
 
+    def gen_elem(self, process_ref, ref_flow):
+        for x in self.db.filter_exch(process_ref, elem=True, ref_flow=ref_flow):
+            yield x
+
     def intermediate(self, process_ref, **kwargs):
         exch = self.db.filter_exch(process_ref, elem=False, **kwargs)
         if len(exch) == 0:
@@ -521,11 +525,26 @@ class ForegroundManager(object):
             frag.terminate(termination)  # None scenario
         return frag
 
-    def terminate_to_foreground(self, fragment):
-        fragment.term.self_terminate()
-        if self.db.is_elementary(fragment.flow):
-            cfs = self.db.factors_for_flow(fragment.term.term_flow, [l for l in self[0].lcia_methods()])
-            fragment.term.flowdb_results(LciaResult.from_cfs(fragment, cfs))
+    def terminate_to_foreground(self, fragment, scenario=None):
+        """
+        Marks a fragment as its own termination. Note: this creates unresolved issues with flow matching across
+        scenarios. but those have always been there and never been solved.
+        If the termination already exists, then the *elementary* flows are made into child flows (assuming the
+        intermediate flows were already done).
+        If the fragment was terminated to a sub-fragment, nothing happens.. the subfragment link is just deleted.
+        any i/o flows developed from the subfragment remain, but their exchange values will be used as-specified.
+        :param fragment:
+        :return:
+        """
+        term = fragment.termination(scenario)
+        children = []
+        if term.term_node.entity_type == 'process':
+            for elem in self.gen_elem(term.term_node, term.term_flow):
+                child = self[0].add_child_ff_from_exchange(fragment, elem)
+                child.term.self_terminate()
+                children.append(child)
+        term.self_terminate()
+        return children
 
     def create_fragment_from_process(self, process_ref, ref_flow=None, background_children=True):
         """
@@ -638,12 +657,28 @@ class ForegroundManager(object):
         for f in self[0].fragments(show_all=True):
             self.compute_fragment_unit_scores(f, scenario=scenario)
 
+    '''
+    if self.db.is_elementary(fragment.flow):
+        cfs = self.db.factors_for_flow(fragment.term.term_flow, [l for l in self[0].lcia_methods()])
+        fragment.term.flowdb_results(LciaResult.from_cfs(fragment, cfs))
+    '''
+
     def compute_fragment_unit_scores(self, fragment, scenario=None):
+        """
+        lcia gets run as: lcia(self.term_node, self.term_flow, q_run)
+        for background or default: x = fragment
+        :param fragment:
+        :param scenario:
+        :return:
+        """
         term = fragment.termination(scenario)
         l_methods = [q for q in self[0].lcia_methods()]
         if fragment.is_background:
             def lcia(x, y, z):
                 return self.bg_lcia(x, ref_flow=y, quantities=z)
+        elif term.is_fg:
+            def lcia(x, y, z):
+                return LciaResult.from_cfs(x, self.db.factors_for_flow(y, z))
         else:
             def lcia(x, y, z):
                 return self.fg_lcia(x, ref_flow=y, quantities=z, scenario=scenario)

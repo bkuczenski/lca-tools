@@ -28,12 +28,16 @@
       "index": 3
     },
     {
-      "source": "/data/GitHub/lca-tools-datafiles/catalogs/ecoinvent_3.2_undefined_xlsx.json.gz",
-      "nicknames": [
-        "EI-U"
-      ],
       "dataSourceType": "JSON",
-      "index": 4
+      "index": 4,
+      "nicknames": [
+        "EI_U"
+      ],
+      "parameters": {
+        "data_dir": "/data/LCI/Ecoinvent/3.2",
+        "model": "undefined"
+      },
+      "source": "/data/GitHub/lca-tools-datafiles/catalogs/ecoinvent_3.2_undefined_xlsx.json.gz"
     },
     {
       "source": "/data/GitHub/lca-tools-datafiles/catalogs/ecoinvent_3.2_apos_xlsx.json.gz",

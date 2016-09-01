@@ -234,6 +234,8 @@ class FlowTermination(object):
     def self_terminate(self, term_flow=None):
         self._process_ref = self._parent
         self.set_term_flow(term_flow)
+        self.clear_score_cache()
+        self._cached_ev = 1.0
 
     @property
     def index(self):
@@ -359,12 +361,12 @@ class FlowTermination(object):
         """
         if self.is_null:
             return
-        if self.term_node.entity_type == 'process':
-            q_run = []
-            for q in quantities:
-                if q.get_uuid() not in self._score_cache.keys():
-                    q_run.append(q)
-            if len(q_run) != 0:
+        q_run = []
+        for q in quantities:
+            if q.get_uuid() not in self._score_cache.keys():
+                q_run.append(q)
+        if len(q_run) != 0:
+            if self.is_fg or self.term_node.entity_type == 'process':
                 results = lcia(self.term_node, self.term_flow, q_run)
                 self._score_cache.update(results)
 

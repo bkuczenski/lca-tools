@@ -358,6 +358,8 @@ def pick_compartment(compartment):
             return compartment
         print('subcompartments of %s:' % compartment)
         c = _pick_list(subs, 'Keep "%s"' % compartment)
+        if c[0] is None:
+            sub = compartment
     return sub
 
 

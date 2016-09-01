@@ -2,6 +2,7 @@
 from lcatools.providers.base import LcArchive
 from lcatools.foreground.fragment_flows import LcFragment
 from lcatools.exchanges import comp_dir
+from lcatools.interact import ifinput
 import json
 import os
 import re
@@ -183,7 +184,8 @@ class ForegroundArchive(LcArchive):
 
     def fragments(self, background=None, **kwargs):
         if background is not None:
-            return [f for f in self._fragments(**kwargs) if f.is_background == background]
+            return sorted([f for f in self._fragments(**kwargs) if f.is_background == background],
+                          key=lambda x: x.term.is_null)
         return sorted([f for f in self._fragments(**kwargs)], key=lambda x: x.is_background)
 
     def add_child_fragment_flow(self, ff, flow, direction, **kwargs):
@@ -192,7 +194,7 @@ class ForegroundArchive(LcArchive):
 
         return f
 
-    def add_child_ff_from_exchange(self, ff, exchange):
+    def add_child_ff_from_exchange(self, ff, exchange, **kwargs):
         """
         Uses a process intermediate exchange to define a child flow to the process.  If the exchange's termination
         is non-null, then the child exchange will also be terminated.
@@ -204,7 +206,7 @@ class ForegroundArchive(LcArchive):
         try:
             bg = next(f for f in self.fragments(background=True) if f.term.terminates(exchange))
             f = LcFragment.new(exchange.flow['Name'], exchange.flow, exchange.direction,
-                               parent=ff, exchange_value=exchange.value)
+                               parent=ff, exchange_value=exchange.value, **kwargs)
             f.terminate(bg)
         except StopIteration:
             f = LcFragment.from_exchange(ff, exchange)
@@ -255,6 +257,33 @@ class ForegroundArchive(LcArchive):
 
             fragments.extend(j['fragments'])
         self._do_load(catalog, fragments)
+
+    def _find_cfs(self, quantity):
+        for f in self.flows():
+            if f.has_characterization(quantity):
+                yield f
+
+    def del_quantity(self, quantity):
+        """
+        This will remove all characterizations for a quantity, and then delete the quantity
+        :param quantity:
+        :return:
+        """
+        print('Flows characterized by the quantity:')
+        count = False
+        for f in self._find_cfs(quantity):
+            count = True
+            print('%s' % f)
+            if quantity is f.reference_entity:
+                print('   *** reference quantity *** %s' % f.get_uuid())
+        if count:
+            if ifinput('Really delete this quantity? y/n', 'y') != 'y':
+                print('Aborted.')
+                return
+        for f in self._find_cfs(quantity):
+            f.del_characterization(quantity)
+        self._entities.pop(quantity._uuid)
+        print('Deleted from foreground.')
 
     def del_orphans(self, for_real=False):
         """

@@ -53,7 +53,7 @@ class ForegroundManager(object):
 
     The interface subclass provides UI for these activities
     """
-    def __init__(self, fg_dir, cfs=None, force_create_new=False):
+    def __init__(self, fg_dir, cat_file=None, cfs=None, force_create_new=False):
 
         import time
         t0 = time.time()
@@ -64,7 +64,8 @@ class ForegroundManager(object):
 
         else:
             self._ensure_foreground(fg_dir, force_create_new=force_create_new)
-            cat_file = os.path.join(fg_dir, 'catalog.json')
+            if cat_file is None:
+                cat_file = os.path.join(fg_dir, 'catalog.json')
             if os.path.exists(cat_file):
                 self._catalog = CatalogInterface.new(fg_dir=fg_dir, catalog_file=cat_file)
             else:
@@ -344,6 +345,29 @@ class ForegroundManager(object):
     def lcia_methods(self):
         return [q for q in self[0].lcia_methods()]
 
+    def _rename_stage(self, frag, old, new):
+        if frag['StageName'] == old:
+            frag['StageName'] = new
+        for x in self.child_flows(frag):
+            self._rename_stage(x, old, new)
+
+    def rename_stage(self, old_name, new_name, fragment=None):
+        """
+        Change the name of a stage everywhere it appears. By default, searches through all foreground fragments.
+        you may also specify a single fragment, in which case it will apply only to that fragment and its descendents.
+        :param old_name:
+        :param new_name:
+        :param fragment:
+        :return:
+        """
+        if fragment is not None:
+            fragments = (fragment)
+        else:
+            fragments = self[0].fragments(background=False)
+        for f in fragments:
+            self._rename_stage(f, old_name, new_name)
+
+
     def fg_lcia(self, process_ref, quantities=None, dist=1, scenario=None, **kwargs):
         """
         :param process_ref:
@@ -369,7 +393,7 @@ class ForegroundManager(object):
             qs = [quantities]
         else:
             qs = quantities
-        results = dict()
+        results = LciaResults(process_ref.entity())
         for q in qs:
             if not isinstance(q, LcQuantity):
                 q = q.entity()
@@ -451,18 +475,17 @@ class ForegroundManager(object):
     def _show_frag_children(self, frag, level=0):
         level += 1
         for k in self.child_flows(frag):
-            print('%s%s' % (' ' * level, k))
+            print('%s%s' % ('  ' * level, k))
             self._show_frag_children(k, level)
 
-    def show_fragments(self, show_all=False, **kwargs):
+    def show_fragments(self, show_all=False, background=False, **kwargs):
         """
 
         :param background:
         :param show_all:
-        :param match: a regex to test against the fragment name
         :return:
         """
-        for f in self[0].fragments(show_all=False, **kwargs):
+        for f in self[0].fragments(show_all=False, background=background, **kwargs):
             print('%s' % f)
             if show_all:
                 self._show_frag_children(f)
@@ -540,7 +563,8 @@ class ForegroundManager(object):
         children = []
         if term.term_node.entity_type == 'process':
             for elem in self.gen_elem(term.term_node, term.term_flow):
-                child = self[0].add_child_ff_from_exchange(fragment, elem)
+                child = self[0].add_child_ff_from_exchange(fragment, elem, Name=str(fragment.flow),
+                                                           StageName='direct emission')
                 child.term.self_terminate()
                 children.append(child)
         term.self_terminate()
@@ -753,12 +777,12 @@ class ForegroundManager(object):
         for cf in frag.flow.characterizations():
             if cf.value is not None:
                 if frag.direction == 'Input':  # output from term
-                    qs[cf.quantity] -= 1.0
+                    qs[cf.quantity] -= cf.value
                 else:
-                    qs[cf.quantity] += 1.0
+                    qs[cf.quantity] += cf.value
         for c in self.child_flows(frag):
             for cf in c.flow.characterizations():
-                mag = c.exchange_value(scenario, observed=observed) * cf.value
+                mag = c.exchange_value(scenario, observed=observed) * (cf.value or 0.0)
                 if mag != 0:
                     if c.direction == 'Output':
                         qs[cf.quantity] -= mag

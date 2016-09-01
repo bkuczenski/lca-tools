@@ -145,6 +145,9 @@ class AggregateLciaScore(object):
             raise DuplicateResult()
         self.LciaDetails.add(d)
 
+    def show(self, **kwargs):
+        self.show_detailed_result(**kwargs)
+
     def show_detailed_result(self, key=lambda x: x.result, show_all=False):
         for d in sorted(self.LciaDetails, key=key, reverse=True):
             if d.result != 0 or show_all:
@@ -153,7 +156,7 @@ class AggregateLciaScore(object):
         print('             Total score: %g ' % self.cumulative_result)
 
     def __str__(self):
-        return '%s %s' % (number(self.cumulative_result), self.entity)
+        return '%s  %s' % (number(self.cumulative_result), self.entity)
 
 
 def show_lcia(lcia_results):
@@ -205,6 +208,9 @@ class LciaResult(object):
         self.scenario = scenario
         self._LciaScores = dict()
         self._private = private
+
+    def __getitem__(self, item):
+        return next(c for c in self._LciaScores.values() if str(c.entity).startswith(item))
 
     '''
     def __getitem__(self, item):
@@ -278,16 +284,17 @@ class LciaResult(object):
         print('%s %s' % (self.quantity, self.quantity.reference_entity.unitstring()))
         print('-' * 60)
 
+    def show(self):
+        self._header()
+        print('%s' % self)
+
     def show_components(self):
         self._header()
-        out = []
         if not self._private:
             for v in sorted(self._LciaScores.values(), key=lambda x: x.cumulative_result, reverse=True):
-                print('%2d %s' % (len(out), v))
-                out.append(v.entity)
-            print('   ==========')
-        print('   %s' % self)
-        return out
+                print('%s' % v)
+            print('==========')
+        print('%s' % self)
 
     def show_details(self, key=None, **kwargs):
         self._header()
@@ -337,9 +344,9 @@ class LciaResults(dict):
 
     def show(self):
         print('LCIA Results\n%s\n%s' % (self.entity, '-' * 60))
-        for i in range(len(self._indices)):
-            r = self[self._indices[i]]
-            print('%2d %10.5g %s' % (i, r.total(), r.quantity))
+        for i, q in enumerate(self._indices):
+            r = self[q]
+            print('[%2d] %.3s  %10.5g %s' % (i, q, r.total(), r.quantity))
 
     def clear(self):
         super(LciaResults, self).clear()

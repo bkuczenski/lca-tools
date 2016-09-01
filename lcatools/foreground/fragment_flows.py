@@ -144,17 +144,7 @@ class FlowTermination(object):
         self.descend = descend
         self.set_term_flow(term_flow)
         self._set_inbound_ev(inbound_ev)
-        try:
-            self.flow_conversion
-        except FlowConversionError:
-            print('Provide conversion factor %s (fragment) to %s (termination)' % (self._parent.flow.unit(),
-                                                                                   self.term_flow.unit()))
-            cf = parse_math(input('Enter conversion factor: '))
-            self._parent.flow.add_characterization(self.term_flow.reference_entity, value=cf)
-
-            # this is surely a hack!
-            self._process_ref.catalog[0].add(self.term_flow.reference_entity)
-            # funny, it doesn't look like that bad of a hack.
+        self.validate_flow_conversion()
 
     def update(self, process_ref, direction=None, term_flow=None, descend=None, inbound_ev=None):
         self._process_ref = process_ref
@@ -165,6 +155,7 @@ class FlowTermination(object):
         self.set_term_flow(term_flow)
         self._score_cache = LciaResults(self._parent)
         self._set_inbound_ev(inbound_ev)
+        self.validate_flow_conversion()
 
     def matches(self, exchange):
         """
@@ -261,6 +252,22 @@ class FlowTermination(object):
         if self._parent.flow.cf(tgt_qty) == 0:
             raise FlowConversionError('Missing cf for %s' % tgt_qty)
         return self._parent.flow.convert(1.0, to=tgt_qty)
+
+    def validate_flow_conversion(self):
+        try:
+            a = self.flow_conversion
+            if a == 42:
+                print('you are so lucky!')
+        except FlowConversionError:
+            print('Flow %s ' % self._parent.flow)
+            print('Provide conversion factor %s (fragment) to %s (termination)' % (self._parent.flow.unit(),
+                                                                                   self.term_flow.unit()))
+            cf = parse_math(input('Enter conversion factor: '))
+            self._parent.flow.add_characterization(self.term_flow.reference_entity, value=cf)
+
+            # this is surely a hack!
+            self._process_ref.catalog[0].add(self.term_flow.reference_entity)
+            # funny, it doesn't look like that bad of a hack.
 
     def _set_inbound_ev(self, inbound_ev):
         if self.is_fg:
@@ -620,12 +627,10 @@ class LcFragment(LcEntity):
                 re = ' ** ref'
         else:
             re = self.reference_entity.get_uuid()[:7]
-        return '(%s) %s %s %s %s  [%s] %s' % (re, self.dirn, self.get_uuid()[:7], self.dirn, self.term,
-                                              self.term.unit, self['Name'])
+        return '(%s) %s %.5s %s %s  [%s] %s' % (re, self.dirn, self.get_uuid(), self.dirn, self.term,
+                                                self.term.unit, self['Name'])
 
-    def show_tree(self, childflows, prefix='', enum=None, scenario=None, observed=False):
-        if enum is None:
-            enum = []
+    def show_tree(self, childflows, prefix='', scenario=None, observed=False):
         dirn = {
             'Input': '-<-',
             'Output': '=>='
@@ -635,26 +640,35 @@ class LcFragment(LcEntity):
         if len(children) > 0 and self.term.is_null:
             raise InvalidParentChild('null-terminated fragment %.7s has children' % self.get_uuid())
 
-        print('%2d %s%s%s %.5s (%7.3g %s)%s %s' % (len(enum), prefix, dirn, self.term, self.get_uuid(),
-                                                   self.exchange_value(scenario, observed=observed) or 0.0,
-                                                   self.flow.unit(),
-                                                   self._mod(scenario),
-                                                   self['Name']))
-        enum.append(self)
-        prefix += '    | '
+        delim = '()'
+        if self.observed_ev != 0.0:
+            delim = '[]'
+        if not(observed and self.observed_ev == 0.0):
+            # when doing the observed mode, don't print zero results
+            print('   %s%s%s %.5s %s%7.3g %s%s%s %s' % (prefix, dirn, self.term, self.get_uuid(),
+                                                        delim[0],
+                                                        self.exchange_value(scenario, observed=observed) or 0.0,
+                                                        self.flow.unit(),
+                                                        delim[1],
+                                                        self._mod(scenario),
+                                                        self['Name']))
+        # print fragment reference
         latest_stage = ''
-        for c in sorted(children, key=lambda x: (x['StageName'], not x.term.is_null, x.term.is_bg)):
-            if c['StageName'] != latest_stage:
-                latest_stage = c['StageName']
-                print('   %s Stage: %s' % (prefix, latest_stage))
-            enum = c.show_tree(childflows, prefix=prefix, enum=enum, scenario=scenario, observed=observed)
         if len(children) > 0:
+            print('   %s [%s] %s' % (prefix, self.term.unit, self['Name']))
+            prefix += '    | '
+            for c in sorted(children, key=lambda x: (x['StageName'], not x.term.is_null, x.term.is_bg)):
+                if c['StageName'] != latest_stage:
+                    latest_stage = c['StageName']
+                    print('   %s %5s Stage: %s' % (prefix, ' ', latest_stage))
+                c.show_tree(childflows, prefix=prefix, scenario=scenario, observed=observed)
             prefix = prefix[:-3] + ' x '
             print('   %s' % prefix)
-        return enum
 
     @property
     def cached_ev(self):
+        if self.reference_entity is None:
+            return 1.0
         return self._exchange_values[0]
 
     @cached_ev.setter
@@ -665,6 +679,8 @@ class LcFragment(LcEntity):
 
     @property
     def observed_ev(self):
+        if self.reference_entity is None:
+            return 1.0
         return self._exchange_values[1]
 
     @observed_ev.setter
@@ -903,6 +919,12 @@ class LcFragment(LcEntity):
         if _balance is None:
             magnitude = upstream_nw * self.exchange_value(scenario, observed=observed)
         else:
+            # balance reports net inflows; positive value is more coming in than out
+            # if I am an input, my exchange must be the negative of the balance
+            # if I am an output, my exchange must equal the balance
+            if self.direction == 'Input':
+                _balance *= -1
+            # print('%.3s %g balance' % (self.get_uuid(), _balance))
             magnitude = upstream_nw * _balance
             self._cache_balance_ev(_balance, scenario)
 
@@ -916,6 +938,7 @@ class LcFragment(LcEntity):
                 conserved = True
             if self.direction == 'Output':  # convention: inputs to parent are positive
                 conserved_val *= -1
+            # print('%.3s %g' % (self.get_uuid(), conserved_val))
 
         node_weight = self.node_weight(magnitude, scenario)
         term = self.termination(scenario)
@@ -1084,7 +1107,7 @@ class FragmentFlow(object):
             term = '--:'
         else:
             term = '-# '
-        return '%.7s %10.3g [%6s] %s %s' % (self.fragment.get_uuid(), self.magnitude, self.fragment.direction,
+        return '%.5s  %10.3g [%6s] %s %s' % (self.fragment.get_uuid(), self.magnitude, self.fragment.direction,
                                             term, self.fragment['Name'])
 
     def to_antelope(self, fragmentID, stageID):

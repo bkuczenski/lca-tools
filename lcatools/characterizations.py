@@ -97,13 +97,13 @@ class Characterization(object):
         else:
             ref = ' | '
         if self.value is not None:
-            return '%10.3g %s == %s%s%s' % (self.value, self.quantity.reference_entity.unitstring(),
-                                            self.flow.reference_entity.reference_entity.unitstring(), ref,
-                                            self.quantity)
+            return '%10.3g %20.20s == %s%s%s' % (self.value, self.quantity.reference_entity.unitstring(),
+                                                 self.flow.reference_entity.reference_entity.unitstring(), ref,
+                                                 self.quantity)
         else:
-            return '%10s %s == %s%s%s' % (' ', self.quantity.reference_entity.unitstring(),
-                                          self.flow.reference_entity.reference_entity.unitstring(), ref,
-                                          self.quantity)
+            return '%10s %20.20s == %s%s%s' % (' ', self.quantity.reference_entity.unitstring(),
+                                               self.flow.reference_entity.reference_entity.unitstring(), ref,
+                                               self.quantity)
 
     def tupleize(self):
         return self.flow.get_uuid(), self.quantity.get_uuid()

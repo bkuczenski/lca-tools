@@ -36,6 +36,10 @@ class MultipleReferencesFound(Exception):
     pass
 
 
+class DeleteReference(Exception):
+    pass
+
+
 class LcEntity(object):
     """
     All LC entities behave like dicts, but they all have some common properties, defined here.
@@ -637,6 +641,11 @@ class LcFlow(LcEntity):
             if location in self._characterizations[quantity.get_uuid()].locations():
                 return True
         return False
+
+    def del_characterization(self, quantity):
+        if quantity is self.reference_entity:
+            raise DeleteReference('Cannot delete reference quantity')
+        self._characterizations.pop(quantity.get_uuid())
 
     def characterizations(self):
         for i in self._characterizations.values():

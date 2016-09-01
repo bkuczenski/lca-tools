@@ -4,6 +4,7 @@ from lcatools.providers.base import LcArchive, NsUuidArchive
 from lcatools.entities import LcProcess, LcFlow, LcQuantity
 from lcatools.providers.ecospold2 import EcospoldV2Archive
 from lcatools.interact import pick_reference
+from lcatools.lcia_results import LciaResults
 
 from lcatools.from_json import from_json
 
@@ -41,18 +42,19 @@ class EcoinventSpreadsheet(NsUuidArchive):
         self._model = model
         self.fg = None
         self.bg = None
-        self.lci = None
+        self.lcia = None
         if self._data_dir is not None:
             if model == 'undefined':
                 self.fg = EcospoldV2Archive(self._fg_filename, prefix='datasets - public')
             else:
                 self.fg = EcospoldV2Archive(self._fg_filename, prefix='datasets')
-                self.bg = EcospoldV2Archive(self._bg_filename, prefix='datasets')
-                if os.path.exists(self._lci_filename):
-                    print('Accessing LCI from %s' % self._lci_filename)
-                    self.lci = LcArchive(self._lci_cache)
-                    if os.path.exists(self._lci_cache):
-                        self.lci.load_json(from_json(self._lci_cache))
+                if os.path.exists(self._bg_filename):
+                    print('BG: Accessing LCI from %s' % self._bg_filename)
+                self.bg = LcArchive(self._lci_cache)
+                if os.path.exists(self._lci_cache):
+                    self.bg.load_json(from_json(self._lci_cache))
+                if os.path.exists(self._lcia_validate_filename):
+                    self.lcia = EcospoldV2Archive(self._lcia_validate_filename, prefix='datasets')
 
     @property
     def _fg_filename(self):
@@ -65,7 +67,7 @@ class EcoinventSpreadsheet(NsUuidArchive):
             return fn
 
     @property
-    def _bg_filename(self):
+    def _lcia_validate_filename(self):
         if self._data_dir is None:
             raise AttributeError('No data directory')
         else:
@@ -75,7 +77,7 @@ class EcoinventSpreadsheet(NsUuidArchive):
             return fn
 
     @property
-    def _lci_filename(self):
+    def _bg_filename(self):
         if self._data_dir is None:
             raise AttributeError('No data directory')
         else:
@@ -96,17 +98,17 @@ class EcoinventSpreadsheet(NsUuidArchive):
             self.fg.retrieve_or_fetch_entity(ds)
         return self.fg[proxy]
 
-    def lci_proxy(self, proxy):
+    def bg_proxy(self, proxy):
         print('Performing LCI lookup -- this is slow because of 7z')
         # re-instantiate each time to avoid out-of-memory errors
-        lci = EcospoldV2Archive(self._lci_filename, prefix='datasets')
+        lci = EcospoldV2Archive(self._bg_filename, prefix='datasets')
         for ds in lci.list_datasets(proxy):
             print('retrieving %s' % ds)
             lci.retrieve_or_fetch_entity(ds)
         return lci[proxy]
 
-    def bg_proxy(self, proxy):
-        for ds in self.bg.list_datasets(proxy):
+    def lcia_validation_proxy(self, proxy):
+        for ds in self.lcia.list_datasets(proxy):
             self.bg.retrieve_or_fetch_entity(ds)
         return self.bg[proxy]
 
@@ -140,6 +142,7 @@ class EcoinventSpreadsheet(NsUuidArchive):
             else:
                 return p.allocated_exchanges(rf)
 
+    '''
     def lci_lookup(self, process_id):
         if self.lci is None:
             print('No LCI data')
@@ -150,12 +153,14 @@ class EcoinventSpreadsheet(NsUuidArchive):
             self.lci.write_to_file(self._lci_cache, gzip=True, exchanges=True, values=True)
             print('LCI: %s' % p)
             return p
+    '''
 
     def bg_lookup(self, process_id, ref_flow=None, reference=None, quantities=None, scenario=None, flowdb=None):
         """
         now with fallback to LCI lookup!
         :param process_id:
         :param ref_flow:
+        :param reference:
         :param quantities:
         :param scenario:
         :param flowdb:
@@ -163,10 +168,9 @@ class EcoinventSpreadsheet(NsUuidArchive):
         """
         if self.bg is None:
             print('No background')
-            missing_q = quantities
-            lcia = dict()
-            rf = ref_flow
+            return super(EcoinventSpreadsheet, self).bg_lookup(process_id)
         else:
+            '''
             p = self.bg_proxy(process_id)
             rf = self._find_rf(p, ref_flow=ref_flow)
             lcia = self.bg.retrieve_lcia_scores('_'.join([process_id, rf.get_uuid()]) + '.spold',
@@ -175,15 +179,34 @@ class EcoinventSpreadsheet(NsUuidArchive):
             for q in quantities:
                 if q.get_uuid() not in lcia.keys():
                     missing_q.append(q)
-
         if len(missing_q) > 0:
-            lci = self.lci[process_id]
+            '''
+            lci = self.bg[process_id]
             if lci is None:
-                lci = self.lci_lookup(process_id)
-            rf = self._find_rf(lci, ref_flow=rf)
-            for q in missing_q:
+                lci = self.bg_proxy(process_id)
+                self.bg.add_entity_and_children(lci)
+                print('LCI: %s' % lci)
+            if ref_flow is None:
+                ref_flow = lci.find_reference(reference)
+            rf = self._find_rf(lci, ref_flow=ref_flow)
+            lcia = LciaResults(lci)
+            for q in quantities:
+                self.bg.add_entity_and_children(q)
                 lcia[q.get_uuid()] = lci.lcia(q, ref_flow=rf, scenario=scenario, flowdb=flowdb)
+            self.bg.write_to_file(self._lci_cache, gzip=True, exchanges=True, values=True, characterizations=True)
         return lcia
+
+    def lcia_lookup(self, process_id, ref_flow=None, reference=None, quantities=None):
+        if self.lcia is None:
+            print('No LCIA validation data')
+            return dict()
+        else:
+            p = self.lcia_validation_proxy(process_id)
+            if ref_flow is None:
+                ref_flow = p.find_reference(reference)
+            rf = self._find_rf(p, ref_flow=ref_flow)
+            return self.lcia.retrieve_lcia_scores('_'.join([process_id, rf.get_uuid()]) + '.spold',
+                                                  quantities=quantities)
 
     def _create_quantity(self, unitstring):
         """

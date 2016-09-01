@@ -74,6 +74,10 @@ class ForegroundBuilder(ForegroundManager):
             if index is None:
                 index = self.current_archive or select_archive(self)
             terms = self._catalog.terminate_fragment(index, ref)
+        elif isinstance(ref, Exchange):
+            if index is None:
+                index = self.current_archive or select_archive(self)
+            terms = self._catalog.terminate_flow(self.ref(index, ref.flow), comp_dir(ref.direction))
         else:
             if direction is None:
                 direction = {'i': 'Input', 'o': 'Output'}[cyoa('(I)nput or (O)utput?', 'IO').lower()]
@@ -115,8 +119,8 @@ class ForegroundBuilder(ForegroundManager):
     def curate_stages(self, frag, stage_names=None):
         def _recurse_stages(f):
             stages = [f['StageName']]
-            for c in self.child_flows(f):
-                stages.extend(_recurse_stages(c))
+            for m in self.child_flows(f):
+                stages.extend(_recurse_stages(m))
             return stages
 
         if stage_names is None:

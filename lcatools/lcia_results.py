@@ -187,9 +187,10 @@ class LciaResult(object):
         results = LciaResults(fragment)
         exch = ExchangeValue(fragment, fragment.flow, fragment.direction, value=1.0)
         for q, cf in cfs.items():
-            results[q] = cls(cf.quantity, scenario=scenario)
-            results[q].add_component(fragment.get_uuid(), entity=fragment)
-            results[q].add_detailed_result(exch, cf, location)
+            if isinstance(cf, Characterization):
+                results[q] = cls(cf.quantity, scenario=scenario)
+                results[q].add_component(fragment.get_uuid(), entity=fragment)
+                results[q].add_score(fragment.get_uuid(), exch, cf, location)
 
         return results
 

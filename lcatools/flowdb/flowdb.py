@@ -77,14 +77,14 @@ class CLookup(object):
     def compartments(self):
         return self._dict.keys()
 
-    def find(self, item, dist=1, return_first=True):
+    def find(self, item, dist=3, return_first=True):
         """
         Hunt for a matching compartment. 'dist' param controls the depth of search:
           dist = 0: equivalent to __getitem__
           dist = 1: also check compartment's children
           dist = 2: also check compartment's parent
           dist = 3: also check compartment's siblings
-        By default (dist==1), checks compartment self and children, parent, and siblings. Returns a set.
+        By default (dist==3), checks compartment self and children, parent, and siblings. Returns a set.
         :param item: a Compartment
         :param dist: how far to search (with limits) (default: 1= compartment + children)
         :param return_first: stop hunting as soon as a cf is found
@@ -348,7 +348,7 @@ class FlowDB(object):
                 missing_flows.append(k)
         return missing_flows
 
-    def lookup_cfs(self, flow, quantity, dist=1):
+    def lookup_cfs(self, flow, quantity, dist=3):
         cfs = set()
         flowables, comp = self.parse_flow(flow)
         q = quantity.get_uuid()
@@ -397,7 +397,7 @@ class FlowDB(object):
         print('All characterizations have the same value- picking first one')
         return list(cfs)[0]
 
-    def lookup_single_cf(self, flow, quantity, location='GLO', dist=1):
+    def lookup_single_cf(self, flow, quantity, location='GLO', dist=3):
         cfs = self.lookup_cfs(flow, quantity, dist=dist)
         if location == '':
             location = 'GLO'

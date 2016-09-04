@@ -580,7 +580,7 @@ class LcFlow(LcEntity):
                 self.add_characterization(self.reference_entity, reference=True, value=self._ref_quantity_factor)
 
     def unit(self):
-        return self.reference_entity.reference_entity.unitstring()
+        return self.reference_entity.unit()
 
     def set_local_unit(self, factor):
         self._ref_quantity_factor = factor
@@ -714,6 +714,9 @@ class LcQuantity(LcEntity):
 
     def __init__(self, entity_uuid, **kwargs):
         super(LcQuantity, self).__init__('quantity', entity_uuid, **kwargs)
+
+    def unit(self):
+        return self.reference_entity.unitstring()
 
     def is_lcia_method(self):
         return 'Indicator' in self.keys()

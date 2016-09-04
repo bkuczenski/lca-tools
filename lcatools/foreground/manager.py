@@ -11,7 +11,7 @@ from lcatools.entities import LcQuantity, LcFlow
 from lcatools.flowdb.flowdb import FlowDB
 from lcatools.lcia_results import LciaResult, LciaResults, InconsistentQuantity
 from lcatools.foreground.dynamic_grid import dynamic_grid
-from lcatools.interact import pick_reference, ifinput, pick_one, pick_compartment
+from lcatools.interact import pick_reference, ifinput, pick_one, pick_compartment, parse_math
 
 MANIFEST = ('catalog.json', 'entities.json', 'fragments.json', 'flows.json')
 
@@ -236,19 +236,6 @@ class ForegroundManager(object):
             f = flowables.pop()
             self.db.cfs_for_flowable(f, **kwargs)
 
-    def new_flow(self):
-        name = input('Enter flow name: ')
-        cas = ifinput('Enter CAS number (or none): ', '')
-        print('Choose reference quantity: ')
-        q = pick_one(self._catalog[0].quantities())
-        comment = input('Enter comment: ')
-        print('Choose compartment:')
-        c = pick_compartment(self.db.compartments)
-        flow = LcFlow.new(name, q, CasNumber=cas, Compartment=c.to_list(), Comment=comment)
-        # flow.add_characterization(q, reference=True)
-        self._catalog[0].add(flow)
-        return flow
-
     # inspection methods
     def gen_exchanges(self, process_ref, ref_flow, direction):
         """
@@ -345,6 +332,11 @@ class ForegroundManager(object):
     def lcia_methods(self):
         return [q for q in self[0].lcia_methods()]
 
+    @property
+    def flow_properties(self):
+        ls = set([q.get_uuid() for q in self.lcia_methods])
+        return [q for q in self[0].quantities() if q.get_uuid() not in ls]
+
     def _rename_stage(self, frag, old, new):
         if frag['StageName'] == old:
             frag['StageName'] = new
@@ -361,12 +353,11 @@ class ForegroundManager(object):
         :return:
         """
         if fragment is not None:
-            fragments = (fragment)
+            fragments = [fragment]
         else:
             fragments = self[0].fragments(background=False)
         for f in fragments:
             self._rename_stage(f, old_name, new_name)
-
 
     def fg_lcia(self, process_ref, quantities=None, dist=1, scenario=None, **kwargs):
         """
@@ -505,6 +496,32 @@ class ForegroundManager(object):
         self.balance(fragment, scenario=scenario, observed=observed)
         return fs
 
+    def observe(self, fragment, scenario=None):
+        print('%s' % fragment)
+        if scenario is None:
+            print('{Observing for model reference}\n')
+            prompt = 'Observed value'
+        else:
+            print('{Observing for scenario "%s"}' % scenario)
+            prompt = 'Scenario value'
+
+        for c in self.child_flows(fragment):
+            print('%s' % c)
+            print(' Cached EV: %6.4g\n Observed EV: %6.4g [%s]' % (c.cached_ev, c.observed_ev, c.flow.unit()))
+            if scenario is None:
+                string_ev = '%10g' % c.observed_ev
+            else:
+                string_ev = '%10g' % c.exchange_value(scenario)
+                print(' Scenario EV: %s [%s]' % (string_ev,
+                                                 c.flow.unit()))
+            val = ifinput('%s: ' % prompt, string_ev)
+            if val != string_ev:
+                new_val = parse_math(val)
+                if scenario is None:
+                    c.observed_ev = new_val
+                else:
+                    c.set_exchange_value(scenario, new_val)
+
     def child_flows(self, fragment):
         """
         This is a lambda method used during traversal in order to generate the child fragment flows from
@@ -539,14 +556,6 @@ class ForegroundManager(object):
             fragment.term_from_exch(term_exch, scenario=scenario)
             self.build_child_flows(fragment, scenario=scenario)
     '''
-
-    def new_fragment(self, flow, direction, termination=None, **kwargs):
-        if isinstance(flow, CatalogRef):
-            flow = flow.entity()
-        frag = self[0].create_fragment(flow, direction, **kwargs)
-        if termination is not None:
-            frag.terminate(termination)  # None scenario
-        return frag
 
     def terminate_to_foreground(self, fragment, scenario=None):
         """
@@ -626,12 +635,14 @@ class ForegroundManager(object):
         frag_exchs = []
         for k, v in accum.items():
             val = abs(v) / in_ex
-            if v < 0:
+            if v == 0:
+                continue
+            elif v < 0:
                 dirn = comp_dir(ref_dir)
             else:
                 dirn = ref_dir
             frag_exchs.append(ExchangeValue(fragment, ent[k], dirn, value=val))
-        return frag_exchs
+        return sorted(frag_exchs, key=lambda x: x.direction)
 
     def build_child_flows(self, fragment, scenario=None, background_children=False):
         """
@@ -770,6 +781,8 @@ class ForegroundManager(object):
             fragment.terminate(bg.term.term_node, flow=bg.term.term_flow, direction=bg.term.direction)
             self.build_child_flows(fragment, background_children=background_children)
             return fragment
+        elif fragment.term.is_null:
+            fragment.term.self_terminate()
         return fragment  # nothing to do
 
     def balance(self, frag, scenario=None, observed=False):
@@ -792,6 +805,33 @@ class ForegroundManager(object):
         for k, v in qs.items():
             print('%10.4g %s' % (v, k))
         return qs
+
+    def show_balance(self, frag, quantity=None, scenario=None, observed=False):
+        def _p_line(f, m):
+            try:
+                # will fail if m is None or non-number
+                print(' %+10.4g  %6s  %.5s %s' % (m, comp_dir(f.direction), f.get_uuid(), f['Name']))
+            finally:
+                pass
+        if quantity is None:
+            quantity = frag.flow.reference_entity
+
+        mag = frag.flow.cf(quantity)
+        if frag.direction == 'Input':
+            mag *= -1
+
+        net = mag
+
+        _p_line(frag, mag)
+
+        for c in self.child_flows(frag):
+            mag = c.exchange_value(scenario, observed=observed) * c.flow.cf(quantity)
+            if c.direction == 'Output':
+                mag *= -1
+            _p_line(c, mag)
+            net += mag
+
+        print('----------\n %+10.4g net' % net)
 
     @staticmethod
     def profile(flow):

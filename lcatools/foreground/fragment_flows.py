@@ -10,20 +10,7 @@ from lcatools.exchanges import comp_dir, ExchangeValue, AllocatedExchange
 from lcatools.characterizations import Characterization
 from lcatools.literate_float import LiterateFloat
 from lcatools.lcia_results import LciaResult, LciaResults
-from lcatools.interact import pick_one
-
-import ast
-
-
-def parse_math(expression):
-    try:
-        tree = ast.parse(expression, mode='eval')
-    except SyntaxError:
-        return    # not a Python expression
-    if not all(isinstance(node, (ast.Expression, ast.UnaryOp, ast.unaryop, ast.BinOp, ast.operator, ast.Num))
-               for node in ast.walk(tree)):
-        return    # not a mathematical expression (numbers and operators)
-    return eval(compile(tree, filename='', mode='eval'))
+from lcatools.interact import pick_one, parse_math
 
 
 class InvalidParentChild(Exception):
@@ -631,11 +618,6 @@ class LcFragment(LcEntity):
                                                 self.term.unit, self['Name'])
 
     def show_tree(self, childflows, prefix='', scenario=None, observed=False):
-        dirn = {
-            'Input': '-<-',
-            'Output': '=>='
-        }[self.direction]
-
         children = [c for c in childflows(self)]
         if len(children) > 0 and self.term.is_null:
             raise InvalidParentChild('null-terminated fragment %.7s has children' % self.get_uuid())
@@ -645,6 +627,11 @@ class LcFragment(LcEntity):
             delim = '[]'
         if not(observed and self.observed_ev == 0.0):
             # when doing the observed mode, don't print zero results
+            dirn = {
+                'Input': '-<-',
+                'Output': '=>='
+            }[self.direction]
+
             print('   %s%s%s %.5s %s%7.3g %s%s%s %s' % (prefix, dirn, self.term, self.get_uuid(),
                                                         delim[0],
                                                         self.exchange_value(scenario, observed=observed) or 0.0,
@@ -694,6 +681,7 @@ class LcFragment(LcEntity):
     def to_foreground(self):
         self._background = False
         for v in self._terminations.values():
+            v.term_
             v.clear_score_cache()
 
     def _match_scenario_ev(self, scenario):

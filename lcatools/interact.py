@@ -9,6 +9,19 @@ from eight import input
 
 from itertools import groupby
 
+import ast
+
+
+def parse_math(expression):
+    try:
+        tree = ast.parse(expression, mode='eval')
+    except SyntaxError:
+        return    # not a Python expression
+    if not all(isinstance(node, (ast.Expression, ast.UnaryOp, ast.unaryop, ast.BinOp, ast.operator, ast.Num))
+               for node in ast.walk(tree)):
+        return    # not a mathematical expression (numbers and operators)
+    return eval(compile(tree, filename='', mode='eval'))
+
 
 def ifinput(prompt, default):
     g = input('%s [%s]: ' % (prompt, default))

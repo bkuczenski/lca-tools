@@ -39,19 +39,24 @@ class ForegroundBuilder(ForegroundManager):
         self._catalog[0].add(q)
         return q
 
-    def new_flow(self):
-        name = input('Enter flow name: ')
-        cas = ifinput('Enter CAS number (or none): ', '')
-        print('Choose reference quantity or none to create new: ')
-        q = pick_one(self.flow_properties)
-        if q is None:
-            q = self.new_quantity()
-        comment = input('Enter flow comment: ')
-        print('Choose compartment:')
-        c = pick_compartment(self.db.compartments)
-        flow = LcFlow.new(name, q, CasNumber=cas, Compartment=c.to_list(), Comment=comment)
-        # flow.add_characterization(q, reference=True)
+    def new_flow(self, flow=None):
+        if flow is None:
+            name = input('Enter flow name: ')
+            cas = ifinput('Enter CAS number (or none): ', '')
+            print('Choose reference quantity or none to create new: ')
+            q = pick_one(self.flow_properties)
+            if q is None:
+                q = self.new_quantity()
+            comment = input('Enter flow comment: ')
+            print('Choose compartment:')
+            c = pick_compartment(self.db.compartments)
+            flow = LcFlow.new(name, q, CasNumber=cas, Compartment=c.to_list(), Comment=comment)
+            # flow.add_characterization(q, reference=True)
+        else:
+            q = flow.reference_entity
+
         self._catalog[0].add(flow)
+        flow.profile()
         while ifinput('Add characterizations for this flow? y/n', 'n') != 'n':
             ch = cyoa('[n]ew or [e]xisting quantity? ', 'en', 'e')
             if ch == 'n':
@@ -105,6 +110,7 @@ class ForegroundBuilder(ForegroundManager):
             # direction reversed for UX! user inputs direction w.r.t. fragment, not w.r.t. parent
             frag = self.new_fragment(flow, comp_dir(direction), Comment=comment)
         else:
+            self.terminate_to_foreground(parent)
             val = ifinput('Exchange value (%s per %s %s): ' % (flow.unit(), parent.flow.unit(), parent.flow['Name']),
                           '1.0')
             if val == '1.0':

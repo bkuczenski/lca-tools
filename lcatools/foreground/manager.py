@@ -120,6 +120,11 @@ class ForegroundManager(object):
     def save(self):
         self._catalog.save_foreground()
 
+    @property
+    def flows(self):
+        for f in sorted(self[0].flows(), key=lambda x: x['Name']):
+            print('%s' % f)
+
     def __getitem__(self, item):
         return self._catalog.__getitem__(item)
 
@@ -254,6 +259,15 @@ class ForegroundManager(object):
     def gen_elem(self, process_ref, ref_flow):
         for x in self.db.filter_exch(process_ref, elem=True, ref_flow=ref_flow):
             yield x
+
+    def inventory(self, node, **kwargs):
+        if node.entity_type == 'fragment':
+            print('%s' % node)
+            for x in self.get_fragment_inventory(node, **kwargs):
+                print(x)
+        else:
+            print('%s' % node.fg())
+            node.fg().inventory()
 
     def intermediate(self, process_ref, **kwargs):
         exch = self.db.filter_exch(process_ref, elem=False, **kwargs)
@@ -570,7 +584,9 @@ class ForegroundManager(object):
         """
         term = fragment.termination(scenario)
         children = []
-        if term.term_node.entity_type == 'process':
+        if term.is_fg:
+            return children
+        if (not term.is_null) and term.term_node.entity_type == 'process':
             for elem in self.gen_elem(term.term_node, term.term_flow):
                 child = self[0].add_child_ff_from_exchange(fragment, elem, Name=str(fragment.flow),
                                                            StageName='direct emission')
@@ -807,28 +823,30 @@ class ForegroundManager(object):
         return qs
 
     def show_balance(self, frag, quantity=None, scenario=None, observed=False):
-        def _p_line(f, m):
+        def _p_line(f, m, d):
             try:
                 # will fail if m is None or non-number
-                print(' %+10.4g  %6s  %.5s %s' % (m, comp_dir(f.direction), f.get_uuid(), f['Name']))
+                print(' %+10.4g  %6s  %.5s %s' % (m, d, f.get_uuid(), f['Name']))
             finally:
                 pass
         if quantity is None:
             quantity = frag.flow.reference_entity
 
+        print('%s' % quantity)
         mag = frag.flow.cf(quantity)
         if frag.direction == 'Input':
             mag *= -1
 
         net = mag
 
-        _p_line(frag, mag)
+        _p_line(frag, mag, comp_dir(frag.direction))
 
-        for c in self.child_flows(frag):
+        for c in sorted(self.child_flows(frag), key=lambda x: x.direction):
             mag = c.exchange_value(scenario, observed=observed) * c.flow.cf(quantity)
             if c.direction == 'Output':
                 mag *= -1
-            _p_line(c, mag)
+            if mag is None or mag != 0:
+                _p_line(c, mag, c.direction)
             net += mag
 
         print('----------\n %+10.4g net' % net)

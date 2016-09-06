@@ -65,3 +65,5 @@ lcatools/providers/web_cache/
 
 # pycharm config
 .idea/
+doc/tests/entities.json
+doc/tests/fragments.json

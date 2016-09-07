@@ -31,29 +31,32 @@ class ForegroundBuilder(ForegroundManager):
         super(ForegroundBuilder, self).__init__(*args, **kwargs)
         self.current_archive = None
 
-    def new_quantity(self):
-        name = input('Enter quantity name: ')
-        unit = input('Unit by string: ')
-        comment = ifinput('Quantity Comment: ', '')
+    def new_quantity(self, name=None, unit=None, comment=None):
+        name = name or input('Enter quantity name: ')
+        unit = unit or input('Unit by string: ')
+        comment = comment or ifinput('Quantity Comment: ', '')
         q = LcQuantity.new(name, unit, Comment=comment)
         self._catalog[0].add(q)
         return q
 
-    def new_flow(self, flow=None):
+    def new_flow(self, flow=None, name=None, cas=None, quantity=None, comment=None, compartment=None):
         if flow is None:
-            name = input('Enter flow name: ')
-            cas = ifinput('Enter CAS number (or none): ', '')
+            name = name or input('Enter flow name: ')
+            cas = cas or ifinput('Enter CAS number (or none): ', '')
             print('Choose reference quantity or none to create new: ')
-            q = pick_one(self.flow_properties)
-            if q is None:
-                q = self.new_quantity()
-            comment = input('Enter flow comment: ')
-            print('Choose compartment:')
-            c = pick_compartment(self.db.compartments)
-            flow = LcFlow.new(name, q, CasNumber=cas, Compartment=c.to_list(), Comment=comment)
+            if quantity is None:
+                q = pick_one(self.flow_properties)
+                if q is None:
+                    q = self.new_quantity()
+                quantity = q
+            comment = comment or input('Enter flow comment: ')
+            if compartment is None:
+                print('Choose compartment:')
+                compartment = pick_compartment(self.db.compartments).to_list()
+            flow = LcFlow.new(name, quantity, CasNumber=cas, Compartment=compartment, Comment=comment)
             # flow.add_characterization(q, reference=True)
         else:
-            q = flow.reference_entity
+            quantity = flow.reference_entity
 
         self._catalog[0].add(flow)
         flow.profile()
@@ -65,7 +68,7 @@ class ForegroundBuilder(ForegroundManager):
                 cq = pick_one(self[0].quantities())
                 if cq is None:
                     cq = self.new_quantity()
-            val = parse_math(input('Value (1 %s = x %s): ' % (q.unit(), cq.unit())))
+            val = parse_math(input('Value (1 %s = x %s): ' % (quantity.unit(), cq.unit())))
             flow.add_characterization(cq, value=val)
 
         return flow
@@ -88,36 +91,43 @@ class ForegroundBuilder(ForegroundManager):
             frag.terminate(termination)  # None scenario
         return frag
 
-    def create_fragment(self, parent=None):
-        ch = cyoa('(N)ew flow or (S)earch for flow? ', 'ns')
-        if ch == 'n':
-            flow = self.new_flow()
-        elif ch == 's':
-            index = self.current_archive or select_archive(self)
-            elem = {'i': False,
-                    'e': True,
-                    'a': None}[cyoa('(I)ntermediate, (E)lementary, or (A)ll flows? ', 'aei', 'I').lower()]
-            flow = self.find_flow(None, index=index, elementary=elem)
-            if flow is None:
-                return None
-            flow = flow.entity()
-        else:
-            raise ValueError
+    def create_fragment(self, parent=None, flow=None, direction=None, comment=None, value=None, balance=False):
+        if flow is None:
+            ch = cyoa('(N)ew flow or (S)earch for flow? ', 'ns')
+            if ch == 'n':
+                flow = self.new_flow()
+            elif ch == 's':
+                index = self.current_archive or select_archive(self)
+                elem = {'i': False,
+                        'e': True,
+                        'a': None}[cyoa('(I)ntermediate, (E)lementary, or (A)ll flows? ', 'aei', 'I').lower()]
+                flow = self.find_flow(None, index=index, elementary=elem)
+                if flow is None:
+                    return None
+                flow = flow.entity()
+            else:
+                raise ValueError
         print('Creating fragment with flow %s' % flow)
-        direction = {'i': 'Input', 'o': 'Output'}[cyoa('flow is (I)nput or (O)utput?', 'IO').lower()]
-        comment = ifinput('Enter FragmentFlow comment: ', '')
+        direction = direction or {'i': 'Input', 'o': 'Output'}[cyoa('flow is (I)nput or (O)utput?', 'IO').lower()]
+        comment = comment or ifinput('Enter FragmentFlow comment: ', '')
         if parent is None:
             # direction reversed for UX! user inputs direction w.r.t. fragment, not w.r.t. parent
             frag = self.new_fragment(flow, comp_dir(direction), Comment=comment)
         else:
             self.terminate_to_foreground(parent)
-            val = ifinput('Exchange value (%s per %s %s): ' % (flow.unit(), parent.flow.unit(), parent.flow['Name']),
-                          '1.0')
-            if val == '1.0':
-                value = 1.0
-            else:
-                value = parse_math(val)
+            if value is None:
+                val = ifinput('Exchange value (%s per %s %s): ' % (flow.unit(), parent.flow.unit(),
+                                                                   parent.flow['Name']), '1.0')
+                if val == '1.0':
+                    value = 1.0
+                else:
+                    value = parse_math(val)
+
             frag = self[0].add_child_fragment_flow(parent, flow, direction, Comment=comment, exchange_value=value)
+            if balance:
+                frag.set_balance_flow()
+                self.traverse(parent)
+
         return frag
 
     def add_child(self, frag):

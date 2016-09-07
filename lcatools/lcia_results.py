@@ -38,9 +38,10 @@ class DetailedLciaResult(object):
     """
     Contains exchange, factor, result
     """
-    def __init__(self, exchange, factor, location):
+    def __init__(self, exchange, factor, location, scale=1.0):
         self.exchange = exchange
         self.factor = factor
+        self._scale = scale
         if location in factor.locations():
             self.location = location
         else:
@@ -61,10 +62,19 @@ class DetailedLciaResult(object):
         return None
 
     @property
+    def _value(self):
+        if self.exchange.value is None:
+            return 0.0
+        return self.exchange.value * self._scale
+
+    @property
     def result(self):
         if self.factor.is_null:
             return 0.0
-        return (self.exchange.value or 0.0) * (self.factor[self.location] or 0.0)
+        return self._value * (self.factor[self.location] or 0.0)
+
+    def scale(self, factor):
+        self._scale = factor
 
     def __hash__(self):
         return hash((self.exchange.process.get_uuid(), self.exchange.direction, self.factor.flow.get_uuid()))
@@ -76,7 +86,7 @@ class DetailedLciaResult(object):
                 self.factor.flow.get_uuid() == other.factor.flow.get_uuid())
 
     def __str__(self):
-        return '%s x %-s = %-s [%s] %s' % (number(self.exchange.value), number(self.factor[self.location]),
+        return '%s x %-s = %-s [%s] %s' % (number(self._value), number(self.factor[self.location]),
                                            number(self.result),
                                            self.location,
                                            self.factor.flow)
@@ -86,7 +96,7 @@ class SummaryLciaResult(object):
     """
     like a DetailedLciaResult except omitting the exchange and factor information
     """
-    def __init__(self, entity, node_weight, unit_score):
+    def __init__(self, entity, node_weight, unit_score, scale=1.0):
         """
         entity_id must either have get_uuid() or be hashable
         :param entity: a hashable identifier
@@ -95,11 +105,15 @@ class SummaryLciaResult(object):
         """
         self.entity = entity
         self.node_weight = node_weight
+        self._scale = scale
         self.unit_score = unit_score
 
     @property
     def result(self):
-        return self.node_weight * self.unit_score
+        return self.node_weight * self.unit_score * self._scale
+
+    def scale(self, factor):
+        self._scale = factor
 
     def __hash__(self):
         try:
@@ -126,21 +140,24 @@ class AggregateLciaScore(object):
     """
     def __init__(self, entity):
         self.entity = entity
+        self._scale = 1.0
         self.LciaDetails = set()
 
     @property
     def cumulative_result(self):
         return sum([i.result for i in self.LciaDetails])
 
-    def add_detailed_result(self, exchange, factor, location):
-        d = DetailedLciaResult(exchange, factor, location)
+    def add_detailed_result(self, exchange, factor, location, scale=None):
+        if scale is not None:
+            self.scale(scale)
+        d = DetailedLciaResult(exchange, factor, location, scale=self._scale)
         if d in self.LciaDetails:
             if factor[location] != 0:
                 raise DuplicateResult('exchange: %s\n  factor: %s\nlocation: %s' % (exchange, factor, location))
         self.LciaDetails.add(d)
 
     def add_summary_result(self, entity, node_weight, unit_score):
-        d = SummaryLciaResult(entity, node_weight, unit_score)
+        d = SummaryLciaResult(entity, node_weight, unit_score, scale=self._scale)
         if d in self.LciaDetails:
             raise DuplicateResult()
         self.LciaDetails.add(d)
@@ -154,6 +171,13 @@ class AggregateLciaScore(object):
                 print('%s' % d)
         print('=' * 60)
         print('             Total score: %g ' % self.cumulative_result)
+
+    def scale(self, factor):
+        if factor == self._scale:
+            return
+        self._scale = factor
+        for k in self.LciaDetails:
+            k.scale(factor)
 
     def __str__(self):
         return '%s  %s' % (number(self.cumulative_result), self.entity)
@@ -197,7 +221,7 @@ class LciaResult(object):
 
         return results
 
-    def __init__(self, quantity, scenario=None, private=False):
+    def __init__(self, quantity, scenario=None, private=False, scale=1.0):
         """
         If private, the LciaResult will not return any unaggregated results
         :param quantity:
@@ -206,6 +230,7 @@ class LciaResult(object):
         """
         self.quantity = quantity
         self.scenario = scenario
+        self._scale = scale
         self._LciaScores = dict()
         self._private = private
 
@@ -226,7 +251,7 @@ class LciaResult(object):
         :param key: default: lambda x: x.fragment['StageName'] -- assuming the payload is a FragmentFlow
         :return:
         """
-        agg_result = LciaResult(self.quantity, scenario=self.scenario, private=self._private)
+        agg_result = LciaResult(self.quantity, scenario=self.scenario, private=self._private, scale=self._scale)
         for v in self._LciaScores.values():
             keystring = 'other'
             try:
@@ -241,6 +266,13 @@ class LciaResult(object):
     @property
     def is_private(self):
         return self._private
+
+    def scale(self, factor):
+        if factor == self._scale:
+            return
+        self._scale = factor
+        for v in self._LciaScores.values():
+            v.scale(factor)
 
     def total(self):
         return sum([i.cumulative_result for i in self._LciaScores.values()])
@@ -258,12 +290,12 @@ class LciaResult(object):
                                                                                        self.quantity.get_uuid()))
         if key not in self._LciaScores.keys():
             self.add_component(key)
-        self._LciaScores[key].add_detailed_result(exchange, factor, location)
+        self._LciaScores[key].add_detailed_result(exchange, factor, location, scale=self._scale)
 
     def add_summary(self, key, entity, node_weight, unit_score):
         if key not in self._LciaScores.keys():
             self.add_component(key)
-        self._LciaScores[key].add_summary_result(entity, node_weight, unit_score)
+        self._LciaScores[key].add_summary_result(entity, node_weight, unit_score, scale=self._scale)
 
     def keys(self):
         if self._private:
@@ -312,6 +344,7 @@ class LciaResult(object):
         if self.scenario != other.scenario:
             raise InconsistentScenario
         s = LciaResult(self.quantity, self.scenario)
+        s.scale(self._scale)
         for k, v in self._LciaScores.items():
             s._LciaScores[k] = v
         for k, v in other._LciaScores.items():
@@ -329,6 +362,7 @@ class LciaResults(dict):
     def __init__(self, entity, *args, **kwargs):
         super(LciaResults, self).__init__(*args, **kwargs)
         self.entity = entity
+        self._scale = 1.0
         self._indices = []
 
     def __getitem__(self, item):
@@ -339,8 +373,16 @@ class LciaResults(dict):
             return super(LciaResults, self).__getitem__(next(k for k in self.keys() if k.startswith(item)))
 
     def __setitem__(self, key, value):
+        value.scale(self._scale)
         super(LciaResults, self).__setitem__(key, value)
         self._indices = list(self.keys())
+
+    def scale(self, factor):
+        if factor == self._scale:
+            return
+        self._scale = factor
+        for k in self._indices:
+            self[k].scale(factor)
 
     def show(self):
         print('LCIA Results\n%s\n%s' % (self.entity, '-' * 60))

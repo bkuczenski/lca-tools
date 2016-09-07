@@ -767,6 +767,9 @@ class LcQuantity(LcEntity):
 
         return outbound / inbound
 
+    def reset_unitstring(self, ustring):
+        self.reference_entity.reset_unitstring(ustring)
+
     def _name(self):
         return '%s [%s]' % (self._d['Name'], self.reference_entity.unitstring())
 
@@ -805,6 +808,10 @@ class LcUnit(object):
 
     def __str__(self):
         return '[%s]' % self._unitstring
+
+    def reset_unitstring(self, ustring):
+        self._external_ref = ustring
+        self._unitstring = ustring
 
 
 entity_refs = {

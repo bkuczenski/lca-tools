@@ -273,7 +273,7 @@ class FlowTermination(object):
                 else:
                     inbound_ev = ex.value
             elif self.term_node.entity_type == 'fragment':
-                inbound_ev = 1.0  # the inbound ev must be applied at traversal time; not known at termination time
+                inbound_ev = 1.0  # the inbound ev must be applied at traversal time;
             else:
                 raise TypeError('How did we get here??? %s' % self._process_ref)
         self._cached_ev = inbound_ev
@@ -606,6 +606,12 @@ class LcFragment(LcEntity):
             j.pop(k)  # we put these together in tags
         return j
 
+    @property
+    def unit(self):
+        if self.reference_entity is None:
+            return '%4g %s' % (self.cached_ev, self.flow.unit())
+        return self.term.unit
+
     def __str__(self):
         if self.reference_entity is None:
             if self.is_background:
@@ -615,7 +621,7 @@ class LcFragment(LcEntity):
         else:
             re = self.reference_entity.get_uuid()[:7]
         return '(%s) %s %.5s %s %s  [%s] %s' % (re, self.dirn, self.get_uuid(), self.dirn, self.term,
-                                                self.term.unit, self['Name'])
+                                                self.unit, self['Name'])
 
     def show_tree(self, childflows, prefix='', scenario=None, observed=False):
         children = [c for c in childflows(self)]
@@ -642,7 +648,7 @@ class LcFragment(LcEntity):
         # print fragment reference
         latest_stage = ''
         if len(children) > 0:
-            print('   %s [%s] %s' % (prefix, self.term.unit, self['Name']))
+            print('   %s [%s] %s' % (prefix, self.unit, self['Name']))
             prefix += '    | '
             for c in sorted(children, key=lambda x: (x['StageName'], not x.term.is_null, x.term.is_bg)):
                 if c['StageName'] != latest_stage:
@@ -654,8 +660,6 @@ class LcFragment(LcEntity):
 
     @property
     def cached_ev(self):
-        if self.reference_entity is None:
-            return 1.0
         return self._exchange_values[0]
 
     @cached_ev.setter
@@ -664,10 +668,15 @@ class LcFragment(LcEntity):
             raise CacheAlreadySet('Set Value: %g (new: %g)' % (self.cached_ev, value))
         self._exchange_values[0] = value
 
+    def reset_cache(self):
+        """
+        this must be done explicitly
+        :return:
+        """
+        self._exchange_values[0] = 1.0
+
     @property
     def observed_ev(self):
-        if self.reference_entity is None:
-            return 1.0
         return self._exchange_values[1]
 
     @observed_ev.setter
@@ -678,11 +687,12 @@ class LcFragment(LcEntity):
     def is_background(self):
         return self._background
 
+    '''
     def to_foreground(self):
         self._background = False
         for v in self._terminations.values():
-            v.term_
             v.clear_score_cache()
+    '''
 
     def _match_scenario_ev(self, scenario):
         match = None
@@ -859,12 +869,17 @@ class LcFragment(LcEntity):
             self.set_exchange_value(match, _balance)
 
     def fragment_lcia(self, childflows, scenario=None, observed=False):
-        ffs, _ = self.traverse(childflows, 1.0, scenario, observed=observed)
+        ffs = self.traversal_entry(childflows, scenario, observed=observed)
         return traversal_to_lcia(ffs)
 
-    def io_flows(self, childflows, scenario, observed=False, frags_seen=None):
-        ffs, _ = self.traverse(childflows, 1.0, scenario, observed=observed, frags_seen=frags_seen)
+    def io_flows(self, childflows, scenario, observed=False):
+        ffs = self.traversal_entry(childflows, scenario, observed=observed)
         return [ff for ff in ffs if ff.term.is_null]
+
+    def traversal_entry(self, childflows, scenario, observed=False):
+        in_wt = self.exchange_value(scenario, observed=observed)
+        ffs, _ = self.traverse(childflows, in_wt, scenario, observed=observed)
+        return ffs
 
     def traverse(self, childflows, upstream_nw, scenario,
                  observed=False, frags_seen=None, conserved_qty=None, _balance=None):
@@ -905,7 +920,11 @@ class LcFragment(LcEntity):
          conserved_val
         '''
         if _balance is None:
-            magnitude = upstream_nw * self.exchange_value(scenario, observed=observed)
+            if self.reference_entity is None:
+                # reference fragment exchange values are inbound
+                ev = 1.0 / self.exchange_value(scenario, observed=observed)
+            else:
+                ev = self.exchange_value(scenario, observed=observed)
         else:
             # balance reports net inflows; positive value is more coming in than out
             # if I am an input, my exchange must be the negative of the balance
@@ -913,15 +932,17 @@ class LcFragment(LcEntity):
             if self.direction == 'Input':
                 _balance *= -1
             # print('%.3s %g balance' % (self.get_uuid(), _balance))
-            magnitude = upstream_nw * _balance
+            ev = _balance
             self._cache_balance_ev(_balance, scenario)
+
+        magnitude = upstream_nw * ev
 
         conserved_val = None
         conserved = False
         if conserved_qty is not None:
             if self._balance_flow:
                 raise BalanceFlowError  # to be caught
-            conserved_val = magnitude * self.flow.cf(conserved_qty)
+            conserved_val = ev * self.flow.cf(conserved_qty)
             if conserved_val != 0:
                 conserved = True
             if self.direction == 'Output':  # convention: inputs to parent are positive
@@ -958,9 +979,14 @@ class LcFragment(LcEntity):
             stock = None
             bal_f = None
             if self._conserved_quantity is not None:
-                stock = self.exchange_value(scenario, observed=observed)
+                stock = self.flow.cf(self._conserved_quantity)
+                if self.reference_entity is None:
+                    # for reference nodes only, e.v. is inbound exchange-> scale balance back to real units
+                    stock *= self.exchange_value(scenario, observed=observed)
+                    # use repeat call to avoid double division
                 if self.direction == 'Input':  # convention: inputs to self are positive
                     stock *= -1
+                # print('%.3s %g inbound-balance' % (self.get_uuid(), stock))
 
             for f in childflows(self):
                 try:
@@ -986,19 +1012,20 @@ class LcFragment(LcEntity):
              child flows
             for background flows, the background ff should replace the current ff, except maintaining self as fragment
             '''
+            in_ex = term.term_node.exchange_value(scenario, observed=observed)
+
             if term.term_node.is_background:
                 bg_ff, cons = term.term_node.traverse(childflows, node_weight, scenario, observed=observed)
                 bg_ff[0].fragment = self
                 return bg_ff, conserved_val
 
             # for proper subfragments, need to determine child flow magnitudes based on traversal record
-            subfrag_ffs, cons = term.term_node.traverse(childflows, 1.0, scenario,
+            subfrag_ffs, cons = term.term_node.traverse(childflows, in_ex, scenario,
                                                         observed=observed, frags_seen=set(frags_seen))
             ios = [f for f in subfrag_ffs if f.term.is_null]
             subfrags = [f for f in subfrag_ffs if not f.term.is_null]
 
             # first, we determine subfragment activity level by adjusting for any autoconsumption
-            in_ex = 1.0
             matches = [f for f in ios if f.fragment.flow == term.term_flow]
             for m in matches:
                 if m.fragment.direction == term.direction:
@@ -1027,7 +1054,7 @@ class LcFragment(LcEntity):
                 matches = [j for j in ios if j.fragment.flow == f.flow]
                 # exchange values are per unit- so don't scale
                 for m in matches:
-                    if m.direction == f.direction:
+                    if m.fragment.direction == f.direction:
                         ev += m.magnitude
                     else:
                         ev -= m.magnitude

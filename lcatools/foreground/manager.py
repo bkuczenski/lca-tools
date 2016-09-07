@@ -499,11 +499,14 @@ class ForegroundManager(object):
         return next(f for f in self[0].fragments(show_all=True) if f.get_uuid().startswith(string.lower()))
 
     def traverse(self, fragment, scenario=None, observed=False):
-        ffs, _ = fragment.traverse(lambda x: self.child_flows(x), 1.0, scenario, observed=observed)
+        ffs = fragment.traversal_entry(lambda x: self.child_flows(x), scenario, observed=observed)
         return ffs
 
-    def fragment_lcia(self, fragment, scenario=None, observed=False):
-        return fragment.fragment_lcia(lambda x: self.child_flows(x), scenario=scenario, observed=observed)
+    def fragment_lcia(self, fragment, scenario=None, observed=False, scale=None):
+        r = fragment.fragment_lcia(lambda x: self.child_flows(x), scenario=scenario, observed=observed)
+        if scale is not None:
+            r.scale(scale)
+        return r
 
     def draw(self, fragment, scenario=None, observed=False):
         fs = fragment.show_tree(lambda x: self.child_flows(x), scenario=scenario, observed=observed)
@@ -626,7 +629,7 @@ class ForegroundManager(object):
         self.build_child_flows(frag, background_children=background_children)
         return frag
 
-    def get_fragment_inventory(self, fragment, scenario=None):
+    def get_fragment_inventory(self, fragment, scenario=None, scale=None):
         """
         Aggregates inputs and outputs (un-terminated flows) from a fragment; returns a list of exchanges.
         :param fragment: ff
@@ -634,29 +637,37 @@ class ForegroundManager(object):
         :return:
         """
         io_ffs = fragment.io_flows(lambda x: self.child_flows(x), scenario)
-        ref_dir = comp_dir(fragment.direction)
+        if scale is not None:
+            for i in io_ffs:
+                i.scale(scale)
+
         accum = defaultdict(float)
         ent = dict()
-        accum[fragment.flow.get_uuid()] = 1.0
+        ev = fragment.exchange_value(scenario)
+        if fragment.direction == 'Input':  # this is input to parent flow, so output to us
+            ev = -ev
+        accum[fragment.flow.get_uuid()] = ev
         for i in io_ffs:
             ent[i.fragment.flow.get_uuid()] = i.fragment.flow
-            if i.fragment.direction == ref_dir:
+            if i.fragment.direction == 'Input':
                 accum[i.fragment.flow.get_uuid()] += i.magnitude
             else:
                 accum[i.fragment.flow.get_uuid()] -= i.magnitude
 
         in_ex = accum.pop(fragment.flow.get_uuid())
-        if in_ex < 0:
+        if in_ex * ev < 0:  # i.e. if the signs are different
             raise ValueError('Fragment requires more reference flow than it generates')
         frag_exchs = []
         for k, v in accum.items():
-            val = abs(v) / in_ex
+            val = abs(v)
+            if ev != in_ex:
+                val *= (ev / in_ex)
             if v == 0:
                 continue
             elif v < 0:
-                dirn = comp_dir(ref_dir)
+                dirn = 'Output'
             else:
-                dirn = ref_dir
+                dirn = 'Input'
             frag_exchs.append(ExchangeValue(fragment, ent[k], dirn, value=val))
         return sorted(frag_exchs, key=lambda x: x.direction)
 
@@ -682,7 +693,8 @@ class ForegroundManager(object):
 
         elif term.term_node.entity_type == 'fragment':
 
-            int_exch = self.get_fragment_inventory(term.term_node, scenario=scenario)
+            ev = fragment.exchange_value(scenario)
+            int_exch = self.get_fragment_inventory(term.term_node, scenario=scenario, scale=1.0/ev)
 
         else:
             raise AmbiguousTermination('Cannot figure out entity type for %s' % term)

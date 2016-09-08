@@ -44,6 +44,13 @@ class ScenarioConflict(Exception):
     pass
 
 
+def _new_evs():
+    d = dict()
+    d[0] = 1.0
+    d[1] = LiterateFloat(0.0)  # w.r.t. parent activity level
+    return d
+
+
 def traversal_to_lcia(ffs):
     """
     This function takes in a list of fragment flow records and aggregates their ScoreCaches into a set of LciaResults.
@@ -65,7 +72,11 @@ def traversal_to_lcia(ffs):
                     l = i.term.term_node.entity()['SpatialScope']
                 except KeyError:
                     l = None
-                f = Characterization(i.term.term_flow, quantity, value=i.term.score_cache(quantity).total(), location=l)
+                value = i.term.score_cache(quantity).total()
+                if i.term.direction == i.fragment.direction:
+                    # if the directions collide (rather than complement), the term is getting run in reverse
+                    value *= -1
+                f = Characterization(i.term.term_flow, quantity, value=value, location=l)
                 results[q].add_score(i.fragment.get_uuid(), x, f, l)
     return results
 
@@ -108,9 +119,14 @@ class FlowTermination(object):
         return cls(fragment, process_ref, direction=direction, term_flow=term_flow, descend=descend)
 
     @classmethod
-    def from_exchange(cls, fragment, exchange_ref):
+    def from_exchange_ref(cls, fragment, exchange_ref):
         return cls(fragment, exchange_ref.process_ref, direction=exchange_ref.direction,
                    term_flow=exchange_ref.exchange.flow, inbound_ev=exchange_ref.exchange.value)
+
+    @classmethod
+    def from_term(cls, fragment, term):
+        return cls(fragment, term.term_node, direction=term.direction, term_flow=term.term_flow,
+                   descend=term.descend, inbound_ev=term.inbound_exchange_value)
 
     @classmethod
     def null(cls, fragment):
@@ -322,7 +338,7 @@ class FlowTermination(object):
                     flow = r_e.flow
                     self.direction = r_e.direction
                 elif len(r_e) > 0:
-                    r_e = pick_one(r_e)
+                    r_e = pick_one(list(r_e))
                     flow = r_e.flow
                     self.direction = r_e.direction
                 else:
@@ -400,6 +416,11 @@ class FlowTermination(object):
             j['descend'] = False
         # don't serialize score cache- could, of course
         return j
+
+    def __eq__(self, other):
+        return (self.term_node.get_uuid() == other.term_node.get_uuid() and
+                self.term_flow == other.term_flow and
+                self.direction == other.direction)
 
     def __str__(self):
         """
@@ -536,9 +557,8 @@ class LcFragment(LcEntity):
 
         self.observed_magnitude = LiterateFloat(1.0)  # in flow's reference unit - strictly documentary
 
-        self._exchange_values = dict()
-        self._exchange_values[0] = exchange_value
-        self._exchange_values[1] = LiterateFloat(0.0)  # w.r.t. parent activity level
+        self._exchange_values = _new_evs()
+        self.cached_ev = exchange_value
         self._cached_unit_scores = dict()  # of quantities
 
         self._terminations = dict()
@@ -553,6 +573,10 @@ class LcFragment(LcEntity):
         :return:
         """
         return self
+
+    @property
+    def index(self):
+        return 0
 
     @property
     def _parent(self):
@@ -623,6 +647,33 @@ class LcFragment(LcEntity):
         return '(%s) %s %.5s %s %s  [%s] %s' % (re, self.dirn, self.get_uuid(), self.dirn, self.term,
                                                 self.unit, self['Name'])
 
+    def show(self):
+        print('%s' % self)
+        super(LcFragment, self).show()
+        evs = list(self._exchange_values.keys())
+        evs.remove(0)
+        evs.remove(1)
+        print('Exchange values: ')
+        print('%20.20s: %g' % ('Cached', self.cached_ev))
+        print('%20.20s: %g' % ('Observed', self.observed_ev))
+        for k in evs:
+            print('%20.20s: %g' % (k, self.exchange_value(k)))
+        if self._balance_flow:
+            print('\nBalance flow: True (%s)' % self.flow.reference_entity)
+        else:
+            print('\nBalance flow: False')
+        print('Terminations: ')
+        print('%20s  %s' % ('Scenario', 'Termination'))
+        for k, v in self._terminations.items():
+            if v.term_node is self:
+                print('%20.20s: %s Foreground' % (k, v))
+            else:
+                if v.descend:
+                    desc = '     '
+                else:
+                    desc = '(agg)'
+                print('%20.20s: %s %s %s' % (k, v, desc, v.term_node))
+
     def show_tree(self, childflows, prefix='', scenario=None, observed=False):
         children = [c for c in childflows(self)]
         if len(children) > 0 and self.term.is_null:
@@ -675,6 +726,9 @@ class LcFragment(LcEntity):
         """
         self._exchange_values[0] = 1.0
 
+    def clear_evs(self):
+        self._exchange_values = _new_evs()
+
     @property
     def observed_ev(self):
         return self._exchange_values[1]
@@ -687,12 +741,14 @@ class LcFragment(LcEntity):
     def is_background(self):
         return self._background
 
-    '''
+    @property
+    def scenarios(self):
+        return set(list(self._exchange_values.keys()) + list(self._terminations.keys())).difference({0, 1})
+
     def to_foreground(self):
         self._background = False
         for v in self._terminations.values():
             v.clear_score_cache()
-    '''
 
     def _match_scenario_ev(self, scenario):
         match = None
@@ -791,8 +847,10 @@ class LcFragment(LcEntity):
         if child.reference_entity != self:
             raise InvalidParentChild
         if self._conserved_quantity is not None:
+            print('%.5s conserving %s' % (self.get_uuid(), self._conserved_quantity))
             raise BalanceAlreadySet
         self._conserved_quantity = child.flow.reference_entity
+        print('%.5s setting balance from %.5s: %s' % (self.get_uuid(), child.get_uuid(), self._conserved_quantity))
 
     def unset_conserved_quantity(self):
         self._conserved_quantity = None
@@ -823,12 +881,17 @@ class LcFragment(LcEntity):
             raise ScenarioConflict('Set termination must specify single scenario')
         if scenario in self._terminations and not self._terminations[scenario].is_null:
             raise CacheAlreadySet('This scenario has already been specified')
-        self._terminations[scenario] = FlowTermination.from_exchange(self, exch_ref)
+        self._terminations[scenario] = FlowTermination.from_exchange_ref(self, exch_ref)
 
     def term_from_json(self, catalog, scenario, j):
         if isinstance(scenario, tuple):
             raise ScenarioConflict('Set termination must specify single scenario')
         self._terminations[scenario] = FlowTermination.from_json(catalog, self, j)
+
+    def term_from_term(self, term, scenario=None):
+        if isinstance(scenario, tuple):
+            raise ScenarioConflict('Set termination must specify single scenario')
+        self._terminations[scenario] = FlowTermination.from_term(self, term)
 
     def termination(self, scenario=None):
         match = self._match_scenario_term(scenario)

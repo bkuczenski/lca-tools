@@ -263,7 +263,7 @@ class ForegroundManager(object):
     def inventory(self, node, **kwargs):
         if node.entity_type == 'fragment':
             print('%s' % node)
-            for x in self.get_fragment_inventory(node, **kwargs):
+            for x in sorted(self.get_fragment_inventory(node, **kwargs), key=lambda x: x.value):
                 print(x)
         else:
             print('%s' % node.fg())
@@ -550,6 +550,29 @@ class ForegroundManager(object):
             if fragment is x.reference_entity:
                 yield x
 
+    def scenarios(self, fragment, _scens=None):
+        if _scens is None:
+            _scens = set()
+        _scens = _scens.union(fragment.scenarios)
+        for c in self.child_flows(fragment):
+            _scens = self.scenarios(c, _scens=_scens)
+        return _scens
+
+    def show_scenario(self, scenario):
+        print('Parameters for scenario "%s"' % scenario)
+        for f in self[0].fragments(show_all=True, background=None):
+            printed = False
+            if f.exchange_value(scenario) != f.cached_ev:
+                if printed is False:
+                    printed = True
+                    print('%s' % f)
+                print(' Exchange value: %10.4g (default %10.4g)' % (f.exchange_value(scenario), f.cached_ev))
+            if f.termination(scenario) != f.term:
+                if printed is False:
+                    print('%s' %f)
+                print('%15s: %s\n%15s: %s' % ('Termination', f.termination(scenario).term_node.entity()['Name'],
+                                              'Default', f.term.term_node.entity()['Name']))
+
     '''
     def auto_terminate(self, index, fragment, scenario=None, use_first=False):
         """
@@ -703,7 +726,7 @@ class ForegroundManager(object):
         for exch in int_exch:
             child = self[0].add_child_ff_from_exchange(fragment, exch)
             if background_children:
-                self.fragment_to_background(child)
+                self.terminate_to_background(child)
             children.append(child)
         return children
 
@@ -747,7 +770,7 @@ class ForegroundManager(object):
                 return self.fg_lcia(x, ref_flow=y, quantities=z, scenario=scenario)
         term.set_score_cache(lcia, l_methods)
 
-    def fragment_to_background(self, fragment):
+    def terminate_to_background(self, fragment):
         """
         Given an existing fragment, create (or locate) a background reference that terminates it. If the fragment is
         terminated, transfer the termination to the background reference.
@@ -846,6 +869,8 @@ class ForegroundManager(object):
 
         print('%s' % quantity)
         mag = frag.flow.cf(quantity)
+        if frag.reference_entity is None:
+            mag *= frag.exchange_value(scenario, observed=observed)
         if frag.direction == 'Input':
             mag *= -1
 

@@ -3,7 +3,7 @@ This module contains utility functions for building fragments. It should probabl
 but that name was taken.
 """
 
-from lcatools.interact import pick_one, cyoa, ifinput, pick_list, _pick_list, pick_one_or, pick_compartment
+from lcatools.interact import pick_one, cyoa, ifinput, pick_list, menu_list, pick_one_or, pick_compartment
 from lcatools.foreground.manager import ForegroundManager
 from lcatools.foreground.fragment_flows import LcFragment, parse_math
 from lcatools.entities import LcFlow, LcQuantity
@@ -73,6 +73,32 @@ class ForegroundBuilder(ForegroundManager):
 
         return flow
 
+    def edit_flow(self):
+        flow = pick_one(self._catalog[0].flows())
+        ch = cyoa('Edit (P)roperties or (C)haracterizations? ', 'pc').lower()
+        if ch == 'p':
+            self._edit_entity(flow)
+        elif ch == 'c':
+            self.edit_characterizations(flow)
+
+    @staticmethod
+    def _edit_entity(entity):
+        print('Select field to edit:')
+        field = menu_list(*entity.keys())
+        if field == -1 or field is None:
+            return True
+        new = ifinput('Enter new value for %s: ' % field, entity[field])
+        if len(new) > 0:
+            entity[field] = new
+        else:
+            print('Not updating.')
+
+    @staticmethod
+    def edit_characterizations(flow):
+        char = pick_one(cf for cf in flow.characterizations())
+        val = float(ifinput('enter new characterization value: ', char.value))
+        char.value = val
+
     def find_flow(self, name, index=None, elementary=False):
         if name is None:
             name = input('Enter flow name search string: ')
@@ -91,7 +117,8 @@ class ForegroundBuilder(ForegroundManager):
             frag.terminate(termination)  # None scenario
         return frag
 
-    def create_fragment(self, parent=None, flow=None, direction=None, comment=None, value=None, balance=False):
+    def create_fragment(self, parent=None, flow=None, direction=None, comment=None, value=None, balance=False,
+                        **kwargs):
         if flow is None:
             ch = cyoa('(N)ew flow or (S)earch for flow? ', 'ns')
             if ch == 'n':
@@ -112,23 +139,142 @@ class ForegroundBuilder(ForegroundManager):
         comment = comment or ifinput('Enter FragmentFlow comment: ', '')
         if parent is None:
             # direction reversed for UX! user inputs direction w.r.t. fragment, not w.r.t. parent
-            frag = self.new_fragment(flow, comp_dir(direction), Comment=comment)
+            if value is None:
+                value = 1.0
+
+            frag = self.new_fragment(flow, comp_dir(direction), Comment=comment, exchange_value=value, **kwargs)
         else:
             self.terminate_to_foreground(parent)
             if value is None:
-                val = ifinput('Exchange value (%s per %s %s): ' % (flow.unit(), parent.flow.unit(),
-                                                                   parent.flow['Name']), '1.0')
+                val = ifinput('Exchange value (%s per %s): ' % (flow.unit(), parent.unit), '1.0')
                 if val == '1.0':
                     value = 1.0
                 else:
                     value = parse_math(val)
 
-            frag = self[0].add_child_fragment_flow(parent, flow, direction, Comment=comment, exchange_value=value)
+            frag = self[0].add_child_fragment_flow(parent, flow, direction, Comment=comment, exchange_value=value,
+                                                   **kwargs)
             if balance:
                 frag.set_balance_flow()
                 self.traverse(parent)
 
         return frag
+
+    @staticmethod
+    def _update_ev(frag, scenario):
+        val = frag.exchange_value(scenario)
+        cur = str(val)
+        upd = ifinput('New value: ', cur)
+        if upd != cur:
+            new_val = parse_math(upd)
+            if new_val != val:
+                if scenario is None:
+                    frag.reset_cache()
+                    frag.cached_ev = new_val
+                else:
+                    frag.set_exchange_value(scenario, new_val)
+
+    def revise_exchanges(self, frag, scenario=None):
+        """
+        interactively update reference exchange values (or values for a particular scenario) for the children of
+        a given fragment
+        :param frag:
+        :param scenario:
+        :return:
+        """
+        print('Reference flow: [%s] %s' % (comp_dir(frag.direction), frag.unit))
+        if scenario is None:
+            print('Update reference flow')
+        else:
+            print('Update reference flow for scenario "%s"' % scenario)
+        self._update_ev(frag, scenario)
+        for c in self.child_flows(frag):
+            print('   Child flow: %s ' % c)
+            if scenario is None:
+                print('Update default value')
+            else:
+                print('Update value for scenario "%s"' % scenario)
+            self._update_ev(c, scenario)
+
+    @staticmethod
+    def transfer_evs(frag, new):
+        if frag.observed_ev != 0:
+            new.observed_ev = frag.observed_ev
+        for scen in frag.exchange_values():
+            if scen != 0 and scen != 1:
+                new.set_exchange_value(scen, frag.exchange_value(scen))
+
+    def clone_fragment(self, frag, parent=None, suffix=' (copy)'):
+        """
+        Creates duplicates of the fragment and its children. returns the reference fragment.
+        :param frag:
+        :param parent: used internally
+        :param suffix: attached to top level fragment
+        :return:
+        """
+        if parent is None:
+            parent = frag.reference_entity
+        if parent is None:
+            direction = comp_dir(frag.direction)  # this gets re-reversed in create_fragment
+        else:
+            direction = frag.direction
+        new = self.create_fragment(parent=parent,
+                                   Name=frag['Name'] + suffix, StageName=frag['StageName'],
+                                   flow=frag.flow, direction=direction, comment=frag['Comment'],
+                                   value=frag.cached_ev, balance=frag._balance_flow)
+
+        self.transfer_evs(frag, new)
+
+        for t_scen in frag.terminations():
+            term = frag.termination(t_scen)
+            if term.term_node is frag:
+                self.terminate_to_foreground(new, scenario=t_scen)
+            else:
+                new.term_from_term(term, scenario=t_scen)
+
+        for c in self.child_flows(frag):
+            self.clone_fragment(c, parent=new, suffix='')
+        return new
+
+    def split_subfragment(self, fragment):
+        """
+        This method takes a child fragment and creates a new subfragment with the same termination; then
+        replaces the child with a surrogate that points to the new subfragment.  All terminations move.
+        exchange value stays with parent.
+        :param fragment:
+        :return:
+        """
+        old_parent = fragment.reference_entity
+        fragment.reference_entity = None
+        surrogate = self.create_fragment(parent=old_parent, flow=fragment.flow, direction=fragment.direction,
+                                         comment='Moved to subfragment', value=fragment.cached_ev,
+                                         balance=fragment._balance_flow)
+        self.transfer_evs(fragment, surrogate)
+        fragment.clear_evs()
+
+        surrogate.terminate(fragment)
+
+    def _del_fragment(self, fragment):
+        for c in self.child_flows(fragment):
+            self._del_fragment(c)
+        self[0]._del_f(fragment)
+
+    def del_fragment(self, fragment):
+        print('%s' % fragment)
+        self._show_frag_children(fragment)
+
+        k = [f for f in self[0]._find_links(fragment)]
+        if len(k) > 0:
+            print('Links to this fragment (terminations will be replaced with None):')
+            for i in k:
+                print('%s' % i)
+        if ifinput('Are you sure?? y/n:', 'n') == 'y':
+            for i in k:
+                for t in i.terminations():
+                    if i.termination(t).term_node is fragment:
+                        i.terminate(None, scenario=t)
+
+            self._del_fragment(fragment)
 
     def add_child(self, frag):
         return self.create_fragment(parent=frag)
@@ -153,7 +299,7 @@ class ForegroundBuilder(ForegroundManager):
     def terminate_by_search(self, frag, index=None):
         print('%s' % frag)
         print('Search for termination.')
-        string = input('Enter search term: ')
+        string = ifinput('Enter search term: ', frag['Name'])
         return pick_one(self.search(index, 'p', Name=string, show=False))
 
     def add_termination(self, frag, term, scenario=None):

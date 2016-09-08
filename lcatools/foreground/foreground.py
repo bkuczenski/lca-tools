@@ -141,7 +141,7 @@ class ForegroundArchive(LcArchive):
     def _recurse_frags(self, frag):
         frags = [frag]
         for x in self._fragments(show_all=True):
-            if x._parent is frag:
+            if x.reference_entity is frag:
                 frags.extend(self._recurse_frags(x))
         return frags
 
@@ -159,18 +159,19 @@ class ForegroundArchive(LcArchive):
             print('deleting %s' % leftover)
             os.remove(os.path.join(self._fragment_dir, leftover))
 
-    def create_fragment(self, flow, direction, Name=None, **kwargs):
+    def create_fragment(self, flow, direction, Name=None, exchange_value=1.0, **kwargs):
         """
         flow must present in self._entities.  This method is for creating new fragments- for appending
         fragment Flows (i.e. fragments with parent entries), use add_child_fragment_flow
         :param flow:
         :param direction:
         :param Name: the fragment name (defaults to flow name)
+        :param exchange_value:
         :return:
         """
         if Name is None:
             Name = flow['Name']
-        f = LcFragment.new(Name, flow, direction, exchange_value=1.0, **kwargs)
+        f = LcFragment.new(Name, flow, direction, exchange_value=exchange_value, **kwargs)
         self.add_entity_and_children(f)
         return f
 
@@ -188,8 +189,10 @@ class ForegroundArchive(LcArchive):
                           key=lambda x: x.term.is_null)
         return sorted([f for f in self._fragments(**kwargs)], key=lambda x: x.is_background)
 
-    def add_child_fragment_flow(self, ff, flow, direction, **kwargs):
-        f = LcFragment.new(flow['Name'], flow, direction, parent=ff, **kwargs)
+    def add_child_fragment_flow(self, ff, flow, direction, Name=None, **kwargs):
+        if Name is None:
+            Name = flow['Name']
+        f = LcFragment.new(Name, flow, direction, parent=ff, **kwargs)
         self.add_entity_and_children(f)
 
         return f
@@ -285,6 +288,10 @@ class ForegroundArchive(LcArchive):
         self._entities.pop(quantity._uuid)
         print('Deleted from foreground.')
 
+    def _del_f(self, f):
+        print('Deleting %s' % f)
+        del self._entities[f._uuid]
+
     def del_orphans(self, for_real=False):
         """
         self is a foreground archive
@@ -296,17 +303,17 @@ class ForegroundArchive(LcArchive):
                 next(self._find_links(f))
                 print('Found a link for %s' % f)
             except StopIteration:
-                print('Deleting %s' % f)
+                print('Found orphan %s' % f)
                 if for_real:
-                    del self._entities[f._uuid]
+                    self._del_f(f)
 
     def _find_links(self, frag):
         for i in self.fragments(show_all=True):
             if i.reference_entity is frag:
                 yield i
             else:
-                for v in i._terminations.values():
-                    if v.term_node is frag:
+                for t in i.terminations():
+                    if i.termination(t).term_node is frag:
                         yield i
 
     '''
@@ -326,4 +333,3 @@ class ForegroundArchive(LcArchive):
 
             fragments.extend(j['fragments'])
         self._do_load(catalog, fragments)
-

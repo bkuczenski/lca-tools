@@ -40,6 +40,10 @@ class DeleteReference(Exception):
     pass
 
 
+class MissingFactor(Exception):
+    pass
+
+
 class LcEntity(object):
     """
     All LC entities behave like dicts, but they all have some common properties, defined here.
@@ -578,6 +582,17 @@ class LcFlow(LcEntity):
         if self.reference_entity is not None:
             if self.reference_entity.get_uuid() not in self._characterizations.keys():
                 self.add_characterization(self.reference_entity, reference=True, value=self._ref_quantity_factor)
+
+    def _set_reference(self, ref_entity):
+        if self.reference_entity is not None:
+            # need to do a conversion
+            inc = self.cf(ref_entity)  # divide by 0 if not known
+            if inc is None or inc == 0:
+                raise MissingFactor('Flow %s missing factor for reference quantity %s' % (self, ref_entity))
+            adj = 1.0 / inc
+            for v in self._characterizations.values():
+                v.scale(adj)
+        super(LcFlow, self)._set_reference(ref_entity)
 
     def unit(self):
         return self.reference_entity.unit()

@@ -23,7 +23,24 @@ from lcatools.exchanges import DirectionlessExchangeError
 
 from lcatools.providers import tail
 from lcatools.providers.xml_widgets import find_tag
+from lcatools.interact import parse_math
 
+
+conversion_dict = {
+    ('Bq', 'kBq'): .001,
+    ('t', 'kg'): 1000,
+    ('kg', 't'): .001,
+    ('kg*km', 't*km'): .001,
+    ('m2', 'ha'): .0001,
+    ('ha', 'm2'): 10000,
+    ('sh tn', 't'): 0.907185,
+    ('sh tn', 'kg'): 907.185,
+    ('MJ', 'kWh'): 0.2777777,
+    ('kWh', 'MJ'): 3.6,
+    ('MJ', 'btu'): 947.817,
+    ('l', 'm3'): .001,
+    ('m3', 'l'): 1000
+}
 
 def not_none(x):
     return x if x is not None else ''
@@ -52,6 +69,7 @@ class EcospoldV1Archive(NsUuidArchive):
         """
         super(EcospoldV1Archive, self).__init__(ref, **kwargs)
         self.internal_prefix = prefix
+        self._q_dict = dict()
         self._archive = Archive(self.ref)
 
     def _build_prefix(self):
@@ -79,8 +97,9 @@ class EcospoldV1Archive(NsUuidArchive):
         :param unitstring:
         :return:
         """
-        try_q = self.quantity_with_unit(unitstring)
-        if try_q is None:
+        if unitstring in self._q_dict:
+            q = self._q_dict[unitstring]
+        else:
             ref_unit, _ = self._create_unit(unitstring)
             uid = self._key_to_id(unitstring)
 
@@ -88,8 +107,7 @@ class EcospoldV1Archive(NsUuidArchive):
                            ReferenceUnit=ref_unit, Comment=self.spold_version)
             q.set_external_ref(unitstring)
             self.add(q)
-        else:
-            q = try_q
+            self._q_dict[unitstring] = q
 
         return q
 
@@ -119,6 +137,15 @@ class EcospoldV1Archive(NsUuidArchive):
             f.set_external_ref(number)
             self.add(f)
 
+        if exch.get("unit") != f.unit():
+            local_q = self._create_quantity(exch.get("unit"))
+            if not f.has_characterization(local_q):
+                if (f.unit(), local_q.unit()) not in conversion_dict:
+                    print('Flow %s needs characterization for unit %s' % (f, local_q))
+                    val = parse_math(input('Enter conversion factor 1 %s = x %s' % (f.unit(), local_q)))
+                else:
+                    val = conversion_dict[(f.unit(), local_q.unit())]
+                f.add_characterization(local_q, value=val)
         return f
 
     def _create_process(self, filename):
@@ -143,8 +170,11 @@ class EcospoldV1Archive(NsUuidArchive):
                 d = 'Input'
             else:
                 raise DirectionlessExchangeError
-            v = exch.get('meanValue')  # returns none if missing
-            flowlist.append((f, d, float(v)))
+            local_q = self._create_quantity(exch.get("unit"))
+            v = float(exch.get('meanValue'))  # returns none if missing
+            if local_q is not f.reference_entity:
+                v = v / f.cf(local_q)
+            flowlist.append((f, d, v))
 
         p_meta = o.dataset.metaInformation.processInformation
         n = p_meta.referenceFunction.get('name')

@@ -70,6 +70,10 @@ class Characterization(object):
         else:
             self[location] = value
 
+    def scale(self, factor):
+        for k, v in self._locations.items():
+            self[k] = v * factor
+
     def locations(self):
         return self._locations.keys()
 

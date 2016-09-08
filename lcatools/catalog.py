@@ -74,7 +74,7 @@ class CatalogRef(object):
     def entity(self):
         if self.catalog[self.index] is None:
             self.catalog.load(self.index)
-        return self.catalog[self.index][self.id]
+        return self.catalog[self.index].retrieve_or_fetch_entity(self.id)  # [self.id]
 
     @property
     def entity_type(self):

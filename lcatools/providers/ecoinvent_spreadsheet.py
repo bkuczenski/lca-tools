@@ -56,6 +56,15 @@ class EcoinventSpreadsheet(NsUuidArchive):
                 if os.path.exists(self._lcia_validate_filename):
                     self.lcia = EcospoldV2Archive(self._lcia_validate_filename, prefix='datasets')
 
+    def _fetch(self, entity, **kwargs):
+        """
+        dummy process
+        :param entity:
+        :param kwargs:
+        :return:
+        """
+        return self[entity]
+
     @property
     def _fg_filename(self):
         if self._data_dir is None:
@@ -186,6 +195,7 @@ class EcoinventSpreadsheet(NsUuidArchive):
                 lci = self.bg_proxy(process_id)
                 self.bg.add_entity_and_children(lci)
                 print('LCI: %s' % lci)
+                self.bg.write_to_file(self._lci_cache, gzip=True, exchanges=True, values=True, characterizations=True)
             if ref_flow is None:
                 ref_flow = lci.find_reference(reference)
             rf = self._find_rf(lci, ref_flow=ref_flow)
@@ -193,7 +203,6 @@ class EcoinventSpreadsheet(NsUuidArchive):
             for q in quantities:
                 self.bg.add_entity_and_children(q)
                 lcia[q.get_uuid()] = lci.lcia(q, ref_flow=rf, scenario=scenario, flowdb=flowdb)
-            self.bg.write_to_file(self._lci_cache, gzip=True, exchanges=True, values=True, characterizations=True)
         return lcia
 
     def lcia_lookup(self, process_id, ref_flow=None, reference=None, quantities=None):

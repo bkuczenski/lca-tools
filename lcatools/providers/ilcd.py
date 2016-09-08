@@ -62,6 +62,14 @@ def _extract_dtype(filename, pathtype=os.path):
     return dtype[0]
 
 
+def _dtype_from_nsmap(nsmap):
+    for v in nsmap.values():
+        cand = re.sub('(^.*/)', '', v)
+        if cand in typeDirs:
+            return cand
+    return None
+
+
 def get_flow_ref(exch, ns=None):
     f_uuid = find_tag(exch, 'referenceToFlowDataSet', ns=ns)[0].attrib['refObjectId']
     f_uri = find_tag(exch, 'referenceToFlowDataSet', ns=ns)[0].attrib['uri']
@@ -444,6 +452,9 @@ class IlcdArchive(LcArchive):
         o = self.objectify(term, dtype=dtype, version=version)
         if o is None:
             return None
+
+        if dtype is None:
+            dtype = _dtype_from_nsmap(o.nsmap)
 
         if dtype == 'Flow':
             try:

@@ -197,7 +197,7 @@ class FlowDB(object):
                     print('match: %s' % match.to_list())
                     print('Updating compartments...')
                     save_compartments(self.compartments, file=self._compartments_file)
-
+                    return c
             else:
                 raise MissingCompartment('%s' % cs)
         else:

@@ -28,16 +28,16 @@
       "index": 3
     },
     {
-      "dataSourceType": "JSON",
-      "index": 4,
+      "source": "/data/GitHub/lca-tools-datafiles/catalogs/ecoinvent_3.2_undefined_xlsx.json.gz",
       "nicknames": [
         "EI_U"
       ],
+      "dataSourceType": "JSON",
       "parameters": {
         "data_dir": "/data/LCI/Ecoinvent/3.2",
         "model": "undefined"
       },
-      "source": "/data/GitHub/lca-tools-datafiles/catalogs/ecoinvent_3.2_undefined_xlsx.json.gz"
+      "index": 4
     },
     {
       "source": "/data/GitHub/lca-tools-datafiles/catalogs/ecoinvent_3.2_apos_xlsx.json.gz",
@@ -101,6 +101,15 @@
       "dataSourceType": "JSON",
       "parameters": {},
       "index": 10
+    },
+    {
+      "source": "/data/GitHub/LCA_Data/TRACI Core-4 Export/",
+      "nicknames": [
+        "TRACI-2"
+      ],
+      "dataSourceType": "IlcdLcia",
+      "parameters": {},
+      "index": 11
     }
   ]
 }

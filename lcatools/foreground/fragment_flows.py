@@ -253,6 +253,14 @@ class FlowTermination(object):
         """
         tgt_qty = self.term_flow.reference_entity
         if self._parent.flow.cf(tgt_qty) == 0:
+            '''
+            print('term flow')
+            self.term_flow.show()
+            self.term_flow.profile()
+            '''
+            print('\nfragment flow')
+            self._parent.flow.show()
+            self._parent.flow.profile()
             raise FlowConversionError('Missing cf for %s' % tgt_qty)
         return self._parent.flow.convert(1.0, to=tgt_qty)
 
@@ -282,12 +290,15 @@ class FlowTermination(object):
                 inbound_ev = 1.0
             elif self.term_node.entity_type == 'process':
                 process = self._process_ref.fg()
-                ex = next(x for x in process.exchange(self.term_flow)
-                          if x.direction == self.direction)
-                if isinstance(ex, AllocatedExchange):
-                    inbound_ev = ex[self.term_flow]
-                else:
-                    inbound_ev = ex.value
+                try:
+                    ex = next(x for x in process.exchange(self.term_flow)
+                              if x.direction == self.direction)
+                    if isinstance(ex, AllocatedExchange):
+                        inbound_ev = ex[self.term_flow]
+                    else:
+                        inbound_ev = ex.value
+                except StopIteration:
+                    inbound_ev = 1.0
             elif self.term_node.entity_type == 'fragment':
                 inbound_ev = 1.0  # the inbound ev must be applied at traversal time;
             else:
@@ -342,7 +353,10 @@ class FlowTermination(object):
                     flow = r_e.flow
                     self.direction = r_e.direction
                 else:
-                    raise MissingFlow('%s missing flow %s\nAND no reference exchange' % (self._process_ref, flow))
+                    # instead of throwing exception, just tolerate a no-reference-flow node using _parent.flow
+                    pass
+                    # raise MissingFlow('%s missing flow %s\nAND no reference exchange' % (self._process_ref, flow))
+
             except TypeError:
                 print('Fragment: %s\nprocess_ref: %s' % (self._parent, self._process_ref))
                 raise

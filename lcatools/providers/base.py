@@ -144,7 +144,7 @@ class LcArchive(ArchiveInterface):
                     if 'value' in c:
                         v = c['value']
                     if 'isReference' in c:
-                        is_ref = True
+                        is_ref = c['isReference']
                     else:
                         is_ref = False
                     entity.add_characterization(q, reference=is_ref, value=v)

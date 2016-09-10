@@ -408,7 +408,10 @@ class LcProcess(LcEntity):
             in_scenario = True
             ref = self._scenarios[reference]
         else:
-            ref = self.find_reference(reference, strict=strict)
+            try:
+                ref = self.find_reference(reference, strict=strict)
+            except NoReferenceFound:
+                pass  # will fail if any exchanges are allocated
 
         for i in sorted(self._exchanges, key=lambda t: t.direction):
             if isinstance(i, AllocatedExchange):
@@ -586,7 +589,12 @@ class LcFlow(LcEntity):
 
     def _set_reference(self, ref_entity):
         if self.reference_entity is not None:
+            if self.reference_entity.get_uuid() == ref_entity.get_uuid():
+                return
             # need to do a conversion
+            print('Changing reference quantity for flow %s' % self)
+            print('reference >>%s<<' % self.reference_entity)
+            print('refer.new >>%s<<' % ref_entity)
             inc = self.cf(ref_entity)  # divide by 0 if not known
             if inc is None or inc == 0:
                 raise MissingFactor('Flow %s missing factor for reference quantity %s' % (self, ref_entity))
@@ -633,10 +641,10 @@ class LcFlow(LcEntity):
         if not isinstance(quantity, LcQuantity):  # assume it's a CatalogRef
             quantity = quantity.entity()
         if reference:
-            self._set_reference(quantity)
             if value is None:
                 value = 1.0
             self.set_local_unit(value)
+            self._set_reference(quantity)
 
         q = quantity.get_uuid()
         c = Characterization(self, quantity)

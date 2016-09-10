@@ -478,7 +478,7 @@ class CatalogInterface(object):
             self[0].save()
             with open(self[0].catalog_file, 'w') as fp:
                 json.dump(self.serialize(), fp, indent=2, sort_keys=True)
-                print('Catalog file with %d archives saved to foreground' % len(self.archives))
+                print('Catalog file with %d archives saved to %s' % (len(self.archives), self[0].catalog_file))
 
     def retrieve(self, archive, key):
         """

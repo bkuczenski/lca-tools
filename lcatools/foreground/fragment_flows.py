@@ -940,7 +940,10 @@ class LcFragment(LcEntity):
         return [ff for ff in ffs if ff.term.is_null]
 
     def traversal_entry(self, childflows, scenario, observed=False):
-        in_wt = self.exchange_value(scenario, observed=observed)
+        if self.reference_entity is None:
+            in_wt = self.exchange_value(scenario, observed=observed)
+        else:
+            in_wt = 1.0 / self.exchange_value(scenario, observed=observed)
         ffs, _ = self.traverse(childflows, in_wt, scenario, observed=observed)
         return ffs
 

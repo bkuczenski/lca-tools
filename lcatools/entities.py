@@ -6,7 +6,7 @@ from itertools import chain
 
 from lcatools.exchanges import Exchange, ExchangeValue, AllocatedExchange, DuplicateExchangeError
 from lcatools.characterizations import Characterization
-from lcatools.lcia_results import LciaResult
+from lcatools.lcia_results import LciaResult, LciaResults
 
 
 def concatenate(*lists):
@@ -513,7 +513,7 @@ class LcProcess(LcEntity):
             return e
 
     def lcias(self, quantities, **kwargs):
-        results = dict()
+        results = LciaResults(entity=self)
         for q in quantities:
             results[q.get_uuid()] = self.lcia(q, **kwargs)
         return results
@@ -524,11 +524,12 @@ class LcProcess(LcEntity):
         for ex in self.allocated_exchanges(scenario or ref_flow):
             if not ex.flow.has_characterization(quantity):
                 if flowdb is not None:
-                    factor = flowdb.lookup_single_cf(ex.flow, quantity, self['SpatialScope'])
-                    if factor is None:
-                        ex.flow.add_characterization(quantity)
-                    else:
-                        ex.flow.add_characterization(factor)
+                    if quantity in flowdb.known_quantities():
+                        factor = flowdb.lookup_single_cf(ex.flow, quantity, self['SpatialScope'])
+                        if factor is None:
+                            ex.flow.add_characterization(quantity)
+                        else:
+                            ex.flow.add_characterization(factor)
             factor = ex.flow.factor(quantity)
             result.add_score(self.get_uuid(), ex, factor, self['SpatialScope'])
         return result
@@ -653,6 +654,8 @@ class LcFlow(LcEntity):
 
     def has_characterization(self, quantity, location='GLO'):
         if quantity.get_uuid() in self._characterizations.keys():
+            if location == 'GLO':
+                return True
             if location in self._characterizations[quantity.get_uuid()].locations():
                 return True
         return False

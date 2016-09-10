@@ -144,7 +144,8 @@ class ForegroundBuilder(ForegroundManager):
 
             frag = self.new_fragment(flow, comp_dir(direction), Comment=comment, exchange_value=value, **kwargs)
         else:
-            self.terminate_to_foreground(parent)
+            if parent.term.is_null:
+                self.terminate_to_foreground(parent)
             if value is None:
                 val = ifinput('Exchange value (%s per %s): ' % (flow.unit(), parent.unit), '1.0')
                 if val == '1.0':

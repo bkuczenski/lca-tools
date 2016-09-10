@@ -303,7 +303,7 @@ class ForegroundArchive(LcArchive):
                 next(self._find_links(f))
                 print('Found a link for %s' % f)
             except StopIteration:
-                print('Found orphan %s' % f)
+                print('### Found orphan %s' % f)
                 if for_real:
                     self._del_f(f)
 

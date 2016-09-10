@@ -552,6 +552,7 @@ class CatalogInterface(object):
             r = self.archives[i].search(**kwargs)
             if r is not None:
                 res_set.extend([CatalogRef(self, i, t.get_uuid()) for t in r])
+        res_set = sorted(res_set, key=lambda x: str(x))
         if show:
             self._show(res_set)
         return res_set

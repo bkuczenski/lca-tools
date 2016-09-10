@@ -58,7 +58,9 @@ class CLookup(object):
 
     def __getitem__(self, item):
         if isinstance(item, Compartment):
-            return self._dict[item]
+            if item in self._dict:
+                return self._dict[item]
+            return set()
         return None
 
     def __setitem__(self, key, value):
@@ -68,7 +70,8 @@ class CLookup(object):
         if not isinstance(key, Compartment):
             print('Key is not a Compartment: %s' % key)
             return False
-        self._dict[key].add(value)
+        if value is not None:
+            self._dict[key].add(value)
         return True
 
     def first(self, item):
@@ -151,6 +154,10 @@ class FlowDB(object):
         self._q_id = dict()  # store the quantities themselves for reference
         self._f_dict = defaultdict(CLookup)  # dict of (flowable index, quantity uuid) to c_lookup
         self._c_dict = dict()  # dict of '; '.join(compartments) to Compartment
+
+    def known_quantities(self):
+        for q in self._q_id.values():
+            yield q
 
     def is_elementary(self, flow):
         comp = self.find_matching_compartment(flow['Compartment'])
@@ -329,9 +336,18 @@ class FlowDB(object):
         if len(flowables) == 0:
             return flow
         for cf in flow.characterizations():
-            if cf is not flow.reference_entity:
+            if cf is not flow.reference_entity and cf.value is not None:
                 self._add_cf(flowables, comp, cf)
         return None
+
+    def import_quantity(self, archive, quantity):
+        missing_flows = set()
+        for f in archive.flows():
+            if f.has_characterization(quantity):
+                k = self.import_cfs(f)
+                if k is not None:
+                    missing_flows.add(k)
+        return missing_flows
 
     def import_archive_cfs(self, archive):
         """
@@ -341,11 +357,11 @@ class FlowDB(object):
         :param archive:
         :return: list of flows
         """
-        missing_flows = []
+        missing_flows = set()
         for f in archive.flows():
             k = self.import_cfs(f)
             if k is not None:
-                missing_flows.append(k)
+                missing_flows.add(k)
         return missing_flows
 
     def lookup_cfs(self, flow, quantity, dist=3):
@@ -394,7 +410,7 @@ class FlowDB(object):
         except TypeError:
             print(vals)
             raise
-        print('All characterizations have the same value- picking first one')
+        # print('All characterizations have the same value- picking first one')
         return list(cfs)[0]
 
     def lookup_single_cf(self, flow, quantity, location='GLO', dist=3):

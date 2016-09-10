@@ -192,9 +192,10 @@ class EcoinventSpreadsheet(NsUuidArchive):
             '''
             lci = self.bg[process_id]
             if lci is None:
+                print('Looking up: %s' % process_id)
                 lci = self.bg_proxy(process_id)
-                self.bg.add_entity_and_children(lci)
                 print('LCI: %s' % lci)
+                self.bg.add_entity_and_children(lci)
                 self.bg.write_to_file(self._lci_cache, gzip=True, exchanges=True, values=True, characterizations=True)
             if ref_flow is None:
                 ref_flow = lci.find_reference(reference)

@@ -81,7 +81,7 @@ class ForegroundManager(object):
             print('Fragments loaded... (%.2f s)' % (time.time() - t0))
 
         self._cfs = []
-        self.unmatched_flows = dict()
+        self.unmatched_flows = defaultdict(set)
         if cfs is not None:
             print('Loading LCIA data... (%.2f s)' % (time.time() - t0))
             for c in cfs:
@@ -91,11 +91,16 @@ class ForegroundManager(object):
         self.compute_unit_scores()
         print('finished... (%.2f s)' % (time.time() - t0))
 
-    def load_lcia_cfs(self, nick):
+    def load_lcia_cfs(self, nick, quantity=None):
         if self._catalog[nick] is None:
             self._catalog.load(nick)
         self.merge_compartments(nick)
-        self.unmatched_flows[nick] = self.db.import_archive_cfs(self._catalog[nick])
+        if quantity is None:
+            self.unmatched_flows[nick] |= self.db.import_archive_cfs(self._catalog[nick])
+        else:
+            if not isinstance(quantity, LcQuantity):
+                quantity = quantity.entity()  # assume catalog ref
+            self.unmatched_flows[nick] |= self.db.import_quantity(self._catalog[nick], quantity)
         print('%d unmatched flows found from source %s... \n' %
               (len(self.unmatched_flows[nick]), self._catalog.name(nick)))
         self._cfs.append(nick)
@@ -193,7 +198,11 @@ class ForegroundManager(object):
         print('Add to foreground: %s' % ref)
         if isinstance(ref, CatalogRef):
             ref = ref.entity()
-        self._catalog[0].add_entity_and_children(ref)
+        if isinstance(ref, list):
+            for k in ref:
+                self.add_to_foreground(k)
+        else:
+            self._catalog[0].add_entity_and_children(ref)
 
     def merge_compartments(self, item):
         if self._catalog.is_loaded(0):
@@ -263,7 +272,7 @@ class ForegroundManager(object):
     def inventory(self, node, **kwargs):
         if node.entity_type == 'fragment':
             print('%s' % node)
-            for x in sorted(self.get_fragment_inventory(node, **kwargs), key=lambda x: x.value):
+            for x in sorted(self.get_fragment_inventory(node, **kwargs), key=lambda z: (z.direction, z.value)):
                 print(x)
         else:
             print('%s' % node.fg())
@@ -373,7 +382,24 @@ class ForegroundManager(object):
         for f in fragments:
             self._rename_stage(f, old_name, new_name)
 
-    def fg_lcia(self, process_ref, quantities=None, dist=1, scenario=None, **kwargs):
+    def _prep_quantities(self, quantities):
+        if quantities is None:
+            qs = self._catalog[0].lcia_methods()
+            if len(qs) == 0:
+                print('No foreground LCIA methods')
+                return None
+            return qs
+        if not (isinstance(quantities, list) or isinstance(quantities, tuple)):
+            quantities = [quantities]
+        out = []
+        for k in quantities:
+            if isinstance(k, CatalogRef):
+                out.append(k.entity())
+            else:
+                out.append(k)
+        return out
+
+    def fg_lcia(self, process_ref, quantities=None, dist=3, scenario=None, **kwargs):
         """
         :param process_ref:
         :param quantities: defaults to foreground lcia quantities
@@ -389,44 +415,35 @@ class ForegroundManager(object):
         if not self._catalog.is_loaded(process_ref.index):
             self._catalog.load(process_ref.index)
         exch = self.db.filter_exch(process_ref, elem=True, **kwargs)
-        if quantities is None:
-            qs = self._catalog[0].lcia_methods()
-            if len(qs) == 0:
-                print('No foreground LCIA methods')
-                return None
-        elif isinstance(quantities, LcQuantity):
-            qs = [quantities]
-        else:
-            qs = quantities
+        qs = self._prep_quantities(quantities)
         results = LciaResults(process_ref.entity())
         for q in qs:
-            if not isinstance(q, LcQuantity):
-                q = q.entity()
             q_result = LciaResult(q)
-            for x in exch:
-                if not x.flow.has_characterization(q):
-                    cf = self.db.lookup_single_cf(x.flow, q, dist=dist, location=process_ref['SpatialScope'])
-                    if cf is None:
-                        x.flow.add_characterization(q)
-                    else:
-                        x.flow.add_characterization(cf)
-                fac = x.flow.factor(q)
-                q_result.add_score(process_ref.id, x, fac, process_ref['SpatialScope'])
+            if q in self.db.known_quantities():
+                for x in exch:
+                    if not x.flow.has_characterization(q):
+                        cf = self.db.lookup_single_cf(x.flow, q, dist=dist, location=process_ref['SpatialScope'])
+                        if cf is None:
+                            x.flow.add_characterization(q)
+                        else:
+                            x.flow.add_characterization(cf)
+                    fac = x.flow.factor(q)
+                    q_result.add_score(process_ref.id, x, fac, process_ref['SpatialScope'])
             results[q.get_uuid()] = q_result
         return results
 
     def bg_lcia(self, p_ref, quantities=None, **kwargs):
-        if quantities is None:
-            quantities = self[0].lcia_methods()
-        if len(quantities) == 0:
+        qs = self._prep_quantities(quantities)
+        if qs is None:
             return dict()
+
         if p_ref is None:
             # cutoff
             result = LciaResults(p_ref.entity())
             for q in quantities:
                 result[q.get_uuid()] = LciaResult(q)
             return result
-        return p_ref.archive.bg_lookup(p_ref.id, quantities=quantities, flowdb=self.db, **kwargs)
+        return p_ref.archive.bg_lookup(p_ref.id, quantities=qs, flowdb=self.db, **kwargs)
 
     def compare_lcia_results(self, p_refs, quantities=None, background=False, **kwargs):
         """
@@ -437,15 +454,12 @@ class ForegroundManager(object):
         :return:
         """
         results = dict()
+        qs = self._prep_quantities(quantities)
         for p in p_refs:
             if background:
-                results[p] = self.bg_lcia(p, **kwargs)
+                results[p] = self.bg_lcia(p, quantities=quantities, **kwargs)
             else:
-                results[p] = self.fg_lcia(p, **kwargs)
-        if quantities is None:
-            qs = self[0].lcia_methods()  # assume same qs for all processes
-        else:
-            qs = quantities
+                results[p] = self.fg_lcia(p, quantities=quantities, **kwargs)
 
         dynamic_grid(p_refs, qs, lambda x, y: results[y][x.get_uuid()],
                      ('Ref Units', lambda x: x.reference_entity),
@@ -483,7 +497,7 @@ class ForegroundManager(object):
             print('%s%s' % ('  ' * level, k))
             self._show_frag_children(k, level)
 
-    def show_fragments(self, show_all=False, background=False, **kwargs):
+    def fragments(self, show_all=False, background=False, **kwargs):
         """
 
         :param background:
@@ -494,6 +508,9 @@ class ForegroundManager(object):
             print('%s' % f)
             if show_all:
                 self._show_frag_children(f)
+
+    def background(self):
+        self.fragments(background=True)
 
     def frag(self, string):
         return next(f for f in self[0].fragments(show_all=True) if f.get_uuid().startswith(string.lower()))
@@ -509,6 +526,8 @@ class ForegroundManager(object):
         return r
 
     def draw(self, fragment, scenario=None, observed=False):
+        if isinstance(fragment, str):
+            fragment = self.frag(fragment)
         fs = fragment.show_tree(lambda x: self.child_flows(x), scenario=scenario, observed=observed)
         self.balance(fragment, scenario=scenario, observed=observed)
         return fs

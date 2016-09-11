@@ -38,14 +38,14 @@ class DetailedLciaResult(object):
     """
     Contains exchange, factor, result
     """
-    def __init__(self, exchange, factor, location, scale=1.0):
+    def __init__(self, lc_result, exchange, factor, location):
         self.exchange = exchange
         self.factor = factor
-        self._scale = scale
         if location in factor.locations():
             self.location = location
         else:
             self.location = 'GLO'
+        self._scale = lc_result.scale
 
     @property
     def flow(self):
@@ -73,9 +73,6 @@ class DetailedLciaResult(object):
             return 0.0
         return self._value * (self.factor[self.location] or 0.0)
 
-    def scale(self, factor):
-        self._scale = factor
-
     def __hash__(self):
         return hash((self.exchange.process.get_uuid(), self.exchange.direction, self.factor.flow.get_uuid()))
 
@@ -96,8 +93,9 @@ class SummaryLciaResult(object):
     """
     like a DetailedLciaResult except omitting the exchange and factor information
     """
-    def __init__(self, entity, node_weight, unit_score, scale=1.0):
+    def __init__(self, lc_result, entity, node_weight, unit_score):
         """
+        :param lc_result: who "owns" you. scale report by their scale.
         entity_id must either have get_uuid() or be hashable
         :param entity: a hashable identifier
         :param node_weight: stand-in for exchange value
@@ -105,15 +103,12 @@ class SummaryLciaResult(object):
         """
         self.entity = entity
         self.node_weight = node_weight
-        self._scale = scale
         self.unit_score = unit_score
+        self._scale = lc_result.scale  # property
 
     @property
     def result(self):
         return self.node_weight * self.unit_score * self._scale
-
-    def scale(self, factor):
-        self._scale = factor
 
     def __hash__(self):
         try:
@@ -140,24 +135,21 @@ class AggregateLciaScore(object):
     """
     def __init__(self, entity):
         self.entity = entity
-        self._scale = 1.0
         self.LciaDetails = set()
 
     @property
     def cumulative_result(self):
         return sum([i.result for i in self.LciaDetails])
 
-    def add_detailed_result(self, exchange, factor, location, scale=None):
-        if scale is not None:
-            self.scale(scale)
-        d = DetailedLciaResult(exchange, factor, location, scale=self._scale)
+    def add_detailed_result(self, lc_result, exchange, factor, location):
+        d = DetailedLciaResult(lc_result, exchange, factor, location)
         if d in self.LciaDetails:
             if factor[location] != 0:
                 raise DuplicateResult('exchange: %s\n  factor: %s\nlocation: %s' % (exchange, factor, location))
         self.LciaDetails.add(d)
 
-    def add_summary_result(self, entity, node_weight, unit_score):
-        d = SummaryLciaResult(entity, node_weight, unit_score, scale=self._scale)
+    def add_summary_result(self, lc_result, entity, node_weight, unit_score):
+        d = SummaryLciaResult(lc_result, entity, node_weight, unit_score)
         if d in self.LciaDetails:
             raise DuplicateResult()
         self.LciaDetails.add(d)
@@ -171,13 +163,6 @@ class AggregateLciaScore(object):
                 print('%s' % d)
         print('=' * 60)
         print('             Total score: %g ' % self.cumulative_result)
-
-    def scale(self, factor):
-        if factor == self._scale:
-            return
-        self._scale = factor
-        for k in self.LciaDetails:
-            k.scale(factor)
 
     def __str__(self):
         return '%s  %s' % (number(self.cumulative_result), self.entity)
@@ -234,8 +219,38 @@ class LciaResult(object):
         self._LciaScores = dict()
         self._private = private
 
+    @property
+    def scale(self):
+        return self._scale
+
+    def set_scale(self, scale):
+        """
+        why is this a function?
+        """
+        self._scale = scale
+
+    def _match_key(self, item):
+        """
+        whaaaaaaaaaat is going on here
+        :param item:
+        :return:
+        """
+        for k, v in self._LciaScores.items():
+            if item == k:
+                yield v
+            elif item == v.entity:
+                yield v
+            elif k.startswith(item):
+                yield v
+            elif str(v.entity).startswith(item):
+                yield v
+            elif k.startswith(str(item)):
+                yield v
+            elif str(v.entity).startswith(str(item)):
+                yield v
+
     def __getitem__(self, item):
-        return next(c for c in self._LciaScores.values() if str(c.entity).startswith(item))
+        return next(self._match_key(item))
 
     '''
     def __getitem__(self, item):
@@ -267,13 +282,6 @@ class LciaResult(object):
     def is_private(self):
         return self._private
 
-    def scale(self, factor):
-        if factor == self._scale:
-            return
-        self._scale = factor
-        for v in self._LciaScores.values():
-            v.scale(factor)
-
     def total(self):
         return sum([i.cumulative_result for i in self._LciaScores.values()])
 
@@ -290,12 +298,12 @@ class LciaResult(object):
                                                                                        self.quantity.get_uuid()))
         if key not in self._LciaScores.keys():
             self.add_component(key)
-        self._LciaScores[key].add_detailed_result(exchange, factor, location, scale=self._scale)
+        self._LciaScores[key].add_detailed_result(self, exchange, factor, location)
 
     def add_summary(self, key, entity, node_weight, unit_score):
         if key not in self._LciaScores.keys():
             self.add_component(key)
-        self._LciaScores[key].add_summary_result(entity, node_weight, unit_score, scale=self._scale)
+        self._LciaScores[key].add_summary_result(self, entity, node_weight, unit_score)
 
     def keys(self):
         if self._private:
@@ -315,6 +323,8 @@ class LciaResult(object):
     def _header(self):
         print('%s %s' % (self.quantity, self.quantity.reference_entity.unitstring()))
         print('-' * 60)
+        if self._scale != 1.0:
+            print('%60s: %10.4g' % ('scale', self._scale))
 
     def show(self):
         self._header()
@@ -344,7 +354,6 @@ class LciaResult(object):
         if self.scenario != other.scenario:
             raise InconsistentScenario
         s = LciaResult(self.quantity, self.scenario)
-        s.scale(self._scale)
         for k, v in self._LciaScores.items():
             s._LciaScores[k] = v
         for k, v in other._LciaScores.items():
@@ -369,11 +378,11 @@ class LciaResults(dict):
         try:
             int(item)
             return super(LciaResults, self).__getitem__(self._indices[item])
-        except ValueError:
+        except (ValueError, TypeError):
             return super(LciaResults, self).__getitem__(next(k for k in self.keys() if k.startswith(item)))
 
     def __setitem__(self, key, value):
-        value.scale(self._scale)
+        value.set_scale(self._scale)
         super(LciaResults, self).__setitem__(key, value)
         self._indices = list(self.keys())
 
@@ -382,12 +391,15 @@ class LciaResults(dict):
             return
         self._scale = factor
         for k in self._indices:
-            self[k].scale(factor)
+            self[k].set_scale(factor)
 
     def show(self):
         print('LCIA Results\n%s\n%s' % (self.entity, '-' * 60))
+        if self._scale != 1.0:
+            print('%60s: %10.4g' % ('scale', self._scale))
         for i, q in enumerate(self._indices):
             r = self[q]
+            r.set_scale(self._scale)
             print('[%2d] %.3s  %10.5g %s' % (i, q, r.total(), r.quantity))
 
     def clear(self):

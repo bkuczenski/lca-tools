@@ -20,6 +20,10 @@ class NoLoadedArchives(Exception):
     pass
 
 
+class AmbiguousReference(Exception):
+    pass
+
+
 class AmbiguousTermination(Exception):
     pass
 
@@ -136,8 +140,25 @@ class ForegroundManager(object):
     def search(self, *args, show=True, **kwargs):
         return self._catalog.search(*args, show=show, **kwargs)
 
-    def terminate(self, *args, **kwargs):
-        return self._catalog.terminate(*args, **kwargs)
+    def find_termination(self, ref, *args, index=None, **kwargs):
+        if isinstance(ref, CatalogRef):
+            if ref.entity_type == 'flow':
+                return self._catalog.terminate_flow(ref, *args, **kwargs)
+            else:
+                print("don't know how to terminate %s" % ref)
+        elif isinstance(ref, ExchangeRef):
+            return self._catalog.terminate(ref, **kwargs)
+        else:
+            if index is None:
+                print('Please specify an index.')
+                return
+            index = self._catalog.get_index(index)
+            if isinstance(ref, Exchange):
+                return self._catalog.terminate(ExchangeRef(self._catalog, index, ref), **kwargs)
+            elif isinstance(ref, LcFlow):
+                return self._catalog.terminate_flow(self.ref(index, ref), *args, **kwargs)
+            elif ref.entity_type == 'fragment':
+                return self._catalog.terminate_fragment(index, ref, **kwargs)
 
     def ref(self, *args):
         return self._catalog.ref(*args)
@@ -296,32 +317,40 @@ class ForegroundManager(object):
         for i in exch:
             print('%s' % i)
 
-    def compare_inventory(self, p_refs, **kwargs):
+    def compare_inventory(self, p_refs, elementary=False, **kwargs):
         def _key(exc):
             return ('%s [%s]' % (exc.flow['Name'], exc.flow.reference_entity.reference_entity.unitstring()),
-                    exc.direction)
+                    exc.direction, exc.flow)
         ints = dict()
-        elems = dict()
         int_set = set()
+        elems = dict()
         elem_set = set()
+
         for p in p_refs:
             ints[p] = self.db.filter_exch(p, elem=False, **kwargs)
             int_set = int_set.union(_key(x) for x in ints[p])
-            elems[p] = self.db.filter_exch(p, elem=True, **kwargs)
-            elem_set = elem_set.union(_key(x) for x in elems[p])
+            if elementary:
+                elems[p] = self.db.filter_exch(p, elem=True, **kwargs)
+                elem_set = elem_set.union(_key(x) for x in elems[p])
 
         int_rows = sorted(int_set, key=lambda x: x[1])
+        int_flows = [x[2] for x in int_rows]
 
         dynamic_grid(p_refs, int_rows,
                      lambda x, y: {t for t in ints[y] if _key(t) == x},
                      ('Direction', lambda x: x[1]),
                      ('Flow', lambda x: x[0]),
                      returns_sets=True, suppress_col_list=True)
-        ele_rows = sorted(elem_set, key=lambda x: x[1])
 
-        dynamic_grid(p_refs, ele_rows, lambda x, y: {t for t in elems[y] if _key(t) == x},
-                     ('Direction', lambda x: x[1]),
-                     ('Flow', lambda x: x[0]), returns_sets=True)
+        if elementary:
+            ele_rows = sorted(elem_set, key=lambda x: x[1])
+            ele_flows = [x[2] for x in ele_rows]
+
+            dynamic_grid(p_refs, ele_rows, lambda x, y: {t for t in elems[y] if _key(t) == x},
+                         ('Direction', lambda x: x[1]),
+                         ('Flow', lambda x: x[0]), returns_sets=True)
+            return int_flows, ele_flows
+        return int_flows
 
     def compare_allocation(self, p_ref):
         def _key(exc):
@@ -512,8 +541,22 @@ class ForegroundManager(object):
     def background(self):
         self.fragments(background=True)
 
-    def frag(self, string):
-        return next(f for f in self[0].fragments(show_all=True) if f.get_uuid().startswith(string.lower()))
+    def frag(self, string, strict=True):
+        """
+        strict=True is slow
+        :param string:
+        :param strict:
+        :return:
+        """
+        if strict:
+            k = [f for f in self[0].fragments(show_all=True) if f.get_uuid().startswith(string.lower())]
+            if len(k) > 1:
+                for i in k:
+                    print('%s' % i)
+                raise AmbiguousReference()
+            return k[0]
+        else:
+            return next(f for f in self[0].fragments(show_all=True) if f.get_uuid().startswith(string.lower()))
 
     def traverse(self, fragment, scenario=None, observed=False):
         ffs = fragment.traversal_entry(lambda x: self.child_flows(x), scenario, observed=observed)
@@ -550,9 +593,12 @@ class ForegroundManager(object):
                 string_ev = '%10g' % c.exchange_value(scenario)
                 print(' Scenario EV: %s [%s]' % (string_ev,
                                                  c.flow.unit()))
-            val = ifinput('%s: ' % prompt, string_ev)
+            val = ifinput('%s ("=" to use cached): ' % prompt, string_ev)
             if val != string_ev:
-                new_val = parse_math(val)
+                if val == '=':
+                    new_val = c.cached_ev
+                else:
+                    new_val = parse_math(val)
                 if scenario is None:
                     c.observed_ev = new_val
                 else:
@@ -569,7 +615,13 @@ class ForegroundManager(object):
             if fragment is x.reference_entity:
                 yield x
 
-    def scenarios(self, fragment, _scens=None):
+    def scenarios(self, fragment=None, _scens=None):
+        if fragment is None:
+            scens = set()
+            for i in self[0].fragments(show_all=True):
+                scens = scens.union(self.scenarios(i))
+            return scens
+
         if _scens is None:
             _scens = set()
         _scens = _scens.union(fragment.scenarios)
@@ -616,6 +668,13 @@ class ForegroundManager(object):
             self.build_child_flows(fragment, scenario=scenario)
     '''
 
+    def import_fragment(self, filename):
+        if os.path.isdir(filename):
+            print('Loading fragment files in directory %s' % filename)
+            self[0].import_fragments(self._catalog, filename)
+        else:
+            self[0].import_fragment(self._catalog, filename)
+
     def terminate_to_foreground(self, fragment, scenario=None):
         """
         Marks a fragment as its own termination. Note: this creates unresolved issues with flow matching across
@@ -640,13 +699,14 @@ class ForegroundManager(object):
         term.self_terminate()
         return children
 
-    def create_fragment_from_process(self, process_ref, ref_flow=None, background_children=True):
+    def create_fragment_from_process(self, process_ref, ref_flow=None, background=False, background_children=True):
         """
         The major entry into fragment building.  Given only a process ref, construct a fragment from the process,
         using the process's reference exchange as the reference fragment flow.
         :param process_ref:
         :param ref_flow:
-        :param background_children: [True] automatically terminate child flows with background references.
+        :param background: [False] add as a background fragment and do not traverse children
+        :param background_children: [True] automatically terminate child flows with background references (ecoinvent).
         :return:
         """
         process = process_ref.fg()
@@ -666,19 +726,20 @@ class ForegroundManager(object):
                 return None
         ref_exch = next(x for x in process.exchange(ref))
         direction = comp_dir(ref_exch.direction)
-        frag = self[0].create_fragment(ref, direction, Name='%s' % process_ref.entity())
+        frag = self[0].create_fragment(ref, direction, Name='%s' % process_ref.entity(), background=background)
         frag.terminate(process_ref, flow=ref)
-        self.build_child_flows(frag, background_children=background_children)
+        if not background:
+            self.build_child_flows(frag, background_children=background_children)
         return frag
 
-    def get_fragment_inventory(self, fragment, scenario=None, scale=None):
+    def get_fragment_inventory(self, fragment, scenario=None, scale=None, observed=False):
         """
         Aggregates inputs and outputs (un-terminated flows) from a fragment; returns a list of exchanges.
         :param fragment: ff
         :param scenario:
         :return:
         """
-        io_ffs = fragment.io_flows(lambda x: self.child_flows(x), scenario)
+        io_ffs = fragment.io_flows(lambda x: self.child_flows(x), scenario, observed=observed)
         if scale is not None:
             for i in io_ffs:
                 i.scale(scale)
@@ -702,8 +763,9 @@ class ForegroundManager(object):
         frag_exchs = []
         for k, v in accum.items():
             val = abs(v)
-            if ev != in_ex:
-                val *= (ev / in_ex)
+            if fragment.reference_entity is None:
+                if ev != in_ex:
+                    val *= (ev / in_ex)
             if v == 0:
                 continue
             elif v < 0:

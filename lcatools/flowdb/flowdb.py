@@ -336,7 +336,7 @@ class FlowDB(object):
         if len(flowables) == 0:
             return flow
         for cf in flow.characterizations():
-            if cf is not flow.reference_entity and cf.value is not None:
+            if cf.value is not None:
                 self._add_cf(flowables, comp, cf)
         return None
 
@@ -364,9 +364,11 @@ class FlowDB(object):
                 missing_flows.add(k)
         return missing_flows
 
-    def lookup_cfs(self, flow, quantity, dist=3):
+    def lookup_cfs(self, flow, quantity, dist=3, intermediate=False):
         cfs = set()
         flowables, comp = self.parse_flow(flow)
+        if not comp.elementary and not intermediate:
+            return cfs
         q = quantity.get_uuid()
         for i in flowables:
             if i in self._q_dict[q]:

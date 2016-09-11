@@ -187,7 +187,7 @@ class ForegroundArchive(LcArchive):
         if background is not None:
             return sorted([f for f in self._fragments(**kwargs) if f.is_background == background],
                           key=lambda x: x.term.is_null)
-        return sorted([f for f in self._fragments(**kwargs)], key=lambda x: x.is_background)
+        return sorted([f for f in self._fragments(**kwargs)], key=lambda x: (x.is_background, x['Name']))
 
     def add_child_fragment_flow(self, ff, flow, direction, Name=None, **kwargs):
         if Name is None:
@@ -309,12 +309,17 @@ class ForegroundArchive(LcArchive):
 
     def _find_links(self, frag):
         for i in self.fragments(show_all=True):
-            if i.reference_entity is frag:
-                yield i
-            else:
-                for t in i.terminations():
-                    if i.termination(t).term_node is frag:
-                        yield i
+            for t in i.terminations():
+                if i.termination(t).term_node is frag:
+                    yield i.termination(t)
+
+    def linked_terms(self, frag):
+        """
+        returns a list of terminations that match the input.
+        :param frag:
+        :return:
+        """
+        return [f for f in self._find_links(frag)]
 
     '''
     Load fragments from other folders
@@ -333,3 +338,14 @@ class ForegroundArchive(LcArchive):
 
             fragments.extend(j['fragments'])
         self._do_load(catalog, fragments)
+
+    def import_fragment(self, catalog, filename):
+        """
+        load just one fragment from the specified file.
+        :param catalog:
+        :param filename:
+        :return:
+        """
+        with open(filename) as fp:
+            self._do_load(catalog, json.load(fp))
+

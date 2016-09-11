@@ -119,6 +119,17 @@ class ForegroundBuilder(ForegroundManager):
 
     def create_fragment(self, parent=None, flow=None, direction=None, comment=None, value=None, balance=False,
                         **kwargs):
+        """
+
+        :param parent:
+        :param flow:
+        :param direction:
+        :param comment:
+        :param value:
+        :param balance:
+        :param kwargs:
+        :return:
+        """
         if flow is None:
             ch = cyoa('(N)ew flow or (S)earch for flow? ', 'ns')
             if ch == 'n':
@@ -160,6 +171,32 @@ class ForegroundBuilder(ForegroundManager):
                 self.traverse(parent)
 
         return frag
+
+    def aggregate_subfrags(self, fragment, scenario=None, descend=False):
+        """
+        set all subfragment terminations to aggregate
+        :param fragment:
+        :param scenario:
+        :param descend: what you actually set it to (default False)
+        :return:
+        """
+        term = fragment.termination(scenario)
+        if not term.is_null:
+            if term.term_node.entity_type == 'fragment':
+                term.descend = descend
+        for c in self.child_flows(fragment):
+            self.aggregate_subfrags(c, scenario=scenario)
+
+    def merge_backgrounds(self, old, new):
+        """
+        terminations linking to the old fragment will be transferred to the new one. not strictly limited to
+        bg fragments
+        :param old:
+        :param new:
+        :return:
+        """
+        for t in self[0].linked_terms(old):
+            t.update(new)
 
     @staticmethod
     def _update_ev(frag, scenario):
@@ -264,22 +301,21 @@ class ForegroundBuilder(ForegroundManager):
         print('%s' % fragment)
         self._show_frag_children(fragment)
 
-        k = [f for f in self[0]._find_links(fragment)]
-        if len(k) > 0:
+        ts = self[0].linked_terms(fragment)
+        if len(ts) > 0:
             print('Links to this fragment (terminations will be replaced with None):')
-            for i in k:
-                print('%s' % i)
+            for i in ts:
+                print('%s' % i._parent)
         if ifinput('Are you sure?? y/n:', 'n') == 'y':
-            for i in k:
-                for t in i.terminations():
-                    if i.termination(t).term_node is fragment:
-                        i.terminate(None, scenario=t)
+            for i in ts:
+                i.update(None)
 
             self._del_fragment(fragment)
 
     def add_child(self, frag):
         return self.create_fragment(parent=frag)
 
+    '''
     def find_termination(self, ref, index=None, direction=None):
         if isinstance(ref, LcFragment):
             if index is None:
@@ -296,6 +332,7 @@ class ForegroundBuilder(ForegroundManager):
         pick = pick_one(terms)
         print('Picked: %s' % pick)
         return pick
+    '''
 
     def terminate_by_search(self, frag, index=None):
         print('%s' % frag)

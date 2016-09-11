@@ -5,7 +5,7 @@
 
 import uuid
 
-from lcatools.entities import LcEntity
+from lcatools.entities import LcEntity, LcFlow
 from lcatools.exchanges import comp_dir, ExchangeValue, AllocatedExchange
 from lcatools.characterizations import Characterization
 from lcatools.literate_float import LiterateFloat
@@ -277,7 +277,9 @@ class FlowTermination(object):
             self._parent.flow.add_characterization(self.term_flow.reference_entity, value=cf)
 
             # this is surely a hack!
-            self._process_ref.catalog[0].add(self.term_flow.reference_entity)
+            if not isinstance(self._process_ref, LcFragment):
+                # if it's a fragment, then its flow's quantities are already in catalog[0]
+                self._process_ref.catalog[0].add(self.term_flow.reference_entity)
             # funny, it doesn't look like that bad of a hack.
 
     def _set_inbound_ev(self, inbound_ev):
@@ -492,7 +494,11 @@ class LcFragment(LcEntity):
             parent = catalog[0][j['parent']]
         else:
             parent = None
-        frag = cls(j['entityId'], catalog[0][j['flow']], j['direction'], parent=parent,
+        flow = catalog[0][j['flow']]
+        if flow is None:
+            flow = LcFlow(j['flow'], Name=j['Name'], Compartment=['Intermediate Flows', 'Fragments'])
+            catalog.add(flow)
+        frag = cls(j['entityId'], flow, j['direction'], parent=parent,
                    exchange_value=j['exchangeValues'].pop('0'),
                    private=j['isPrivate'],
                    balance_flow=j['isBalanceFlow'],
@@ -808,6 +814,8 @@ class LcFragment(LcEntity):
             ev = self._exchange_values[match]
         if ev is None:
             return 0.0
+        if ev == 0 and self.reference_entity is None:
+            ev = self.cached_ev
         return ev
 
     def exchange_values(self):
@@ -1006,11 +1014,6 @@ class LcFragment(LcEntity):
             else:
                 ev = self.exchange_value(scenario, observed=observed)
         else:
-            # balance reports net inflows; positive value is more coming in than out
-            # if I am an input, my exchange must be the negative of the balance
-            # if I am an output, my exchange must equal the balance
-            if self.direction == 'Input':
-                _balance *= -1
             # print('%.3s %g balance' % (self.get_uuid(), _balance))
             ev = _balance
             self._cache_balance_ev(_balance, scenario)
@@ -1081,6 +1084,11 @@ class LcFragment(LcEntity):
                 ff.extend(child_ff)
 
             if bal_f is not None:
+                # balance reports net inflows; positive value is more coming in than out
+                # if balance flow is an input, its exchange must be the negative of the balance
+                # if it is an output, its exchange must equal the balance
+                if bal_f.direction == 'Input':
+                    stock *= -1
                 bal_ff, cons = bal_f.traverse(childflows, node_weight, scenario, observed=observed,
                                               frags_seen=set(frags_seen), conserved_qty=None, _balance=stock)
                 ff.extend(bal_ff)

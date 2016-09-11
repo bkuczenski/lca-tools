@@ -62,8 +62,8 @@ def dynamic_grid(comparands, comparators, func, near_label, far_label, returns_s
     print('-' * len(h_str))
     #######
 
-    for row in comparators:
-        f_str = '%*.*s  ' % (near_width, near_width, near_label[1](row))
+    for i, row in enumerate(comparators):
+        f_str = '[%d] %*.*s  ' % (i, near_width, near_width, near_label[1](row))
         data_sets = defaultdict(set)
         for col in range(n):
             if returns_sets:

@@ -609,7 +609,7 @@ class CatalogInterface(object):
         return self._check_exchanges(flow_ref.index, flow_ref.entity(), 'Output', show=show)
 
     def sink(self, flow_ref, show=False):
-        return self._check_exchanges(flow_ref.index, flow_ref.entity(), 'Output', show=show)
+        return self._check_exchanges(flow_ref.index, flow_ref.entity(), 'Input', show=show)
 
     def _serialize_archive(self, item):
         index = self.get_index(item)

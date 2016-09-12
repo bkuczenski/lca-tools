@@ -170,6 +170,8 @@ class ForegroundBuilder(ForegroundManager):
                 frag.set_balance_flow()
                 self.traverse(parent)
 
+        if self.db.is_elementary(frag.flow):
+            self.terminate_to_foreground(frag)
         return frag
 
     def aggregate_subfrags(self, fragment, scenario=None, descend=False):
@@ -293,6 +295,8 @@ class ForegroundBuilder(ForegroundManager):
         surrogate.terminate(fragment)
 
     def _del_fragment(self, fragment):
+        if isinstance(fragment, str):
+            fragment = self.frag(fragment)
         for c in self.child_flows(fragment):
             self._del_fragment(c)
         self[0]._del_f(fragment)
@@ -340,23 +344,23 @@ class ForegroundBuilder(ForegroundManager):
         string = ifinput('Enter search term: ', frag['Name'])
         return pick_one(self.search(index, 'p', Name=string, show=False))
 
-    def add_termination(self, frag, term, scenario=None):
+    def add_termination(self, frag, term, scenario=None, background_children=True):
         if isinstance(term, ExchangeRef):
             print('Terminating from exchange\n')
             frag.term_from_exch(term, scenario=scenario)
         else:
             print('Terminating from process ref\n')
             frag.terminate(term, scenario=scenario)
-        self.build_child_flows(frag, background_children=True)
+        self.build_child_flows(frag, background_children=background_children)
 
-    def auto_terminate(self, frag, index=None, scenario=None):
+    def auto_terminate(self, frag, index=None, scenario=None, background_children=True):
         if scenario is None and not frag.term.is_null:
             return  # nothing to do-- (ecoinvent) already terminated by exchange
-        ex = self.find_termination(frag, index=index)
+        ex = pick_one(self.find_termination(frag, index=index))
         if ex is None:
             ex = self.terminate_by_search(frag, index=index)
         if ex is not None:
-            self.add_termination(frag, ex, scenario=scenario)
+            self.add_termination(frag, ex, scenario=scenario, background_children=background_children)
         else:
             print('Not terminated.')
 

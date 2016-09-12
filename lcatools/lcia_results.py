@@ -145,13 +145,29 @@ class AggregateLciaScore(object):
         d = DetailedLciaResult(lc_result, exchange, factor, location)
         if d in self.LciaDetails:
             if factor[location] != 0:
-                raise DuplicateResult('exchange: %s\n  factor: %s\nlocation: %s' % (exchange, factor, location))
+                other = next(k for k in self.LciaDetails if k == d)
+                if other.factor[location] != factor[location]:
+                    raise DuplicateResult('exchange: %s\n  factor: %s\nlocation: %s\nconflicts with %s' %
+                                          (exchange, factor, location, other.factor))
+                else:
+                    self.LciaDetails.remove(other)
+                    self.add_summary_result(lc_result, other.exchange.process,
+                                            other.exchange.value + exchange.value, factor[location])
+                    return
+            else:
+                # do nothing
+                return
         self.LciaDetails.add(d)
 
     def add_summary_result(self, lc_result, entity, node_weight, unit_score):
         d = SummaryLciaResult(lc_result, entity, node_weight, unit_score)
         if d in self.LciaDetails:
-            raise DuplicateResult()
+            other = next(k for k in self.LciaDetails if k == d)
+            if other.unit_score != d.unit_score:
+                raise DuplicateResult()
+            else:
+                other.node_weight += node_weight
+                return
         self.LciaDetails.add(d)
 
     def show(self, **kwargs):

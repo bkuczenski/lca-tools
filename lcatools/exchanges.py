@@ -304,7 +304,7 @@ class AllocatedExchange(Exchange):
                 print('r: %s ref: %s v: %d' % (r, self._ref_flow, v))
                 raise ValueError('Reference exchange value cannot be zero')
             if r != self._ref_flow and v != 0:
-                print('r: %s ref: %s v: %d' % (r, self._ref_flow, v))
+                print('r: %s ref: %s v: %g' % (r, self._ref_flow, v))
                 raise ValueError('Reference exchange value must be zero for non-reference exchanges')
 
     @property

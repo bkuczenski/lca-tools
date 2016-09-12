@@ -340,7 +340,7 @@ class ForegroundManager(object):
                      lambda x, y: {t for t in ints[y] if _key(t) == x},
                      ('Direction', lambda x: x[1]),
                      ('Flow', lambda x: x[0]),
-                     returns_sets=True, suppress_col_list=True)
+                     returns_sets=True, suppress_col_list=elementary)
 
         if elementary:
             ele_rows = sorted(elem_set, key=lambda x: x[1])
@@ -526,7 +526,7 @@ class ForegroundManager(object):
             print('%s%s' % ('  ' * level, k))
             self._show_frag_children(k, level)
 
-    def fragments(self, show_all=False, background=False, **kwargs):
+    def fragments(self, *args, show_all=False, background=False, **kwargs):
         """
 
         :param background:
@@ -534,12 +534,15 @@ class ForegroundManager(object):
         :return:
         """
         for f in self[0].fragments(show_all=False, background=background, **kwargs):
+            if len(args) != 0:
+                if not bool(re.search(args[0], str(f), flags=re.IGNORECASE)):
+                    continue
             print('%s' % f)
             if show_all:
                 self._show_frag_children(f)
 
-    def background(self):
-        self.fragments(background=True)
+    def background(self, *args):
+        self.fragments(*args, background=True)
 
     def frag(self, string, strict=True):
         """

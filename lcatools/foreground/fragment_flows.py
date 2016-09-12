@@ -67,7 +67,7 @@ def traversal_to_lcia(ffs):
                 if q not in results.keys():
                     results[q] = LciaResult(quantity, scenario=v.scenario)
                 results[q].add_component(i.fragment.get_uuid(), entity=i)
-                x = ExchangeValue(i.term.term_node.entity(), i.term.term_flow, i.term.direction, value=i.node_weight)
+                x = ExchangeValue(i.fragment, i.term.term_flow, i.term.direction, value=i.node_weight)
                 try:
                     l = i.term.term_node.entity()['SpatialScope']
                 except KeyError:
@@ -755,7 +755,10 @@ class LcFragment(LcEntity):
 
     @observed_ev.setter
     def observed_ev(self, value):
-        self._exchange_values[1] = value
+        if self._balance_flow:
+            print('value set by balance.')
+        else:
+            self._exchange_values[1] = value
 
     @property
     def is_background(self):

@@ -296,7 +296,7 @@ class ForegroundArchive(LcArchive):
         """
         self is a foreground archive
         """
-        for f in self.fragments(show_all=True):
+        for f in self.fragments(background=True):
             if f.reference_entity is not None:
                 continue
             try:

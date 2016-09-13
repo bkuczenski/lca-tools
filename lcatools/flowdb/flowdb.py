@@ -262,7 +262,7 @@ class FlowDB(object):
                      ('Flowable', lambda x: self.flowables.name(x)),
                      returns_sets=True)
 
-    def factors_for_flow(self, flow, quantities, single=True, **kwargs):
+    def factors_for_flow(self, flow, quantities=None, single=True, **kwargs):
         """
         straight lookup. returns a dict of quantity uuid to set of cfs
         :param flow:
@@ -272,6 +272,8 @@ class FlowDB(object):
         :return:
         """
         cfs = dict()
+        if quantities is None:
+            quantities = [q for q in self.known_quantities()]
         for qu in quantities:
             if single:
                 hits_q = self.lookup_single_cf(flow, qu, **kwargs)

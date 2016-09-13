@@ -45,7 +45,7 @@ class DetailedLciaResult(object):
             self.location = location
         else:
             self.location = 'GLO'
-        self._scale = lc_result.scale
+        self._lc = lc_result
 
     @property
     def flow(self):
@@ -65,7 +65,7 @@ class DetailedLciaResult(object):
     def _value(self):
         if self.exchange.value is None:
             return 0.0
-        return self.exchange.value * self._scale
+        return self.exchange.value * self._lc.scale
 
     @property
     def result(self):

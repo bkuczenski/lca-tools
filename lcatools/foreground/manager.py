@@ -562,10 +562,14 @@ class ForegroundManager(object):
             return next(f for f in self[0].fragments(show_all=True) if f.get_uuid().startswith(string.lower()))
 
     def traverse(self, fragment, scenario=None, observed=False):
+        if isinstance(fragment, str):
+            fragment = self.frag(fragment)
         ffs = fragment.traversal_entry(lambda x: self.child_flows(x), scenario, observed=observed)
         return ffs
 
     def fragment_lcia(self, fragment, scenario=None, observed=False, scale=None):
+        if isinstance(fragment, str):
+            fragment = self.frag(fragment)
         r = fragment.fragment_lcia(lambda x: self.child_flows(x), scenario=scenario, observed=observed)
         if scale is not None:
             r.scale(scale)
@@ -579,6 +583,8 @@ class ForegroundManager(object):
         return fs
 
     def observe(self, fragment, scenario=None):
+        if isinstance(fragment, str):
+            fragment = self.frag(fragment)
         print('%s' % fragment)
         if scenario is None:
             print('{Observing for model reference}\n')
@@ -689,11 +695,14 @@ class ForegroundManager(object):
         :param fragment:
         :return:
         """
+        if isinstance(fragment, str):
+            fragment = self.frag(fragment)
         term = fragment.termination(scenario)
         children = []
         if term.is_fg:
             return children
         if (not term.is_null) and term.term_node.entity_type == 'process':
+            fragment.scale_evs(1.0 / term.inbound_exchange_value)
             for elem in self.gen_elem(term.term_node, term.term_flow):
                 child = self[0].add_child_ff_from_exchange(fragment, elem, Name=str(fragment.flow),
                                                            StageName='direct emission')
@@ -795,13 +804,33 @@ class ForegroundManager(object):
             return None
 
         if term.term_node.entity_type == 'process':
+            if scenario is not None:
+                print('Automatic building of child flows is not supported for scenario terminations of process nodes.')
+                return []
+            if len([c for c in self.child_flows(fragment)]) != 0:
+                print('Warning: fragment already has child flows. Continuing will result in (possibly many) ')
+                if ifinput('duplicate child flows.  Continue? y/n', 'n') != 'y':
+                    return []
 
             int_exch = self.gen_exchanges(term.term_node, term.term_flow, term.direction)
+            # in process case- possible to specify multiple identical children from the same node
+            """
+             this means that build_child_flows will have undesirable results if called for
+             a process- terminated node with similar exchanges for multiple scenarios.
+             maybe changing node terminations should only be permitted for subfragments. something to
+             think about.
+            """
 
         elif term.term_node.entity_type == 'fragment':
 
-            ev = fragment.exchange_value(scenario)
-            int_exch = self.get_fragment_inventory(term.term_node, scenario=scenario, scale=1.0/ev)
+            int_exch = self.get_fragment_inventory(term.term_node, scenario=scenario)
+            # in subfragment case- child flows aggregate so we don't want to create duplicate children
+            for x in int_exch:
+                match = [c for c in self.child_flows(fragment) if c.flow == x.flow and c.direction == x.direction]
+                if len(match) > 1:
+                    raise AmbiguousReference('Multiple child flows matching %s' % x)
+                elif len(match) == 1:
+                    int_exch.remove(x)  # don't make a new child if one is already found
 
         else:
             raise AmbiguousTermination('Cannot figure out entity type for %s' % term)
@@ -922,12 +951,16 @@ class ForegroundManager(object):
 
     def balance(self, frag, scenario=None, observed=False):
         qs = defaultdict(float)
+        if frag.reference_entity is None:
+            in_ex = frag.exchange_value(scenario, observed=observed)
+        else:
+            in_ex = 1.0
         for cf in frag.flow.characterizations():
             if cf.value is not None:
                 if frag.direction == 'Input':  # output from term
-                    qs[cf.quantity] -= cf.value
+                    qs[cf.quantity] -= cf.value * in_ex
                 else:
-                    qs[cf.quantity] += cf.value
+                    qs[cf.quantity] += cf.value * in_ex
         for c in self.child_flows(frag):
             for cf in c.flow.characterizations():
                 mag = c.exchange_value(scenario, observed=observed) * (cf.value or 0.0)

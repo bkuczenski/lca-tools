@@ -295,13 +295,13 @@ class ForegroundBuilder(ForegroundManager):
         surrogate.terminate(fragment)
 
     def _del_fragment(self, fragment):
-        if isinstance(fragment, str):
-            fragment = self.frag(fragment)
         for c in self.child_flows(fragment):
             self._del_fragment(c)
         self[0]._del_f(fragment)
 
     def del_fragment(self, fragment):
+        if isinstance(fragment, str):
+            fragment = self.frag(fragment)
         print('%s' % fragment)
         self._show_frag_children(fragment)
 

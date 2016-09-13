@@ -137,7 +137,7 @@ class FlowTermination(object):
         self._process_ref = process_ref  # this is either a catalog_ref (for process) or just a fragment
         self._descend = True
         self.term_flow = None
-        self._cached_ev = None
+        self._cached_ev = 1.0
         self._score_cache = LciaResults(fragment)
         if direction is None:
             self.direction = comp_dir(fragment.direction)
@@ -326,7 +326,9 @@ class FlowTermination(object):
 
     @property
     def unit(self):
-        return '%4g %s' % (self._cached_ev, self.term_flow.unit())
+        if isinstance(self.term_node, LcFragment):  # fg, bg, or subfragment
+            return '%4g unit' % self._cached_ev
+        return '%4g %s' % (self._cached_ev, self.term_flow.unit())  # process
 
     def set_term_flow(self, flow):
         """
@@ -434,6 +436,13 @@ class FlowTermination(object):
         return j
 
     def __eq__(self, other):
+        if self is other:
+            return True
+        if not isinstance(other, FlowTermination):
+            return False
+        if self.is_null:
+            if other.is_null:
+                return True
         return (self.term_node.get_uuid() == other.term_node.get_uuid() and
                 self.term_flow == other.term_flow and
                 self.direction == other.direction)
@@ -496,7 +505,7 @@ class LcFragment(LcEntity):
             parent = None
         flow = catalog[0][j['flow']]
         if flow is None:
-            flow = LcFlow(j['flow'], Name=j['Name'], Compartment=['Intermediate Flows', 'Fragments'])
+            flow = LcFlow(j['flow'], Name=j['tags']['Name'], Compartment=['Intermediate Flows', 'Fragments'])
             catalog.add(flow)
         frag = cls(j['entityId'], flow, j['direction'], parent=parent,
                    exchange_value=j['exchangeValues'].pop('0'),
@@ -579,7 +588,6 @@ class LcFragment(LcEntity):
 
         self._exchange_values = _new_evs()
         self.cached_ev = exchange_value
-        self._cached_unit_scores = dict()  # of quantities
 
         self._terminations = dict()
         self._terminations[None] = FlowTermination.null(self)
@@ -652,6 +660,10 @@ class LcFragment(LcEntity):
 
     @property
     def unit(self):
+        """
+        used for formatting the fragment in display
+        :return:
+        """
         if self.reference_entity is None:
             return '%4g %s' % (self.cached_ev, self.flow.unit())
         return self.term.unit
@@ -696,7 +708,8 @@ class LcFragment(LcEntity):
 
     def show_tree(self, childflows, prefix='', scenario=None, observed=False):
         children = [c for c in childflows(self)]
-        if len(children) > 0 and self.term.is_null:
+        term = self.termination(scenario)
+        if len(children) > 0 and term.is_null:
             raise InvalidParentChild('null-terminated fragment %.7s has children' % self.get_uuid())
 
         delim = '()'
@@ -709,17 +722,17 @@ class LcFragment(LcEntity):
                 'Output': '=>='
             }[self.direction]
 
-            print('   %s%s%s %.5s %s%7.3g %s%s%s %s' % (prefix, dirn, self.term, self.get_uuid(),
+            print('   %s%s%s %.5s %s%s%7.3g %s%s %s' % (prefix, dirn, term, self.get_uuid(),
                                                         delim[0],
+                                                        self._mod(scenario),
                                                         self.exchange_value(scenario, observed=observed) or 0.0,
                                                         self.flow.unit(),
                                                         delim[1],
-                                                        self._mod(scenario),
                                                         self['Name']))
         # print fragment reference
         latest_stage = ''
         if len(children) > 0:
-            print('   %s [%s] %s' % (prefix, self.unit, self['Name']))
+            print('   %s [%s] %s' % (prefix, term.unit, self['Name']))
             prefix += '    | '
             for c in sorted(children, key=lambda x: (x['StageName'], not x.term.is_null, x.term.is_bg)):
                 if c['StageName'] != latest_stage:
@@ -745,6 +758,15 @@ class LcFragment(LcEntity):
         :return:
         """
         self._exchange_values[0] = 1.0
+
+    def scale_evs(self, factor):
+        """
+        needed when foregrounding terminations
+        :param factor:
+        :return:
+        """
+        for k, v in self._exchange_values.items():
+            self._exchange_values[k] = v * factor
 
     def clear_evs(self):
         self._exchange_values = _new_evs()
@@ -952,7 +974,7 @@ class LcFragment(LcEntity):
     def _cache_balance_ev(self, _balance, scenario):
         match = self._match_scenario_ev(scenario)
         if match is None:
-            self.observed_ev = _balance
+            self._exchange_values[1] = _balance
         else:
             self.set_exchange_value(match, _balance)
 
@@ -1157,7 +1179,7 @@ class LcFragment(LcEntity):
 
             # remaining un-accounted io flows are getting appended, so do scale
             for x in ios:
-                x.scale(node_weight)
+                x.scale(downstream_nw)
             ff.extend(ios)
 
         # if descend is true- we give back everything- otherwise we aggregate

@@ -16,6 +16,12 @@ from lcatools.interact import pick_reference, ifinput, pick_one, pick_compartmen
 MANIFEST = ('catalog.json', 'entities.json', 'fragments.json', 'flows.json')
 
 
+def _recursive_ref(frag):
+    if frag.reference_entity is not None:
+        return _recursive_ref(frag.reference_entity)
+    return frag
+
+
 class NoLoadedArchives(Exception):
     pass
 
@@ -823,7 +829,25 @@ class ForegroundManager(object):
 
         elif term.term_node.entity_type == 'fragment':
 
-            int_exch = self.get_fragment_inventory(term.term_node, scenario=scenario)
+            if term.term_node.reference_entity is not None:
+                the_ref = _recursive_ref(term.term_node)
+                correct_reference = True
+            else:
+                the_ref = term.term_node
+                correct_reference = False
+
+            int_exch = self.get_fragment_inventory(the_ref, scenario=scenario)
+
+            if correct_reference:
+                surrogate_in = next(x for x in int_exch
+                                    if x.flow is term.term_flow and x.direction == term.direction)  # or StopIter
+                int_exch.remove(surrogate_in)
+                int_exch.append(ExchangeValue(the_ref, the_ref.flow, comp_dir(the_ref.direction),
+                                              value=the_ref.cached_ev))
+
+                for x in int_exch:
+                    x.value *= 1.0 / surrogate_in.value
+
             # in subfragment case- child flows aggregate so we don't want to create duplicate children
             for x in int_exch:
                 match = [c for c in self.child_flows(fragment) if c.flow == x.flow and c.direction == x.direction]

@@ -25,6 +25,10 @@ def select_archive(F):
     return index
 
 
+class InvalidFragmentFlow(Exception):
+    pass
+
+
 class ForegroundBuilder(ForegroundManager):
 
     def __init__(self, *args, **kwargs):
@@ -293,6 +297,50 @@ class ForegroundBuilder(ForegroundManager):
         fragment.clear_evs()
 
         surrogate.terminate(fragment)
+        return surrogate
+
+    def rebase_fragment(self, fragment, flow, direction):
+        """
+        creates a new fragment by inverting an existing one (via traversal), specifying an alternate flow as the
+        reference.  basically wraps the fragment and sets the exchange value, then deletes one child flow.
+        doesn't currently work if the fragment contains internal reference flow feedback
+        :param fragment:
+        :param exchange: should be output from F.get_fragment_inventory
+        :return:
+        """
+        comment = 'rebased %.5s' % fragment.get_uuid()
+
+        exchange = next(ex for ex in self.get_fragment_inventory(fragment)
+                        if ex.flow is flow and ex.direction == direction)
+        frag = self.new_fragment(exchange.flow, comp_dir(exchange.direction),
+                                 Comment=comment, exchange_value=exchange.value)
+        frag.terminate(frag)
+        self.create_fragment(parent=frag, flow=fragment.flow, direction=comp_dir(exchange.direction),
+                             comment=comment, value=fragment.cached_ev)
+        n = self.create_fragment(parent=frag, flow=fragment.flow, direction=fragment.direction,
+                                 comment=comment, value=fragment.cached_ev)
+        n.terminate(fragment)
+        ch = self.build_child_flows(n, background_children=False)
+
+        for c in ch:
+            if c.flow is exchange.flow:
+                c.term.self_terminate()
+
+        return frag
+
+    def terminate_in_reverse(self, fragment, non_ref):
+        """
+        Terminate a fragment flow in a non-reference flow of another fragment.
+
+        turns out I don't really need a function to do this, as it's just two steps
+        :param fragment: the child flow to be terminated
+        :param non_ref: the child flow that matches the termination
+        :return:
+        """
+        if not non_ref.term.is_null:
+            raise InvalidFragmentFlow('termination must be an io flow')
+        fragment.terminate(non_ref)
+        self.build_child_flows(fragment, background_children=False)
 
     def _del_fragment(self, fragment):
         for c in self.child_flows(fragment):

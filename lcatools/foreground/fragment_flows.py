@@ -10,7 +10,7 @@ from lcatools.entities import LcEntity, LcFlow
 from lcatools.exchanges import comp_dir, ExchangeValue, AllocatedExchange
 from lcatools.characterizations import Characterization
 from lcatools.literate_float import LiterateFloat
-from lcatools.lcia_results import LciaResult, LciaResults
+from lcatools.lcia_results import LciaResult, LciaResults, DetailedLciaResult, SummaryLciaResult
 from lcatools.interact import pick_one, parse_math
 
 
@@ -601,6 +601,12 @@ class LcFragment(LcEntity):
         if 'StageName' not in self._d:
             self._d['StageName'] = ''
 
+        self.__dbg_threshold = -1  # higher number is more verbose
+
+    def _print(self, qwer, level=1):
+        if level < self.__dbg_threshold:
+                print(qwer)
+
     def entity(self):
         """
         for compat with catalog_refs
@@ -1024,11 +1030,9 @@ class LcFragment(LcEntity):
         children of fragment nodes
         :return: an array of FragmentFlow records reporting the traversal
         """
-        __dbg_threshold = 2
 
-        def _print(x, level=1):
-            if level < __dbg_threshold:
-                print(x)
+        def _print(qwer, level=1):
+            self._print(qwer, level=level)
         '''
         First handle the traversal entry
         inputs:
@@ -1049,7 +1053,7 @@ class LcFragment(LcEntity):
             else:
                 ev = self.exchange_value(scenario, observed=observed)
         else:
-            _print('%.3s %g balance' % (self.get_uuid(), _balance))
+            _print('%.3s %g balance' % (self.get_uuid(), _balance), level=2)
             ev = _balance
             self._cache_balance_ev(_balance, scenario)
 
@@ -1065,7 +1069,7 @@ class LcFragment(LcEntity):
                 conserved = True
             if self.direction == 'Output':  # convention: inputs to parent are positive
                 conserved_val *= -1
-            _print('%.3s %g' % (self.get_uuid(), conserved_val))
+            _print('%.3s %g' % (self.get_uuid(), conserved_val), level=2)
 
         node_weight = self.node_weight(magnitude, scenario)
         term = self.termination(scenario)
@@ -1104,7 +1108,7 @@ class LcFragment(LcEntity):
                     # use repeat call to avoid double division
                 if self.direction == 'Input':  # convention: inputs to self are positive
                     stock *= -1
-                # print('%.3s %g inbound-balance' % (self.get_uuid(), stock))
+                _print('%.3s %g inbound-balance' % (self.get_uuid(), stock), level=2)
 
             for f in childflows(self):
                 try:
@@ -1155,11 +1159,19 @@ class LcFragment(LcEntity):
                 _print('inverse traversal---')
                 the_ref = _recursive_ref(term.term_node)
                 correct_reference = True
+                in_ex = the_ref.exchange_value(scenario, observed=observed)
+                # If flow directions conflict, subfragment is being run in reverse
+                if term.term_node.direction == self.direction:
+                    in_ex *= -1
+                    _print('%s\nNegating subfragments-- caution ahead!' % self, level=0)
             else:
                 the_ref = term.term_node
                 correct_reference = False
-
-            in_ex = the_ref.exchange_value(scenario, observed=observed)
+                in_ex = the_ref.exchange_value(scenario, observed=observed)
+                # If flow directions conflict, subfragment is being run in reverse
+                if term.term_node.direction != self.direction:
+                    in_ex *= -1
+                    _print('%s\nNegating subfragments-- caution ahead!' % self, level=0)
 
             # for proper subfragments, need to determine child flow magnitudes based on traversal record
             subfrag_ffs, cons = the_ref.traverse(childflows, in_ex, scenario,
@@ -1190,7 +1202,7 @@ class LcFragment(LcEntity):
                     _print(' -= %g' % m.magnitude)
                 ios.remove(m)
 
-            downstream_nw = node_weight / in_ex
+            downstream_nw = node_weight / abs(in_ex)
 
             # then we add the results of the subfragment, either in aggregated or disaggregated form
             if term.descend:
@@ -1287,13 +1299,34 @@ class FragmentFlow(object):
             term = '--:'
         else:
             term = '-# '
-        return '%.5s  %10.3g [%6s] %s %s' % (self.fragment.get_uuid(), self.magnitude, self.fragment.direction,
+        return '%.5s  %10.3g [%6s] %s %s' % (self.fragment.get_uuid(), self.node_weight, self.fragment.direction,
                                             term, self.fragment['Name'])
+
+    def __add__(self, other):
+        if isinstance(other, FragmentFlow):
+            if other.fragment is not self.fragment:
+                raise ValueError('Fragment flows do not belong to the same fragment')
+            mag = other.magnitude
+            nw = other.node_weight
+        elif isinstance(other, DetailedLciaResult):
+            if other.exchange.process is not self.fragment:
+                raise ValueError('FragmentFlow and DetailedLciaResult do not belong to the same fragment')
+            nw = other.exchange.value
+            mag = nw
+        elif isinstance(other, SummaryLciaResult):
+            if other.entity is not self.fragment:
+                raise ValueError('FragmentFlow and SummaryLciaResult do not belong to the same fragment')
+            nw = other.node_weight
+            mag = nw
+        else:
+            raise TypeError("Don't know how to add type %s to FragmentFlow\n %s\n to %s" %(type(other), other, self))
+        # don't check unit scores-- ?????
+        new = FragmentFlow(self.fragment, self.magnitude + mag, self.node_weight + nw,
+                           self.term, self.is_conserved)
+        return new
 
     def to_antelope(self, fragmentID, stageID):
         pass
-
-
 
 
 class GhostFragmentFlow(object):

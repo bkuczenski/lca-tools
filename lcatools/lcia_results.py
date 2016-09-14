@@ -141,6 +141,13 @@ class AggregateLciaScore(object):
     def cumulative_result(self):
         return sum([i.result for i in self.LciaDetails])
 
+    def _augment_entity_contents(self, other):
+        """
+        when duplicate fragmentflows are aggregated, their node weights and magnitudes should be added together
+        :return:
+        """
+        self.entity = self.entity + other
+
     def add_detailed_result(self, lc_result, exchange, factor, location):
         d = DetailedLciaResult(lc_result, exchange, factor, location)
         if d in self.LciaDetails:
@@ -153,6 +160,7 @@ class AggregateLciaScore(object):
                     self.LciaDetails.remove(other)
                     self.add_summary_result(lc_result, other.exchange.process,
                                             other.exchange.value + exchange.value, factor[location])
+                    self._augment_entity_contents(d)
                     return
             else:
                 # do nothing
@@ -167,6 +175,7 @@ class AggregateLciaScore(object):
                 raise DuplicateResult()
             else:
                 other.node_weight += node_weight
+                self._augment_entity_contents(other)
                 return
         self.LciaDetails.add(d)
 

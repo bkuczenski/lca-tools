@@ -347,5 +347,5 @@ class ForegroundArchive(LcArchive):
         :return:
         """
         with open(filename) as fp:
-            self._do_load(catalog, json.load(fp))
+            self._do_load(catalog, json.load(fp)['fragments'])
 

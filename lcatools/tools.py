@@ -11,6 +11,7 @@ from collections import defaultdict, Counter
 
 from lcatools.from_json import from_json
 
+from lcatools.providers.base import LcArchive
 from lcatools.providers.ilcd import IlcdArchive
 from lcatools.providers.ilcd_lcia import IlcdLcia
 from lcatools.providers.ecospold2 import EcospoldV2Archive
@@ -43,6 +44,7 @@ def archive_factory(ref, ds_type, **kwargs):
     :return:
     """
     init_fcn = {
+        'lcarchive': LcArchive,
         'ilcdarchive': IlcdArchive,
         'ilcd': IlcdArchive,
         'ilcdlcia': IlcdLcia,

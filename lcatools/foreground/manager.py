@@ -135,9 +135,14 @@ class ForegroundManager(object):
     def save(self):
         self._catalog.save_foreground()
 
-    @property
-    def flows(self):
+    def flows(self, *args, elementary=False):
         for f in sorted(self[0].flows(), key=lambda x: x['Name']):
+            if isinstance(elementary, bool):
+                if not self.db.is_elementary(f) is elementary:
+                    continue
+            if len(args) != 0:
+                if not bool(re.search(args[0], str(f), flags=re.IGNORECASE)):
+                    continue
             print('%s' % f)
 
     def __getitem__(self, item):
@@ -457,11 +462,18 @@ class ForegroundManager(object):
             if q in self.db.known_quantities():
                 for x in exch:
                     if not x.flow.has_characterization(q):
-                        cf = self.db.lookup_single_cf(x.flow, q, dist=dist, location=process_ref['SpatialScope'])
-                        if cf is None:
-                            x.flow.add_characterization(q)
-                        else:
+                        # look locally
+                        local = self[0][x.flow.get_uuid()]
+                        if local is not None and local.has_characterization(q):
+                            cf = local.factor(q)
                             x.flow.add_characterization(cf)
+                        else:
+                            cf = self.db.lookup_single_cf(x.flow, q, dist=dist, location=process_ref['SpatialScope'])
+                            if cf is None:
+                                x.flow.add_characterization(q)
+                            else:
+                                x.flow.add_characterization(cf)
+                                self.add_to_foreground(x.flow)
                     fac = x.flow.factor(q)
                     q_result.add_score(process_ref.id, x, fac, process_ref['SpatialScope'])
             results[q.get_uuid()] = q_result
@@ -588,36 +600,49 @@ class ForegroundManager(object):
         self.balance(fragment, scenario=scenario, observed=observed)
         return fs
 
+    @staticmethod
+    def _observe(c, scenario):
+        if scenario is None:
+            prompt = 'Observed value'
+        else:
+            prompt = 'Scenario value'
+
+        print('%s' % c)
+        print(' Cached EV: %6.4g\n Observed EV: %6.4g [%s]' % (c.cached_ev, c.observed_ev, c.flow.unit()))
+        if scenario is None:
+            string_ev = '%10g' % c.observed_ev
+        else:
+            string_ev = '%10g' % c.exchange_value(scenario)
+            print(' Scenario EV: %s [%s]' % (string_ev,
+                                             c.flow.unit()))
+        val = ifinput('%s ("=" to use cached): ' % prompt, string_ev)
+        if val != string_ev:
+            if val == '=':
+                new_val = c.cached_ev
+            else:
+                new_val = parse_math(val)
+            if scenario is None:
+                c.observed_ev = new_val
+            else:
+                c.set_exchange_value(scenario, new_val)
+
     def observe(self, fragment, scenario=None):
         if isinstance(fragment, str):
             fragment = self.frag(fragment)
-        print('%s' % fragment)
+
+        fragment.show()
         if scenario is None:
             print('{Observing for model reference}\n')
-            prompt = 'Observed value'
         else:
             print('{Observing for scenario "%s"}' % scenario)
-            prompt = 'Scenario value'
-
+        self._observe(fragment, scenario)
+        if fragment.term.is_null:
+            return
+        if fragment.term.term_node.entity_type == 'fragment':
+            print('fragment children are set by traversal')
+            return
         for c in self.child_flows(fragment):
-            print('%s' % c)
-            print(' Cached EV: %6.4g\n Observed EV: %6.4g [%s]' % (c.cached_ev, c.observed_ev, c.flow.unit()))
-            if scenario is None:
-                string_ev = '%10g' % c.observed_ev
-            else:
-                string_ev = '%10g' % c.exchange_value(scenario)
-                print(' Scenario EV: %s [%s]' % (string_ev,
-                                                 c.flow.unit()))
-            val = ifinput('%s ("=" to use cached): ' % prompt, string_ev)
-            if val != string_ev:
-                if val == '=':
-                    new_val = c.cached_ev
-                else:
-                    new_val = parse_math(val)
-                if scenario is None:
-                    c.observed_ev = new_val
-                else:
-                    c.set_exchange_value(scenario, new_val)
+            self._observe(c, scenario)
 
     def child_flows(self, fragment):
         """
@@ -901,7 +926,10 @@ class ForegroundManager(object):
                 return self.bg_lcia(x, ref_flow=y, quantities=z)
         elif term.is_fg:
             def lcia(x, y, z):
-                return LciaResult.from_cfs(x, self.db.factors_for_flow(y, z))
+                local = self[0][y.get_uuid()]
+                if local is not y:
+                    raise AmbiguousReference('!!! this should be in foreground')
+                return LciaResult.from_cfs(x, self.db.factors_for_flow(local, z))
         else:
             def lcia(x, y, z):
                 return self.fg_lcia(x, ref_flow=y, quantities=z, scenario=scenario)
@@ -1028,10 +1056,6 @@ class ForegroundManager(object):
             net += mag
 
         print('----------\n %+10.4g net' % net)
-
-    @staticmethod
-    def profile(flow):
-        flow.profile()
 
 
 '''

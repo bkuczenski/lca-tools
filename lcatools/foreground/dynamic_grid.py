@@ -47,7 +47,7 @@ def dynamic_grid(comparands, comparators, func, near_label, far_label, returns_s
     :param suppress_col_list: [False] don't print summary at the bottom- useful in case of multiple dynamic grids
     :return: NOTHING!
     """
-    h_str = '%s  ' % near_label[0]
+    h_str = '    %s  ' % near_label[0]
     near_width = len(near_label[0])
 
     width = max([6, width])
@@ -63,7 +63,7 @@ def dynamic_grid(comparands, comparators, func, near_label, far_label, returns_s
     #######
 
     for i, row in enumerate(comparators):
-        f_str = '[%d] %*.*s  ' % (i, near_width, near_width, near_label[1](row))
+        f_str = '[%2d] %*.*s  ' % (i, near_width, near_width, near_label[1](row))
         data_sets = defaultdict(set)
         for col in range(n):
             if returns_sets:
@@ -88,7 +88,7 @@ def dynamic_grid(comparands, comparators, func, near_label, far_label, returns_s
                     n_str += _result_to_str(data_sets[col].pop(), width=width)
                 else:
                     n_str += ' ' * (width + 1)
-            print('%s ' % n_str)
+            print('    %s ' % n_str)
             max_len -= 1
     if suppress_col_list is False:
         print('%s' % h_str)

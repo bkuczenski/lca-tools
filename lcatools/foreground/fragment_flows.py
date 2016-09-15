@@ -68,18 +68,24 @@ def traversal_to_lcia(ffs):
         if not i.term.is_null:
             for q, v in i.term.score_cache_items():
                 quantity = v.quantity
+
+                value = i.term.score_cache(quantity).total()
+                if value * i.node_weight == 0:
+                    continue
+
+                if i.term.direction == i.fragment.direction:
+                    # if the directions collide (rather than complement), the term is getting run in reverse
+                    value *= -1
+
                 if q not in results.keys():
                     results[q] = LciaResult(quantity, scenario=v.scenario)
+
                 results[q].add_component(i.fragment.get_uuid(), entity=i)
                 x = ExchangeValue(i.fragment, i.term.term_flow, i.term.direction, value=i.node_weight)
                 try:
                     l = i.term.term_node.entity()['SpatialScope']
                 except KeyError:
                     l = None
-                value = i.term.score_cache(quantity).total()
-                if i.term.direction == i.fragment.direction:
-                    # if the directions collide (rather than complement), the term is getting run in reverse
-                    value *= -1
                 f = Characterization(i.term.term_flow, quantity, value=value, location=l)
                 results[q].add_score(i.fragment.get_uuid(), x, f, l)
     return results
@@ -756,7 +762,7 @@ class LcFragment(LcEntity):
 
     @property
     def cached_ev(self):
-        return self._exchange_values[0]
+        return self._exchange_values[0] or 0
 
     @cached_ev.setter
     def cached_ev(self, value):

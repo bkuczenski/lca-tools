@@ -248,6 +248,21 @@ class ForegroundBuilder(ForegroundManager):
             if scen != 0 and scen != 1:
                 new.set_exchange_value(scen, frag.exchange_value(scen))
 
+    def interpose(self, frag):
+        """
+        create a new fragment between the given fragment and its parent. if flow is None, uses the same flow.
+        direction is the same as the given fragment. exchange value is shifted to new frag; given frag's ev is
+        set to 1.
+        given fragment sets the new frag as its parent.
+        """
+        interp = self.create_fragment(parent=frag.reference_entity, flow=frag.flow, direction=frag.direction,
+                                      comment='Interposed flow', value=frag.cached_ev)
+        interp.term.self_terminate()
+        self.transfer_evs(frag, interp)
+        frag.clear_evs()
+        frag.reference_entity = interp
+        return interp
+
     def clone_fragment(self, frag, parent=None, suffix=' (copy)'):
         """
         Creates duplicates of the fragment and its children. returns the reference fragment.

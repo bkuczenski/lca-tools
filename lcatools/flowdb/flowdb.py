@@ -181,7 +181,6 @@ class FlowDB(object):
 
         :param compartment: should be an iterable, as-stored in an archive
         :param interact: if true, interactively prompt user to merge and save missing compartments
-        :param save_file: where to save the updated compartments
         :return: the Compartment. Also adds it to self._c_dict
         """
         cs = compartment_string(compartment)
@@ -295,14 +294,22 @@ class FlowDB(object):
                      ('Locations', lambda x: x.list_locations()),
                      ('Compartment', lambda x: x.flow['Compartment']))
 
-    def all_cfs(self, flowable, category=None):
+    def all_cfs(self, flowable, category=None, quantity=None):
         """
         generator - produces all characterizations matching the flowable, optionally filtering for a single category
+        or a single quantity
         :param flowable:
-        :param category:
+        :param category: (default all)
+        :param quantity: (default all)
         :return:
         """
-        qs = [k for k, v in self._q_dict.items() if flowable in v]
+        if quantity is not None:
+            if isinstance(quantity, str):
+                qs = [quantity]
+            else:
+                qs = [quantity.get_uuid()]
+        else:
+            qs = [k for k, v in self._q_dict.items() if flowable in v]
         for q in qs:
             comps = self._f_dict[(flowable, q)]
             if category is None:
@@ -350,6 +357,19 @@ class FlowDB(object):
                 if k is not None:
                     missing_flows.add(k)
         return missing_flows
+
+    def export_quantity(self, quantity):
+        """
+        exports a set of characterized flows for the given quantity, which can then be added to an archive and
+        reloaded.
+        :param quantity:
+        :return: list of flows
+        """
+        flows = set()
+        for fb in self._q_dict[quantity.get_uuid()]:
+            for cf in self.all_cfs(fb, quantity=quantity):
+                flows.add(cf.flow)
+        return flows
 
     def import_archive_cfs(self, archive):
         """
@@ -418,6 +438,12 @@ class FlowDB(object):
         return list(cfs)[0]
 
     def lookup_single_cf(self, flow, quantity, location='GLO', dist=3):
+        """
+        this is a hack- but is it wrong?
+        flow takes precedence over db if you want a single value- seems right to me
+        """
+        if flow.has_characterization(quantity):
+            return flow.factor(quantity)
         cfs = self.lookup_cfs(flow, quantity, dist=dist)
         if location == '':
             location = 'GLO'

@@ -411,6 +411,11 @@ class FlowDB(object):
         if len(cfs) == 1:
             return list(cfs)[0]
         elif len(cfs) > 1:
+            cf1 = [cf for cf in cfs if cf.flow == flow]
+            if len(cf1) == 1:
+                return cf1[0]
+            elif len(cf1) > 1:
+                cfs = cf1
             cf1 = [cf for cf in cfs if cf.flow.match(flow)]
             if len(cf1) == 1:
                 return cf1[0]

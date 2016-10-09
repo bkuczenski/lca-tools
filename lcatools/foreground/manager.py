@@ -680,7 +680,7 @@ class ForegroundManager(object):
                 print(' Exchange value: %10.4g (default %10.4g)' % (f.exchange_value(scenario), f.cached_ev))
             if f.termination(scenario) != f.term:
                 if printed is False:
-                    print('%s' %f)
+                    print('%s' % f)
                 print('%15s: %s\n%15s: %s' % ('Termination', f.termination(scenario).term_node.entity()['Name'],
                                               'Default', f.term.term_node.entity()['Name']))
 
@@ -742,12 +742,14 @@ class ForegroundManager(object):
         term.self_terminate()
         return children
 
-    def create_fragment_from_process(self, process_ref, ref_flow=None, background=False, background_children=True):
+    def create_fragment_from_process(self, process_ref, ref_flow=None, direction=None, background=False,
+                                     background_children=True):
         """
         The major entry into fragment building.  Given only a process ref, construct a fragment from the process,
         using the process's reference exchange as the reference fragment flow.
         :param process_ref:
         :param ref_flow:
+        :param direction:
         :param background: [False] add as a background fragment and do not traverse children
         :param background_children: [True] automatically terminate child flows with background references (ecoinvent).
         :return:
@@ -767,8 +769,11 @@ class ForegroundManager(object):
             except StopIteration:
                 print('Reference flow not found in target process.')
                 return None
-        ref_exch = next(x for x in process.exchange(ref))
-        direction = comp_dir(ref_exch.direction)
+        if direction is None:
+            ref_exch = next(x for x in process.exchange(ref))
+            direction = comp_dir(ref_exch.direction)
+        else:
+            direction = comp_dir(direction)  # direction specified w.r.t. fragment
         frag = self[0].create_fragment(ref, direction, Name='%s' % process_ref.entity(), background=background)
         frag.terminate(process_ref, flow=ref)
         if not background:
@@ -902,8 +907,9 @@ class ForegroundManager(object):
                     f.termination(scenario).clear_score_cache()
 
     def compute_unit_scores(self, scenario=None):
-        for f in self[0].fragments(show_all=True):
-            self.compute_fragment_unit_scores(f, scenario=scenario)
+        if self._catalog.is_loaded(0):
+            for f in self[0].fragments(show_all=True):
+                self.compute_fragment_unit_scores(f, scenario=scenario)
 
     '''
     if self.db.is_elementary(fragment.flow):

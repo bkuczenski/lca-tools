@@ -67,3 +67,4 @@ lcatools/providers/web_cache/
 .idea/
 doc/tests/entities.json
 doc/tests/fragments.json
+doc/archive/

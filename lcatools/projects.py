@@ -22,9 +22,9 @@ def gabi_package_list(url):
     :return: a list of dataframe objects containing the contents of the processListTable(s)
     """
 
-    import pandas as pd
+    # import pandas as pd
     from urllib.request import urlopen
-    from bs4  import BeautifulSoup
+    from bs4 import BeautifulSoup
     html = urlopen(url).read()
     dom = BeautifulSoup(html)
     t = dom.findAll('table', attrs={'id': 'processListTable'})

@@ -111,6 +111,9 @@ class LcEntity(object):
     def get_uuid(self):
         return str(self._uuid)
 
+    def get_link(self):
+        return '%s%s' % (self.origin, self.get_external_ref())
+
     def _validate_reference(self, ref_entity):
         if ref_entity is None:
             # raise ValueError('Null reference')

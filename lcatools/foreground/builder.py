@@ -325,7 +325,7 @@ class ForegroundBuilder(ForegroundManager):
         """
         comment = 'rebased %.5s' % fragment.get_uuid()
 
-        exchange = next(ex for ex in self.get_fragment_inventory(fragment)
+        exchange = next(ex for ex in fragment.get_fragment_inventory()
                         if ex.flow is flow and ex.direction == direction)
         frag = self.new_fragment(exchange.flow, comp_dir(exchange.direction),
                                  Comment=comment, exchange_value=exchange.value)

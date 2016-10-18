@@ -304,7 +304,7 @@ class ForegroundManager(object):
     def inventory(self, node, **kwargs):
         if node.entity_type == 'fragment':
             print('%s' % node)
-            for x in sorted(self.get_fragment_inventory(node, **kwargs), key=lambda z: (z.direction, z.value)):
+            for x in sorted(node.get_fragment_inventory(**kwargs), key=lambda z: (z.direction, z.value)):
                 print(x)
         else:
             print('%s' % node.fg())
@@ -403,7 +403,7 @@ class ForegroundManager(object):
     def _rename_stage(self, frag, old, new):
         if frag['StageName'] == old:
             frag['StageName'] = new
-        for x in self.child_flows(frag):
+        for x in frag.child_flows(frag):
             self._rename_stage(x, old, new)
 
     def rename_stage(self, old_name, new_name, fragment=None):
@@ -540,7 +540,7 @@ class ForegroundManager(object):
     # fragment methods
     def _show_frag_children(self, frag, level=0):
         level += 1
-        for k in self.child_flows(frag):
+        for k in frag.child_flows(frag):
             print('%s%s' % ('  ' * level, k))
             self._show_frag_children(k, level)
 
@@ -582,13 +582,13 @@ class ForegroundManager(object):
     def traverse(self, fragment, scenario=None, observed=False):
         if isinstance(fragment, str):
             fragment = self.frag(fragment)
-        ffs = fragment.traversal_entry(lambda x: self.child_flows(x), scenario, observed=observed)
+        ffs = fragment.traversal_entry(scenario, observed=observed)
         return ffs
 
     def fragment_lcia(self, fragment, scenario=None, observed=False, scale=None):
         if isinstance(fragment, str):
             fragment = self.frag(fragment)
-        r = fragment.fragment_lcia(lambda x: self.child_flows(x), scenario=scenario, observed=observed)
+        r = fragment.fragment_lcia(scenario=scenario, observed=observed)
         if scale is not None:
             r.scale(scale)
         return r
@@ -596,7 +596,7 @@ class ForegroundManager(object):
     def draw(self, fragment, scenario=None, observed=False):
         if isinstance(fragment, str):
             fragment = self.frag(fragment)
-        fs = fragment.show_tree(lambda x: self.child_flows(x), scenario=scenario, observed=observed)
+        fs = fragment.show_tree(scenario=scenario, observed=observed)
         self.balance(fragment, scenario=scenario, observed=observed)
         return fs
 
@@ -641,19 +641,8 @@ class ForegroundManager(object):
         if fragment.term.term_node.entity_type == 'fragment':
             print('fragment children are set by traversal')
             return
-        for c in self.child_flows(fragment):
+        for c in fragment.child_flows(fragment):
             self._observe(c, scenario)
-
-    def child_flows(self, fragment):
-        """
-        This is a lambda method used during traversal in order to generate the child fragment flows from
-        a given fragment.
-        :param fragment:
-        :return: fragments listing fragment as parent
-        """
-        for x in self[0].fragments(show_all=True):
-            if fragment is x.reference_entity:
-                yield x
 
     def scenarios(self, fragment=None, _scens=None):
         if fragment is None:
@@ -665,7 +654,7 @@ class ForegroundManager(object):
         if _scens is None:
             _scens = set()
         _scens = _scens.union(fragment.scenarios)
-        for c in self.child_flows(fragment):
+        for c in fragment.child_flows(fragment):
             _scens = self.scenarios(c, _scens=_scens)
         return _scens
 
@@ -780,49 +769,6 @@ class ForegroundManager(object):
             self.build_child_flows(frag, background_children=background_children)
         return frag
 
-    def get_fragment_inventory(self, fragment, scenario=None, scale=None, observed=False):
-        """
-        Aggregates inputs and outputs (un-terminated flows) from a fragment; returns a list of exchanges.
-        :param fragment: ff
-        :param scenario:
-        :return:
-        """
-        io_ffs = fragment.io_flows(lambda x: self.child_flows(x), scenario, observed=observed)
-        if scale is not None:
-            for i in io_ffs:
-                i.scale(scale)
-
-        accum = defaultdict(float)
-        ent = dict()
-        ev = fragment.exchange_value(scenario)
-        if fragment.direction == 'Input':  # this is input to parent flow, so output to us
-            ev = -ev
-        accum[fragment.flow.get_uuid()] = ev
-        for i in io_ffs:
-            ent[i.fragment.flow.get_uuid()] = i.fragment.flow
-            if i.fragment.direction == 'Input':
-                accum[i.fragment.flow.get_uuid()] += i.magnitude
-            else:
-                accum[i.fragment.flow.get_uuid()] -= i.magnitude
-
-        in_ex = accum.pop(fragment.flow.get_uuid())
-        if in_ex * ev < 0:  # i.e. if the signs are different
-            raise ValueError('Fragment requires more reference flow than it generates')
-        frag_exchs = []
-        for k, v in accum.items():
-            val = abs(v)
-            if fragment.reference_entity is None:
-                if ev != in_ex:
-                    val *= (ev / in_ex)
-            if v == 0:
-                continue
-            elif v < 0:
-                dirn = 'Output'
-            else:
-                dirn = 'Input'
-            frag_exchs.append(ExchangeValue(fragment, ent[k], dirn, value=val))
-        return sorted(frag_exchs, key=lambda x: x.direction)
-
     def build_child_flows(self, fragment, scenario=None, background_children=False):
         """
         Given a terminated fragment, construct child flows corresponding to the termination's complementary
@@ -843,7 +789,7 @@ class ForegroundManager(object):
             if scenario is not None:
                 print('Automatic building of child flows is not supported for scenario terminations of process nodes.')
                 return []
-            if len([c for c in self.child_flows(fragment)]) != 0:
+            if len([c for c in fragment.child_flows(fragment)]) != 0:
                 print('Warning: fragment already has child flows. Continuing will result in (possibly many) ')
                 if ifinput('duplicate child flows.  Continue? y/n', 'n') != 'y':
                     return []
@@ -866,7 +812,7 @@ class ForegroundManager(object):
                 the_ref = term.term_node
                 correct_reference = False
 
-            int_exch = self.get_fragment_inventory(the_ref, scenario=scenario)
+            int_exch = the_ref.get_fragment_inventory(scenario=scenario)
 
             if correct_reference:
                 surrogate_in = next(x for x in int_exch
@@ -880,7 +826,7 @@ class ForegroundManager(object):
 
             # in subfragment case- child flows aggregate so we don't want to create duplicate children
             for x in int_exch:
-                match = [c for c in self.child_flows(fragment) if c.flow == x.flow and c.direction == x.direction]
+                match = [c for c in fragment.child_flows(fragment) if c.flow == x.flow and c.direction == x.direction]
                 if len(match) > 1:
                     raise AmbiguousReference('Multiple child flows matching %s' % x)
                 elif len(match) == 1:
@@ -1019,7 +965,7 @@ class ForegroundManager(object):
                     qs[cf.quantity] -= cf.value * in_ex
                 else:
                     qs[cf.quantity] += cf.value * in_ex
-        for c in self.child_flows(frag):
+        for c in frag.child_flows(frag):
             for cf in c.flow.characterizations():
                 mag = c.exchange_value(scenario, observed=observed) * (cf.value or 0.0)
                 if mag != 0:
@@ -1053,7 +999,7 @@ class ForegroundManager(object):
 
         _p_line(frag, mag, comp_dir(frag.direction))
 
-        for c in sorted(self.child_flows(frag), key=lambda x: x.direction):
+        for c in sorted(frag.child_flows(frag), key=lambda x: x.direction):
             mag = c.exchange_value(scenario, observed=observed) * c.flow.cf(quantity)
             if c.direction == 'Output':
                 mag *= -1

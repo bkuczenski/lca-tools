@@ -79,6 +79,17 @@ class ForegroundArchive(LcArchive):
             raise ForegroundError('Foreground archive not supposed to have an upstream')
         super(ForegroundArchive, self).__init__(ref, quiet=quiet, **kwargs)
 
+    def child_flows(self, fragment):
+        """
+        This is a lambda method used during traversal in order to generate the child fragment flows from
+        a given fragment.
+        :param fragment:
+        :return: fragments listing fragment as parent
+        """
+        for x in self.fragments(show_all=True):
+            if fragment is x.reference_entity:
+                yield x
+
     def _fetch(self, entity, **kwargs):
         raise AttributeError('Foreground archives cannot fetch.')
 
@@ -171,7 +182,7 @@ class ForegroundArchive(LcArchive):
         """
         if Name is None:
             Name = flow['Name']
-        f = LcFragment.new(Name, flow, direction, exchange_value=exchange_value, **kwargs)
+        f = LcFragment.new(lambda x: self.child_flows(x), Name, flow, direction, exchange_value=exchange_value, **kwargs)
         self.add_entity_and_children(f)
         return f
 
@@ -192,7 +203,7 @@ class ForegroundArchive(LcArchive):
     def add_child_fragment_flow(self, ff, flow, direction, Name=None, **kwargs):
         if Name is None:
             Name = flow['Name']
-        f = LcFragment.new(Name, flow, direction, parent=ff, **kwargs)
+        f = LcFragment.new(lambda x: self.child_flows(x), Name, flow, direction, parent=ff, **kwargs)
         self.add_entity_and_children(f)
 
         return f
@@ -208,11 +219,11 @@ class ForegroundArchive(LcArchive):
         """
         try:
             bg = next(f for f in self.fragments(background=True) if f.term.terminates(exchange))
-            f = LcFragment.new(exchange.flow['Name'], exchange.flow, exchange.direction,
+            f = LcFragment.new(lambda x: self.child_flows(x), exchange.flow['Name'], exchange.flow, exchange.direction,
                                parent=ff, exchange_value=exchange.value, **kwargs)
             f.terminate(bg)
         except StopIteration:
-            f = LcFragment.from_exchange(ff, exchange)
+            f = LcFragment.from_exchange(lambda x: self.child_flows(x), ff, exchange)
         self.add_entity_and_children(f)
         return f
 
@@ -236,7 +247,7 @@ class ForegroundArchive(LcArchive):
 
     def _do_load(self, catalog, fragments):
         for f in fragments:
-            frag = LcFragment.from_json(catalog, f)
+            frag = LcFragment.from_json(lambda x: self.child_flows(x), catalog, f)
             self.add(frag)
 
         for f in fragments:
@@ -348,4 +359,3 @@ class ForegroundArchive(LcArchive):
         """
         with open(filename) as fp:
             self._do_load(catalog, json.load(fp)['fragments'])
-

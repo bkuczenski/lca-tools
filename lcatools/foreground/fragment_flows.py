@@ -4,7 +4,7 @@
 """
 
 import uuid
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 
 from lcatools.entities import LcEntity, LcFlow
 from lcatools.exchanges import comp_dir, ExchangeValue, AllocatedExchange
@@ -210,12 +210,16 @@ class FlowTermination(object):
         return ExchangeValue(self.term_node.entity(), self.term_flow, self.direction, value=self._cached_ev)
 
     @property
+    def is_frag(self):
+        return (not self.is_null) and (self.term_node.entity_type == 'fragment')
+
+    @property
     def is_fg(self):
         return (not self.is_null) and (self.term_node is self._parent)
 
     @property
     def is_bg(self):
-        return (not self.is_null) and (self.term_node.entity_type == 'fragment') and self.term_node.is_background
+        return self.is_frag and self.term_node.is_background
 
     @property
     def is_null(self):
@@ -498,8 +502,9 @@ class LcFragment(LcEntity):
     _new_fields = ['Parent', 'StageName']
 
     @classmethod
-    def new(cls, name, *args, **kwargs):
+    def new(cls, child_flows, name, *args, **kwargs):
         """
+        :param child_flows: a lambda for listing children of a fragment. Comes from foreground.
         :param name: the name of the fragment
         :param args: need flow and direction
         :param kwargs: parent, exchange_value, private, balance_flow, background, termination
@@ -507,10 +512,10 @@ class LcFragment(LcEntity):
         """
         print('LcFragment - Name: %s:' % name)
 
-        return cls(uuid.uuid4(), *args, Name=name, **kwargs)
+        return cls(child_flows, uuid.uuid4(), *args, Name=name, **kwargs)
 
     @classmethod
-    def from_json(cls, catalog, j):
+    def from_json(cls, child_flows, catalog, j):
         if j['parent'] is not None:
             parent = catalog[0][j['parent']]
         else:
@@ -519,7 +524,7 @@ class LcFragment(LcEntity):
         if flow is None:
             flow = LcFlow(j['flow'], Name=j['tags']['Name'], Compartment=['Intermediate Flows', 'Fragments'])
             catalog.add(flow)
-        frag = cls(j['entityId'], flow, j['direction'], parent=parent,
+        frag = cls(child_flows, j['entityId'], flow, j['direction'], parent=parent,
                    exchange_value=j['exchangeValues'].pop('0'),
                    private=j['isPrivate'],
                    balance_flow=j['isBalanceFlow'],
@@ -540,16 +545,17 @@ class LcFragment(LcEntity):
                 self.term_from_json(catalog, k, v)
 
     @classmethod
-    def from_exchange(cls, parent, exchange):
+    def from_exchange(cls, child_flows, parent, exchange):
         """
         This method creates a child flow, positioning the parent node as the 'process' component of the exchange
         and using the exchange's 'flow' and 'direction' components to define the child flow.  If the exchange
         also includes a 'termination', then that is used to automatically terminate the child flow.
+        :param child_flows: a lambda for listing children of a fragment. Comes from foreground.
         :param parent:
         :param exchange:
         :return:
         """
-        frag = cls(uuid.uuid4(), exchange.flow, exchange.direction, parent=parent, exchange_value=exchange.value,
+        frag = cls(child_flows, uuid.uuid4(), exchange.flow, exchange.direction, parent=parent, exchange_value=exchange.value,
                    Name=exchange.flow['Name'])
 
         if exchange.termination is not None:
@@ -559,7 +565,7 @@ class LcFragment(LcEntity):
             frag.terminate(term, flow=term_flow)
         return frag
 
-    def __init__(self, the_uuid, flow, direction, parent=None,
+    def __init__(self, child_flows, the_uuid, flow, direction, parent=None,
                  exchange_value=1.0,
                  private=False,
                  balance_flow=False,
@@ -567,6 +573,7 @@ class LcFragment(LcEntity):
                  **kwargs):
         """
         Required params:
+        :param child_flows: a lambda for listing children of a fragment. Comes from foreground.
         :param the_uuid: use .new(Name, ...) for a random UUID
         :param flow: an LcFlow
         :param direction:
@@ -579,6 +586,7 @@ class LcFragment(LcEntity):
         """
 
         super(LcFragment, self).__init__('fragment', the_uuid, **kwargs)
+        self.child_flows = child_flows
         if background:
             parent = None
             # if parent is not None:
@@ -724,8 +732,8 @@ class LcFragment(LcEntity):
                     desc = '(agg)'
                 print('%20.20s: %s %s %s' % (k, v, desc, v.term_node))
 
-    def show_tree(self, childflows, prefix='', scenario=None, observed=False):
-        children = [c for c in childflows(self)]
+    def show_tree(self, prefix='', scenario=None, observed=False):
+        children = [c for c in self.child_flows(self)]
         term = self.termination(scenario)
         if len(children) > 0 and term.is_null:
             raise InvalidParentChild('null-terminated fragment %.7s has children' % self.get_uuid())
@@ -756,7 +764,7 @@ class LcFragment(LcEntity):
                 if c['StageName'] != latest_stage:
                     latest_stage = c['StageName']
                     print('   %s %5s Stage: %s' % (prefix, ' ', latest_stage))
-                c.show_tree(childflows, prefix=prefix, scenario=scenario, observed=observed)
+                c.show_tree(prefix=prefix, scenario=scenario, observed=observed)
             prefix = prefix[:-3] + ' x '
             print('   %s' % prefix)
 
@@ -996,23 +1004,65 @@ class LcFragment(LcEntity):
         else:
             self.set_exchange_value(match, _balance)
 
-    def fragment_lcia(self, childflows, scenario=None, observed=False):
-        ffs = self.traversal_entry(childflows, scenario, observed=observed)
+    def fragment_lcia(self, scenario=None, observed=False):
+        ffs = self.traversal_entry(scenario, observed=observed)
         return traversal_to_lcia(ffs)
 
-    def io_flows(self, childflows, scenario, observed=False):
-        ffs = self.traversal_entry(childflows, scenario, observed=observed)
+    def io_flows(self, scenario, observed=False):
+        ffs = self.traversal_entry(scenario, observed=observed)
         return [ff for ff in ffs if ff.term.is_null]
 
-    def traversal_entry(self, childflows, scenario, observed=False):
+    def get_fragment_inventory(self, scenario=None, scale=None, observed=False):
+        """
+        Aggregates inputs and outputs (un-terminated flows) from a fragment; returns a list of exchanges.
+        :param scenario:
+        :return:
+        """
+        io_ffs = self.io_flows(scenario, observed=observed)
+        if scale is not None:
+            for i in io_ffs:
+                i.scale(scale)
+
+        accum = defaultdict(float)
+        ent = dict()
+        ev = self.exchange_value(scenario)
+        if self.direction == 'Input':  # this is input to parent flow, so output to us
+            ev = -ev
+        accum[self.flow.get_uuid()] = ev
+        for i in io_ffs:
+            ent[i.fragment.flow.get_uuid()] = i.fragment.flow
+            if i.fragment.direction == 'Input':
+                accum[i.fragment.flow.get_uuid()] += i.magnitude
+            else:
+                accum[i.fragment.flow.get_uuid()] -= i.magnitude
+
+        in_ex = accum.pop(self.flow.get_uuid())
+        if in_ex * ev < 0:  # i.e. if the signs are different
+            raise ValueError('Fragment requires more reference flow than it generates')
+        frag_exchs = []
+        for k, v in accum.items():
+            val = abs(v)
+            if self.reference_entity is None:
+                if ev != in_ex:
+                    val *= (ev / in_ex)
+            if v == 0:
+                continue
+            elif v < 0:
+                dirn = 'Output'
+            else:
+                dirn = 'Input'
+            frag_exchs.append(ExchangeValue(self, ent[k], dirn, value=val))
+        return sorted(frag_exchs, key=lambda x: x.direction)
+
+    def traversal_entry(self, scenario, observed=False):
         if self.reference_entity is None:
             in_wt = self.exchange_value(scenario, observed=observed)
         else:
             in_wt = 1.0 / self.exchange_value(scenario, observed=observed)
-        ffs, _ = self.traverse(childflows, in_wt, scenario, observed=observed)
+        ffs, _ = self.traverse(in_wt, scenario, observed=observed)
         return ffs
 
-    def traverse(self, childflows, upstream_nw, scenario,
+    def traverse(self, upstream_nw, scenario,
                  observed=False, frags_seen=None, conserved_qty=None, _balance=None):
 
         """
@@ -1022,10 +1072,6 @@ class LcFragment(LcEntity):
         termination, and return.
 
         else: assume it is a null foreground node; follow child flows
-
-        :param childflows: this is a lambda that takes current frag and returns a generator of frags listing self
-        as parent
-        - must be provided by calling environment
 
         :param upstream_nw: upstream node weight
         :param scenario: string or tuple of strings
@@ -1116,9 +1162,9 @@ class LcFragment(LcEntity):
                     stock *= -1
                 _print('%.3s %g inbound-balance' % (self.get_uuid(), stock), level=2)
 
-            for f in childflows(self):
+            for f in self.child_flows(self):
                 try:
-                    child_ff, cons = f.traverse(childflows, node_weight, scenario, observed=observed,
+                    child_ff, cons = f.traverse(node_weight, scenario, observed=observed,
                                                 frags_seen=set(frags_seen), conserved_qty=self._conserved_quantity)
                     if cons is not None:
                         stock += cons
@@ -1134,7 +1180,7 @@ class LcFragment(LcEntity):
                 # if it is an output, its exchange must equal the balance
                 if bal_f.direction == 'Input':
                     stock *= -1
-                bal_ff, cons = bal_f.traverse(childflows, node_weight, scenario, observed=observed,
+                bal_ff, cons = bal_f.traverse(node_weight, scenario, observed=observed,
                                               frags_seen=set(frags_seen), conserved_qty=None, _balance=stock)
                 ff.extend(bal_ff)
 
@@ -1147,7 +1193,7 @@ class LcFragment(LcEntity):
             '''
 
             if term.term_node.is_background:
-                bg_ff, cons = term.term_node.traverse(childflows, node_weight, scenario, observed=observed)
+                bg_ff, cons = term.term_node.traverse(node_weight, scenario, observed=observed)
                 bg_ff[0].fragment = self
                 return bg_ff, conserved_val
 
@@ -1180,7 +1226,7 @@ class LcFragment(LcEntity):
                     _print('%s\nNegating subfragments-- caution ahead!' % self, level=0)
 
             # for proper subfragments, need to determine child flow magnitudes based on traversal record
-            subfrag_ffs, cons = the_ref.traverse(childflows, in_ex, scenario,
+            subfrag_ffs, cons = the_ref.traverse(in_ex, scenario,
                                                  observed=observed, frags_seen=set(frags_seen))
             ios = [f for f in subfrag_ffs if f.term.is_null]
             subfrags = [f for f in subfrag_ffs if not f.term.is_null]
@@ -1224,7 +1270,7 @@ class LcFragment(LcEntity):
                 ff[0].node_weight = downstream_nw
 
             # next we traverse our own child flows, determining the exchange values from the subfrag traversal
-            for f in childflows(self):
+            for f in self.child_flows(self):
                 ev = 0.0
                 matches = [j for j in ios if j.fragment.flow == f.flow]
                 # exchange values are per unit- so don't scale
@@ -1238,7 +1284,7 @@ class LcFragment(LcEntity):
                         ev -= m.magnitude
                     ios.remove(m)
 
-                child_ff, cons = f.traverse(childflows, downstream_nw, scenario, observed=observed,
+                child_ff, cons = f.traverse(downstream_nw, scenario, observed=observed,
                                             frags_seen=frags_seen, _balance=ev)
                 ff.extend(child_ff)
 

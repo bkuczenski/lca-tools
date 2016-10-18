@@ -7,6 +7,9 @@ from lcatools.characterizations import Characterization
 from lcatools.interfaces import to_uuid
 
 
+from collections import defaultdict
+
+
 def get_entity_uuid(item):
     if to_uuid(item) is not None:
         return item
@@ -265,13 +268,9 @@ class LciaResult(object):
                 yield v
             elif item == v.entity:
                 yield v
-            elif k.startswith(item):
-                yield v
-            elif str(v.entity).startswith(item):
-                yield v
-            elif k.startswith(str(item)):
-                yield v
             elif str(v.entity).startswith(str(item)):
+                yield v
+            elif str(k).startswith(str(item)):
                 yield v
 
     def __getitem__(self, item):
@@ -309,6 +308,9 @@ class LciaResult(object):
 
     def total(self):
         return sum([i.cumulative_result for i in self._LciaScores.values()])
+
+    def range(self):
+        return sum([abs(i.cumulative_result) for i in self._LciaScores.values()])
 
     def add_component(self, key, entity=None):
         if entity is None:
@@ -388,6 +390,24 @@ class LciaResult(object):
     def __str__(self):
         return '%s %s' % (number(self.total()), self.quantity)
 
+    # charts
+    def contrib_query(self, stages):
+        """
+        returns a handle to a pyplot axis
+        :param stages: the stages to query
+        :return:
+        """
+        if stages is None:
+            stages = self.components()
+
+        data = []
+        for c in stages:
+            try:
+                data.append(self[c].cumulative_result)
+            except (KeyError, StopIteration):
+                data.append(0)
+        return data
+
 
 class LciaResults(dict):
     """
@@ -409,7 +429,11 @@ class LciaResults(dict):
     def __setitem__(self, key, value):
         value.set_scale(self._scale)
         super(LciaResults, self).__setitem__(key, value)
-        self._indices = list(self.keys())
+        if key not in self._indices:
+            self._indices.append(key)
+
+    def to_list(self):
+        return [self.__getitem__(k) for k in self._indices]
 
     def scale(self, factor):
         if factor == self._scale:
@@ -426,6 +450,48 @@ class LciaResults(dict):
             r = self[q]
             r.set_scale(self._scale)
             print('[%2d] %.3s  %10.5g %s' % (i, q, r.total(), r.quantity))
+
+    def apply_weighting(self, weights, quantity, **kwargs):
+        """
+        Create a new LciaResult object containing the weighted sum of entries in the current object.
+
+        We want the resulting LciaResult to still be aggregatable. In order to accomplish this, we need to maintain
+        all the individual _LciaScores entities in the weighting inputs, and compute their weighted scores here. Then
+        we need to log the weighted scores as the *node weights* and use *unit* values of unit scores, because
+        SummaryLciaResults are only allowed to be further aggregated if they have the same unit score.
+
+        This feels a bit hacky and may turn out to be a terrible idea.  But there is a certain harmony in making the
+        quantity's unit THE unit for a weighting computation. So I think it will work for now.
+
+        :param weights: a dict mapping quantity UUIDs to numerical weights
+        :param quantity: EITHER an LcQuantity OR a string to use as the name of in LcQuantity.new()
+        :param kwargs: passed to LciaResult
+        :return:
+        """
+        weighted_result = LciaResult(quantity, **kwargs)
+
+        component_list = dict()  # dict maps keys entities
+        component_score = defaultdict(float)  # maps keys to weighted scores
+        for method, weight in weights.items():
+            try:
+                result = self.__getitem__(method)  # an LciaResult
+            except KeyError:
+                continue
+            for comp in result.keys():
+                if comp in component_list.keys():
+                    if result[comp].entity != component_list[comp]:
+                        raise DuplicateResult('Key %s matches different entities:\n%s\n%s' % (comp,
+                                                                                              result[comp],
+                                                                                              component_list[comp]))
+                else:
+                    component_list[comp] = result[comp].entity
+                component_score[comp] += (weight * result[comp].cumulative_result)
+
+        for comp, ent in component_list.items():
+            weighted_result.add_component(comp, entity=ent)
+            weighted_result.add_summary(comp, ent, component_score[comp], 1.0)
+
+        return weighted_result
 
     def clear(self):
         super(LciaResults, self).clear()

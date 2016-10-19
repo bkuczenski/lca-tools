@@ -4,6 +4,10 @@ import matplotlib.pyplot as plt
 from textwrap import wrap
 
 
+prefab_colors = ((0.1, 0.6, 0.7), (0.6, 0.1, 0.7), (0.7, 0.6, 0.1), (0.4, 0.9, 0.3), (0.3, 0.4, 0.9), (0.9, 0.3, 0.4))
+net_color = (0.2, 0.2, 0.2)
+
+
 def linspace(a, b, num):
     dif = float(b - a) / (num - 1)
     for i in range(num - 1):
@@ -127,19 +131,21 @@ def spread_contrib_figure(results, stages, colors=None, scenarios=None, results_
                           match_y=False):
     """
 
-    :param results:
-    :param stages:
-    :param colors:
-    :param scenarios:
-    :param results_hi:
-    :param results_lo:
+    :param results: m-array of queryable results
+    :param stages: k-array of stages
+    :param colors: should match k
+    :param scenarios: should match m (used for subtitles)
+    :param results_hi: either None or an m-array of high values
+    :param results_lo: either None or an m-array of low values
     :param match_y: [False] if True, set all axes to have the same [maximal] y limits
     :return:
     """
     if not isinstance(results, list):
+        # assume that all the m-arrays are non-arrays
         results = [results]
         results_hi = [results_hi]
         results_lo = [results_lo]
+        scenarios = [scenarios]
 
     if len(results) == 1:
         f = plt.figure(figsize=(6, 5))
@@ -153,29 +159,44 @@ def spread_contrib_figure(results, stages, colors=None, scenarios=None, results_
     if colors is None:
         colors = (0.1, 0.6, 0.7)
 
+    if results_hi is None:
+        results_hi = [None] * len(results)
+
+    if results_lo is None:
+        results_lo = [None] * len(results)
+
     ax = []
 
     for i, result in enumerate(results):
         ax.append(f.add_subplot(len(results), wid, i + 1))
         data = result.contrib_query(stages)
-        if results_hi is None:
+        if results_hi[i] is None:
             hi = data
         else:
             hi = results_hi[i].contrib_query(stages)
 
-        if results_lo is None:
+        if results_lo[i] is None:
             lo = data
         else:
             lo = results_lo[i].contrib_query(stages)
 
-        if scenarios is None:
-            subt = ''
+        spread_bars(ax[-1], data, colors, lo=lo, hi=hi)
+        ax[-1].set_xticks(range(len(stages)))
+        if max([len(l) for l in stages]) > 20:
+            labels = ['\n'.join(wrap(l, 25)) for l in stages]
+            rotation = 70
         else:
-            subt = scenarios[i]
+            labels = stages
+            rotation = 0
+
+        ax[-1].set_xticklabels(labels, rotation=rotation)
 
         t = result.quantity['Indicator']
 
-        spread_bars(ax[-1], stages, data, colors, lo=lo, hi=hi, title=t, subtitle=subt)
+        if scenarios is None:
+            ax[-1].set_title(t, fontsize=14)
+        else:
+            ax[-1].set_title('%s\n%s' % (t, scenarios[i]), fontsize=14)
 
     if match_y:
         y_lo = 0
@@ -188,6 +209,102 @@ def spread_contrib_figure(results, stages, colors=None, scenarios=None, results_
                 y_hi = y1
         for x in ax:
             x.set_ylim(y_lo, y_hi)
+
+
+def spread_scenario_compare(ax, results, stages, colors=None, scenarios=None, results_hi=None, results_lo=None,
+                            net=False):
+    """
+
+    :param ax: axes already created
+    :param results:
+    :param stages:
+    :param colors:
+    :param scenarios:
+    :param results_hi:
+    :param results_lo:
+    :param net:
+    :return:
+    """
+    barwidth = 0.8  # use most of the space for multiple scenarios
+
+    if not isinstance(results, list):
+        # assume that all the m-arrays are non-arrays
+        results = [results]
+        results_hi = [results_hi]
+        results_lo = [results_lo]
+        scenarios = [scenarios]
+        barwidth = 0.65
+
+    m = len(results)
+
+    barwidth /= m
+
+    x_0 = -(m + 1) * barwidth / 2
+
+    if colors is None:
+        colors = prefab_colors[:len(results)]
+
+    if results_hi is None:
+        results_hi = [None] * len(results)
+
+    if results_lo is None:
+        results_lo = [None] * len(results)
+
+    if scenarios is None:
+        scenarios = ['S%d' % (i+1) for i, _ in enumerate(results)]
+
+    unit = list(set(['%s [%s]' % (r.quantity['Indicator'], r.quantity.unit()) for r in results]))
+    if len(unit) > 1:
+        print('Warning: multiple units found in result sets!!')
+
+    for i, r in enumerate(results):
+        x_0 += barwidth
+
+        data = r.contrib_query(stages)
+        if net:
+            data.append(r.total())
+
+        if results_hi[i] is None:
+            hi = data
+        else:
+            hi = results_hi[i].contrib_query(stages)
+            if net:
+                hi.append(results_hi[i].total())
+
+        if results_lo[i] is None:
+            lo = data
+        else:
+            lo = results_lo[i].contrib_query(stages)
+            if net:
+                lo.append(results_lo[i].total())
+
+        mycolors = (colors[i],) * len(stages)
+        if net:
+            mycolors += (net_color,)
+
+        spread_bars(ax, data, mycolors, lo=lo, hi=hi, barwidth=barwidth, x_offset=x_0, labels=False)
+
+    # graph general parts
+    ax.plot(ax.get_xlim(), (0, 0), 'k')
+
+    if max([len(l) for l in stages]) > 20:
+        labels = ['\n'.join(wrap(l, 25)) for l in stages]
+        rotation = 90
+    else:
+        labels = stages
+        rotation = 0
+
+    if net:
+        labels.append('NET')
+
+    ax.set_xticks(range(len(labels)))
+    ax.set_xticklabels(labels, rotation=rotation)
+    ax.set_ylabel(unit[0])
+
+    if len(scenarios) > 1:
+        ax.legend(scenarios)
+    else:
+        ax.set_title(scenarios[0], fontsize=14)
 
 
 def scenario_compare_figure(results, stages, hues=None, scenarios=None):
@@ -376,24 +493,21 @@ def stack_bars(ax, series, hue, units, labels=None, title='Scenario Analysis', s
     ax.set_ylim(btm, 3.6)
 
 
-def spread_bars(ax, stages, data, color_gen, title='Contribution Analysis', subtitle='by stage',
-                hi=None, lo=None, y_lim=None, **kwargs):
+def spread_bars(ax, data, color_gen, hi=None, lo=None, y_lim=None, barwidth=0.65, x_offset=0, labels=True, **kwargs):
     """
 
     :param ax:
-    :param stages:
     :param data:
     :param color_gen: iterator that yields color for data points
-    :param title:
-    :param subtitle:
     :param hi: data vector for high errorbars (passed on to pyplot)
     :param lo: data vector for low errorbars (passed on to pyplot)
     :param y_lim: y axis limits, if to be specified
+    :param barwidth: [0.65]
+    :param x_offset: [0]
+    :param labels: [True] whether to label the top of each bar
     :return:
     """
-    barwidth = 0.65
-
-    x = [i - barwidth/2 for i in range(len(stages))]
+    x = [i - barwidth/2 + x_offset for i in range(len(data))]
 
     kwargs['ecolor'] = (0,0,0)
     kwargs['width'] = barwidth
@@ -411,17 +525,15 @@ def spread_bars(ax, stages, data, color_gen, title='Contribution Analysis', subt
     kwargs['yerr'] = [lo_d, hi_d]
 
     patches = ax.bar(x, data, **kwargs)
-    for i, patch in enumerate(patches):
-        _label_vbar(patch, data[i], sep=hi_d[i])
+    if labels:
+        for i, patch in enumerate(patches):
+            _label_vbar(patch, data[i], sep=hi_d[i])
 
-    ax.set_xlim(-0.5, len(stages)-0.5)
+    ax.set_xlim(-0.5, len(data)-0.5)
     if y_lim is not None:
         ax.set_ylim(y_lim)
-    ax.set_xticks(range(len(stages)))
-    labels = ['\n'.join(wrap(l, 25)) for l in stages]
-    ax.set_xticklabels(labels, rotation=70)
-    ax.set_title('%s\n%s' % (title, subtitle), fontsize=14)
-    ax.plot((-0.5, len(stages)), (0, 0), 'k')
+
+    ax.plot((-0.5, len(data)), (0, 0), 'k')
 
 
 """

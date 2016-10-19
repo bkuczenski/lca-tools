@@ -1,6 +1,7 @@
 from __future__ import division
 import colorsys
 import matplotlib.pyplot as plt
+from textwrap import wrap
 
 
 def linspace(a, b, num):
@@ -41,12 +42,24 @@ def _label_segment(patch, data, label, threshold):
         _label_bar(patch, label=label)
 
 
-def _has_pos_neg(data):
+def _label_vbar(patch, value, valueformat='%6.3g', sep=0):
+    (y0, y1) = patch.axes.get_ylim()
+    vgap = 0.02 * (y1 - y0)
+    bl = patch.get_xy()
+    x = 0.5 * patch.get_width() + bl[0]
+
+    y = bl[1] + patch.get_height() + sep + vgap
+
+    patch.axes.text(x, y, valueformat % value, ha='center', va='bottom')
+
+
+def _has_pos_neg(res):
     """
     Returns true if the input contains both positive and negative data points
-    :param data:
+    :param res:
     :return:
     """
+    data = res.contrib_query(res.components())
     poss = sum([k for k in data if k > 0])
     negs = sum([k for k in data if k < 0])
     if poss != 0 and negs != 0:
@@ -58,13 +71,12 @@ def save_plot(file):
     plt.savefig(file, format='eps', bbox_inches='tight')
 
 
-def stack_bar_figure(results, stages, hues=None, units=None):
+def stack_bar_figure(results, stages, hues=None):
 
     if hues is None:
         hues = [None] * len(results)
 
-    if units is None:
-        units = [r.quantity.unit() for r in results]
+    units = [r.quantity.unit() for r in results]
 
     # prepare data, determine figure height
     height = 0
@@ -72,7 +84,7 @@ def stack_bar_figure(results, stages, hues=None, units=None):
     for i, r in enumerate(results):
         data[i] = r.contrib_query(stages)
         height += 1.8
-        if _has_pos_neg(data[i]):
+        if _has_pos_neg(r):
             height += 0.4
 
     fig = plt.figure(figsize=(8, height))
@@ -90,29 +102,159 @@ def stack_bar_figure(results, stages, hues=None, units=None):
     return fig
 
 
-def stack_bar(ax, data, hue, units, title='Contribution Analysis', subtitle='by stage'):
-    """
-    Draws a stack bar chart on the existing axes.
-    ax = axes
-    data = ordered data corresponding to the above contributions
-    hue = float [0..1] used as the base color in shading the bars
-          hue can also be (hue1, hue2), in which case the bars follow a gradient from hue1 to hue2
-    units = appended to total in square brackets if present
-    title, subtitle- drawn on graph
+def _stackbar_subfig_height(results):
+    height = 1.3
 
-    If several stack bar charts are to be shown side by side, they should all have the data ordered the same.
+    for n, r in enumerate(results):
+        height += 0.6
+        if _has_pos_neg(r):
+            height += 0.6
+    return height
+
+
+def _scenario_fig_height(results, scenario=False):
+    height = 0
+    if scenario:
+        for m, res in enumerate(results):
+            height += _stackbar_subfig_height(res)
+    else:
+        for m, res in enumerate(results):
+            height += _stackbar_subfig_height([res])
+    return height
+
+
+def spread_contrib_figure(results, stages, colors=None, scenarios=None, results_hi=None, results_lo=None,
+                          match_y=False):
     """
+
+    :param results:
+    :param stages:
+    :param colors:
+    :param scenarios:
+    :param results_hi:
+    :param results_lo:
+    :param match_y: [False] if True, set all axes to have the same [maximal] y limits
+    :return:
+    """
+    if not isinstance(results, list):
+        results = [results]
+        results_hi = [results_hi]
+        results_lo = [results_lo]
+
+    if len(results) == 1:
+        f = plt.figure(figsize=(6, 5))
+        wid = 1
+
+    else:
+        height = 5 * round(len(results)/2)
+        f = plt.figure(figsize=(12, height))
+        wid = 2
+
+    if colors is None:
+        colors = (0.1, 0.6, 0.7)
+
+    ax = []
+
+    for i, result in enumerate(results):
+        ax.append(f.add_subplot(len(results), wid, i + 1))
+        data = result.contrib_query(stages)
+        if results_hi is None:
+            hi = data
+        else:
+            hi = results_hi[i].contrib_query(stages)
+
+        if results_lo is None:
+            lo = data
+        else:
+            lo = results_lo[i].contrib_query(stages)
+
+        if scenarios is None:
+            subt = ''
+        else:
+            subt = scenarios[i]
+
+        t = result.quantity['Indicator']
+
+        spread_bars(ax[-1], stages, data, colors, lo=lo, hi=hi, title=t, subtitle=subt)
+
+    if match_y:
+        y_lo = 0
+        y_hi = 0
+        for x in ax:
+            (y0, y1) = x.get_ylim()
+            if y0 < y_lo:
+                y_lo = y0
+            if y1 > y_hi:
+                y_hi = y1
+        for x in ax:
+            x.set_ylim(y_lo, y_hi)
+
+
+def scenario_compare_figure(results, stages, hues=None, scenarios=None):
+    """
+    A bit of a swiss army knife.
+
+    if scenarios is None, results is an n-array of LciaResult objects.  Creates an n-subplot figure of
+    stacked pos/neg bars, annotated by reference to k ordered stages.
+
+     if scenarios is not none, it must be an m-array of scenario names or labels.  results is interpreted as
+     an m-array of n-arrays of LciaResult objects. Creates an n-subplot figure of m-stacked pos/neg bars, each
+     featuring k stages
+
+    :param results: either a n-array or a k-by-n array of results
+    :param stages: k query terms to results
+    :param hues: for n quantities represented (quick-compute from UUID)
+    :param scenarios:
+    :return:
+    """
+
+    if scenarios is None:
+        height = _scenario_fig_height(results, scenario=False)
+        fig = plt.figure(figsize=(8, height))
+        quantities = [r.quantity for r in results]
+
+    else:
+        height = _scenario_fig_height(results, scenario=True)
+        fig = plt.figure(figsize=(8, height))
+        quantities = [r.quantity for r in results[0]]
+
+    if hues is None:
+        hues = [None] * len(quantities)
+
+    for n, quantity in enumerate(quantities):
+        hue = hues[n]
+        ax = fig.add_subplot(len(quantities), 1, n + 1)
+
+        if hue is None:
+            hue = int('%.4s' % quantity.get_uuid(), 16) / 65536
+
+        if scenarios is None:
+            series = results[n].contrib_query(stages)
+            stack_bars(ax, [series], hue, [quantity.unit()],
+                       title=quantity['Name'], subtitle=quantity['Indicator'])
+
+        else:
+            series = [r[n].contrib_query(stages) for r in results]
+            units = [r[n].quantity.unit() for r in results]
+
+            stack_bars(ax, series, hue, units, labels=scenarios,
+                       title=quantity['Name'], subtitle=quantity['Indicator'])
+
+    return fig
+
+
+def _one_bar(ax, pos_y, neg_y, data, hue, units, threshold):
     poss = sum([k for k in data if k > 0])
     negs = sum([k for k in data if k < 0])
+
     total = poss + negs
-    data_range = poss - negs
 
-    threshold = 0.07 * data_range
-    bar_height = 20
+    left = 0.0
+    right = 0.0
 
-    # defaults
-    pos_y = (1.05 * bar_height) / 2
-    neg_y = pos_y - bar_height
+    patch_handles = []
+    colors = color_range(len(data), hue)
+
     total_y = None  # where to put the net marker
 
     if poss != 0:
@@ -122,45 +264,24 @@ def stack_bar(ax, data, hue, units, title='Contribution Analysis', subtitle='by 
             else:
                 total_y = pos_y
         else:
-            neg_y = 0
+            neg_y = pos_y
 
     else:
         if negs == 0:
             return None  # nothing to do
-        neg_y = 0
-
-    left = 0.0
-    right = 0.0
-    patch_handles = []
-    colors = color_range(len(data), hue)
+        neg_y = pos_y
 
     for (i, d) in enumerate(data):
         if d > 0:
-            patch = ax.barh(pos_y, d, color=next(colors), align='center', left=right, height=bar_height)
+            patch = ax.barh(pos_y, d, color=next(colors), align='center', left=right, height=1)
             patch_handles.append(patch)
             _label_segment(patch[0], d, chr(ord('A') + i), threshold)
             right += d
         elif d < 0:
             left += d
-            patch = ax.barh(neg_y, abs(d), color=next(colors), align='center', left=left, height=bar_height)
+            patch = ax.barh(neg_y, abs(d), color=next(colors), align='center', left=left, height=1)
             patch_handles.append(patch)
             _label_segment(patch[0], d, chr(ord('A') + i), threshold)
-
-    ax.plot((0, 0), (neg_y, bar_height), 'k-')  # line at origin
-
-    ax.spines['top'].set_visible(False)
-    ax.spines['bottom'].set_visible(False)
-    ax.spines['left'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-
-    ax.text(left, 2.3 * bar_height, subtitle, color=(0.3, 0.3, 0.3), size='small')
-    ax.text(left, 2.8 * bar_height, title, size='large')
-
-    ax.set_yticks([])
-    # ax.set_position([0.125, 0.125, 0.7, 0.9])
-    ax.xaxis.set_ticks_position('bottom')
-    ax.set_xlim(left * 1.08, right * 1.08)
-    ax.set_ylim(neg_y - (0.5 * bar_height), 3.6 * bar_height)
 
     if units is None:
         unitstring = ''
@@ -176,6 +297,131 @@ def stack_bar(ax, data, hue, units, title='Contribution Analysis', subtitle='by 
 
     if total_y is not None:
         ax.plot(total, total_y, 'd')
+
+    return neg_y - 0.55
+
+
+def stack_bar(ax, data, hue, units, title='Contribution Analysis', subtitle='by stage'):
+    """
+    Draws a single stack bar chart on the existing axes.
+    ax = axes
+    data = ordered data corresponding to the above contributions
+    hue = float [0..1] used as the base color in shading the bars
+          hue can also be (hue1, hue2), in which case the bars follow a gradient from hue1 to hue2
+    units = appended to total in square brackets if present
+    title, subtitle- drawn on graph
+
+    If several stack bar charts are to be shown side by side, they should all have the data ordered the same.
+    """
+    stack_bars(ax, [data], hue, [units], title=title, subtitle=subtitle)
+
+
+def stack_bars(ax, series, hue, units, labels=None, title='Scenario Analysis', subtitle='by stage'):
+    """
+
+    :param ax:
+    :param series: must be a list of iterables, presumably all the same length
+    :param hue:
+    :param units:
+    :param labels: None, or a list of text strings to label each bar set
+    :param title:
+    :param subtitle:
+    :return:
+    """
+    # first, determine left and right ranges
+    left = 0.0
+    right = 0.0
+    for data in series:
+        poss = sum([k for k in data if k > 0])
+        negs = sum([k for k in data if k < 0])
+
+        if poss > right:
+            right = poss
+        if negs < left:
+            left = negs
+
+    data_range = right - left
+    threshold = 0.07 * data_range
+    top = 1.1
+    bar_skip = 1.4
+
+    # defaults
+    pos_y = .55
+    btm = 0
+
+    # make the plots
+    for i, data in enumerate(series):
+        neg_y = pos_y - 1
+        btm = _one_bar(ax, pos_y, neg_y, data, hue, units[i], threshold)
+        if labels is not None:
+            ax.text(left, pos_y, '%s  ' % labels[i], ha='right', va='center', fontsize=12)
+        pos_y = btm - bar_skip
+
+    # common to full plot
+
+    ax.text(left, 2.3, subtitle, color=(0.3, 0.3, 0.3), size='small')
+    ax.text(left, 2.8, title, size='large')
+
+    ax.plot((0, 0), (btm, top), 'k-')  # line at origin
+
+    ax.spines['top'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+    ax.set_yticks([])
+    # ax.set_position([0.125, 0.125, 0.7, 0.9])
+    ax.xaxis.set_ticks_position('bottom')
+    ax.set_xlim(left * 1.08, right * 1.08)
+    ax.set_ylim(btm, 3.6)
+
+
+def spread_bars(ax, stages, data, color_gen, title='Contribution Analysis', subtitle='by stage',
+                hi=None, lo=None, y_lim=None, **kwargs):
+    """
+
+    :param ax:
+    :param stages:
+    :param data:
+    :param color_gen: iterator that yields color for data points
+    :param title:
+    :param subtitle:
+    :param hi: data vector for high errorbars (passed on to pyplot)
+    :param lo: data vector for low errorbars (passed on to pyplot)
+    :param y_lim: y axis limits, if to be specified
+    :return:
+    """
+    barwidth = 0.65
+
+    x = [i - barwidth/2 for i in range(len(stages))]
+
+    kwargs['ecolor'] = (0,0,0)
+    kwargs['width'] = barwidth
+    kwargs['color'] = [k for k in color_gen]
+
+    if hi is None:
+        hi_d = [0] * len(data)
+    else:
+        hi_d = [hi[i] - data[i] for i, _ in enumerate(data)]
+    if lo is None:
+        lo_d = [0] * len(data)
+    else:
+        lo_d = [data[i] - lo[i] for i, _ in enumerate(data)]
+
+    kwargs['yerr'] = [lo_d, hi_d]
+
+    patches = ax.bar(x, data, **kwargs)
+    for i, patch in enumerate(patches):
+        _label_vbar(patch, data[i], sep=hi_d[i])
+
+    ax.set_xlim(-0.5, len(stages)-0.5)
+    if y_lim is not None:
+        ax.set_ylim(y_lim)
+    ax.set_xticks(range(len(stages)))
+    labels = ['\n'.join(wrap(l, 25)) for l in stages]
+    ax.set_xticklabels(labels, rotation=70)
+    ax.set_title('%s\n%s' % (title, subtitle), fontsize=14)
+    ax.plot((-0.5, len(stages)), (0, 0), 'k')
 
 
 """

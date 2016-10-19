@@ -8,7 +8,7 @@ import os
 import re
 import glob
 from lcatools.exchanges import comp_dir
-from lcatools.charts import stack_bar_figure, save_plot
+from lcatools.charts import scenario_compare_figure, save_plot
 
 
 def _grab_stages(results):
@@ -229,7 +229,8 @@ class TeXAuthor(object):
         else:
             arrows = '\\ncline{f-}{nx%.5s}{px%.5s}' % (fragment.get_uuid(), fragment.get_uuid())
         if not first:
-            arrows += '\n\\bput(0.78){\\parbox{2cm}{\\centering \\scriptsize %.4g %s}}' % (node_weight, fragment.flow.unit())
+            arrows += '\n\\bput(0.78){\\parbox{2cm}{\\centering \\scriptsize %.4g %s}}' % (node_weight,
+                                                                                           fragment.flow.unit())
 
         children = [c for c in fragment.child_flows(fragment)]
         if len(children) > 0:
@@ -237,7 +238,7 @@ class TeXAuthor(object):
 
             for c in children:
                 arrows += '\n\\ncangle[angleA=-90,angleB=180,framearc=0]{nx%.5s}{px%.5s}' % (fragment.get_uuid(),
-                                                                                               c.get_uuid())
+                                                                                             c.get_uuid())
                 arrows += '\n'
                 boxes += '\n'
                 bplus, aplus = self.frag_layout_traverse(c, node_weight, scenario=scenario, parbox_width=parbox_width)
@@ -262,7 +263,7 @@ class TeXAuthor(object):
         if stages is None:
             stages = _grab_stages(results)
 
-        fig = stack_bar_figure(results, stages, **kwargs)
+        fig = scenario_compare_figure(results, stages, **kwargs)
         save_plot(os.path.join(self.img_folder, self._img_fname(frag)))
         self._write_stage_names(frag, stages)
         return fig

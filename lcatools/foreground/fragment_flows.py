@@ -675,7 +675,7 @@ class LcFragment(LcEntity):
             'direction': self.direction,
             'isPrivate': self._private,
             'isBackground': self._background,
-            'isBalanceFlow': self._balance_flow,
+            'isBalanceFlow': self.balance_flow,
             'exchangeValues': self._serialize_evs(),
             'terminations': self._serialize_terms(),
             'tags': self._d
@@ -716,7 +716,7 @@ class LcFragment(LcEntity):
         print('%20.20s: %g' % ('Observed', self.observed_ev))
         for k in evs:
             print('%20.20s: %g' % (k, self.exchange_value(k)))
-        if self._balance_flow:
+        if self.balance_flow:
             print('\nBalance flow: True (%s)' % self.flow.reference_entity)
         else:
             print('\nBalance flow: False')
@@ -803,7 +803,7 @@ class LcFragment(LcEntity):
 
     @observed_ev.setter
     def observed_ev(self, value):
-        if self._balance_flow:
+        if self.balance_flow:
             print('value set by balance.')
         else:
             self._exchange_values[1] = value
@@ -857,7 +857,7 @@ class LcFragment(LcEntity):
         """
         match = self._match_scenario_ev(scenario)
         if match is None:
-            if observed or self._balance_flow:
+            if observed or self.balance_flow:
                 ev = self.observed_ev
             else:
                 ev = self.cached_ev
@@ -873,7 +873,7 @@ class LcFragment(LcEntity):
         return self._exchange_values.keys()
 
     def _mod(self, scenario):
-        if self._balance_flow:
+        if self.balance_flow:
             return '='
         match_e = self._match_scenario_ev(scenario)
         match_t = self._match_scenario_term(scenario)
@@ -906,13 +906,17 @@ class LcFragment(LcEntity):
             magnitude = self.flow.convert(magnitude, fr=quantity)
         self.observed_magnitude = magnitude
 
+    @property
+    def balance_flow(self):
+        return self._balance_flow
+
     def set_balance_flow(self):
-        if self._balance_flow is False:
+        if self.balance_flow is False:
             self.reference_entity.set_conserved_quantity(self)
             self._balance_flow = True
 
     def unset_balance_flow(self):
-        if self._balance_flow:
+        if self.balance_flow:
             self.reference_entity.unset_conserved_quantity()
             self._balance_flow = False
 
@@ -1114,7 +1118,7 @@ class LcFragment(LcEntity):
         conserved_val = None
         conserved = False
         if conserved_qty is not None:
-            if self._balance_flow:
+            if self.balance_flow:
                 raise BalanceFlowError  # to be caught
             conserved_val = ev * self.flow.cf(conserved_qty)
             if conserved_val != 0:

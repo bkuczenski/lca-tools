@@ -662,11 +662,12 @@ class ForegroundManager(object):
         print('Parameters for scenario "%s"' % scenario)
         for f in self[0].fragments(show_all=True, background=None):
             printed = False
-            if f.exchange_value(scenario) != f.cached_ev:
-                if printed is False:
-                    printed = True
-                    print('%s' % f)
-                print(' Exchange value: %10.4g (default %10.4g)' % (f.exchange_value(scenario), f.cached_ev))
+            if not f.balance_flow:
+                if f.exchange_value(scenario) != f.cached_ev:
+                    if printed is False:
+                        printed = True
+                        print('%s' % f)
+                    print(' Exchange value: %10.4g (default %10.4g)' % (f.exchange_value(scenario), f.cached_ev))
             if f.termination(scenario) != f.term:
                 if printed is False:
                     print('%s' % f)

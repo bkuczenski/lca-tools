@@ -167,8 +167,9 @@ class ForegroundArchive(LcArchive):
             with open(tgt_file, 'w') as fp:
                 json.dump({'fragments': frags}, fp, indent=2, sort_keys=True)
         for leftover in current_files:
-            print('deleting %s' % leftover)
-            os.remove(os.path.join(self._fragment_dir, leftover))
+            if not os.path.isdir(os.path.join(self._fragment_dir, leftover)):
+                print('deleting %s' % leftover)
+                os.remove(os.path.join(self._fragment_dir, leftover))
 
     def create_fragment(self, flow, direction, Name=None, exchange_value=1.0, **kwargs):
         """
@@ -266,6 +267,8 @@ class ForegroundArchive(LcArchive):
         if not os.path.exists(self._fragment_dir):
             os.makedirs(self._fragment_dir)
         for file in os.listdir(self._fragment_dir):
+            if os.path.isdir(os.path.join(self._fragment_dir, file)):
+                continue
             with open(os.path.join(self._fragment_dir, file), 'r') as fp:
                 j = json.load(fp)
 

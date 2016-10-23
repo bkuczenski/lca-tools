@@ -144,10 +144,16 @@ class ExchangeValue(Exchange):
         self.value = value
 
     def __str__(self):
-        if self.process.reference_entity is not None and self in self.process.reference_entity:
-            ref = '{*}'
+        if self.process.entity_type == 'fragment':
+            if self.process.reference_entity is None:
+                ref = '{*}'
+            else:
+                ref = '   '
         else:
-            ref = '   '
+            if self.process.reference_entity is not None and self in self.process.reference_entity:
+                ref = '{*}'
+            else:
+                ref = '   '
         return '%6.6s: %s [%.3g %s] %s' % (self.direction, ref, self.value, self.unit, self.tflow)
 
     def f_view(self):
@@ -404,10 +410,16 @@ class AllocatedExchange(Exchange):
             self._check_ref()
 
     def __str__(self):
-        if self in self.process.reference_entity:
-            ref = '{*}'
+        if self.process.entity_type == 'fragment':
+            if self.process.reference_entity is None:
+                ref = '{*}'
+            else:
+                ref = '   '
         else:
-            ref = '   '
+            if self in self.process.reference_entity:
+                ref = '{*}'
+            else:
+                ref = '   '
         return '%6.6s: %s [%.3g %s] %s' % (self.direction, ref, self.value, self.unit, self.tflow)
 
     def f_view(self):

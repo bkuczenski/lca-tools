@@ -185,6 +185,15 @@ class AggregateLciaScore(object):
     def show(self, **kwargs):
         self.show_detailed_result(**kwargs)
 
+    def details(self):
+        """
+        generator of nonzero detailed results
+        :return:
+        """
+        for d in self.LciaDetails:
+            if d.result != 0:
+                yield d
+
     def show_detailed_result(self, key=lambda x: x.result, show_all=False):
         for d in sorted(self.LciaDetails, key=key, reverse=True):
             if d.result != 0 or show_all:
@@ -227,10 +236,11 @@ class LciaResult(object):
         results = LciaResults(fragment)
         exch = ExchangeValue(fragment, fragment.flow, fragment.direction, value=1.0)
         for q, cf in cfs.items():
+            qu = q.get_uuid()
+            results[qu] = cls(q, scenario=scenario)
             if isinstance(cf, Characterization):
-                results[q] = cls(cf.quantity, scenario=scenario)
-                results[q].add_component(fragment.get_uuid(), entity=fragment)
-                results[q].add_score(fragment.get_uuid(), exch, cf, location)
+                results[qu].add_component(fragment.get_uuid(), entity=fragment)
+                results[qu].add_score(fragment.get_uuid(), exch, cf, location)
 
         return results
 
@@ -424,7 +434,10 @@ class LciaResults(dict):
             int(item)
             return super(LciaResults, self).__getitem__(self._indices[item])
         except (ValueError, TypeError):
-            return super(LciaResults, self).__getitem__(next(k for k in self.keys() if k.startswith(item)))
+            try:
+                return super(LciaResults, self).__getitem__(next(k for k in self.keys() if k.startswith(item)))
+            except StopIteration:
+                return LciaResult(None)  #
 
     def __setitem__(self, key, value):
         value.set_scale(self._scale)

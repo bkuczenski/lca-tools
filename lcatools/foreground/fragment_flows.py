@@ -69,6 +69,9 @@ def traversal_to_lcia(ffs):
             for q, v in i.term.score_cache_items():
                 quantity = v.quantity
 
+                if q not in results.keys():
+                    results[q] = LciaResult(quantity, scenario=v.scenario)
+
                 value = i.term.score_cache(quantity).total()
                 if value * i.node_weight == 0:
                     continue
@@ -76,9 +79,6 @@ def traversal_to_lcia(ffs):
                 if i.term.direction == i.fragment.direction:
                     # if the directions collide (rather than complement), the term is getting run in reverse
                     value *= -1
-
-                if q not in results.keys():
-                    results[q] = LciaResult(quantity, scenario=v.scenario)
 
                 results[q].add_component(i.fragment.get_uuid(), entity=i)
                 x = ExchangeValue(i.fragment, i.term.term_flow, i.term.direction, value=i.node_weight)
@@ -467,12 +467,13 @@ class FlowTermination(object):
         """
 
         :return:
-          '--:' = fragment I/O
-          '-O ' = foreground node
-          '-* ' = process
-          '-# ' - sub-fragment
-          '-B#' - terminated background
-          '--C' - cut-off background
+          '---:' = fragment I/O
+          '-O  ' = foreground node
+          '-*  ' = process
+          '-#  ' - sub-fragment (aggregate)
+          '-#: ' - sub-fragment (descend)
+          '-B ' - terminated background
+          '--C ' - cut-off background
         """
         if self.is_null:
             term = '---:'  # fragment IO
@@ -487,7 +488,10 @@ class FlowTermination(object):
                 else:
                     term = '-B  '
             else:
-                term = '-#  '
+                if self.descend:
+                    term = '-#: '
+                else:
+                    term = '-#  '
         else:
             raise TypeError('I Do not understand this term for frag %.7s' % self._parent.get_uuid())
         return term
@@ -1357,7 +1361,7 @@ class FragmentFlow(object):
         else:
             term = '-# '
         return '%.5s  %10.3g [%6s] %s %s' % (self.fragment.get_uuid(), self.node_weight, self.fragment.direction,
-                                            term, self.fragment['Name'])
+                                             term, self.fragment['Name'])
 
     def __add__(self, other):
         if isinstance(other, FragmentFlow):
@@ -1381,6 +1385,14 @@ class FragmentFlow(object):
         new = FragmentFlow(self.fragment, self.magnitude + mag, self.node_weight + nw,
                            self.term, self.is_conserved)
         return new
+
+    def __eq__(self, other):
+        if not isinstance(other, FragmentFlow):
+            return False
+        return self.fragment == other.fragment and self.term == other.term and self.magnitude == other.magnitude
+
+    def __hash__(self):
+        return hash(self.fragment)
 
     def to_antelope(self, fragmentID, stageID):
         pass

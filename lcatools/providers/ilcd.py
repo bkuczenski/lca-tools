@@ -184,6 +184,15 @@ class IlcdArchive(LcArchive):
     def _de_prefix(self, file):
         return re.sub('^' + self._pathtype.join(self._build_prefix(), ''), '', file)
 
+    def _path_from_uri(self, uri):
+        """
+        just need to strip any leading '../' from the uri
+        :param uri:
+        :return:
+        """
+        uri = re.sub('^(\.\./)*', '', uri)
+        return self._pathtype.join(self._build_prefix(), uri)
+
     def _path_from_parts(self, dtype, uid, version=None):
         """
         aka 'path from parts'
@@ -218,8 +227,7 @@ class IlcdArchive(LcArchive):
     def _check_or_retrieve_child(self, uid, uri):
         child = self._get_entity(uid)
         if child is None:
-            dtype = _extract_dtype(uri, self._pathtype)
-            child = self.retrieve_or_fetch_entity(uid, dtype=dtype)
+            child = self._fetch(uid, uri=uri)
         return child
 
     def _get_objectified_entity(self, filename):
@@ -241,7 +249,9 @@ class IlcdArchive(LcArchive):
         print('No results.')
         return None
 
-    def objectify(self, term, dtype=None, version=None):
+    def objectify(self, term, dtype=None, version=None, uri=None):
+        if uri is not None:
+            return self._get_objectified_entity(self._path_from_uri(uri))
         if dtype is None:
             return self._search_for_term(term)
 
@@ -437,7 +447,7 @@ class IlcdArchive(LcArchive):
 
         return p
 
-    def _fetch(self, term, dtype=None, version=None):
+    def _fetch(self, term, dtype=None, version=None, **kwargs):
         """
         fetch an object from the archive by reference.
 
@@ -449,7 +459,7 @@ class IlcdArchive(LcArchive):
         if dtype is None:
             dtype = _extract_dtype(term, self._pathtype)
 
-        o = self.objectify(term, dtype=dtype, version=version)
+        o = self.objectify(term, dtype=dtype, version=version, **kwargs)
         if o is None:
             return None
 
@@ -460,7 +470,7 @@ class IlcdArchive(LcArchive):
             try:
                 return self._create_flow(o)
             except KeyError:
-                print('KeyError on term %s dtype %s version %s'% (term, dtype, version))
+                print('KeyError on term %s dtype %s version %s' % (term, dtype, version))
         elif dtype == 'Process':
             return self._create_process(o)
         elif dtype == 'FlowProperty':

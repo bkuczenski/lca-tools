@@ -487,7 +487,7 @@ class ForegroundManager(object):
         if p_ref is None:
             # cutoff
             result = LciaResults(p_ref.entity())
-            for q in quantities:
+            for q in qs:
                 result[q.get_uuid()] = LciaResult(q)
             return result
         return p_ref.archive.bg_lookup(p_ref.id, quantities=qs, flowdb=self.db, **kwargs)
@@ -601,7 +601,7 @@ class ForegroundManager(object):
         return fs
 
     @staticmethod
-    def _observe(c, scenario):
+    def _observe(c, scenario, accept_all=False):
         if scenario is None:
             prompt = 'Observed value'
         else:
@@ -615,7 +615,10 @@ class ForegroundManager(object):
             string_ev = '%10g' % c.exchange_value(scenario)
             print(' Scenario EV: %s [%s]' % (string_ev,
                                              c.flow.unit()))
-        val = ifinput('%s ("=" to use cached): ' % prompt, string_ev)
+        if accept_all:
+            val = '='
+        else:
+            val = ifinput('%s ("=" to use cached): ' % prompt, string_ev)
         if val != string_ev:
             if val == '=':
                 new_val = c.cached_ev
@@ -626,7 +629,7 @@ class ForegroundManager(object):
             else:
                 c.set_exchange_value(scenario, new_val)
 
-    def observe(self, fragment, scenario=None):
+    def observe(self, fragment, scenario=None, accept_all=False):
         if isinstance(fragment, str):
             fragment = self.frag(fragment)
 
@@ -638,11 +641,12 @@ class ForegroundManager(object):
         self._observe(fragment, scenario)
         if fragment.term.is_null:
             return
-        if fragment.term.term_node.entity_type == 'fragment':
+        if fragment.term.is_fg or not fragment.term.is_frag:
+            for c in fragment.child_flows(fragment):
+                self._observe(c, scenario, accept_all=accept_all)
+        else:
             print('fragment children are set by traversal')
             return
-        for c in fragment.child_flows(fragment):
-            self._observe(c, scenario)
 
     def scenarios(self, fragment=None, _scens=None):
         if fragment is None:

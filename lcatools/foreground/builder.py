@@ -190,7 +190,7 @@ class ForegroundBuilder(ForegroundManager):
         if not term.is_null:
             if term.term_node.entity_type == 'fragment':
                 term.descend = descend
-        for c in self.child_flows(fragment):
+        for c in fragment.child_flows(fragment):
             self.aggregate_subfrags(c, scenario=scenario)
 
     def merge_backgrounds(self, old, new):
@@ -232,7 +232,7 @@ class ForegroundBuilder(ForegroundManager):
         else:
             print('Update reference flow for scenario "%s"' % scenario)
         self._update_ev(frag, scenario)
-        for c in self.child_flows(frag):
+        for c in frag.child_flows(frag):
             print('   Child flow: %s ' % c)
             if scenario is None:
                 print('Update default value')
@@ -280,7 +280,7 @@ class ForegroundBuilder(ForegroundManager):
         new = self.create_fragment(parent=parent,
                                    Name=frag['Name'] + suffix, StageName=frag['StageName'],
                                    flow=frag.flow, direction=direction, comment=frag['Comment'],
-                                   value=frag.cached_ev, balance=frag._balance_flow)
+                                   value=frag.cached_ev, balance=frag.balance_flow)
 
         self.transfer_evs(frag, new)
 
@@ -291,7 +291,7 @@ class ForegroundBuilder(ForegroundManager):
             else:
                 new.term_from_term(term, scenario=t_scen)
 
-        for c in self.child_flows(frag):
+        for c in frag.child_flows(frag):
             self.clone_fragment(c, parent=new, suffix='')
         return new
 
@@ -307,7 +307,7 @@ class ForegroundBuilder(ForegroundManager):
         fragment.reference_entity = None
         surrogate = self.create_fragment(parent=old_parent, flow=fragment.flow, direction=fragment.direction,
                                          comment='Moved to subfragment', value=fragment.cached_ev,
-                                         balance=fragment._balance_flow)
+                                         balance=fragment.balance_flow)
         self.transfer_evs(fragment, surrogate)
         fragment.clear_evs()
 
@@ -320,7 +320,8 @@ class ForegroundBuilder(ForegroundManager):
         reference.  basically wraps the fragment and sets the exchange value, then deletes one child flow.
         doesn't currently work if the fragment contains internal reference flow feedback
         :param fragment:
-        :param exchange: should be output from F.get_fragment_inventory
+        :param flow:
+        :param direction:
         :return:
         """
         comment = 'rebased %.5s' % fragment.get_uuid()
@@ -358,7 +359,7 @@ class ForegroundBuilder(ForegroundManager):
         self.build_child_flows(fragment, background_children=False)
 
     def _del_fragment(self, fragment):
-        for c in self.child_flows(fragment):
+        for c in fragment.child_flows(fragment):
             self._del_fragment(c)
         self[0]._del_f(fragment)
 
@@ -434,7 +435,7 @@ class ForegroundBuilder(ForegroundManager):
     def curate_stages(self, frag, stage_names=None):
         def _recurse_stages(f):
             stages = [f['StageName']]
-            for m in self.child_flows(f):
+            for m in f.child_flows(f):
                 stages.extend(_recurse_stages(m))
             return stages
 
@@ -448,7 +449,7 @@ class ForegroundBuilder(ForegroundManager):
         if ch not in stage_names:
             stage_names.add(ch)
         frag['StageName'] = ch
-        for c in self.child_flows(frag):
+        for c in frag.child_flows(frag):
             self.curate_stages(c, stage_names=stage_names)
 
     def background_scenario(self, scenario, index=None):

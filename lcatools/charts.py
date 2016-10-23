@@ -1,18 +1,22 @@
 from __future__ import division
 import colorsys
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 from textwrap import wrap
 
 
-prefab_colors = ((0.1, 0.6, 0.7), (0.6, 0.1, 0.7), (0.7, 0.6, 0.1), (0.4, 0.9, 0.3), (0.3, 0.4, 0.9), (0.9, 0.3, 0.4))
-net_color = (0.2, 0.2, 0.2)
+prefab_colors = ((0.1, 0.6, 0.7), (0.9, 0.3, 0.4), (0.3, 0.9, 0.6), (0.1, 0.1, 0.8), (0.4, 0.9, 0.3), (0.3, 0.4, 0.9))
+net_color = (0.6, 0.6, 0.6)
 
 
 def linspace(a, b, num):
-    dif = float(b - a) / (num - 1)
-    for i in range(num - 1):
+    if num < 2:
         yield a
-        a += dif
+    else:
+        dif = float(b - a) / (num - 1)
+        for i in range(num - 1):
+            yield a
+            a += dif
     yield b
 
 
@@ -36,11 +40,11 @@ def _label_bar(patch, value=None, label=None, valueformat='%5.3g', labelformat='
     if value is not None:
         patch.axes.text(x, y, valueformat % value, ha='center', va='center')
     if label is not None:
-        patch.axes.text(x, y + patch.get_height(), labelformat % label, ha='center', va='center')
+        patch.axes.text(x, y + (0.52* patch.get_height()), labelformat % label, ha='center', va='bottom')
 
 
 def _label_segment(patch, data, label, threshold):
-    if data > threshold:
+    if abs(data) > threshold:
         _label_bar(patch, value=data, label=label)
     else:
         _label_bar(patch, label=label)
@@ -57,6 +61,11 @@ def _label_vbar(patch, value, valueformat='%6.3g', sep=0):
     patch.axes.text(x, y, valueformat % value, ha='center', va='bottom')
 
 
+def _has_nonzero(res):
+    data = sum([abs(i) for i in res.contrib_query(res.components())])
+    return data != 0
+
+
 def _has_pos_neg(res):
     """
     Returns true if the input contains both positive and negative data points
@@ -71,8 +80,22 @@ def _has_pos_neg(res):
     return False
 
 
-def save_plot(file):
+def save_plot(file, close_after=True):
     plt.savefig(file, format='eps', bbox_inches='tight')
+    if close_after:
+        plt.close()
+
+
+def standard_labels(ax, stages):
+    ax.set_xticks(range(len(stages)))
+    if max([len(l) for l in stages]) > 12:
+        labels = ['\n'.join(wrap(l, 25)) for l in stages]
+        rotation = 90
+    else:
+        labels = stages
+        rotation = 0
+
+    ax.set_xticklabels(labels, rotation=rotation)
 
 
 def stack_bar_figure(results, stages, hues=None):
@@ -109,10 +132,11 @@ def stack_bar_figure(results, stages, hues=None):
 def _stackbar_subfig_height(results):
     height = 1.3
 
-    for n, r in enumerate(results):
-        height += 0.6
-        if _has_pos_neg(r):
-            height += 0.6
+    for r in results:
+        if _has_nonzero(r):
+            height += 0.8
+            if _has_pos_neg(r):
+                height += 0.6
     return height
 
 
@@ -181,15 +205,7 @@ def spread_contrib_figure(results, stages, colors=None, scenarios=None, results_
             lo = results_lo[i].contrib_query(stages)
 
         spread_bars(ax[-1], data, colors, lo=lo, hi=hi)
-        ax[-1].set_xticks(range(len(stages)))
-        if max([len(l) for l in stages]) > 20:
-            labels = ['\n'.join(wrap(l, 25)) for l in stages]
-            rotation = 70
-        else:
-            labels = stages
-            rotation = 0
-
-        ax[-1].set_xticklabels(labels, rotation=rotation)
+        standard_labels(ax[-1], stages)
 
         t = result.quantity['Indicator']
 
@@ -212,7 +228,7 @@ def spread_contrib_figure(results, stages, colors=None, scenarios=None, results_
 
 
 def spread_scenario_compare(ax, results, stages, colors=None, scenarios=None, results_hi=None, results_lo=None,
-                            net=False):
+                            net=False, labels=False, legend=True):
     """
 
     :param ax: axes already created
@@ -253,7 +269,7 @@ def spread_scenario_compare(ax, results, stages, colors=None, scenarios=None, re
     if scenarios is None:
         scenarios = ['S%d' % (i+1) for i, _ in enumerate(results)]
 
-    unit = list(set(['%s [%s]' % (r.quantity['Indicator'], r.quantity.unit()) for r in results]))
+    unit = list(set([(r.quantity['Indicator'], r.quantity.unit()) for r in results]))
     if len(unit) > 1:
         print('Warning: multiple units found in result sets!!')
 
@@ -282,29 +298,30 @@ def spread_scenario_compare(ax, results, stages, colors=None, scenarios=None, re
         if net:
             mycolors += (net_color,)
 
-        spread_bars(ax, data, mycolors, lo=lo, hi=hi, barwidth=barwidth, x_offset=x_0, labels=False)
+        spread_bars(ax, data, mycolors, lo=lo, hi=hi, barwidth=barwidth, x_offset=x_0, labels=labels)
 
     # graph general parts
     ax.plot(ax.get_xlim(), (0, 0), 'k')
 
-    if max([len(l) for l in stages]) > 20:
-        labels = ['\n'.join(wrap(l, 25)) for l in stages]
+    if max([len(l) for l in stages]) > 12:
+        lbls = ['\n'.join(wrap(l, 25)) for l in stages]
         rotation = 90
     else:
-        labels = stages
+        lbls = [l for l in stages]
         rotation = 0
 
     if net:
-        labels.append('NET')
+        lbls.append('NET')
 
-    ax.set_xticks(range(len(labels)))
-    ax.set_xticklabels(labels, rotation=rotation)
-    ax.set_ylabel(unit[0])
+    ax.set_xticks(range(len(lbls)))
+    ax.set_xticklabels(lbls, rotation=rotation)
+    ax.set_ylabel(unit[0][1])
 
-    if len(scenarios) > 1:
-        ax.legend(scenarios)
-    else:
-        ax.set_title(scenarios[0], fontsize=14)
+    if len(scenarios) > 1 and legend:
+        handles = [mpatches.Patch(color=colors[i], label=scenarios[i]) for i in range(len(scenarios))]
+
+        ax.legend(handles=handles, loc='best')
+    ax.set_title(unit[0][0], fontsize=14)
 
 
 def scenario_compare_figure(results, stages, hues=None, scenarios=None):
@@ -357,6 +374,17 @@ def scenario_compare_figure(results, stages, hues=None, scenarios=None):
             stack_bars(ax, series, hue, units, labels=scenarios,
                        title=quantity['Name'], subtitle=quantity['Indicator'])
 
+        """
+        if n == 0:
+            colors = [k for k in color_range(len(stages), hue)]
+            handles = [mpatches.Patch(color=colors[i], label='%s -- %s' % (chr(ord('A') + i), k))
+                       for i, k in enumerate(stages)]
+
+            ax.legend(handles=handles, bbox_to_anchor=(1.75, 0.75))
+            """
+    leg = 'Stages: \n' + '\n'.join(['%s -- %s' % (chr(ord('A') + i), k) for i, k in enumerate(stages)])
+    print(leg)
+
     return fig
 
 
@@ -385,7 +413,7 @@ def _one_bar(ax, pos_y, neg_y, data, hue, units, threshold):
 
     else:
         if negs == 0:
-            return None  # nothing to do
+            return pos_y  # nothing to do
         neg_y = pos_y
 
     for (i, d) in enumerate(data):
@@ -410,10 +438,11 @@ def _one_bar(ax, pos_y, neg_y, data, hue, units, threshold):
                 ha='left', va='center')
 
     if negs != 0:
-        ax.text(right, neg_y, '%6.3g%s' % (left, unitstring), ha='left', fontsize=12, fontweight='bold')
+        ax.text(right, neg_y, '%6.3g%s' % (left, unitstring), ha='left', va='center', fontsize=12, fontweight='bold')
 
     if total_y is not None:
-        ax.plot(total, total_y, 'd')
+        ax.plot(total, total_y, 'd', markersize=10)
+        ax.text(total, total_y, '  %6.3g' % total, ha='left', va='center')
 
     return neg_y - 0.55
 
@@ -479,18 +508,23 @@ def stack_bars(ax, series, hue, units, labels=None, title='Scenario Analysis', s
     ax.text(left, 2.3, subtitle, color=(0.3, 0.3, 0.3), size='small')
     ax.text(left, 2.8, title, size='large')
 
-    ax.plot((0, 0), (btm, top), 'k-')  # line at origin
-
     ax.spines['top'].set_visible(False)
     ax.spines['bottom'].set_visible(False)
     ax.spines['left'].set_visible(False)
     ax.spines['right'].set_visible(False)
 
     ax.set_yticks([])
-    # ax.set_position([0.125, 0.125, 0.7, 0.9])
-    ax.xaxis.set_ticks_position('bottom')
-    ax.set_xlim(left * 1.08, right * 1.08)
-    ax.set_ylim(btm, 3.6)
+    if data_range == 0:
+        ax.set_xticks([])
+        ax.set_xlim(left, left + 1)
+        ax.text(0, 1.1, 'No impacts', ha='left', va='bottom')
+        ax.set_ylim(1, 3.6)
+    else:
+        ax.plot((0, 0), (btm, top), 'k-')  # line at origin
+
+        ax.xaxis.set_ticks_position('bottom')
+        ax.set_xlim(left - 0.02 * data_range, right + 0.08 * data_range)
+        ax.set_ylim(btm, 3.6)
 
 
 def spread_bars(ax, data, color_gen, hi=None, lo=None, y_lim=None, barwidth=0.65, x_offset=0, labels=True, **kwargs):
@@ -527,7 +561,8 @@ def spread_bars(ax, data, color_gen, hi=None, lo=None, y_lim=None, barwidth=0.65
     patches = ax.bar(x, data, **kwargs)
     if labels:
         for i, patch in enumerate(patches):
-            _label_vbar(patch, data[i], sep=hi_d[i])
+            if data[i] != 0:
+                _label_vbar(patch, data[i], sep=hi_d[i])
 
     ax.set_xlim(-0.5, len(data)-0.5)
     if y_lim is not None:

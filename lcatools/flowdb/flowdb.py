@@ -86,7 +86,7 @@ class CLookup(object):
           dist = 0: equivalent to __getitem__
           dist = 1: also check compartment's children
           dist = 2: also check compartment's parent
-          dist = 3: also check compartment's siblings
+          XXX dist = 3: also check compartment's siblings XXX - canceled because this results in spurious matches
         By default (dist==3), checks compartment self and children, parent, and siblings. Returns a set.
         :param item: a Compartment
         :param dist: how far to search (with limits) (default: 1= compartment + children)
@@ -109,6 +109,7 @@ class CLookup(object):
         if dist > 1:
             if item.parent in self._dict.keys():
                 results = results.union(self._dict[item.parent])
+        '''
         if found(results):
             return results
 
@@ -116,6 +117,7 @@ class CLookup(object):
             for s in item.parent.subcompartments():
                 if s in self._dict.keys():
                     results = results.union(self._dict[s])
+        '''
         return results
 
 
@@ -278,7 +280,7 @@ class FlowDB(object):
                 hits_q = self.lookup_single_cf(flow, qu, **kwargs)
             else:
                 hits_q = self.lookup_cfs(flow, qu, **kwargs)
-            cfs[qu.get_uuid()] = hits_q
+            cfs[qu] = hits_q
 
         return cfs
 
@@ -432,7 +434,7 @@ class FlowDB(object):
         try:
             if len(set(vals)) > 1:
                 print('Multiple CFs found: %s' % vals)
-                print('Flow: %s' % flow)
+                print('Flow: %s [%s]' % (flow, flow.unit()))
                 print('Quantity: %s' % quantity)
                 print('Pick characterization to apply')
                 return pick_one(list(cfs))

@@ -6,7 +6,6 @@ I guess for research on this, I should start by actually drawing a fragment by h
 """
 import os
 import re
-import glob
 from lcatools.exchanges import comp_dir
 from lcatools.charts import scenario_compare_figure, save_plot
 
@@ -23,8 +22,16 @@ drawing 'primitives'
 """
 
 
+def stage_name_table(stages):
+    out = '\\scriptsize\n\\begin{tabular}[b]{c@{ -- }l}\n'
+    for i, k in enumerate(stages):
+        out += '%s & %s\\\\\n' % (chr(ord('A') + i), k)
+    out += '\\end{tabular}\n'
+    return out
+
+
 def fragment_header(frag, scenario=None):
-    return '{\\Large \\texttt{%.5s}}{\large -- %s}\\\\[3pt]\n{\\large %s: %g %s %s}\\\\[8pt]\n%s\n' % (
+    return '{\\Large \\texttt{%.5s}}\\subsection{~-- %s}\n{\\large %s: %g %s %s}\\\\[8pt]\n%s\n' % (
         frag.get_uuid(), frag['Name'], comp_dir(frag.direction), frag.exchange_value(scenario),
         frag.flow.unit(),
         frag.flow['Name'], frag['Comment']
@@ -68,7 +75,7 @@ def fg_box(uid):
 
 
 def io_box(uid):
-    return '\\rput(px%.5s){\\pnode(1,0){nx%.5s}}\\psdots[dotsize=4pt(nx%.5s)' % (uid, uid, uid)
+    return '\\rput(px%.5s){\\pnode(1,0){nx%.5s}}\\psdots[dotsize=4pt](nx%.5s)' % (uid, uid, uid)
 
 
 def process_box(uid):
@@ -107,12 +114,15 @@ class TeXAuthor(object):
         return os.path.join(self.img_folder, self._stg_fname(frag))
 
     def _write_stage_names(self, frag, stages):
-        out = '\\begin{tabular}{c@{ -- }l}\n'
-        for i, k in enumerate(stages):
-            out += '%s & %s\\\\\n' % (chr(ord('A') + i), k)
-        out += '\\end{tabular}\n'
+        out = stage_name_table(stages)
         with open(self.stg_rel_path(frag), 'w') as fp:
             fp.write(out)
+
+    @staticmethod
+    def _tex_sanitize(tex):
+        tex = re.sub('%', '\\%', tex)
+        # tex = re.sub('_', '\\\\textunderscore', tex)  # this doesn't work bc filenames have underscores
+        return tex
 
     def __init__(self, folder, overwrite=True):
         """
@@ -132,15 +142,16 @@ class TeXAuthor(object):
             os.makedirs(self.img_folder)
 
         self._file_list = []
-        for file in self._read_wrapper():
-            try:
-                fname = re.search('\{(.*/)?(.*).tex\}', file).group(2)
-            except AttributeError:
-                continue
-            if fname not in self._file_list:
-                self._file_list.append(fname)
+        if os.path.exists(self._wrapper_fname):
+            for file in self._read_wrapper():
+                try:
+                    fname = re.search('\\\input\{(.*/)?(.*).tex\}', file).group(2)
+                except AttributeError:
+                    continue
+                if fname not in self._file_list:
+                    self._file_list.append(fname)
 
-    def frag_layout_recurse(self, fragment, level=0, depth=0):
+    def frag_layout_recurse(self, fragment, level=0, depth=0, scenario=None):
         """
         This pass creates a list of coordinates for pnode declarations for the reference points of all fragment flows.
         returns a 3-tuple of (pnode name, x-coord, y-coord)
@@ -163,12 +174,14 @@ class TeXAuthor(object):
                 depth += .5
             level += 1
             for c in sorted(children, key=lambda x: (x['StageName'], not x.term.is_null, x.term.is_bg)):
+                if c.exchange_value(scenario, observed=True) == 0:
+                    continue
                 if c.term.is_frag and not c.term.is_bg and not fragment.term.is_fg:
                     level += .25
                 coords.extend(self.frag_layout_recurse(c, level=level, depth=depth))
                 level = coords[-1][2]
                 # setup coords for next child -- background nodes are smaller
-                if c.term.is_bg:
+                if c.term.is_bg or c.term.is_fg or c.term.is_null:
                     level += 0.7
                 else:
                     level += 1
@@ -188,8 +201,11 @@ class TeXAuthor(object):
         :param parbox_width: [14cm] width of right-hand text box
         :return:
         """
+        subfrag_scale = 1.0
         if not first:
-            node_weight *= fragment.exchange_value(scenario)
+            node_weight *= fragment.exchange_value(scenario, observed=True)
+        if node_weight == 0:
+            return '\n', '\n'
         if fragment.term.is_frag:
             if fragment.term.is_fg:
                 # foreground
@@ -206,13 +222,17 @@ class TeXAuthor(object):
             else:
                 # subfragment
                 boxes = subfrag_box(fragment.get_uuid(), fragment.term.term_node.get_uuid())
+                subfrag_scale = 1.0 / fragment.term.term_node.exchange_value(scenario, observed=True)
+                print('subfrag scaling: %g' % subfrag_scale)
                 frag_name = fragment.term.term_node['Name']
+                '''
                 exchs = [x for x in fragment.get_fragment_inventory(scenario=scenario, scale=node_weight)]
                 if len(exchs) > 0:
                     frag_name += '\\\\\n{\scriptsize\n'
                     for x in exchs:
                         frag_name += '%6s: %6.3g %s\\\\' % (x.direction, x.value, x.flow['Name'])
                     frag_name += '}'
+                '''
         elif fragment.term.is_null:
             # I/O
             boxes = io_box(fragment.get_uuid())
@@ -221,13 +241,14 @@ class TeXAuthor(object):
             # process
             boxes = process_box(fragment.get_uuid())
             frag_name = fragment.term.term_node['Name']
+            subfrag_scale = fragment.term.node_weight_multiplier
         boxes += '\n\\rput[l]([angle=0,nodesep=6pt]nx%.5s){\parbox{%fcm}{\\raggedright %s}}' % (fragment.get_uuid(),
                                                                                                 parbox_width, frag_name)
 
         if fragment.direction == 'Input':
             arrows = '\\ncline{->}{nx%.5s}{px%.5s}' % (fragment.get_uuid(), fragment.get_uuid())
         else:
-            arrows = '\\ncline{f-}{nx%.5s}{px%.5s}' % (fragment.get_uuid(), fragment.get_uuid())
+            arrows = '\\ncline{<-}{nx%.5s}{px%.5s}' % (fragment.get_uuid(), fragment.get_uuid())
         if not first:
             arrows += '\n\\bput(0.78){\\parbox{2cm}{\\centering \\scriptsize %.4g %s}}' % (node_weight,
                                                                                            fragment.flow.unit())
@@ -241,11 +262,14 @@ class TeXAuthor(object):
                                                                                              c.get_uuid())
                 arrows += '\n'
                 boxes += '\n'
-                bplus, aplus = self.frag_layout_traverse(c, node_weight, scenario=scenario, parbox_width=parbox_width)
+                bplus, aplus = self.frag_layout_traverse(c, node_weight * subfrag_scale,
+                                                         scenario=scenario, parbox_width=parbox_width)
 
                 boxes += bplus
                 arrows += aplus
 
+        arrows += '\n'
+        boxes += '\n'
         return boxes, arrows
 
     def contrib_chart(self, frag, results, stages=None, **kwargs):
@@ -271,11 +295,11 @@ class TeXAuthor(object):
     def frag_chart(self, frag):
         return '''
 \\begin{minipage}{\\textwidth}
-{\\pnode(11,-1){pLegend}
+{\\pnode(12,-1){pLegend}
 \\large Contribution Analysis}
 
 \\includegraphics[width=12cm]{%s}
-\\rput[tl](pLegend){\\parbox{5cm}{\\raggedright Stages
+\\rput[tl](pLegend){\\parbox{5cm}{\\raggedright Stages\\\\
 {\\scriptsize \\input{%s}}}}
 \\end{minipage}
 ''' % (self.img_rel_path(frag), self.stg_rel_path(frag))
@@ -296,14 +320,14 @@ class TeXAuthor(object):
 
         tab_lf = '\\\\'
 
-        chart = '\\begin{tabularx}{\\textwidth}{|X|%s}\n\\hline' % ('r|' * len(results))
+        chart = '\n\\begin{tabularx}{\\textwidth}{|X|%s}\n\\hline' % ('r|' * len(results))
         chart += '\\rule[-4pt]{0pt}{16pt}\\textbf{Stage} '
         for i, j in enumerate(results):
-            chart += ' & \centering \\textbf{%.10s} ' % j.quantity['Indicator']
+            chart += ' & \\textbf{%.10s} ' % j.quantity['Indicator']
 
         chart += '%s \n ' % tab_lf
         for i, j in enumerate(results):
-            chart += ' & \centering  %s ' % j.quantity.unit()
+            chart += ' &  %s ' % j.quantity.unit()
 
         chart += '%s \\hline\n' % tab_lf
 
@@ -312,10 +336,12 @@ class TeXAuthor(object):
 
             for r in results:
                 d = sum([q for q in r.contrib_query([s])])
-                if d > 0.1 * r.range():
-                    chart += ' & \sffamily \textbf{%8.3e} ' % d
+                if abs(d) > 0.1 * r.range():
+                    chart += ' & \\sffamily \\textbf{%8.3e} ' % d
+                elif d == 0:
+                    chart += ' & -- '
                 else:
-                    chart += ' & \sffamily %8.3e ' % d
+                    chart += ' & \\sffamily %8.3e ' % d
 
             chart += '%s\n' % tab_lf
 
@@ -348,25 +374,27 @@ class TeXAuthor(object):
                 stages = _grab_stages(results)
             self.contrib_chart(frag, results, stages=stages, **kwargs)
 
-        coords = self.frag_layout_recurse(frag)
+        coords = self.frag_layout_recurse(frag, scenario=scenario)
 
         filename = os.path.join(self.folder, '%s.tex' % frag.get_uuid())
 
+        tex_dump = fragment_header(frag, scenario=scenario)
+        tex_dump += frag_drawing_opener(coords[-1][2])
+        tex_dump += frag_pnodes(coords)
+        bx, ar = self.frag_traversal_entry(frag, scenario=scenario)
+        tex_dump += bx
+        tex_dump += ar
+        tex_dump += frag_drawing_closer()
+
+        if os.path.exists(self.img_rel_path(frag)):
+            tex_dump += self.frag_chart(frag)
+
+        if results is not None:
+            if table is True:
+                tex_dump += self.contrib_table(results, stages=stages)
+
         with open(filename, 'w') as fp:
-            fp.write(fragment_header(frag, scenario=scenario))
-            fp.write(frag_drawing_opener(coords[-1][2]))
-            fp.write(frag_pnodes(coords))
-            bx, ar = self.frag_traversal_entry(frag, scenario=scenario)
-            fp.write(bx)
-            fp.write(ar)
-            fp.write(frag_drawing_closer())
-
-            if os.path.exists(self.img_rel_path(frag)):
-                fp.write(self.frag_chart(frag))
-
-            if results is not None:
-                if table is True:
-                    fp.write(self.contrib_table(results, stages=stages))
+            fp.write(self._tex_sanitize(tex_dump))
 
         print('Written to %s' % filename)
         if frag.get_uuid() not in self._file_list:
@@ -375,7 +403,14 @@ class TeXAuthor(object):
             self._file_list.append(frag.get_uuid())
         return filename
 
-    def report_wrapper(self):
-        with open('wrapper.tex', 'w') as fp:
-            for x in self._file_list:
-                fp.write('\\input{%s}\\clearpage\n' % x)
+    def new_report(self):
+        if os.path.exists(self._wrapper_fname):
+            os.remove(self._wrapper_fname)
+            self._file_list = []
+        with open(self._wrapper_fname, 'w') as fp:
+            fp.write('% TeX report wrapper for lcatools')
+
+    def new_section(self, section_name):
+        with open(self._wrapper_fname, 'a') as fp:
+            fp.write('\\clearpage\n\n\\section{%s}\n\n' % section_name)
+

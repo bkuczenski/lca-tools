@@ -31,11 +31,23 @@ def stage_name_table(stages):
 
 
 def fragment_header(frag, scenario=None):
-    return '{\\Large \\texttt{%.5s}}\\subsection{~-- %s}\n{\\large %s: %g %s %s}\\\\[8pt]\n%s\n' % (
-        frag.get_uuid(), frag['Name'], comp_dir(frag.direction), frag.exchange_value(scenario),
+    return '{\\hypertarget{%.5s}{\\Large \\texttt{%.5s}}}\\subsection{%s}\n{\\large %s: %g %s %s}\\\\[8pt]\n%s\n' % (
+        frag.get_uuid(), frag.get_uuid(), frag['Name'], comp_dir(frag.direction), frag.exchange_value(scenario),
         frag.flow.unit(),
         frag.flow['Name'], frag['Comment']
     )
+
+
+def fragment_inventory(fragment, scenario=None):
+    exchs = [x for x in fragment.get_fragment_inventory(scenario=scenario)]
+    inventory = ''
+    if len(exchs) > 0:
+        inventory += '\n{\\small\n\\begin{tabular}{rccl}\n'
+        for x in exchs:
+            inventory += '%6s & %6.3g & %s & %s\\\\\n' % (x.direction, x.value, x.flow.unit(), x.flow['Name'])
+        inventory += '\\end{tabular}\n}\n'
+
+    return inventory
 
 
 def frag_drawing_opener(max_size):
@@ -67,7 +79,7 @@ def bg_box(uid):
 
 def subfrag_box(uid, tgt_id):
     return ('\\rput(px%.5s){\\rput(1.25,0){\\nodebox{nx%.5s}{style=process,style=dashed}'
-            '{1.15cm}{0.6cm}{\\texttt{%.5s}}}}' % (uid, uid, tgt_id))
+            '{1.15cm}{0.6cm}{\\hyperlink{%.5s}{\\texttt{%.5s}}}}}' % (uid, uid, tgt_id, tgt_id))
 
 
 def fg_box(uid):
@@ -124,7 +136,7 @@ class TeXAuthor(object):
         # tex = re.sub('_', '\\\\textunderscore', tex)  # this doesn't work bc filenames have underscores
         return tex
 
-    def __init__(self, folder, overwrite=True):
+    def __init__(self, folder, overwrite=True, comments=False):
         """
         This function
 
@@ -133,6 +145,7 @@ class TeXAuthor(object):
         """
         self.folder = folder
         self.overwrite = overwrite
+        self.comments = comments
         if os.path.exists(folder):
             if not os.path.isdir(folder):
                 raise ValueError('Path is not a directory.')
@@ -162,8 +175,9 @@ class TeXAuthor(object):
         :param fragment:
         :param level: [0] vertical traversal height, used for positioning the pnodes
         :param depth: [0] horizontal traversal depth
+        :param scenario:
         :return:
-        """
+xs        """
         coords = [('%.5s' % fragment.get_uuid(), depth, level)]
 
         children = [c for c in fragment.child_flows(fragment)]
@@ -242,6 +256,17 @@ class TeXAuthor(object):
             boxes = process_box(fragment.get_uuid())
             frag_name = fragment.term.term_node['Name']
             subfrag_scale = fragment.term.node_weight_multiplier
+        mag_mod = ''
+        if node_weight < 0:
+            frag_name = '(AVOIDED) ' + frag_name
+            mag_mod = '\\darkred'
+
+        if self.comments:
+            # this can get added in once we have an easy way to curate comments
+            if not first:
+                if len(fragment['Comment']) > 0:
+                    frag_name += '~$\cdot$~{\\scriptsize %s}' % fragment['Comment']
+
         boxes += '\n\\rput[l]([angle=0,nodesep=6pt]nx%.5s){\parbox{%fcm}{\\raggedright %s}}' % (fragment.get_uuid(),
                                                                                                 parbox_width, frag_name)
 
@@ -250,8 +275,9 @@ class TeXAuthor(object):
         else:
             arrows = '\\ncline{<-}{nx%.5s}{px%.5s}' % (fragment.get_uuid(), fragment.get_uuid())
         if not first:
-            arrows += '\n\\bput(0.78){\\parbox{2cm}{\\centering \\scriptsize %.4g %s}}' % (node_weight,
-                                                                                           fragment.flow.unit())
+            arrows += '\n\\bput(0.78){\\parbox{2cm}{\\centering %s \\scriptsize %.4g %s}}' % (mag_mod,
+                                                                                              node_weight,
+                                                                                              fragment.flow.unit())
 
         children = [c for c in fragment.child_flows(fragment)]
         if len(children) > 0:
@@ -379,6 +405,7 @@ class TeXAuthor(object):
         filename = os.path.join(self.folder, '%s.tex' % frag.get_uuid())
 
         tex_dump = fragment_header(frag, scenario=scenario)
+        tex_dump += fragment_inventory(frag, scenario=scenario)
         tex_dump += frag_drawing_opener(coords[-1][2])
         tex_dump += frag_pnodes(coords)
         bx, ar = self.frag_traversal_entry(frag, scenario=scenario)
@@ -413,4 +440,3 @@ class TeXAuthor(object):
     def new_section(self, section_name):
         with open(self._wrapper_fname, 'a') as fp:
             fp.write('\\clearpage\n\n\\section{%s}\n\n' % section_name)
-

@@ -417,14 +417,15 @@ def _one_bar(ax, pos_y, neg_y, data, hue, units, threshold):
         neg_y = pos_y
 
     for (i, d) in enumerate(data):
+        color = next(colors)
         if d > 0:
-            patch = ax.barh(pos_y, d, color=next(colors), align='center', left=right, height=1)
+            patch = ax.barh(pos_y, d, color=color, align='center', left=right, height=1)
             patch_handles.append(patch)
             _label_segment(patch[0], d, chr(ord('A') + i), threshold)
             right += d
         elif d < 0:
             left += d
-            patch = ax.barh(neg_y, abs(d), color=next(colors), align='center', left=left, height=1)
+            patch = ax.barh(neg_y, abs(d), color=color, align='center', left=left, height=1)
             patch_handles.append(patch)
             _label_segment(patch[0], d, chr(ord('A') + i), threshold)
 

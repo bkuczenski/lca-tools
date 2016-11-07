@@ -914,6 +914,19 @@ class LcFragment(LcEntity):
     def balance_flow(self):
         return self._balance_flow
 
+    def reverse_direction(self):
+        """
+        Changes the direction of a fragment to its complement, and negates all stored exchange values.
+        Does NOT change termination directions- since the direction of the fragment flow is arbitrary- but the
+        direction of the termination is not.
+        :return:
+        """
+        d = dict()
+        for k, v in self._exchange_values.items():
+            d[k] = -1 * v
+        self.direction = comp_dir(self.direction)
+        self._exchange_values = d
+
     def set_balance_flow(self):
         if self.balance_flow is False:
             self.reference_entity.set_conserved_quantity(self)

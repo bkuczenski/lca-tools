@@ -895,7 +895,7 @@ class LcFragment(LcEntity):
         if scenario == 0 or scenario == '0':
             self.cached_ev = value
         elif scenario == 1 or scenario == '1':
-            self.observed_ev = value
+            self._exchange_values[1] = value
         else:
             self._exchange_values[scenario] = value
 
@@ -1276,6 +1276,12 @@ class LcFragment(LcEntity):
                 ios.remove(m)
 
             downstream_nw = node_weight / abs(in_ex)
+
+            # this part is uncertain [wow, this function needs cleaned up]
+            if _balance is not None:
+                # need to properly log our balance flow magnitude
+                _print('%.3s %g re-setting balance' % (self.get_uuid(), _balance / in_ex), level=2)
+                self._cache_balance_ev(_balance / in_ex, scenario)
 
             # then we add the results of the subfragment, either in aggregated or disaggregated form
             if term.descend:

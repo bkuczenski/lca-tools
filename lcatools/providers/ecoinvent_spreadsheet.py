@@ -108,13 +108,20 @@ class EcoinventSpreadsheet(NsUuidArchive):
         return self.fg[proxy]
 
     def bg_proxy(self, proxy):
-        print('Performing LCI lookup -- this is slow because of 7z')
-        # re-instantiate each time to avoid out-of-memory errors
-        lci = EcospoldV2Archive(self._bg_filename, prefix='datasets')
-        for ds in lci.list_datasets(proxy):
-            print('retrieving %s' % ds)
-            lci.retrieve_or_fetch_entity(ds)
-        return lci[proxy]
+        bg = self.bg[proxy]
+        if bg is None:
+            print('Looking up: %s' % proxy)
+            print('Performing LCI lookup -- this is slow because of 7z')
+            # re-instantiate each time to avoid out-of-memory errors
+            lci = EcospoldV2Archive(self._bg_filename, prefix='datasets')
+            for ds in lci.list_datasets(proxy):
+                print('retrieving %s' % ds)
+                lci.retrieve_or_fetch_entity(ds)
+            bg = lci[proxy]
+            print('LCI: %s' % bg)
+            self.bg.add_entity_and_children(bg)
+            self.bg.write_to_file(self._lci_cache, gzip=True, exchanges=True, values=True, characterizations=True)
+        return bg
 
     def lcia_validation_proxy(self, proxy):
         for ds in self.lcia.list_datasets(proxy):
@@ -190,13 +197,7 @@ class EcoinventSpreadsheet(NsUuidArchive):
                     missing_q.append(q)
         if len(missing_q) > 0:
             '''
-            lci = self.bg[process_id]
-            if lci is None:
-                print('Looking up: %s' % process_id)
-                lci = self.bg_proxy(process_id)
-                print('LCI: %s' % lci)
-                self.bg.add_entity_and_children(lci)
-                self.bg.write_to_file(self._lci_cache, gzip=True, exchanges=True, values=True, characterizations=True)
+            lci = self.bg_proxy(process_id)
             if ref_flow is None:
                 ref_flow = lci.find_reference(reference)
             rf = self._find_rf(lci, ref_flow=ref_flow)

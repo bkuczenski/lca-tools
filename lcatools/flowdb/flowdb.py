@@ -207,19 +207,18 @@ class FlowDB(object):
 
     def friendly_flowable(self, i, width=4):
         print('(%*d) %11s %d %.95s' % (width, i, self.flowables.cas(i),
-                                        len([cf for cf in self.all_cfs(i)]),
-                                        sorted(
+                                       len([cf for cf in self.all_cfs(i)]),
+                                       sorted(
                                             filter(lambda x: not bool(cas_regex.match(x)),
                                                    filter(lambda x: not bool(uuid_regex.match(x)),
                                                           self.flowables[i])))
-                                     )
+                                       )
               )
 
-    def friendly_search(self, regex, max_hits=100):
+    def friendly_search(self, regex):
         """
 
         :param regex:
-        :param max_hits: maximum number of results to return (default 100)
         :return:
         """
         results = sorted(list(self.flowables.search(regex)))

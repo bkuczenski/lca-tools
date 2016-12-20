@@ -32,3 +32,15 @@ Usage:
     
     
     >>>
+
+
+## Testing
+
+The python `unittest` framework is used to implement unit tests.  The tests should be automatically discovered and run by running `python -m unittest` from the root directory of the repo.
+
+In order to ensure that tests are discoverable, the test files must match the shell pattern `'test_*.py'` and the directory containing the files must have a `__init__.py`.
+
+Currently tested modules:
+
+ * `flowdb.compartments`
+

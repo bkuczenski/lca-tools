@@ -148,47 +148,53 @@ class Compartment(object):
     Each compartment has a canonical name and a set of synonyms.
     """
     @classmethod
-    def from_json(cls, j):
+    def from_json(cls, j, elementary=False, **kwargs):
         """
         Classmethod to build compartment hierarchy from serialization
         :param j:
+        :param elementary: [False] root compartment should not be elementary unless
         :return:
         """
         rootname = j['name']
         if not isinstance(rootname, list):
             rootname = [rootname]
-        root = cls(rootname[0], elementary=False)  # root compartment is not elementary
+        root = cls(rootname[0], elementary=elementary, **kwargs)  # root compartment is not elementary
         for i in rootname[1:]:
             root.add_syn(i)
-        root._add_subs_from_json(j['subcompartments'])
+        root._add_subs_from_json(j['subcompartments'], elementary=elementary)
         return root
 
     def add_branch_from_json(self, j):
-        branch = Compartment.from_json(j)
+        branch = Compartment.from_json(j, parent=self)
         self._subcompartments.add(branch)
 
-    def _add_subs_from_json(self, subs):
+    def _add_subs_from_json(self, subs, elementary=False):
         for sub in subs:
-            if 'elementary' in sub.keys():
-                elementary = bool(sub['elementary'])
+            if elementary:
+                elementary_sub = True
+            elif 'elementary' in sub.keys():
+                elementary_sub = bool(sub['elementary'])
             else:
-                elementary = False
+                elementary_sub = False
             syns = sub['name']
             if not isinstance(syns, list):
                 if syns is None or syns.lower() == 'unspecified':
                     continue
                 syns = [syns]
 
-            sc = self.add_sub(syns[0], elementary=elementary)
+            sc = self.add_sub(syns[0], elementary=elementary_sub)
             for syn in syns[1:]:
                 sc.add_syn(syn)
-            sc._add_subs_from_json(sub['subcompartments'])
+            sc._add_subs_from_json(sub['subcompartments'], elementary=elementary_sub)
 
     def __init__(self, name, parent=None, elementary=False):
         self.name = name
         self._synonyms = set()
+        assert isinstance(elementary, bool)
         self._elementary = elementary
         self._subcompartments = set()
+        if parent is not None:
+            assert isinstance(parent, Compartment)
         self.parent = parent
         self._id = '; '.join(self.to_list())
 
@@ -203,6 +209,39 @@ class Compartment(object):
     def add_syns(self, syns):
         for i in syns:
             self.add_syn(i)
+
+    def add_sub(self, name, elementary=None, verbose=False):
+        """
+        make a new subcompartment based on name only.  if parent is elementary, child will be as well.
+        :param name:
+        :param elementary: force elementary with arg.
+        :param verbose:
+        :return:
+        """
+        try:
+            sub = self[name]
+        except KeyError:
+            if elementary is None or self._elementary is True:
+                elementary = self._elementary
+            if verbose:
+                print('New compartment %s [elementary: %s]' % (name, elementary))
+            sub = Compartment(name, parent=self, elementary=elementary)
+        self._subcompartments.add(sub)
+        return sub
+
+    def add_subs(self, subs, verbose=False):
+        """
+        input is a list of nested subcompartments to be added recursively
+        :param subs:
+        :param verbose:
+        :return:
+        """
+        subs = _ensure_list(subs)
+        if len(subs) == 1:
+            self.add_sub(subs[0], verbose=verbose)
+        else:
+            sub = self.add_sub(subs[0], verbose=verbose)
+            sub.add_subs(subs[1:], verbose=verbose)
 
     def _ensure_comp(self, item):
         if isinstance(item, Compartment):
@@ -258,11 +297,21 @@ class Compartment(object):
         return (self.name in other.synonyms) and (self.parent == other.parent)
 
     def __contains__(self, item):
+        """
+        Tests whether item is a name or synonym for self
+        :param item:
+        :return:
+        """
         if item in self.synonyms:
             return True
         return False
 
     def __getitem__(self, item):
+        """
+        subcompartment accessor; returns a subcompartment that contains item
+        :param item:
+        :return:
+        """
         for x in self._subcompartments:
             if item in x.synonyms:
                 return x
@@ -349,42 +398,11 @@ class Compartment(object):
         :param subcompartment:
         :return:
         """
-        self._collapse(subcompartment)
-        self._subcompartments.remove(subcompartment)
+        s1 = self._ensure_comp(subcompartment)
+        self._collapse(s1)
+        self._subcompartments.remove(s1)
 
-    def add_sub(self, name, elementary=None, verbose=False):
-        """
-        make a new subcompartment based on name only
-        :param name:
-        :param elementary:
-        :param verbose:
-        :return:
-        """
-        try:
-            sub = self[name]
-        except KeyError:
-            if elementary is None:
-                elementary = self._elementary
-            if verbose:
-                print('New compartment %s [elementary: %s]' % (name, elementary))
-            sub = Compartment(name, parent=self, elementary=elementary)
-        self._subcompartments.add(sub)
-        return sub
-
-    def add_subs(self, subs, verbose=False):
-        """
-        input is a list of subcompartments to be added recursively
-        :param subs:
-        :param verbose:
-        :return:
-        """
-        subs = _ensure_list(subs)
-        if len(subs) == 1:
-            self.add_sub(subs[0], verbose=verbose)
-        else:
-            sub = self.add_sub(subs[0], verbose=verbose)
-            sub.add_subs(subs[1:], verbose=verbose)
-
+    '''
     def traverse(self, subs):
         """
         turns a list of compartment strings into a list of Compartment objects
@@ -397,6 +415,7 @@ class Compartment(object):
             return comps
         comps.extend(comps[0].traverse(subs[1:]))
         return comps
+    '''
 
     def _names(self):
         a = [self.name]

@@ -268,15 +268,16 @@ class Compartment(object):
         l.append(self.name)
         return l
 
-    def print_tree(self, up=''):
+    def known_names(self, up='', print_tree=False):
         s = self.name
         if s is None:
             s = '##NONE##'
         ls = self._names()
-        print(up + '; '.join(ls))
+        if print_tree is True:
+            print(up + '; '.join(ls))
         up += s
-        for x in self.subcompartments():
-            ls += x.print_tree(up=up + ' -- ')
+        for x in sorted(self.subcompartments(), key=lambda z: z.name):
+            ls += x.known_names(up=up + ' -- ', print_tree=print_tree)
         return ls
 
     def set_elementary(self):
@@ -284,8 +285,12 @@ class Compartment(object):
         for i in self.subcompartments():
             i.set_elementary()
 
-    def unset_elementary(self):
+    def unset_elementary(self, unset_children=False):
         self._elementary = False
+
+        if unset_children is True:
+            for i in self.subcompartments():
+                i.set_elementary()
 
     def __str__(self):
         return self.name
@@ -323,6 +328,27 @@ class Compartment(object):
             raise ValueError('Subcompartment not empty')
         self._subcompartments.remove(s1)
 
+    def _merge_sub(self, comp):
+        """
+        take an existing compartment and make it a subcompartment of self.  If self already has a subcompartment
+        whose synonyms match the argument (first encountered), then the argument is combined with the already-matching
+        subcompartment. This merge is performed recursively, with the incoming subcompartment's subcompartments being
+        merged with the existing subcompartment.
+        Otherwise, the argument is introduced as a new subcompartment.
+        :param comp: existing unattached compartment
+        :return:
+        """
+        for i in self._subcompartments:
+            if i.synonyms.intersection(comp.synonyms):
+                # if an existing match is found, merge subcompartments recursively
+                i.add_syns(comp.synonyms)
+                for j in comp._subcompartments:
+                    i._merge_sub(j)
+                return
+
+        # still around?
+        self._subcompartments.add(comp)
+
     def merge_subs(self, n1, n2):
         """
         Merge two subcompartments of the same parent compartment.
@@ -343,31 +369,10 @@ class Compartment(object):
             raise ValueError('elementary flag must match')
         s2.add_syns(s1.synonyms)
         for i in s1._subcompartments:
-            s2.merge_sub(i)
+            s2._merge_sub(i)
 
         if s1 in self._subcompartments:
             self._subcompartments.remove(s1)
-
-    def merge_sub(self, comp):
-        """
-        take an existing compartment and make it a subcompartment of self.  If self already has a subcompartment
-        whose synonyms match the argument, then the argument is combined with the already-matching subcompartment.
-        This merge is performed recursively, with the incoming subcompartment's subcompartments being merged with
-        the existing subcompartment.
-        Otherwise, the argument is introduced as a new subcompartment.
-        :param comp: existing compartment
-        :return:
-        """
-        merge = False
-        for i in self._subcompartments:
-            if i.synonyms.intersection(comp.synonyms):
-                i.add_syns(comp.synonyms)
-                for j in comp._subcompartments:
-                    i.merge_sub(j)
-                merge = True
-                break
-        if merge is False:
-            self._subcompartments.add(comp)
 
     def uproot(self, merged, new_parent):
         """
@@ -377,7 +382,8 @@ class Compartment(object):
         :return:
         """
         s1 = self._ensure_comp(merged)
-        new_parent.merge_sub(s1)
+        s2 = self._ensure_comp(new_parent)
+        s2._merge_sub(s1)
         self._subcompartments.remove(s1)
 
     def _collapse(self, subcompartment):

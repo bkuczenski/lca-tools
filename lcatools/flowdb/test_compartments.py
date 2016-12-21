@@ -33,7 +33,7 @@ class CompartmentTestCase(unittest.TestCase):
     Functions to test:
       * builtin operators: __contains__, __eq__, __getitem__, __str__
       * core Compartment operations: synonyms, add_syn, add_syns, add_sub, add_subs, elementary behavior, to_list
-      * advanced functionality: merge_sub, merge_subs, collapse, uproot
+      * advanced functionality: merge_subs, collapse, uproot
       * serialize
     """
     def setUp(self):
@@ -51,23 +51,104 @@ class CompartmentTestCase(unittest.TestCase):
             os.remove(self._test_file)
 
     def test_operations(self):
+        """
+        tests methods:
+        __init__
+        __contains__
+        __str__
+        add_syns -> add_syn
+        :return:
+        """
         self.assertTrue('dummy root' in self.base_compartment)  # test construction; __contains__
         self.assertEqual(str(self.base_compartment), 'Dummy compartment')
 
     def test_getitem_subcompartments(self):
+        """
+        tests:
+        from_json
+        add_branch_from_json
+        _add_subs_from_json
+        __getitem__
+        subcompartments
+        :return:
+        """
         self.base_compartment.add_branch_from_json(json.loads(subcompartment_json))
         self.assertEqual(len([i for i in self.base_compartment['A branching subcompartment'].subcompartments()]),
                          2, "Wrong number of subcompartments found")
-        self.assertIs(self.base_compartment['A branching subcompartment'],
+        self.assertIs(self.base_compartment['a subcompartment added as a branch'],
                       next(self.base_compartment.subcompartments()),
                       "__getitem__ reference does not match subcompartment iterator")
 
     def test_synonyms(self):
-        self.assertSetEqual(self.base_compartment.synonyms, {'Dummy compartment', 'dummy root', 'test root'})
+        """
+        tests:
+        synonyms
+        add_syn
+        to_list
+        :return:
+        """
+        bc = self.base_compartment
+        self.assertSetEqual(bc.synonyms, {'Dummy compartment', 'dummy root', 'test root'})
 
-    def test_build_merge(self):
-        self.base_compartment.add_subs(['Branch 1', 'branch 1a', 'node 1a'])
-        self.base_compartment.add_subs(['Branch 2', 'branch 2b', 'node 2b'])
+        bc.add_subs(['Branch 1', 'branch 1a', 'node 1a'])
+        bca = bc['Branch 1']['branch 1a']
+        bca.add_syn('Ores')
+
+        self.assertEqual(bc['Branch 1']['Ores']['node 1a'].to_list(), ['Branch 1', 'branch 1a', 'node 1a'])
+
+    @staticmethod
+    def _merge_expected_fields():
+        return ['Dummy compartment', 'dummy root', 'test root',
+                'Branch 1', 'branch 1a', 'node 1a',
+                'Branch 2', 'branch 2b', 'node 2b']
+
+    def _build_merge(self):
+        bc = self.base_compartment
+        bc.add_subs(['Branch 2', 'branch 2b', 'node 2b'])
+        bc.add_subs(['Branch 1', 'branch 1a', 'node 1a'])
+
+        self.assertEqual(bc.known_names(), self._merge_expected_fields(),
+                         "built tree doesn't match expected merge names")
+
+        bc._merge_sub(bc['Branch 1'])  # this should have no effect
+        self.assertEqual(bc.known_names(), self._merge_expected_fields(),
+                         "merge_sub modified node list")
+
+    @staticmethod
+    def _merge_subs_expected_fields():
+        return ['Dummy compartment', 'dummy root', 'test root',
+                'Branch 1', 'Branch 2',
+                'branch 1a', 'node 1a', 'branch 2b', 'node 2b']
+
+    def test_merge_subs(self):
+        self._build_merge()
+        bc = self.base_compartment
+
+        bc.merge_subs(bc['Branch 2'], bc['Branch 1'])
+
+        self.assertEqual(bc.known_names(), self._merge_subs_expected_fields(),
+                         "merge_subs unexpected node list %s" % bc.known_names())
+
+        self.assertSetEqual(bc['Branch 2'].synonyms, {'Branch 1', 'Branch 2'})
+
+    @staticmethod
+    def _uproot_expected_fields():
+        return ['Dummy compartment', 'dummy root', 'test root',
+                'Branch 2', 'Branch 1',
+                'branch 1a', 'node 1a', 'branch 2b', 'node 2b']
+
+    def test_uproot(self):
+        self._build_merge()
+        bc = self.base_compartment
+
+        bc.uproot('Branch 1', 'Branch 2')
+        self.assertEqual(bc.known_names(), self._uproot_expected_fields(),
+                         "uproot unexpected node list %s" % bc.known_names())
+
+        self.assertSetEqual(bc['Branch 2'].synonyms, {'Branch 2'})
+
+        self.assertSetEqual({k.name for k in bc['Branch 2'].subcompartments()}, {'Branch 1', 'branch 2b'},
+                            "wrong subcompartments after uproot")
 
     def test_collapse(self):
         b1 = self.base_compartment.add_sub('Branch 1')
@@ -76,6 +157,15 @@ class CompartmentTestCase(unittest.TestCase):
         with self.assertRaises(StopIteration, ):
             next(b1.subcompartments())
         self.assertSetEqual(b1.synonyms, {'Branch 1', 'Branch 1 redundant', 'also redundant'}, "collapse failed")
+
+    def test_elementary(self):
+        """
+        setting a node to elementary should set all child nodes
+
+
+        :return:
+        """
+        pass
 
 
 class CompartmentManagerTestCase(unittest.TestCase):

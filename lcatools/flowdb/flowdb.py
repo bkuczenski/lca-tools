@@ -2,7 +2,7 @@ from math import ceil, log10
 
 from lcatools.flowdb.create_synonyms import load_synonyms, SYNONYMS
 from lcatools.flowdb.synlist import cas_regex
-from lcatools.flowdb.compartments import Compartment, CompartmentManager  #load_compartments, save_compartments, traverse_compartments, COMPARTMENTS
+from lcatools.flowdb.compartments import Compartment, CompartmentManager  #load_compartments, save_compartments, traverse_compartments, REFERENCE_EFLOWS
 from lcatools.catalog import get_entity_uuid
 from lcatools.characterizations import Characterization
 from lcatools.interfaces import uuid_regex
@@ -89,15 +89,6 @@ class CLookup(object):
         return results
 
 
-def compartment_string(compartment):
-    """
-    Defined locally because it is relevant only to the FlowDB's compartment-lookup dictionary
-    :param compartment:
-    :return:
-    """
-    return '; '.join(list(filter(None, compartment)))
-
-
 class FlowDB(object):
     """
     The purpose of this interface is to allow users to easily register / lookup elementary flow characterizations.
@@ -122,31 +113,18 @@ class FlowDB(object):
         :param compartments: JSON file containing the Compartment hierarchy
         """
         self.flowables = load_synonyms(flows)
-        self.compartments = compartments or CompartmentManager.new()
+        if isinstance(compartments, CompartmentManager):
+            self.compartments = compartments
+        else:
+            self.compartments = CompartmentManager.eflows()
 
         self._q_dict = defaultdict(set)  # dict of quantity uuid to set of characterized flowables
         self._q_id = dict()  # store the quantities themselves for reference
         self._f_dict = defaultdict(CLookup)  # dict of (flowable index, quantity uuid) to c_lookup
-        self._c_dict = dict()  # dict of '; '.join(compartments) to Compartment
 
     def known_quantities(self):
         for q in self._q_id.values():
             yield q
-
-    def find_matching_compartment(self, compartment_name, interact=True):
-        """
-
-        :param compartment_name: should be an iterable, as-stored in an archive
-        :param interact: if true, interactively prompt user to merge and save missing compartments
-        :return: the Compartment. Also adds it to self._c_dict
-        """
-        cs = compartment_string(compartment_name)
-        if cs in self._c_dict.keys():
-            return self._c_dict[cs]
-
-        match = self.compartments.find_matching(compartment_name, interact=interact)
-        self._c_dict[cs] = match
-        return match
 
     def friendly_flowable(self, i, width=4):
         print('(%*d) %11s %d %.95s' % (width, i, self.flowables.cas(i),

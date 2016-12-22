@@ -5,10 +5,14 @@ import re
 from lcatools.interact import _pick_list
 
 
-COMPARTMENTS = os.path.join(os.path.dirname(__file__), 'compartments.json')
+REFERENCE_EFLOWS = os.path.join(os.path.dirname(__file__), 'compartments.json')
 
 
 class MissingCompartment(Exception):
+    pass
+
+
+class ProtectedReferenceFile(Exception):
     pass
 
 
@@ -18,24 +22,76 @@ def _ensure_list(var):
     return var
 
 
+def compartment_string(compartment_name):
+    """
+    Defined locally because it is relevant only to the FlowDB's compartment-lookup dictionary
+    :param compartment_name: an iterable of monotonically nested compartments (though nonconsecutive is allowed)
+    :return:
+    """
+    return '; '.join(list(filter(None, compartment_name)))
+
+
 class CompartmentManager(object):
     """
     This class stores a hierarchy of compartments and exposes tools to allow client code to query and manipulate
     it.
     """
-    def __init__(self, file=COMPARTMENTS):
-        self._compartments_file = file
-        self.compartments = self._load_compartments()  # this is a single compartment at the root of the hierarchy
+
+    def __init__(self, file=None):
+        with open(REFERENCE_EFLOWS, 'r') as fp:
+            self.compartments = Compartment.from_json(json.load(fp))
+        self._local_file = None
+        if file is not None:
+            self.set_local(file)
+        self._c_dict = dict()  # dict of '; '.join(compartments) to Compartment -- an example of premature optimization
+
+    @property
+    def writeable(self):
+        if self._local_file is None:
+            return False
+        return os.access(self._local_file, os.W_OK)
+
+    def set_local(self, file):
+        self._local_file = file
+        if os.path.exists(file):
+            self._load_compartments()
+        else:
+            self.save()
 
     def _load_compartments(self):
-        with open(self._compartments_file, 'r') as fp:
-            return Compartment.from_json(json.load(fp))  # the use of classmethod ensures that this returns typesafe
+        """
+        Merge compartments specified in the local file into the reference hierarchy.
+        Four steps here:
+        * load the local json
+        * add top-level synonyms
+        * merge intermediate compartments
+        * merge elementary compartments
 
-    def save(self):
-        with open(self._compartments_file, 'w') as fp:
+        This ensures that (1) user can make local modifications to both intermediate and elementary compartments, and
+        (2) no other compartment types are permitted. This may be unduly dogmatic. but I think it's OK.
+        :return:
+        """
+        if self._local_file is not None:
+            with open(self._local_file, 'r') as fp:
+                local = Compartment.from_json(json.load(fp))
+                self.compartments.add_syns(local.synonyms)
+                local.uproot('Intermediate Flows', self.compartments)
+                local.uproot('Elementary Flows', self.compartments)
+
+    def save(self, force=False):
+        if self._local_file is None:
+            if force is False:
+                raise ProtectedReferenceFile('Use force=True to force a rewrite of the reference file')
+            print('Overwriting reference elementary flow compartments')
+            file = REFERENCE_EFLOWS
+        else:
+            print('Updating local compartment file')
+            file = self._local_file
+
+        with open(file, 'w') as fp:
             json.dump(self.compartments.serialize(), fp, indent=2, sort_keys=True)
 
-    def crawl(self, clist):
+    def _crawl(self, clist, check_elem=False):
         """
         THIS is used to crawl an existing compartment hierarchy and find the one that matches a supplied compartment
         name. Compartment names are allowed to be sloppy (e.g. to omit steps, as long as they are monotonic in the
@@ -44,51 +100,96 @@ class CompartmentManager(object):
         The hard work is done by a static recursive function.  This wrapper is necessary because of the centrality of
         pop() to the underlying recursion.
         :param clist:
+        :param check_elem: return as soon as compartment is determined to be elementary (without finishing the crawl)
         :return:
         """
         my_clist = []
         my_clist.extend(clist)
-        return _crawl_compartments(self.compartments, my_clist)
+        return _crawl_compartments(self.compartments, my_clist, check_elem=check_elem)
 
     def is_elementary(self, flow):
-        comp = self.find_matching(flow['Compartment'], check_elem=True)
+        comp = self.find_matching(flow['Compartment'], check_elem=True, interact=False)
+        if comp is None:
+            return False
+            # raise MissingCompartment('Cannot check if unknown compartment %s is_elementary' % flow['Compartment'])
         return comp.elementary
 
     # inspection methods
     def filter_exch(self, process_ref, elem=True, **kwargs):
+        """
+        Given a process reference, return a list of exchanges that match the specification
+        :param process_ref:
+        :param elem: [True] whether to return elementary [if True] or intermediate [if False] exchanges
+        :param kwargs: passed to fg_lookup
+        :return:
+        """
         return [x for x in process_ref.archive.fg_lookup(process_ref.id, **kwargs)
                 if self.is_elementary(x.flow) is elem]
 
-    def find_matching(self, compartment_name, interact=True, check_elem=False):
+    def find_matching(self, compartment_name, interact=True, check_elem=False, force=False):
         """
-
-        :param compartment_name:  a monotonic list of compartment names (as stored in an archive)
+        :param compartment_name: a monotonic list of compartment names (as stored in an archive)
         :param interact: whether to interactively add / merge missing compartments
         :param check_elem: whether to bail out as soon as the compartment is determined to be elementary
-        :return:
+        :param force:
+
+        :return: matching or newly merged compartment; or None if check_elem is True and no compartment found
         """
-        match = self.crawl(compartment_name)
-        if match is None:
+        compartment_name = _ensure_list(compartment_name)
+        cs = compartment_string(compartment_name)
+        if cs in self._c_dict.keys():
+            return self._c_dict[cs]
+
+        match = self._crawl(compartment_name, check_elem=check_elem)
+        if match is None and check_elem is False:
             if interact:
-                c = self.merge_compartment(compartment_name)
-                match = _crawl_compartments(self.compartments, compartment_name, check_elem=check_elem)
-                if c is match and c is not None:
-                    print('match: %s' % match.to_list())
-                    print('Updating compartments...')
-                    self.save()
-                    return c
-                # else - MissingCompartment
-            raise MissingCompartment('%s' % compartment_name)
+                try:
+                    c = self._merge_compartment(compartment_name, force=force)
+                    match = self._crawl(compartment_name)
+                    if c is match and c is not None:
+                        print('match: %s' % match.to_list())
+                        self._c_dict[cs] = match
+                        return match
+                    else:
+                        raise MissingCompartment('Merge failed: %s' % c)
+                except ProtectedReferenceFile:
+                    pass
+            return None
+            # raise MissingCompartment('%s' % compartment_name)
+        return match
 
-    def merge_compartment(self, missing):
+    def add_compartment(self, compartment_name, parent='Intermediate Flows', force=False):
         """
-
-        :param missing:
+        Add a compartment recursively to a named parent.
+        :param compartment_name:
+        :param parent:
+        :param force:
         :return:
         """
+        if not self.writeable and not force:
+            raise ProtectedReferenceFile('set_local(file) to store a local compartment hierarchy (or force=True)')
+        if not isinstance(parent, Compartment):
+            parent = self._crawl(_ensure_list(parent))
+        sub = parent.add_subs(compartment_name)
+        return sub
+
+    def _merge_compartment(self, compartment_name, force=False):
+        """
+        Recursively and interactively merge a compartment specifier into the existing hierarchy.
+
+        crawls the compartment hierarchy until it runs out of matches. Beginning with the last match, successively
+        prompts the user to pick a subcompartment to descend into, to add the current term as a synonym, or to add
+        the current term as a subcompartment.
+
+        :param compartment_name:
+        :param force: [False] set to True in order to modify the reference eflows
+        :return:
+        """
+        if not self.writeable and not force:
+            raise ProtectedReferenceFile('Specify a target file to add to the compartment hierarchy (or force=True)')
         compartment = self.compartments
         my_missing = []
-        my_missing.extend(missing)
+        my_missing.extend(compartment_name)
         while len(my_missing) > 0:
             sub = _crawl_compartments(compartment, my_missing[:1])
             if sub is not None:
@@ -103,10 +204,7 @@ class CompartmentManager(object):
                 if c == (None, 0):
                     compartment.add_syn(my_missing.pop(0))
                 elif c == (None, 1):  # now we add all remaining compartments
-                    while len(my_missing) > 0:
-                        new_sub = my_missing.pop(0)
-                        compartment.add_sub(new_sub)
-                        compartment = compartment[new_sub]
+                    return compartment.add_subs(my_missing)
                 elif c == (None, None):
                     raise ValueError('User break')
                 else:
@@ -123,6 +221,9 @@ def _crawl_compartments(compartment, clist, check_elem=False):
     """
     while len(clist) > 0 and clist[0] in compartment:
         clist.pop(0)
+        if check_elem and compartment.elementary:
+            # compartments never switch back from elementary, so if we're just checking elem, bail out here
+            return compartment
     while len(clist) > 0 and clist[0] is None:
         clist.pop(0)
     if len(clist) > 0:
@@ -130,12 +231,9 @@ def _crawl_compartments(compartment, clist, check_elem=False):
             clist.pop(0)
     if len(clist) == 0:
         return compartment
-    if check_elem and compartment.elementary:
-        # compartments never switch back from elementary, so if we're just checking elem, bail out here
-        return compartment
     else:
         for s in compartment.subcompartments():
-            n = _crawl_compartments(s, clist)
+            n = _crawl_compartments(s, clist, check_elem=check_elem)
             if n is not None:
                 return n
         return None
@@ -166,7 +264,7 @@ class Compartment(object):
 
     def add_branch_from_json(self, j):
         branch = Compartment.from_json(j, parent=self)
-        self._subcompartments.add(branch)
+        self._merge_sub(branch)
 
     def _add_subs_from_json(self, subs, elementary=False):
         for sub in subs:
@@ -226,7 +324,7 @@ class Compartment(object):
             if verbose:
                 print('New compartment %s [elementary: %s]' % (name, elementary))
             sub = Compartment(name, parent=self, elementary=elementary)
-        self._subcompartments.add(sub)
+        self._merge_sub(sub)
         return sub
 
     def add_subs(self, subs, verbose=False):
@@ -238,10 +336,10 @@ class Compartment(object):
         """
         subs = _ensure_list(subs)
         if len(subs) == 1:
-            self.add_sub(subs[0], verbose=verbose)
+            return self.add_sub(subs[0], verbose=verbose)
         else:
             sub = self.add_sub(subs[0], verbose=verbose)
-            sub.add_subs(subs[1:], verbose=verbose)
+            return sub.add_subs(subs[1:], verbose=verbose)
 
     def _ensure_comp(self, item):
         if isinstance(item, Compartment):
@@ -338,16 +436,17 @@ class Compartment(object):
         :param comp: existing unattached compartment
         :return:
         """
-        for i in self._subcompartments:
+        for i in self._subcompartments.union({self}):
             if i.synonyms.intersection(comp.synonyms):
                 # if an existing match is found, merge subcompartments recursively
                 i.add_syns(comp.synonyms)
-                for j in comp._subcompartments:
+                for j in comp.subcompartments():
                     i._merge_sub(j)
                 return
 
         # still around?
         self._subcompartments.add(comp)
+        comp.parent = self
 
     def merge_subs(self, n1, n2):
         """

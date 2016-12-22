@@ -19,6 +19,8 @@
             {
               "elementary": true,
               "name": [
+                "air",
+	        "Air",
                 "Emissions to air",
                 "Emissions to air, unspecified",
                 "Group NMVOC to air",
@@ -29,7 +31,6 @@
                 "Other emissions to air",
                 "Particles to air",
                 "Radioactive emissions to air",
-                "air",
                 "fossil"
               ],
               "subcompartments": [
@@ -107,7 +108,8 @@
               "name": [
                 "soil",
                 "Emissions to soil",
-                "Emissions to soil, unspecified"
+                "Emissions to soil, unspecified",
+		"Soil"
               ],
               "subcompartments": [
                 {
@@ -145,7 +147,8 @@
               "name": [
                 "water",
                 "Emissions to water",
-                "Emissions to water, unspecified"
+                "Emissions to water, unspecified",
+		"Water"
               ],
               "subcompartments": [
                 {
@@ -236,13 +239,14 @@
         {
           "elementary": true,
           "name": [
-            "Resources",
+	    "resources",
             "Crude oil (resource)",
             "Energy resources",
             "Material resources",
             "Natural gas (resource)",
             "Non renewable energy resources",
             "Renewable resources",
+            "Resources",
             "natural resource",
             "renewable",
             "resource"

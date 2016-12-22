@@ -1,6 +1,7 @@
 import os
 import json
-from lcatools.flowdb.compartments import Compartment, CompartmentManager
+from lcatools.flowdb.compartments import Compartment, CompartmentManager, MissingCompartment
+from lcatools.entities import LcFlow
 
 import unittest
 
@@ -21,6 +22,67 @@ subcompartment_json = '''
           "deal with extra real"
         ],
       "subcompartments": []
+    }
+  ]
+}
+'''
+
+local_cm_json = '''
+
+{
+  "name": [
+    "test root",
+    "dummy test"
+  ],
+  "subcompartments": [
+    {
+      "name": ["Intermediate Flows"],
+      "subcompartments": [
+        {
+          "name": ["Utilities"],
+          "subcompartments": []
+        },
+        {
+          "name": ["Materials"],
+          "subcompartments": []
+        }
+      ]
+    },
+    {
+      "name": ["Elementary Flows"],
+      "subcompartments": [
+        {
+          "name": ["Emissions"],
+          "subcompartments": [
+            {
+              "name": ["Air", "blorgle air"],
+              "subcompartments": [
+                {
+                  "name": ["blorgle air"],
+                  "subcompartments": []
+                },
+                {
+                  "name": ["fooferaw"],
+                  "subcompartments": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": ["Other kinds of flows"],
+      "subcompartments": [
+        {
+          "name": ["exciting flows"],
+          "subcompartments": []
+        },
+        {
+          "name": ["dull flows"],
+          "subcompartments": []
+        }
+      ]
     }
   ]
 }
@@ -47,8 +109,21 @@ class CompartmentTestCase(unittest.TestCase):
         self.base_compartment.add_syns({'dummy root', 'test root'})
 
     def tearDown(self):
+        self._parent_child()
         if os.path.exists(self._test_file):
             os.remove(self._test_file)
+
+    def _parent_child(self, compartment=None):
+        """
+        added to tearDown to validate the tree that was built
+        :param compartment:
+        :return:
+        """
+        if compartment is None:
+            compartment = self.base_compartment
+        for sub in compartment.subcompartments():
+            self.assertIs(sub.parent, compartment, "Parent [%s] Child [%s] error" % (compartment, sub))
+            self._parent_child(sub)
 
     def test_operations(self):
         """
@@ -169,8 +244,65 @@ class CompartmentTestCase(unittest.TestCase):
 
 
 class CompartmentManagerTestCase(unittest.TestCase):
-    pass
+    """
+    The compartment manager allows client code to do the following:
+     - load a compartment hierarchy from a json file
+     - crawl a compartment hierarchy to find a matching compartment from a list of strings
+     - act as a wrapper for adding new compartments or synonyms
+     - quickly check to see if a flow is elementary
+    """
+    def setUp(self):
+        self._test_file = 'test_compartment_manager.json'
+        self.cm = CompartmentManager()
 
+    def tearDown(self):
+        if os.path.exists(self._test_file):
+            os.remove(self._test_file)
+
+    def test_read_reference(self):
+        kn = self.cm.compartments.known_names()
+        self.assertEqual(len(kn), 111, "Length does not match")
+        self.assertEqual(kn[42], 'Heavy metals to industrial soil')
+        self.assertEqual(kn[-1], 'Intermediate Flows')
+
+    def test_crawl(self):
+        self.assertEqual(self.cm.find_matching('Emissions to soil').to_list(),
+                         ['Elementary Flows', 'Emissions', 'soil'])
+
+        self.assertEqual(self.cm.find_matching(['Soil']).to_list(),
+                         ['Elementary Flows', 'Emissions', 'soil'])
+
+        self.assertEqual(self.cm.find_matching(['Emissions to soil'], check_elem=True).to_list(),
+                         ['Elementary Flows', 'Emissions', 'soil'])
+
+        self.assertEqual(self.cm.find_matching(['Emissions', 'soil'], check_elem=True).to_list(),
+                         ['Elementary Flows', 'Emissions'])
+
+    def test_load_local(self):
+        with open(self._test_file, 'w') as fp:
+            fp.write(local_cm_json)
+        self.cm.set_local(self._test_file)
+        self.assertEqual(self.cm.compartments.known_names()[17:20],
+                         ['Radioactive emissions to air', 'blorgle air', 'fossil'])
+        self.assertSetEqual({i.name for i in self.cm.compartments.subcompartments()},
+                            {'Intermediate Flows', 'Elementary Flows'})
+        self.assertEqual(self.cm.find_matching('fooferaw').name, 'fooferaw')
+        self.assertEqual(self.cm.find_matching('Materials').to_list(), ['Intermediate Flows', 'Materials'])
+
+    def test_elementary(self):
+        self.cm.set_local(self._test_file)
+        f1 = LcFlow.new("Dummy flow", None, Compartment=['Emissions to air'])
+        f2 = LcFlow.new("Dummy flow", None, Compartment=['Products'])
+        self.assertTrue(self.cm.is_elementary(f1))
+        self.assertFalse(self.cm.is_elementary(f2))
+
+    def test_add_intflows(self):
+        self.cm.set_local(self._test_file)
+        f2 = LcFlow.new("Dummy flow", None, Compartment=['Products'])
+        self.assertIsNone(self.cm.find_matching(f2['Compartment'], interact=False))
+
+        products = self.cm.add_compartment(f2['Compartment'])
+        self.assertIs(self.cm.find_matching(f2['Compartment']), products)
 
 if __name__ == '__main__':
     unittest.main()

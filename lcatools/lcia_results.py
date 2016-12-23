@@ -2,12 +2,12 @@
 This object replaces the LciaResult types spelled out in Antelope-- instead, it serializes to an LCIA result directly.
 
 """
-from lcatools.exchanges import ExchangeValue, DissipationExchange
-from lcatools.characterizations import Characterization
-from lcatools.interfaces import to_uuid
-
-
 from collections import defaultdict
+
+from lcatools.exchanges import ExchangeValue, DissipationExchange
+
+from entities.characterizations import Characterization
+from lcatools.interface import to_uuid
 
 
 def get_entity_uuid(item):

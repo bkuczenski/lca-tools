@@ -1,25 +1,17 @@
-import json
 import os
 import re
-
 from collections import defaultdict
 
-from lcatools.foreground.foreground import ForegroundArchive
+from entities.exchanges import comp_dir, Exchange, ExchangeValue
 from lcatools.catalog import CatalogInterface, ExchangeRef, CatalogRef
-from lcatools.exchanges import comp_dir, Exchange, ExchangeValue
-from lcatools.entities import LcQuantity, LcFlow
-from lcatools.flowdb.flowdb import FlowDB
-from lcatools.lcia_results import LciaResult, LciaResults, InconsistentQuantity
+from lcatools.entities import LcFlow
+from lcatools.flowdb.compartments import CompartmentManager
 from lcatools.foreground.dynamic_grid import dynamic_grid
-from lcatools.interact import pick_reference, ifinput, pick_one, pick_compartment, parse_math
+from lcatools.foreground.foreground import ForegroundArchive
+from lcatools.interact import pick_reference, ifinput, pick_one, parse_math
+from lcatools.lcia_results import LciaResult, LciaResults
 
 MANIFEST = ('catalog.json', 'entities.json', 'fragments.json', 'flows.json')
-
-
-def _recursive_ref(frag):
-    if frag.reference_entity is not None:
-        return _recursive_ref(frag.reference_entity)
-    return frag
 
 
 class NoLoadedArchives(Exception):
@@ -63,13 +55,12 @@ class ForegroundManager(object):
 
     The interface subclass provides UI for these activities
     """
-    def __init__(self, fg_dir, cat_file=None, cfs=None, force_create_new=False):
+    def __init__(self, fg_dir, cat_file=None, force_create_new=False):
 
         import time
         t0 = time.time()
         if fg_dir is None:
             self._catalog = CatalogInterface.new()
-            self.db = FlowDB()
             print('Setup Catalog and FlowDB... (%.2f s)' % (time.time() - t0))
 
         else:
@@ -81,26 +72,15 @@ class ForegroundManager(object):
             else:
                 self._catalog = CatalogInterface.new(fg_dir=fg_dir)
             self._catalog.load(0)
-            if os.path.exists(self[0].compartment_file):
-                self.db = FlowDB(compartments=self[0].compartment_file)
-            else:
-                self.db = FlowDB()
-            print('Setup Catalog and FlowDB... (%.2f s)' % (time.time() - t0))
+            print('Setup Catalog and Compartments... (%.2f s)' % (time.time() - t0))
 
             self[0].load_fragments(self._catalog)
             print('Fragments loaded... (%.2f s)' % (time.time() - t0))
 
-        self._cfs = []
-        self.unmatched_flows = defaultdict(set)
-        if cfs is not None:
-            print('Loading LCIA data... (%.2f s)' % (time.time() - t0))
-            for c in cfs:
-                self.load_lcia_cfs(c)
-                print('finished %s... (%.2f s)' % (c, time.time() - t0))
-
         self.compute_unit_scores()
         print('finished... (%.2f s)' % (time.time() - t0))
 
+    '''
     def load_lcia_cfs(self, nick, quantity=None):
         if self._catalog[nick] is None:
             self._catalog.load(nick)
@@ -114,6 +94,7 @@ class ForegroundManager(object):
         print('%d unmatched flows found from source %s... \n' %
               (len(self.unmatched_flows[nick]), self._catalog.name(nick)))
         self._cfs.append(nick)
+    '''
 
     def show(self, loaded=True):
         if loaded:
@@ -138,7 +119,7 @@ class ForegroundManager(object):
     def flows(self, *args, elementary=False):
         for f in sorted(self[0].flows(), key=lambda x: x['Name']):
             if isinstance(elementary, bool):
-                if not self.db.is_elementary(f) is elementary:
+                if not self.cm.is_elementary(f) is elementary:
                     continue
             if len(args) != 0:
                 if not bool(re.search(args[0], str(f), flags=re.IGNORECASE)):
@@ -181,27 +162,6 @@ class ForegroundManager(object):
         if force_create_new or not os.path.exists(os.path.join(folder, 'entities.json')):
             ForegroundArchive.new(folder)
 
-    def _add_local_synonym(self, existing, new):
-        syns = self._load_local_synonyms()
-        syns[existing].append(new)
-        self.db.flowables.add_synonym(existing, new)
-
-    def _install_local_synonyms(self, syns):
-        for k, v in syns:
-            for val in v:
-                self.db.flowables.add_synonym(k, val)
-
-    def _load_local_synonyms(self):
-        if os.path.exists(self[0].synonyms_file):
-            with open(self[0].synonyms_file, 'r') as fp:
-                syns = json.load(fp)
-            return syns
-        return defaultdict(list)
-
-    def _save_local_synonyms(self, syns):
-        with open(self[0].synonyms_file, 'w') as fp:
-            json.dump(syns, fp)
-
     def workon(self, folder, force_create_new=False):
         """
         Select the current foreground.  Create folder if needed.
@@ -218,10 +178,9 @@ class ForegroundManager(object):
         if os.path.exists(self[0].catalog_file):
             self._catalog.open(self[0].catalog_file)
         if os.path.exists(self[0].compartment_file):
-            self.db.load_compartments(self[0].compartment_file)
+            self.cm = CompartmentManager(self[0].compartment_file)
 
         self[0].load_fragments(self._catalog)
-        self._load_local_synonyms()
 
         self.clear_unit_scores()
         self.compute_unit_scores()
@@ -236,6 +195,7 @@ class ForegroundManager(object):
         else:
             self._catalog[0].add_entity_and_children(ref)
 
+    '''
     def merge_compartments(self, item):
         if self._catalog.is_loaded(0):
             self.db.save_compartments(self[0].compartment_file)
@@ -281,6 +241,7 @@ class ForegroundManager(object):
         elif len(flowables) == 1:
             f = flowables.pop()
             self.db.cfs_for_flowable(f, **kwargs)
+    '''
 
     # inspection methods
     def gen_exchanges(self, process_ref, ref_flow, direction):
@@ -293,15 +254,22 @@ class ForegroundManager(object):
         :param direction:
         :return: an exchange generator (NOT ExchangeRefs because I haven't figured out how to be consistent on that yet)
         """
-        for x in self.db.filter_exch(process_ref, elem=False, ref_flow=ref_flow):
+        for x in self.cm.filter_exch(process_ref, elem=False, ref_flow=ref_flow):
             if not (x.flow == ref_flow and x.direction == direction):
                 yield x
 
     def gen_elem(self, process_ref, ref_flow):
-        for x in self.db.filter_exch(process_ref, elem=True, ref_flow=ref_flow):
+        for x in self.cm.filter_exch(process_ref, elem=True, ref_flow=ref_flow):
             yield x
 
     def inventory(self, node, **kwargs):
+        """
+        Not clear what this is for... I think the input argument is either a process_ref or a fragment. The argument
+        for it being in the manager is that /// ???
+        :param node:
+        :param kwargs:
+        :return:
+        """
         if node.entity_type == 'fragment':
             print('%s' % node)
             for x in sorted(node.get_fragment_inventory(**kwargs), key=lambda z: (z.direction, z.value)):
@@ -311,7 +279,7 @@ class ForegroundManager(object):
             node.fg().inventory()
 
     def intermediate(self, process_ref, **kwargs):
-        exch = self.db.filter_exch(process_ref, elem=False, **kwargs)
+        exch = self.cm.filter_exch(process_ref, elem=False, **kwargs)
         if len(exch) == 0:
             print('No intermediate exchanges')
             return
@@ -320,7 +288,7 @@ class ForegroundManager(object):
             print('%s' % i)
 
     def elementary(self, process_ref, **kwargs):
-        exch = self.db.filter_exch(process_ref, elem=True, **kwargs)
+        exch = self.cm.filter_exch(process_ref, elem=True, **kwargs)
         if len(exch) == 0:
             print('No elementary exchanges')
             return
@@ -338,10 +306,10 @@ class ForegroundManager(object):
         elem_set = set()
 
         for p in p_refs:
-            ints[p] = self.db.filter_exch(p, elem=False, **kwargs)
+            ints[p] = self.cm.filter_exch(p, elem=False, **kwargs)
             int_set = int_set.union(_key(x) for x in ints[p])
             if elementary:
-                elems[p] = self.db.filter_exch(p, elem=True, **kwargs)
+                elems[p] = self.cm.filter_exch(p, elem=True, **kwargs)
                 elem_set = elem_set.union(_key(x) for x in elems[p])
 
         int_rows = sorted(int_set, key=lambda x: x[1])
@@ -374,9 +342,9 @@ class ForegroundManager(object):
         cols = []
         for p in p_ref.entity().reference_entity:
             cols.append(p)
-            ints[p] = self.db.filter_exch(p_ref, elem=False, ref_flow=p.flow)
+            ints[p] = self.cm.filter_exch(p_ref, elem=False, ref_flow=p.flow)
             int_set = int_set.union(_key(x) for x in ints[p])
-            elems[p] = self.db.filter_exch(p_ref, elem=True, ref_flow=p.flow)
+            elems[p] = self.cm.filter_exch(p_ref, elem=True, ref_flow=p.flow)
             elem_set = elem_set.union(_key(x) for x in elems[p])
 
         int_rows = sorted(int_set, key=lambda x: x[1])
@@ -439,12 +407,10 @@ class ForegroundManager(object):
                 out.append(k)
         return out
 
-    def fg_lcia(self, process_ref, quantities=None, dist=3, scenario=None, **kwargs):
+    def fg_lcia(self, process_ref, quantities=None, **kwargs):
         """
         :param process_ref:
         :param quantities: defaults to foreground lcia quantities
-        :param dist: [1] how far afield to search for cfs (see CLookup.find() from flowdb)
-        :param scenario: (not presently used) - some day the flow-quantity database will be scenario-sensitive
         :return:
         """
         if self._catalog.fg is None:
@@ -454,26 +420,18 @@ class ForegroundManager(object):
             self._catalog.load(0)
         if not self._catalog.is_loaded(process_ref.index):
             self._catalog.load(process_ref.index)
-        exch = self.db.filter_exch(process_ref, elem=True, **kwargs)
+        exch = self.cm.filter_exch(process_ref, elem=True, **kwargs)
         qs = self._prep_quantities(quantities)
         results = LciaResults(process_ref.entity())
         for q in qs:
             q_result = LciaResult(q)
-            if q in self.db.known_quantities():
-                for x in exch:
-                    if not x.flow.has_characterization(q):
-                        # look locally
-                        local = self[0][x.flow.get_uuid()]
-                        if local is not None and local.has_characterization(q):
-                            cf = local.factor(q)
-                            x.flow.add_characterization(cf)
-                        else:
-                            cf = self.db.lookup_single_cf(x.flow, q, dist=dist, location=process_ref['SpatialScope'])
-                            if cf is None:
-                                x.flow.add_characterization(q)
-                            else:
-                                x.flow.add_characterization(cf)
-                                self.add_to_foreground(x.flow)
+            for x in exch:
+                if not x.flow.has_characterization(q):
+                    # look locally
+                    local = self[0][x.flow.get_uuid()]
+                    if local is not None and local.has_characterization(q):
+                        cf = local.factor(q)
+                        x.flow.add_characterization(cf)
                     fac = x.flow.factor(q)
                     q_result.add_score(process_ref.id, x, fac, process_ref['SpatialScope'])
             results[q.get_uuid()] = q_result
@@ -490,7 +448,7 @@ class ForegroundManager(object):
             for q in qs:
                 result[q.get_uuid()] = LciaResult(q)
             return result
-        return p_ref.archive.bg_lookup(p_ref.id, quantities=qs, flowdb=self.db, **kwargs)
+        return p_ref.archive.bg_lookup(p_ref.id, quantities=qs, **kwargs)
 
     def compare_lcia_results(self, p_refs, quantities=None, background=False, **kwargs):
         """
@@ -811,7 +769,7 @@ class ForegroundManager(object):
         elif term.term_node.entity_type == 'fragment':
 
             if term.term_node.reference_entity is not None:
-                the_ref = _recursive_ref(term.term_node)
+                the_ref = term.term_node.top()
                 correct_reference = True
             else:
                 the_ref = term.term_node

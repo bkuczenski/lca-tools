@@ -4,12 +4,14 @@ Interim classes with useful building blocks
 
 from __future__ import print_function, unicode_literals
 
-import six
 import uuid
 
-from lcatools.interfaces import ArchiveInterface, to_uuid
+import six
+
+from entities.exchanges import Exchange
 from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcUnit  # , LcEntity
-from lcatools.exchanges import Exchange
+from lcatools.interface import ArchiveInterface, to_uuid
+from lcatools.lcia_results import LciaResults
 
 if six.PY2:
     bytes = str
@@ -286,7 +288,7 @@ class LcArchive(ArchiveInterface):
             return process.allocated_exchanges(reference=ref_flow)
         return process.exchanges()
 
-    def bg_lookup(self, process_id, ref_flow=None, reference=None, quantities=None, scenario=None, flowdb=None):
+    def bg_lookup(self, process_id, ref_flow=None, reference=None, quantities=None, scenario=None):
         """
         bg_lookup returns a flow representing the process's reference flow (must specify if the process is allocated)
         containing characterizations for the LCIA quantities specified
@@ -295,7 +297,6 @@ class LcArchive(ArchiveInterface):
         :param reference: a keyword to use to find the reference flow among the process's exchanges
         :param quantities:
         :param scenario:
-        :param flowdb:
         :return:
         """
         process = self.fg_proxy(process_id)
@@ -303,9 +304,9 @@ class LcArchive(ArchiveInterface):
             quantities = self.lcia_methods()
         if ref_flow is None:
             ref_flow = process.find_reference(reference)
-        cfs_out = dict()
+        cfs_out = LciaResults(process)
         for q in quantities:
-            result = process.lcia(q, ref_flow=ref_flow, scenario=scenario, flowdb=flowdb)
+            result = process.lcia(q, ref_flow=ref_flow, scenario=scenario)
             # ref_flow.add_characterization(q, value=result.total, location=process['SpatialScope'])
             cfs_out[q.get_uuid()] = result
         # return ref_flow

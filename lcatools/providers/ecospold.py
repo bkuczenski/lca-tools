@@ -10,20 +10,17 @@ web paper, to a collection of process data, to wit:
 
 from __future__ import print_function, unicode_literals
 
-import six
-
 import os
 
 from lxml import objectify
 
-from lcatools.providers.base import NsUuidArchive
-from lcatools.providers.archive import Archive
+from entities.exchanges import DirectionlessExchangeError
 from lcatools.entities import LcQuantity, LcFlow, LcProcess
-from lcatools.exchanges import DirectionlessExchangeError
-
-from lcatools.providers import tail
-from lcatools.providers.xml_widgets import find_tag
 from lcatools.interact import parse_math
+from lcatools.providers import tail
+from lcatools.providers.archive import Archive
+from lcatools.providers.base import NsUuidArchive
+from lcatools.providers.xml_widgets import find_tag
 
 
 conversion_dict = {

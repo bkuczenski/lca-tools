@@ -6,13 +6,13 @@
 import uuid
 from collections import namedtuple, defaultdict
 
-from lcatools.entities import LcEntity, LcFlow
-from lcatools.exchanges import comp_dir, ExchangeValue, AllocatedExchange
-from lcatools.characterizations import Characterization
-from lcatools.literate_float import LiterateFloat
-from lcatools.lcia_results import LciaResult, LciaResults, DetailedLciaResult, SummaryLciaResult
-from lcatools.interact import pick_one, parse_math
+from lcatools.entities.exchanges import comp_dir, ExchangeValue, AllocatedExchange
 
+from entities.characterizations import Characterization
+from lcatools.entities import LcEntity, LcFlow
+from lcatools.interact import pick_one, parse_math
+from lcatools.lcia_results import LciaResult, LciaResults, DetailedLciaResult, SummaryLciaResult
+from lcatools.literate_float import LiterateFloat
 
 GhostFrag = namedtuple('GhostFrag', ['flow', 'direction'])
 
@@ -399,7 +399,7 @@ class FlowTermination(object):
         :param lcia: a lambda that takes as input a process ref and a ref flow and a list of quantities, and
         returns a dict of LciaResults
         fragment LCIA results are not cached, but instead are computed on demand. we'll see if that works for highly
-        nested models. we will have to cache traversals somewhere- but I think that can be done by the manager.
+        nested models. We cache traversals as FragmentFlows, which can get published via antelope
         :param quantities:
         :return:
         """
@@ -449,6 +449,7 @@ class FlowTermination(object):
         if self._descend is False:
             j['descend'] = False
         # don't serialize score cache- could, of course
+
         return j
 
     def __eq__(self, other):
@@ -624,6 +625,12 @@ class LcFragment(LcEntity):
     def _print(self, qwer, level=1):
         if level < self.__dbg_threshold:
                 print(qwer)
+
+    def top(self):
+        if self.reference_entity is None:
+            return self
+        else:
+            return self.reference_entity.top()
 
     def entity(self):
         """
@@ -1036,6 +1043,10 @@ class LcFragment(LcEntity):
     def get_fragment_inventory(self, scenario=None, scale=None, observed=False):
         """
         Aggregates inputs and outputs (un-terminated flows) from a fragment; returns a list of exchanges.
+
+        This needs to be cleaned up in a major way-- this machinery approximates the traversal machinery
+        but doesn't equal it; similarly, this
+
         :param scenario:
         :return:
         """

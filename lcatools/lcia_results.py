@@ -513,3 +513,21 @@ class LciaResults(dict):
     def update(self, *args, **kwargs):
         super(LciaResults, self).update(*args, **kwargs)
         self._indices = list(self.keys())
+
+
+
+class LciaWeighting(object):
+    def __init__(self, quantity, weighting):
+        """
+
+        :param quantity: a new LcQuantity to represent the weighting
+        :param weighting: a weighting dict as defined in apply_weighting
+        """
+        self._q = quantity
+        self._w = weighting
+
+    def weigh(self, res, **kwargs):
+        return res.apply_weighting(self._w, self._q, **kwargs)
+
+    def q(self):
+        return self._q.get_uuid()

@@ -113,7 +113,19 @@ class TeXAuthor(object):
 
     @property
     def _wrapper_fname(self):
-        return os.path.join(self.folder, 'wrapper.tex')
+        return os.path.join(self.folder, 'fragment-data.tex')
+
+    @property
+    def _documentation_fname(self):
+        return os.path.join(self.folder, 'model-doc.tex')
+
+    @staticmethod
+    def _init_report_file(fname, intro_text):
+        if os.path.exists(fname):
+            os.remove(fname)
+
+        with open(fname, 'w') as fp:
+            fp.write('%% %s' % intro_text)
 
     def _read_wrapper(self):
         with open(self._wrapper_fname) as fp:
@@ -403,6 +415,7 @@ xs        """
         coords = self.frag_layout_recurse(frag, scenario=scenario)
 
         filename = os.path.join(self.folder, '%s.tex' % frag.get_uuid())
+        docname = os.path.join(self.folder, '%s-model-doc.tex' % frag.get_uuid())
 
         tex_dump = fragment_header(frag, scenario=scenario)
         tex_dump += fragment_inventory(frag, scenario=scenario)
@@ -428,15 +441,26 @@ xs        """
             with open(self._wrapper_fname, 'a') as wp:
                 wp.write('\\input{%s}\\clearpage\n' % filename)
             self._file_list.append(frag.get_uuid())
+
+        if frag.has_property('ModelDocumentation'):
+            with open(docname, 'w') as fp:
+                fp.write(frag['ModelDocumentation'])
+            with open(self._documentation_fname, 'a') as dp:
+                dp.write('\\input{%s}\n' % docname)
         return filename
 
     def new_report(self):
-        if os.path.exists(self._wrapper_fname):
-            os.remove(self._wrapper_fname)
-            self._file_list = []
-        with open(self._wrapper_fname, 'w') as fp:
-            fp.write('% TeX report wrapper for lcatools')
+        """
+        Create new fragment-data and model-doc files; if fragment
+        :return:
+        """
+        self._file_list = []
+        self._init_report_file(self._wrapper_fname,
+                               'TeX report wrapper for fragment-data, lcatools')
+
+        self._init_report_file(self._documentation_fname,
+                               'TeX report wrapper for model documentation, lcatools')
 
     def new_section(self, section_name):
         with open(self._wrapper_fname, 'a') as fp:
-            fp.write('\\clearpage\n\n\\section{%s}\n\n' % section_name)
+            fp.write('\\cleardoublepage\n\n\\section{%s}\n\n' % section_name)

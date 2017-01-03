@@ -151,9 +151,8 @@ class ForegroundArchive(LcArchive):
 
     def _recurse_frags(self, frag):
         frags = [frag]
-        for x in self._fragments(show_all=True):
-            if x.reference_entity is frag:
-                frags.extend(self._recurse_frags(x))
+        for x in sorted(self.child_flows(frag), key=lambda z: z.get_uuid()):
+            frags.extend(self._recurse_frags(x))
         return frags
 
     def save_fragments(self):

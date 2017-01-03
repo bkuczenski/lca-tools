@@ -560,7 +560,8 @@ class LcFragment(LcEntity):
                    background=j['isBackground'])
         # frag.observed_ev = j['exchangeValues'].pop('1')
         for i, v in j['exchangeValues'].items():
-            frag.set_exchange_value(i, v)
+            frag._exchange_values[i] = v
+            # frag.set_exchange_value(i, v)
         for tag, val in j['tags'].items():
             frag[tag] = val  # just a fragtag group of values
         return frag
@@ -885,7 +886,9 @@ class LcFragment(LcEntity):
         :return:
         """
         match = self._match_scenario_ev(scenario)
-        if match is None:
+        if scenario in self._exchange_values.keys():
+            ev = self._exchange_values[scenario]
+        elif match is None:
             if observed or self.balance_flow:
                 ev = self.observed_ev
             else:
@@ -915,6 +918,12 @@ class LcFragment(LcEntity):
         return '%'  # both scenario
 
     def set_exchange_value(self, scenario, value):
+        """
+        TODO: needs to test whether ev is set-able (i.e. not if balance_flow, not if parent is subfragment)
+        :param scenario:
+        :param value:
+        :return:
+        """
         if isinstance(scenario, tuple):
             raise ScenarioConflict('Set EV must specify single scenario')
         if scenario == 0 or scenario == '0':
@@ -1044,11 +1053,26 @@ class LcFragment(LcEntity):
         return magnitude * term.node_weight_multiplier
 
     def _cache_balance_ev(self, _balance, scenario):
-        match = self._match_scenario_ev(scenario)
-        if match is None:
+        """
+        BIG FAT BUG: evs can be modified by scenarios not defined locally in the current fragment.  Ergo, checking to
+        see if the fragment's ev dict has the given scenario is not sufficient- we should not be setting the
+        'observed ev' when any scenario is in effect. the whole scenario tuple needs to be used. this is a cheap dict,
+        after all.  For balancing + fragment child flows only.  so this needs to be thought through somewhat.
+        ans- no it doesn't! if they are balance / fffc flows, then their ev is never used! the ev dict is only for
+        recordkeeping!  except set_exchange_value is limited to one scenario. so- don't use it.
+        :param _balance:
+        :param scenario:
+        :return:
+        """
+        # match = self._match_scenario_ev(scenario)  # !TODO:
+        # if match is None:
+        #     self._exchange_values[1] = _balance
+        # else:
+        #     self.set_exchange_value(match, _balance)
+        if scenario is None:
             self._exchange_values[1] = _balance
         else:
-            self.set_exchange_value(match, _balance)
+            self._exchange_values[scenario] = _balance
 
     def fragment_lcia(self, scenario=None, observed=False):
         ffs = self.traversal_entry(scenario, observed=observed)

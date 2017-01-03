@@ -111,7 +111,7 @@ class FlowTermination(object):
     LCIA results are always cached in the terminations, and are not (by default) persistent across instantiations.
     """
     @classmethod
-    def from_json(cls, catalog, fragment, j):
+    def from_json(cls, fragment, catalog, scenario, j):
         if len(j) == 0:
             return cls.null(fragment)
         if j['source'] == 'foreground':
@@ -126,7 +126,10 @@ class FlowTermination(object):
             term_flow = catalog.ref(index, term_flow).entity()
         direction = j.pop('direction', None)
         descend = j.pop('descend', None)
-        return cls(fragment, process_ref, direction=direction, term_flow=term_flow, descend=descend)
+        term = cls(fragment, process_ref, direction=direction, term_flow=term_flow, descend=descend)
+        if 'scoreCache' in j.keys():
+            term._deserialize_score_cache(catalog, j['scoreCache'], scenario)
+        return term
 
     @classmethod
     def from_exchange_ref(cls, fragment, exchange_ref):
@@ -215,11 +218,15 @@ class FlowTermination(object):
 
     @property
     def is_fg(self):
-        return (not self.is_null) and (self.term_node is self._parent)
+        return self.is_frag and (self.term_node is self._parent)
 
     @property
     def is_bg(self):
         return self.is_frag and self.term_node.is_background
+
+    @property
+    def is_subfrag(self):
+        return self.is_frag and (not self.is_fg) and (not self.is_bg)
 
     @property
     def is_null(self):
@@ -235,7 +242,9 @@ class FlowTermination(object):
             return
         if isinstance(value, bool):
             self._descend = value
-            self.clear_score_cache()
+            if value is True:
+                self.clear_score_cache()  # if it's descend, it should have no score_cache
+                # if it's not descend, the score cache gets set during traversal
         else:
             raise ValueError('Descend setting must be True or False')
 
@@ -431,6 +440,21 @@ class FlowTermination(object):
     def clear_score_cache(self):
         self._score_cache.clear()
 
+    def _serialize_score_cache(self):
+        """
+        Score cache contains an LciaResults object, which works as a dict.
+        serialization should preserve order, which prohibits using a simple dict
+        :return: a list to be serialized directly
+        """
+        return [{"quantity": q, "score": self._score_cache[q].total()} for q in self._score_cache.indices()]
+
+    def _deserialize_score_cache(self, catalog, sc, scenario):
+        self._score_cache = LciaResults(self._parent)
+        for i in sc:
+            res = LciaResult(catalog[0][i["quantity"]], scenario=scenario)
+            res.add_summary(self._parent.get_uuid(), self._parent, 1.0, i['score'])
+            self._score_cache.add(res)
+
     def serialize(self):
         if self._process_ref is None:
             return {}
@@ -448,7 +472,8 @@ class FlowTermination(object):
             j['direction'] = self.direction
         if self._descend is False:
             j['descend'] = False
-        # don't serialize score cache- could, of course
+        if self._parent.is_background:
+            j['scoreCache'] = self._serialize_score_cache()
         return j
 
     def __eq__(self, other):
@@ -533,7 +558,7 @@ class LcFragment(LcEntity):
                    private=j['isPrivate'],
                    balance_flow=j['isBalanceFlow'],
                    background=j['isBackground'])
-        frag.observed_ev = j['exchangeValues'].pop('1')
+        # frag.observed_ev = j['exchangeValues'].pop('1')
         for i, v in j['exchangeValues'].items():
             frag.set_exchange_value(i, v)
         for tag, val in j['tags'].items():
@@ -980,7 +1005,7 @@ class LcFragment(LcEntity):
     def term_from_json(self, catalog, scenario, j):
         if isinstance(scenario, tuple):
             raise ScenarioConflict('Set termination must specify single scenario')
-        self._terminations[scenario] = FlowTermination.from_json(catalog, self, j)
+        self._terminations[scenario] = FlowTermination.from_json(self, catalog, scenario, j)
 
     def term_from_term(self, term, scenario=None):
         if isinstance(scenario, tuple):

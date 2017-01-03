@@ -134,7 +134,8 @@ class SummaryLciaResult(object):
 class AggregateLciaScore(object):
     """
     contains an entityId which should be either a process or a fragment (fragment stages show up as fragments??)
-    constructed from
+    The Aggregate score is constructed either from individual LCIA Details (exchange value x characterization factor)
+    or from summary results
     """
     def __init__(self, entity):
         self.entity = entity
@@ -218,9 +219,14 @@ def show_lcia(lcia_results):
 
 class LciaResult(object):
     """
-    An LCIA result object contains a collection of LCIA results for a related set of entities under a common scenario.
-    The exchanges and factors referenced in add_score should be stored post-scenario-lookup. (An LciaResult should be
-    static)
+    An LCIA result object contains a collection of LCIA results for a related set of entities, called components.  Each
+     component is an AggregateLciaScore, which itself is a collection of either detailed LCIA results or summary scores.
+
+    Each component which is a FragmentFlow represents a specific traversal scenario and is thus static.
+
+    Each component which is a process will contain actual exchanges and factors, which are scenario-sensitive, and
+     so is (theoretically) dynamic. This is not yet useful in practice.  LCIA Results are in sharp need of testing /
+     refactoring.
     """
     @classmethod
     def from_cfs(cls, fragment, cfs, scenario=None, location=None):
@@ -421,7 +427,12 @@ class LciaResult(object):
 
 class LciaResults(dict):
     """
-    A dict of LciaResult objects, with some useful attachments
+    A dict of LciaResult objects, with some useful attachments.  The dict gets added to in the normal way, but
+    also keeps track of the keys added in sequence, so that they can be retrieved by numerical index.
+
+    The LciaResults object keys should be quantity UUIDs
+
+
     """
     def __init__(self, entity, *args, **kwargs):
         super(LciaResults, self).__init__(*args, **kwargs)
@@ -430,6 +441,11 @@ class LciaResults(dict):
         self._indices = []
 
     def __getitem__(self, item):
+        """
+        __getitem__ can either be used as a numerical index
+        :param item:
+        :return:
+        """
         try:
             int(item)
             return super(LciaResults, self).__getitem__(self._indices[item])
@@ -440,10 +456,19 @@ class LciaResults(dict):
                 return LciaResult(None)  #
 
     def __setitem__(self, key, value):
+        assert isinstance(value, LciaResult)
         value.set_scale(self._scale)
         super(LciaResults, self).__setitem__(key, value)
         if key not in self._indices:
             self._indices.append(key)
+
+    def add(self, value):
+        assert isinstance(value, LciaResult)
+        self.__setitem__(value.quantity.get_uuid(), value)
+
+    def indices(self):
+        for i in self._indices:
+            yield i
 
     def to_list(self):
         return [self.__getitem__(k) for k in self._indices]

@@ -405,9 +405,9 @@ def _one_bar(ax, pos_y, neg_y, data, hue, units, threshold):
     if poss != 0:
         if negs != 0:
             if total > 0:
-                total_y = neg_y
+                total_y = neg_y - 0.1
             else:
-                total_y = pos_y
+                total_y = pos_y + 0.1
         else:
             neg_y = pos_y
 

@@ -558,7 +558,7 @@ class LcFragment(LcEntity):
                    private=j['isPrivate'],
                    balance_flow=j['isBalanceFlow'],
                    background=j['isBackground'])
-        # frag.observed_ev = j['exchangeValues'].pop('1')
+        frag._exchange_values[1] = j['exchangeValues'].pop('1')
         for i, v in j['exchangeValues'].items():
             frag._exchange_values[i] = v
             # frag.set_exchange_value(i, v)
@@ -1289,6 +1289,7 @@ class LcFragment(LcEntity):
             else:
                 the_ref = term.term_node
                 correct_reference = False
+                # ## isn't this a repeat of above?
                 in_ex = the_ref.exchange_value(scenario, observed=observed)
                 # If flow directions conflict, subfragment is being run in reverse
                 if term.term_node.direction != self.direction:
@@ -1448,7 +1449,7 @@ class FragmentFlow(object):
             nw = other.node_weight
             mag = nw
         else:
-            raise TypeError("Don't know how to add type %s to FragmentFlow\n %s\n to %s" %(type(other), other, self))
+            raise TypeError("Don't know how to add type %s to FragmentFlow\n %s\n to %s" % (type(other), other, self))
         # don't check unit scores-- ?????
         new = FragmentFlow(self.fragment, self.magnitude + mag, self.node_weight + nw,
                            self.term, self.is_conserved)

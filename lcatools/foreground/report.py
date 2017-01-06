@@ -10,7 +10,10 @@ from lcatools.exchanges import comp_dir
 from lcatools.charts import scenario_compare_figure, save_plot
 
 
-def _grab_stages(results):
+default_tex_folder = 'tex-files'
+
+
+def grab_stages(results):
     stages = set()
     for r in results:
         stages = stages.union(r.components())
@@ -148,12 +151,13 @@ class TeXAuthor(object):
         # tex = re.sub('_', '\\\\textunderscore', tex)  # this doesn't work bc filenames have underscores
         return tex
 
-    def __init__(self, folder, overwrite=True, comments=False):
+    def __init__(self, folder=default_tex_folder, overwrite=True, comments=False):
         """
         This function
 
         :param folder:
         :param overwrite: [True] whether to overwrite existing files in the folder
+        :param comments: [False] whether to write FragmentFlow comments on tree drawings
         """
         self.folder = folder
         self.overwrite = overwrite
@@ -225,13 +229,15 @@ xs        """
         :param scenario:
         :param first: [False] whether to suppress printing exchange weight
         :param parbox_width: [14cm] width of right-hand text box
-        :return:
+        :return: boxes, arrows, subfragments
         """
         subfrag_scale = 1.0
+        subfrags = []
+
         if not first:
             node_weight *= fragment.exchange_value(scenario, observed=True)
         if node_weight == 0:
-            return '\n', '\n'
+            return '\n', '\n', subfrags
         if fragment.term.is_frag:
             if fragment.term.is_fg:
                 # foreground
@@ -247,8 +253,13 @@ xs        """
                 frag_name = fragment.term.term_node['Name']
             else:
                 # subfragment
+                subfrags.append(fragment.term.term_node)
                 boxes = subfrag_box(fragment.get_uuid(), fragment.term.term_node.get_uuid())
-                subfrag_scale = 1.0 / fragment.term.term_node.exchange_value(scenario, observed=True)
+                try:
+                    subfrag_scale = 1.0 / fragment.term.term_node.exchange_value(scenario, observed=True)
+                except ZeroDivisionError:
+                    # zero exchange value usually means unobserved-- for reference flow that is not usually important
+                    subfrag_scale = 1.0 / fragment.term.term_node.exchange_value(scenario, observed=False)
                 print('subfrag scaling: %g' % subfrag_scale)
                 frag_name = fragment.term.term_node['Name']
                 '''
@@ -300,15 +311,17 @@ xs        """
                                                                                              c.get_uuid())
                 arrows += '\n'
                 boxes += '\n'
-                bplus, aplus = self.frag_layout_traverse(c, node_weight * subfrag_scale,
-                                                         scenario=scenario, parbox_width=parbox_width)
+                bplus, aplus, sfplus = self.frag_layout_traverse(c, node_weight * subfrag_scale,
+                                                                 scenario=scenario, parbox_width=parbox_width)
 
                 boxes += bplus
                 arrows += aplus
 
+                subfrags.extend(sfplus)
+
         arrows += '\n'
         boxes += '\n'
-        return boxes, arrows
+        return boxes, arrows, subfrags
 
     def contrib_chart(self, frag, results, stages=None, **kwargs):
         """
@@ -323,7 +336,7 @@ xs        """
             results = results.to_list()
 
         if stages is None:
-            stages = _grab_stages(results)
+            stages = grab_stages(results)
 
         fig = scenario_compare_figure(results, stages, **kwargs)
         save_plot(os.path.join(self.img_folder, self._img_fname(frag)))
@@ -354,7 +367,7 @@ xs        """
             results = results.to_list()
 
         if stages is None:
-            stages = _grab_stages(results)
+            stages = grab_stages(results)
 
         tab_lf = '\\\\'
 
@@ -400,17 +413,21 @@ xs        """
         :param frag:
         :param scenario:
         :param stages: list of stages to report (defaults to a collection of all stages found in the results
-        :param results:
-        :param table:
-        :return:
+        :param results: list of LciaResult objects
+        :param table: [False]
+        :return: a list of the fragment's children
         """
 
         if results is not None:
             if not isinstance(results, list):
                 results = results.to_list()
             if stages is None:
-                stages = _grab_stages(results)
-            self.contrib_chart(frag, results, stages=stages, **kwargs)
+                stages = grab_stages(results)
+            try:
+                self.contrib_chart(frag, results, stages=stages, **kwargs)
+            except AttributeError:
+                print('bailing out of chart')
+                return []
 
         coords = self.frag_layout_recurse(frag, scenario=scenario)
 
@@ -421,7 +438,7 @@ xs        """
         tex_dump += fragment_inventory(frag, scenario=scenario)
         tex_dump += frag_drawing_opener(coords[-1][2])
         tex_dump += frag_pnodes(coords)
-        bx, ar = self.frag_traversal_entry(frag, scenario=scenario)
+        bx, ar, subfrags = self.frag_traversal_entry(frag, scenario=scenario)  # subfrags go back up to the author
         tex_dump += bx
         tex_dump += ar
         tex_dump += frag_drawing_closer()
@@ -447,7 +464,8 @@ xs        """
                 fp.write(frag['ModelDocumentation'])
             with open(self._documentation_fname, 'a') as dp:
                 dp.write('\\input{%s}\n' % docname)
-        return filename
+
+        return subfrags
 
     def new_report(self):
         """

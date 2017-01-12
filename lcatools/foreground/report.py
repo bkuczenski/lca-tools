@@ -80,9 +80,9 @@ def bg_box(uid):
     return '\\rput(px%.5s){\\pnode(1.1,0){nx%.5s}\\psframe*(1,-0.25)(1.1,0.25)}' % (uid, uid)
 
 
-def subfrag_box(uid, tgt_id):
+def subfrag_box(uid, tgt_top):
     return ('\\rput(px%.5s){\\rput(1.25,0){\\nodebox{nx%.5s}{style=process,style=dashed}'
-            '{1.15cm}{0.6cm}{\\hyperlink{%.5s}{\\texttt{%.5s}}}}}' % (uid, uid, tgt_id, tgt_id))
+            '{1.15cm}{0.6cm}{\\hyperlink{%.5s}{\\texttt{%.5s}}}}}' % (uid, uid, tgt_top, tgt_top))
 
 
 def fg_box(uid):
@@ -196,7 +196,7 @@ class TeXAuthor(object):
 xs        """
         coords = [('%.5s' % fragment.get_uuid(), depth, level)]
 
-        children = [c for c in fragment.child_flows(fragment)]
+        children = [c for c in fragment.child_flows]
         if len(children) > 0:
             # setup coords for first child
             depth += 1.5
@@ -253,13 +253,14 @@ xs        """
                 frag_name = fragment.term.term_node['Name']
             else:
                 # subfragment
-                subfrags.append(fragment.term.term_node)
-                boxes = subfrag_box(fragment.get_uuid(), fragment.term.term_node.get_uuid())
+                top_frag = fragment.term.term_node.top()
+                subfrags.append(top_frag)
+                boxes = subfrag_box(fragment.get_uuid(), top_frag.get_uuid())
                 try:
                     subfrag_scale = 1.0 / fragment.term.term_node.exchange_value(scenario, observed=True)
                 except ZeroDivisionError:
                     # zero exchange value usually means unobserved-- for reference flow that is not usually important
-                    subfrag_scale = 1.0 / fragment.term.term_node.exchange_value(scenario, observed=False)
+                    subfrag_scale = 0.0
                 print('subfrag scaling: %g' % subfrag_scale)
                 frag_name = fragment.term.term_node['Name']
                 '''
@@ -302,7 +303,7 @@ xs        """
                                                                                               node_weight,
                                                                                               fragment.flow.unit())
 
-        children = [c for c in fragment.child_flows(fragment)]
+        children = [c for c in fragment.child_flows]
         if len(children) > 0:
             parbox_width -= 2
 
@@ -482,3 +483,73 @@ xs        """
     def new_section(self, section_name):
         with open(self._wrapper_fname, 'a') as fp:
             fp.write('\\cleardoublepage\n\n\\section{%s}\n\n' % section_name)
+
+    def report(self, query, chart=True):
+        """
+        generate TeX reports for the fragments and results.
+        :param query: a ForegroundQuery
+        :param chart: [True] whether to compute + plot results
+        :return: list of child fragments
+        """
+        children = []
+        for i, f in enumerate(query.fragments):
+            if chart:
+                ch = self.fragment_report(f, stages=query.agg_stages[i], results=query.agg_results[i], table=True,
+                                          scenario=query.scenario)
+            else:
+                ch = self.fragment_report(f, scenario=query.scenario)
+            for k in ch:
+                if k not in children:
+                    # preserve order encountered
+                    children.append(k)
+
+        return children
+
+    def recurse_report(self, fm, fragments, quantities, section_names=None, **kwargs):
+        """
+        Recursively generate fragment drawings for supplied fragments plus all descendents.
+        TODO: figure out a way to organize / group child fragments other than by tier.
+        Current plans are to _manually edit_ fragment_data.tex to reorganize sections / hide private fragments
+        :param fm: ForegroundManager
+        :param fragments: list of LcFragment objects at the top tier of the report [[ or uuids? ]]
+        :param quantities: list of LcQuantity objects or quantity UUIDs
+        :param section_names: [None] a list of names for successive tiers
+        :param kwargs: passed to foreground query: weightings, scenario, observed, [scale doesn't make sense]
+        """
+        self.new_report()
+        if section_names is None:
+            section_names = []
+
+        try:
+            section_name = section_names.pop(0)
+        except IndexError:
+            section_name = 'Top-level Fragments'
+
+        # run out top-level frags, then draw their children in the next section
+        qs = []
+
+        for q in quantities:
+            if isinstance(q, str):
+                qs.append(q)
+            else:
+                qs.append(q.get_uuid())
+
+        level = 0
+
+        seen = []
+
+        while len(fragments) > 0:
+            if len(section_name) > 0:
+                self.new_section(section_name)
+            seen.extend(fragments)
+            query = fm.query(fragments, qs, **kwargs)
+            children = self.report(query)
+            new_children = [ch for ch in children if ch not in seen]
+            fragments = new_children
+
+            level += 1
+
+            try:
+                section_name = section_names.pop(0)
+            except IndexError:
+                section_name = 'Tier %d Fragments' % level

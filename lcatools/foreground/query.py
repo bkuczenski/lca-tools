@@ -39,16 +39,15 @@ class ForegroundQuery(object):
             res[k.q()] = k.weigh(res)
         return res
 
-    def _do_fragment_lcia(self, frag, **kwargs):
+    def _do_fragment_lcia(self, frag):
         """
 
         :param frag:
-        :param kwargs:
         :return:
         """
         frag = self._ensure_frag(frag)
 
-        res = self._fm.fragment_lcia(frag, **kwargs)  # returns an LciaResults object
+        res = self._fm.fragment_lcia(frag, **self._query_args)  # return LciaResults object
         res = self._do_weighting(res)
 
         return [res[k] for k in self._qs]
@@ -57,12 +56,23 @@ class ForegroundQuery(object):
     def _do_stages(res):
         """
         sort by first quantity
-        :param res:
+        :param res: a 1d array of LciaResult objects for different quantities for the same fragment
         :return:
         """
         return sorted(grab_stages(res), key=lambda x: res[0][x].cumulative_result)
 
-    def __init__(self, manager, frags, quantities, weightings=None, savepath='figures', **kwargs):
+    def _do_all_stages(self):
+        stgs = []
+        stgs_seen = set()
+        for i, res in enumerate(self.agg_results):
+            for s in self.agg_stages[i]:
+                if s not in stgs_seen:
+                    stgs_seen.add(s)
+                    stgs.append((s, res[0][s].cumulative_result))
+        return [g[0] for g in sorted(stgs, key=lambda x: x[1])]
+
+    def __init__(self, manager, frags, quantities, weightings=None, savepath='figures',
+                 **kwargs):
         """
 
         :param manager: a Foreground interface of some kind e.g. ForegroundManager
@@ -79,17 +89,37 @@ class ForegroundQuery(object):
         self._frags = frags
         self._qs = quantities
         self._ws = weightings or []
+        self._query_args = kwargs
 
         self._res = None  # cache result
 
         self._stages = []
         self._agg_stages = []
+        self._all_stages = []
 
         self.savepath = savepath
 
     @property
     def quantities(self):
         return [self._fm[0][q] for q in self._qs]
+
+    @property
+    def scenario(self):
+        if 'scenario' in self._query_args:
+            return self._query_args['scenario']
+        return None
+
+    @property
+    def observed(self):
+        if 'observed' in self._query_args:
+            return self._query_args['observed']
+        return False
+
+    @property
+    def scale(self):
+        if 'scale' in self._query_args:
+            return self._query_args['scale']
+        return 1.0
 
     @property
     def results(self):
@@ -144,23 +174,24 @@ class ForegroundQuery(object):
         """
         return [res[i].aggregate(key=key) for i, q in enumerate(self._qs)]
 
-    def _run_query(self, **kwargs):
+    def _run_query(self):
         """
-        :param kwargs: passed to fragment_lcia
         :return:
         """
-        self._res = [self._do_fragment_lcia(f, **kwargs) for f in self._frag_refs]  # this is a list of LciaResults objs
+        self._res = [self._do_fragment_lcia(f) for f in self._frag_refs]  # this is a list of LciaResults objs
         self._stages = [self._do_stages(k) for k in self._res]
         agg = self.agg_results
         self._agg_stages = [self._do_stages(k) for k in agg]
+        self._all_stages = self._do_all_stages()
 
-    def lcia_scenario_compare(self, stages=None, **kwargs):
+    def lcia_scenario_compare(self, stages=None):
         if self._res is None:
-            self._run_query(**kwargs)
+            self._run_query()
 
         if stages is None:
-            agg_sort = self._res[0][self._qs[0]].aggregate()
-            stages = sorted(agg_sort.components(), key=lambda x: agg_sort[x].cumulative_result)
+            stages = self._all_stages
+            # agg_sort = self._res[0][self._qs[0]].aggregate()
+            # stages = sorted(agg_sort.components(), key=lambda x: agg_sort[x].cumulative_result)
 
         scenario_compare_figure([self.aggregate(k) for k in self._res], stages, scenarios=self._frag_names)
         return stages
@@ -181,23 +212,3 @@ class ForegroundQuery(object):
             out = stage_name_table(stages)
             with open(fname + '_stages', 'w') as fp:
                 fp.write(out)
-
-    def report(self, author, chart=True):
-        """
-        generate TeX reports for the fragments and results.
-        :param author: a TeXAuthor
-        :param chart: [True] whether to compute + plot results
-        :return: list of child fragments
-        """
-        children = []
-        for i, f in enumerate(self.fragments):
-            if chart:
-                ch = author.fragment_report(f, stages=self.agg_stages[i], results=self.agg_results[i], table=True)
-            else:
-                ch = author.fragment_report(f)
-            for k in ch:
-                if k not in children:
-                    # preserve order encountered
-                    children.append(k)
-
-        return children

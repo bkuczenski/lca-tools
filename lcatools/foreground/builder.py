@@ -190,7 +190,7 @@ class ForegroundBuilder(ForegroundManager):
         if not term.is_null:
             if term.term_node.entity_type == 'fragment':
                 term.descend = descend
-        for c in fragment.child_flows(fragment):
+        for c in fragment.child_flows:
             self.aggregate_subfrags(c, scenario=scenario)
 
     def merge_backgrounds(self, old, new):
@@ -232,7 +232,7 @@ class ForegroundBuilder(ForegroundManager):
         else:
             print('Update reference flow for scenario "%s"' % scenario)
         self._update_ev(frag, scenario)
-        for c in frag.child_flows(frag):
+        for c in frag.child_flows:
             print('   Child flow: %s ' % c)
             if scenario is None:
                 print('Update default value')
@@ -291,7 +291,7 @@ class ForegroundBuilder(ForegroundManager):
             else:
                 new.term_from_term(term, scenario=t_scen)
 
-        for c in frag.child_flows(frag):
+        for c in frag.child_flows:
             self.clone_fragment(c, parent=new, suffix='')
         return new
 
@@ -359,7 +359,7 @@ class ForegroundBuilder(ForegroundManager):
         self.build_child_flows(fragment, background_children=False)
 
     def _del_fragment(self, fragment):
-        for c in fragment.child_flows(fragment):
+        for c in fragment.child_flows:
             self._del_fragment(c)
         self[0]._del_f(fragment)
 
@@ -431,26 +431,6 @@ class ForegroundBuilder(ForegroundManager):
     def foreground(self, frag, index=None):
         self.fragment_to_foreground(frag)
         self.auto_terminate(frag, index=index)
-
-    def curate_stages(self, frag, stage_names=None):
-        def _recurse_stages(f):
-            stages = [f['StageName']]
-            for m in f.child_flows(f):
-                stages.extend(_recurse_stages(m))
-            return stages
-
-        if stage_names is None:
-            stage_names = set(_recurse_stages(frag))
-
-        print("Select stage for %s \n(or enter '' to quit)" % frag)
-        ch = pick_one_or(sorted(stage_names), default=frag['StageName'])
-        if ch == '':
-            return
-        if ch not in stage_names:
-            stage_names.add(ch)
-        frag['StageName'] = ch
-        for c in frag.child_flows(frag):
-            self.curate_stages(c, stage_names=stage_names)
 
     def background_scenario(self, scenario, index=None):
         if index is None:

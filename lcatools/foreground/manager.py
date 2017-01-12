@@ -11,15 +11,11 @@ from lcatools.entities import LcQuantity, LcFlow
 from lcatools.flowdb.flowdb import FlowDB
 from lcatools.lcia_results import LciaResult, LciaResults, InconsistentQuantity
 from lcatools.foreground.dynamic_grid import dynamic_grid
-from lcatools.interact import pick_reference, ifinput, pick_one, pick_compartment, parse_math
+from lcatools.interact import pick_reference, ifinput, pick_one, pick_one_or  # , pick_compartment, parse_math
+from lcatools.foreground.query import ForegroundQuery
+
 
 MANIFEST = ('catalog.json', 'entities.json', 'fragments.json', 'flows.json')
-
-
-def _recursive_ref(frag):
-    if frag.reference_entity is not None:
-        return _recursive_ref(frag.reference_entity)
-    return frag
 
 
 class NoLoadedArchives(Exception):
@@ -403,7 +399,7 @@ class ForegroundManager(object):
     def _rename_stage(self, frag, old, new):
         if frag['StageName'] == old:
             frag['StageName'] = new
-        for x in frag.child_flows(frag):
+        for x in frag.child_flows:
             self._rename_stage(x, old, new)
 
     def rename_stage(self, old_name, new_name, fragment=None):
@@ -540,7 +536,7 @@ class ForegroundManager(object):
     # fragment methods
     def _show_frag_children(self, frag, level=0):
         level += 1
-        for k in frag.child_flows(frag):
+        for k in frag.child_flows:
             print('%s%s' % ('  ' * level, k))
             self._show_frag_children(k, level)
 
@@ -597,39 +593,10 @@ class ForegroundManager(object):
         if isinstance(fragment, str):
             fragment = self.frag(fragment)
         fs = fragment.show_tree(scenario=scenario, observed=observed)
-        self.balance(fragment, scenario=scenario, observed=observed)
+        fragment.balance(scenario=scenario, observed=observed)
         return fs
 
-    @staticmethod
-    def _observe(c, scenario, accept_all=False):
-        if scenario is None:
-            prompt = 'Observed value'
-        else:
-            prompt = 'Scenario value'
-
-        print('%s' % c)
-        print(' Cached EV: %6.4g\n Observed EV: %6.4g [%s]' % (c.cached_ev, c.observed_ev, c.flow.unit()))
-        if scenario is None:
-            string_ev = '%10g' % c.observed_ev
-        else:
-            string_ev = '%10g' % c.exchange_value(scenario)
-            print(' Scenario EV: %s [%s]' % (string_ev,
-                                             c.flow.unit()))
-        if accept_all:
-            val = '='
-        else:
-            val = ifinput('%s ("=" to use cached): ' % prompt, string_ev)
-        if val != string_ev:
-            if val == '=':
-                new_val = c.cached_ev
-            else:
-                new_val = parse_math(val)
-            if scenario is None:
-                c.observed_ev = new_val
-            else:
-                c.set_exchange_value(scenario, new_val)
-
-    def observe(self, fragment, scenario=None, accept_all=False):
+    def observe(self, fragment, scenario=None, accept_all=False, recurse=True):
         if isinstance(fragment, str):
             fragment = self.frag(fragment)
 
@@ -638,15 +605,30 @@ class ForegroundManager(object):
             print('{Observing for model reference}\n')
         else:
             print('{Observing for scenario "%s"}' % scenario)
-        self._observe(fragment, scenario)
-        if fragment.term.is_null:
+        fragment.observe(scenario=scenario, accept_all=accept_all, recurse=recurse)
+
+    def query(self, frags, quantities, **kwargs):
+        return ForegroundQuery.from_fragments(self, frags, quantities, **kwargs)
+
+    def curate_stages(self, frag, stage_names=None):
+        def _recurse_stages(f):
+            stages = [f['StageName']]
+            for m in f.child_flows:
+                stages.extend(_recurse_stages(m))
+            return stages
+
+        if stage_names is None:
+            stage_names = set(_recurse_stages(frag))
+
+        print("Select stage for %s \n(or enter '' to quit)" % frag)
+        ch = pick_one_or(sorted(stage_names), default=frag['StageName'])
+        if ch == '':
             return
-        if fragment.term.is_fg or not fragment.term.is_frag:
-            for c in fragment.child_flows(fragment):
-                self._observe(c, scenario, accept_all=accept_all)
-        else:
-            print('fragment children are set by traversal')
-            return
+        if ch not in stage_names:
+            stage_names.add(ch)
+        frag['StageName'] = ch
+        for c in frag.child_flows:
+            self.curate_stages(c, stage_names=stage_names)
 
     def scenarios(self, fragment=None, _scens=None):
         if fragment is None:
@@ -658,7 +640,7 @@ class ForegroundManager(object):
         if _scens is None:
             _scens = set()
         _scens = _scens.union(fragment.scenarios)
-        for c in fragment.child_flows(fragment):
+        for c in fragment.child_flows:
             _scens = self.scenarios(c, _scens=_scens)
         return _scens
 
@@ -794,7 +776,7 @@ class ForegroundManager(object):
             if scenario is not None:
                 print('Automatic building of child flows is not supported for scenario terminations of process nodes.')
                 return []
-            if len([c for c in fragment.child_flows(fragment)]) != 0:
+            if len([c for c in fragment.child_flows]) != 0:
                 print('Warning: fragment already has child flows. Continuing will result in (possibly many) ')
                 if ifinput('duplicate child flows.  Continue? y/n', 'n') != 'y':
                     return []
@@ -811,7 +793,7 @@ class ForegroundManager(object):
         elif term.term_node.entity_type == 'fragment':
 
             if term.term_node.reference_entity is not None:
-                the_ref = _recursive_ref(term.term_node)
+                the_ref = term.term_node.top()
                 correct_reference = True
             else:
                 the_ref = term.term_node
@@ -831,7 +813,7 @@ class ForegroundManager(object):
 
             # in subfragment case- child flows aggregate so we don't want to create duplicate children
             for x in int_exch:
-                match = [c for c in fragment.child_flows(fragment) if c.flow == x.flow and c.direction == x.direction]
+                match = [c for c in fragment.child_flows if c.flow == x.flow and c.direction == x.direction]
                 if len(match) > 1:
                     raise AmbiguousReference('Multiple child flows matching %s' % x)
                 elif len(match) == 1:
@@ -957,62 +939,6 @@ class ForegroundManager(object):
         elif fragment.term.is_null:
             fragment.term.self_terminate()
         return fragment  # nothing to do
-
-    def balance(self, frag, scenario=None, observed=False):
-        qs = defaultdict(float)
-        if frag.reference_entity is None:
-            in_ex = frag.exchange_value(scenario, observed=observed)
-        else:
-            in_ex = 1.0
-        for cf in frag.flow.characterizations():
-            if cf.value is not None:
-                if frag.direction == 'Input':  # output from term
-                    qs[cf.quantity] -= cf.value * in_ex
-                else:
-                    qs[cf.quantity] += cf.value * in_ex
-        for c in frag.child_flows(frag):
-            for cf in c.flow.characterizations():
-                mag = c.exchange_value(scenario, observed=observed) * (cf.value or 0.0)
-                if mag != 0:
-                    if c.direction == 'Output':
-                        qs[cf.quantity] -= mag
-                    else:
-                        qs[cf.quantity] += mag
-
-        for k, v in qs.items():
-            print('%10.4g %s' % (v, k))
-        return qs
-
-    def show_balance(self, frag, quantity=None, scenario=None, observed=False):
-        def _p_line(f, m, d):
-            try:
-                # will fail if m is None or non-number
-                print(' %+10.4g  %6s  %.5s %s' % (m, d, f.get_uuid(), f['Name']))
-            finally:
-                pass
-        if quantity is None:
-            quantity = frag.flow.reference_entity
-
-        print('%s' % quantity)
-        mag = frag.flow.cf(quantity)
-        if frag.reference_entity is None:
-            mag *= frag.exchange_value(scenario, observed=observed)
-        if frag.direction == 'Input':
-            mag *= -1
-
-        net = mag
-
-        _p_line(frag, mag, comp_dir(frag.direction))
-
-        for c in sorted(frag.child_flows(frag), key=lambda x: x.direction):
-            mag = c.exchange_value(scenario, observed=observed) * c.flow.cf(quantity)
-            if c.direction == 'Output':
-                mag *= -1
-            if mag is None or mag != 0:
-                _p_line(c, mag, c.direction)
-            net += mag
-
-        print('----------\n %+10.4g net' % net)
 
 
 '''

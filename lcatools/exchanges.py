@@ -305,6 +305,8 @@ class AllocatedExchange(Exchange):
         super(AllocatedExchange, self).__init__(process, flow, direction, **kwargs)
 
     def _check_ref(self):
+        pass
+        '''
         for r, v in self._value_dict.items():
             if r == self._ref_flow and v == 0:
                 print('r: %s ref: %s v: %d' % (r, self._ref_flow, v))
@@ -312,6 +314,7 @@ class AllocatedExchange(Exchange):
             if r != self._ref_flow and v != 0:
                 print('r: %s ref: %s v: %g' % (r, self._ref_flow, v))
                 raise ValueError('Reference exchange value must be zero for non-reference exchanges')
+        '''
 
     @property
     def value(self):
@@ -398,6 +401,7 @@ class AllocatedExchange(Exchange):
             raise DuplicateExchangeError('Exchange value already defined for this reference!')
         if key not in [x.flow.get_uuid() for x in self.process.reference_entity]:
             raise KeyError('Cannot set allocation for a non-reference flow')
+        '''
         if self._ref_flow in self._value_dict:  # reference exchange
             if key == self._ref_flow:
                 if value == 0:
@@ -405,6 +409,7 @@ class AllocatedExchange(Exchange):
             else:
                 if value != 0:
                     raise ValueError('Allocation for non-reference exchange must be zero')
+        '''
         self._value_dict[key] = value
         if key == self._ref_flow:
             self._check_ref()

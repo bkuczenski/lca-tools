@@ -271,7 +271,7 @@ class LcProcess(LcEntity):
         return cls(uuid.uuid4(), Name=name, ReferenceExchange=ref_exchange, **kwargs)
 
     def __init__(self, entity_uuid, **kwargs):
-        self._exchanges = set()
+        self._exchanges = dict()
         super(LcProcess, self).__init__('process', entity_uuid, **kwargs)
         if self.reference_entity is None:
             self.reference_entity = set()
@@ -372,18 +372,18 @@ class LcProcess(LcEntity):
 
     def exchange(self, flow):
         if isinstance(flow, LcFlow):
-            for x in self._exchanges:
+            for x in self._exchanges.values():
                 if x.flow == flow:
                     yield x
         elif flow in self._scenarios:
-            for x in self._exchanges:
+            for x in self._exchanges.values():
                 if x.flow == self._scenarios[flow]:
                     yield x
         else:
             raise TypeError('LcProcess.exchange input %s %s' % (flow, type(flow)))
 
     def exchanges(self):
-        for i in sorted(self._exchanges, key=lambda x: x.direction):
+        for i in sorted(self._exchanges.values(), key=lambda x: x.direction):
             yield i
 
     def find_reference(self, reference, strict=False):
@@ -416,7 +416,7 @@ class LcProcess(LcEntity):
             except NoReferenceFound:
                 pass  # will fail if any exchanges are allocated
 
-        for i in sorted(self._exchanges, key=lambda t: t.direction):
+        for i in sorted(self._exchanges.values(), key=lambda t: t.direction):
             if isinstance(i, AllocatedExchange):
                 if in_scenario:
                     yield ExchangeValue.from_scenario(i, reference, ref)
@@ -453,7 +453,7 @@ class LcProcess(LcEntity):
         if _x in self._exchanges:
             if value is None or value == 0:
                 return None
-            e = [x for x in self._exchanges if x == _x][0]
+            e = self._exchanges[_x]
             if reference is None:
                 if isinstance(e, AllocatedExchange):
                     try:
@@ -468,8 +468,10 @@ class LcProcess(LcEntity):
                 else:
                     try:
                         exch = ExchangeValue.from_exchange(e, value=value)  # this will catch already-set errors
-                        self._exchanges.remove(e)
-                        self._exchanges.add(exch)
+                        self._exchanges[e] = exch
+                        assert self._exchanges[exch] == exch
+                        # self._exchanges.remove(e)
+                        # self._exchanges.add(exch)
                         return exch
                     except DuplicateExchangeError:
                         if add_dups:
@@ -492,9 +494,15 @@ class LcProcess(LcEntity):
                         else:
                             print('Duplicate exchange in process %s:\n%s' % (self.get_uuid(), e))
                             raise
+                    except ValueError:
+                        print('Error adding [%s] = %10.3g for exchange\n%s\nto process\n%s' % (
+                            reference.flow.get_uuid(), value, e, self.get_external_ref()))
+                        raise
 
-                self._exchanges.remove(e)
-                self._exchanges.add(exch)
+                self._exchanges[e] = exch
+                assert self._exchanges[exch] == exch
+                # self._exchanges.remove(e)
+                # self._exchanges.add(exch)
                 return exch
 
         else:
@@ -515,7 +523,8 @@ class LcProcess(LcEntity):
                 raise TypeError('Unhandled value type %s' % type(value))
             if e in self._exchanges:
                 raise KeyError('Exchange already present')
-            self._exchanges.add(e)
+            # self._exchanges.add(e)
+            self._exchanges[e] = e
             return e
 
     def lcias(self, quantities, **kwargs):
@@ -548,11 +557,11 @@ class LcProcess(LcEntity):
         j.pop(self._ref_field)  # reference reported in exchanges
         if exchanges:
             # if exchanges is true, report all exchanges
-            j['exchanges'] = sorted([x.serialize(**kwargs) for x in self._exchanges],
+            j['exchanges'] = sorted([x.serialize(**kwargs) for x in self._exchanges.values()],
                                     key=lambda x: (x['direction'], x['flow']))
         else:
             # if exchanges is false, only report reference exchanges
-            j['exchanges'] = sorted([x.serialize(**kwargs) for x in self._exchanges
+            j['exchanges'] = sorted([x.serialize(**kwargs) for x in self._exchanges.values()
                                      if x in self.reference_entity],
                                     key=lambda x: (x['direction'], x['flow']))
         return j

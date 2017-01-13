@@ -156,16 +156,15 @@ class EcospoldV1Archive(NsUuidArchive):
         """
         o = self._get_objectified_entity(filename)
 
-        rf = None  # reference flow
+        rf = set()  # reference flows
         flowlist = []
 
         for exch in o.dataset.flowData.getchildren():
             f = self._create_flow(exch)
             if hasattr(exch, 'outputGroup'):
                 d = 'Output'
-                if exch.outputGroup == 0:
-                    assert rf is None, "Multiple reference flows found!"
-                    rf = f
+                if exch.outputGroup == 0 or exch.outputGroup == 2:
+                    rf.add(f)
             elif hasattr(exch, 'inputGroup'):
                 d = 'Input'
             else:
@@ -198,10 +197,8 @@ class EcospoldV1Archive(NsUuidArchive):
                           Classifications=cls)
             p.set_external_ref(n)
 
-            if rf is None:
-                rx = None
-            else:
-                rx = p.add_reference(rf, 'Output')
+            for ref in rf:
+                p.add_reference(ref, 'Output')
             for flow, f_dir, val in flowlist:
                 self._print('Exch %s [%s] (%g)' % (flow, f_dir, val))
                 p.add_exchange(flow, f_dir, reference=None, value=val, add_dups=True)

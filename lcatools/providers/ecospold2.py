@@ -31,7 +31,7 @@ if six.PY2:
     str = unicode
 
 
-EcospoldExchange = namedtuple('EcospoldExchange', ('flow', 'direction', 'value', 'termination'))
+EcospoldExchange = namedtuple('EcospoldExchange', ('flow', 'direction', 'value', 'termination', 'is_ref'))
 EcospoldLciaResult = namedtuple('EcospoldLciaResult', ('Method', 'Category', 'Indicator', 'score'))
 
 
@@ -255,15 +255,24 @@ class EcospoldV2Archive(LcArchive):
                 continue
 
             f = self._create_flow(exch)
+            is_ref = False
             if hasattr(exch, 'outputGroup'):
                 d = 'Output'
+                og = exch.get('outputGroup')
+                if og == 0:
+                    is_ref = True
+                elif og == 2:  # 1, 3 not used
+                    for cls in find_tag(exch, 'classification'):
+                        if cls.classificationSystem == 'By-product classification':
+                            if str(cls.classificationValue).startswith('allocat'):
+                                is_ref = True
             elif hasattr(exch, 'inputGroup'):
                 d = 'Input'
             else:
                 raise DirectionlessExchangeError
             v = float(exch.get('amount'))  # or None if not found
             t = exch.get('activityLinkId')  # or None if not found
-            flowlist.append(EcospoldExchange(f, d, v, t))
+            flowlist.append(EcospoldExchange(f, d, v, t, is_ref))
         return flowlist
 
     def _collect_impact_scores(self, o, process, flow):
@@ -316,6 +325,8 @@ class EcospoldV2Archive(LcArchive):
                     self._print('Exch %s [%s] (%g)' % (exch.flow, exch.direction, exch.value))
                     p.add_exchange(exch.flow, exch.direction, reference=rx, value=exch.value,
                                    termination=exch.termination)
+                if exch.is_ref:
+                    p.add_reference(exch.flow, exch.direction)
 
         return p
 

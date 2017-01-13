@@ -130,7 +130,12 @@ def stack_bar_figure(results, stages, hues=None):
 
 
 def _stackbar_subfig_height(results):
-    height = 1.3
+    """
+    returns the
+    :param results: an array of LciaResult objects
+    :return:
+    """
+    height = 0.2
 
     for r in results:
         if _has_nonzero(r):
@@ -401,20 +406,28 @@ def _one_bar(ax, pos_y, neg_y, data, hue, units, threshold):
     colors = color_range(len(data), hue)
 
     total_y = None  # where to put the net marker
+    total_ha = 'left'  #
 
+    # position the net total indicator
     if poss != 0:
         if negs != 0:
             if total > 0:
-                total_y = neg_y - 0.1
+                # total indicator is aligned with neg
+                total_y = neg_y  # - 0.1
+                if total > poss / 2:
+                    total_ha = 'right'
             else:
-                total_y = pos_y + 0.1
+                total_y = pos_y  # + 0.1
+                if total > negs / 2:
+                    total_ha = 'right'
         else:
             neg_y = pos_y
-
     else:
         if negs == 0:
             return pos_y  # nothing to do
         neg_y = pos_y
+
+    # print('NY: %f  PY: %f  TY: %f  ha: %s' % (neg_y, pos_y, total_y, total_ha))
 
     for (i, d) in enumerate(data):
         color = next(colors)
@@ -443,7 +456,8 @@ def _one_bar(ax, pos_y, neg_y, data, hue, units, threshold):
 
     if total_y is not None:
         ax.plot(total, total_y, 'd', markersize=10)
-        ax.text(total, total_y, '  %6.3g' % total, ha='left', va='center')
+        ax.barh(total_y - 0.3, total, color=(0.74, 0.74, 0.74), height=0.6, edgecolor='none')
+        ax.text(total, total_y, '   %6.3g   ' % total, ha=total_ha, va='center')
 
     return neg_y - 0.55
 

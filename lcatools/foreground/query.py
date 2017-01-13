@@ -184,7 +184,13 @@ class ForegroundQuery(object):
         self._agg_stages = [self._do_stages(k) for k in agg]
         self._all_stages = self._do_all_stages()
 
-    def lcia_scenario_compare(self, stages=None):
+    def lcia_fragments_compare(self, stages=None):
+        """
+        Show the fragments in the query side-by-side on the same axes (create a scenario_compare_figure, using the
+        different fragments as scenarios)
+        :param stages:
+        :return:
+        """
         if self._res is None:
             self._run_query()
 

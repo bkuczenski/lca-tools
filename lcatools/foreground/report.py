@@ -299,7 +299,7 @@ xs        """
         else:
             arrows = '\\ncline{<-}{nx%.5s}{px%.5s}' % (fragment.get_uuid(), fragment.get_uuid())
         if not first:
-            arrows += '\n\\bput(0.78){\\parbox{2cm}{\\centering %s \\scriptsize %.4g %s}}' % (mag_mod,
+            arrows += '\n\\bput(0.78){\\parbox{2cm}{\\centering %s \\scriptsize %.3g %s}}' % (mag_mod,
                                                                                               node_weight,
                                                                                               fragment.flow.unit())
 
@@ -389,11 +389,11 @@ xs        """
             for r in results:
                 d = sum([q for q in r.contrib_query([s])])
                 if abs(d) > 0.1 * r.range():
-                    chart += ' & \\sffamily \\textbf{%8.3e} ' % d
+                    chart += ' & \\sffamily \\textbf{%8.2e} ' % d
                 elif d == 0:
                     chart += ' & -- '
                 else:
-                    chart += ' & \\sffamily %8.3e ' % d
+                    chart += ' & \\sffamily %8.2e ' % d
 
             chart += '%s\n' % tab_lf
 

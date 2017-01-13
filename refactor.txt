@@ -1,0 +1,192 @@
+==========
+Wed Dec 21 19:13:07 PST 2016
+
+Need to do some serious work on this shit.  Code is flung all over the place, all crazy. I need to dig through this with a pickaxe.
+
+#1 - Compartment Manager-- that was some great (if not test-driven, then) test-supported redesign of the compartment handler.  The question is, where does that live?
+
+The ForegroundManager has a ton of inspection processes, like compare_allocation, inventory, elementary, and so on.
+
+The ForegroundManager also is the locus of saving and loading state files, even though those files all get saved and loaded elsewhere (?)
+
+There's the catalog, which is a collection of archives; the archives themselves; the flow database;;; the background lookup; the foreground lookup;; the fragmentt builder
+
+
+there are too many pieces. all this stuff needs to be reworked.
+
+
+
+Wed 2016-12-21 19:26:32 -0800
+
+Really, right now the ForegroundManager is really a WorkspaceManager-- its sole definition is a working directory.  Then inside that directory are the following files:
+
+ - entities.json -- flows, quantities, and processes that belong to the foreground
+ - catalog.json -- a list of data references
+ - compartments.json -- a curated hierarchical list of compartments
+ - fragments/ -- a directory containing fragment definitions
+ 
+
+entities.json and fragments/ should be all that is required to host an antelope server.  In every respect, these are the deliverable products of the fragment building exercises.
+
+
+# Archives
+
+An archive is a self-consistent, monolithically managed collection of LCI data, that is, of entities.  Archives have a low-level interface
+
+# Catalog
+
+The catalog is the core fixture of the tool. A catalog is a listing of data sources, each of which provides information on the entities listed above.
+
+A catalog is a list of data sources available to a project. It also includes some other project-specific information:
+ * a customizable category manager, which includes flow compartments and process classifications
+ * project-specific flow identity information, to aid in characterizing elementary flows (basically, identifying existing flows as synonyms for flowables known to the flow database; see below)
+
+
+
+
+## CatalogRefs
+
+CatalogRefs are some nifty emergent tools that come out of the catalog system.  A catalog ref refers to a unique entity defined by a specified data source.  The catalog allows a catalog ref to be dereferenced to produce the entity.
+
+are strictly created by a catalog.  Their only constitutive properties are the catalog that created them, and an index + ID that can be dereferenced by the catalog (the index is a numeric index into the catalog's list of sources, the ID is the entiti
+
+
+# LCIA
+
+The approach here is that flows know their own characterizations. It is the job of a Flow Database (really a quantity database) to allow flows to characterize themselves.  This should not happen on the fly-- but rather, the flows in a given archive should all get characterized en bloc with respect to a particular 
+
+
+# Life Cycle Inventory Model Design
+
+
+
+## Fragments
+
+
+## Scenarios
+
+Scenarios are a list of changes to a collection of entities in order to demonstrate or a particular set of circumstances or assumptions.  In the original Antelope framework, a scenario consisted of five different types of parameter settings:
+
+ * FragmentFlow parameters (changes to fragment exchange values)
+ * FlowProperty parameters (changes to non-LCIA flow characterizations, such as energy density or composition)
+ * Dissipation parameters (changes to how compositions are released into the environment)
+ * Emission paraameters (changes to non-composition derived emissions)
+ * LCIA parameters (changes to characterization factors)
+
+In addition, there was the intention to implement substitution parameters, where a fragment termination could be changed under different scenarios.  This was complicated because of the way the fragment structure was stored and was never completed.
+
+In the new framework, the objective is to support all the same types of parameters, although the mechanism for doing this is not so clear.
+
+Fragments store fragment flow parameters inherently, and compute balances during traversal.  LCIA parameters and Flow Property parameters (and the deprecated composition parameters) are really just parameterized characterizations.  Dissipations are a special type of exchanges, so both dissipation params and emission params are really just parameterized exchanges.  So the challenge is merely how to store these in the characterizations and exchanges themselves, which really comes down to serializing and deserializing them.
+
+Which can be fairly easily unit tested.
+
+When it comes right down to it, unit testing is the secret to the whole refactoring project we are undertaking right now but it's HARD, and part of the reason why it's HARD is because the code has no testing whatsoever at the present time, and so there is no way to tell (other than myself sitting and thinking hard about it) whether any given change is going to work.
+
+At the end of all this, the code will be substantially improved.  The question is-- the problem is-- how long will it take to get to the end of all of this? I'm already behind on the Patagonia Virent annex, and I'm arguably behind on the AUOMA project, which from an lca-tools perspective I *haven't even started yet*.
+
+
+
+
+
+==========
+Tue Jan 10 14:18:02 PST 2017
+
+
+Exchange refactoring.
+
+Allocated exchanges are a terrible abuse of code.  Desperately need a test suite (read: a functional definition) for exchanges.  Right now the thing causing the issue is some stupid shit with validating allocated exchanges, where I assert the reference value for the reference flow must be nonzero, and the non-reference value for reference flows must be zero.  That's causing problems for processes that list their own reference outputs as inputs, which is not a problem *as long as the nonreference factors get added together* when the matrix is constructed.  I'm sure this is what ecoinvent does.  well, who can be sure?
+
+anyways-- it's coming up at all because I monkeyed in these runtime assertions to validate the allocated exchanges since I never bothered to define their functionality with tests.
+
+Can we confirm this is the case in some other application?
+
+Yes- in the APOS case, the heat and power co-generation process has the same exchange listed [the one causing the error] (twice; once 0) as an output and twice as an input.
+
+so I am going to simply ignore the errors for now, and fix on the refactor.
+
+
+
+Tue 2017-01-10 14:39:38 -0800
+seems to be working. FYI, refactoring exchanges into a dict from a set has also eliminated the slow performance, even from zip (somewhat: 5000 processes in 53 sec; and counting)
+125.66 sec to load 12966 processes.
+
+ok, heading to campus
+
+
+==========
+Wed Jan 11 22:42:17 PST 2017
+
+
+Proposal: mush all outputGroup 0 + 2 flows into reference exchangess on initial Lc load.  that would mean diluting the meaning of reference exchanges (but they're already allowed to be multiple)
+
+
+need tests! need a spec!
+
+Here's what a process inventory should be able to do:
+
+I = ProcessInventory(catalog_ref)
+
+I.
+
+
+
+
+Here's what I would like to accomplish:
+
+LC = LcArchive(catalog)  # e.g. from json
+
+p = LC[process-key]
+
+p.exchanges() should yield exchanges
+
+p.exchanges(flow-ref)
+
+p.exchange(flow-ref, direction[=None])  # all instances
+  basically FirstOrDefault()
+  if query returns multiple results, raise exception; StopIteration returns None.
+
+p.exchange(flow-ref, ['Input'|'Output'])
+
+p.reference_entity is a set of exchanges
+
+p.references() should yield references
+
+
+x = next(p.references())
+
+x[ref-flow] returns exchange value under allocation for ref-flow
+
+we should strive to make allocation specified as simply as possible at the process level
+but exchanges, if they store it, should also know (?)
+
+exchanges have got to be thought of as observations
+
+So x = an ExchangeValue() which can be specified statically at invocation [as a dict]
+
+x.value is the somehow-designated (first observed) exchange value- should be immutable.  But all exchanges should be AllocatedExchanges, in the sense that all exchanges should have dicts of values. of observations.  which could be e.g. node terminations.
+
+the million dollar question is whether I need to preserve the outputGroup designation-- and I think no.  The question has got to be, how am *I* using it?
+
+Currently, ecospold.py raises an exception if it sees multiple references.  ecospold2- wow, ecospold2 just calls them all outputs and grabs the reference from the filename.  If you want a separate reference you have to load a separate file, I guess.  but unlinked processes? it doesn't know. since it ignores that part.
+
+what about the serialization? no harm, no foul- ecospold v1 processes will never have multiply-valued exchanges; ecospold v2 processes (unlinked) currently are also all single-valued, and (linked) the change should have no effect on the reference flows.
+
+I currently don't use it in the foreground-- (where do I query ecoinvent processes? for LCIA, where the reference should maybe be made mandatory)  but then in cases where I do expect a singular, I can catch that according to the spec.  In building fragments I just grab all the intermediate flows.  which is to say, I ask the compartment manager. that would include all reference flows.
+
+so it's resolved-  ecospold loaders should mark outputgroup 0 and 2 as reference flows.  That solves half the problem of pre-loading uslci.
+
+ecospold2 loaders should look at the byproduct classification
+
+p.reference()
+  yield the first or None; raise if multiple
+
+so what do I do if I catch that?  when would we do it? only if not specified. on query it's known - term_flow is known - so it's not a problem.
+
+And the exchange should simply return the value for the term_flow.
+
+okay, so we have our refactor.  Then loading exchanges should simply be registering observations.  much simpler.
+
+that's all there is to it.  If a flow has extra references defined- fine.
+
+anyways.... how do we use this to build

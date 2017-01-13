@@ -161,18 +161,23 @@ class ForegroundBuilder(ForegroundManager):
         else:
             if parent.term.is_null:
                 self.terminate_to_foreground(parent)
-            if value is None:
-                val = ifinput('Exchange value (%s per %s): ' % (flow.unit(), parent.unit), '1.0')
-                if val == '1.0':
-                    value = 1.0
-                else:
-                    value = parse_math(val)
+            if balance or parent.term.is_subfrag:
+                print('Exchange value set during traversal')
+                value = 1.0
+            else:
+                if value is None:
+                    val = ifinput('Exchange value (%s per %s): ' % (flow.unit(), parent.unit), '1.0')
+                    if val == '1.0':
+                        value = 1.0
+                    else:
+                        value = parse_math(val)
 
             frag = self[0].add_child_fragment_flow(parent, flow, direction, Comment=comment, exchange_value=value,
                                                    **kwargs)
             if balance:
                 frag.set_balance_flow()
-                self.traverse(parent)
+
+            self.traverse(parent)
 
         if self.db.is_elementary(frag.flow):
             self.terminate_to_foreground(frag)
@@ -263,12 +268,13 @@ class ForegroundBuilder(ForegroundManager):
         frag.reference_entity = interp
         return interp
 
-    def clone_fragment(self, frag, parent=None, suffix=' (copy)'):
+    def clone_fragment(self, frag, parent=None, suffix=' (copy)', comment=None):
         """
         Creates duplicates of the fragment and its children. returns the reference fragment.
         :param frag:
         :param parent: used internally
         :param suffix: attached to top level fragment
+        :param comment: can be used in place of source fragment's comment
         :return:
         """
         if parent is None:
@@ -277,9 +283,12 @@ class ForegroundBuilder(ForegroundManager):
             direction = comp_dir(frag.direction)  # this gets re-reversed in create_fragment
         else:
             direction = frag.direction
+        if suffix is None:
+            suffix = ''
+        the_comment = comment or frag['Comment']
         new = self.create_fragment(parent=parent,
                                    Name=frag['Name'] + suffix, StageName=frag['StageName'],
-                                   flow=frag.flow, direction=direction, comment=frag['Comment'],
+                                   flow=frag.flow, direction=direction, comment=the_comment,
                                    value=frag.cached_ev, balance=frag.balance_flow)
 
         self.transfer_evs(frag, new)

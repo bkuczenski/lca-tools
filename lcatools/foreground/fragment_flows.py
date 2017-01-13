@@ -560,6 +560,8 @@ class LcFragment(LcEntity):
                    background=j['isBackground'])
         frag._exchange_values[1] = j['exchangeValues'].pop('1')
         for i, v in j['exchangeValues'].items():
+            if i.find('____') >= 0:
+                i = tuple(i.split('____'))
             frag._exchange_values[i] = v
             # frag.set_exchange_value(i, v)
         for tag, val in j['tags'].items():
@@ -696,6 +698,8 @@ class LcFragment(LcEntity):
                 evs["0"] = v
             elif isinstance(k, int):
                 evs[str(k)] = v
+            elif isinstance(k, tuple):
+                evs['____'.join(k)] = v  # warning! ____ is now a special secret scenario delimiter
             else:
                 evs[k] = v
         return evs
@@ -928,6 +932,8 @@ class LcFragment(LcEntity):
 
     def _match_scenario_ev(self, scenario):
         match = None
+        if scenario in self._exchange_values.keys():
+            return scenario
         if isinstance(scenario, tuple):
             for scen in scenario:
                 if scen in self._exchange_values.keys():
@@ -935,8 +941,6 @@ class LcFragment(LcEntity):
                         raise ScenarioConflict('fragment: %s\nexchange value: %s, %s' % (self, scenario, match))
                     match = scen
             return match
-        if scenario in self._exchange_values.keys():
-            return scenario
         return None
 
     def _match_scenario_term(self, scenario):
@@ -984,7 +988,7 @@ class LcFragment(LcEntity):
             return '='
         match_e = self._match_scenario_ev(scenario)
         match_t = self._match_scenario_term(scenario)
-        if match_e is None:
+        if match_e is None or self.exchange_value(match_e) == self.cached_ev:
             if match_t is None:
                 return ' '  # no scenario
             return '+'  # term scenario
@@ -1001,6 +1005,8 @@ class LcFragment(LcEntity):
         """
         if isinstance(scenario, tuple):
             raise ScenarioConflict('Set EV must specify single scenario')
+        if scenario.find('____') >= 0:
+            raise ValueError('"____" used as a delimiter; disallowed in scenario name')
         if scenario == 0 or scenario == '0':
             self.cached_ev = value
         elif scenario == 1 or scenario == '1':

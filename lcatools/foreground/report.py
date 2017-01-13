@@ -33,6 +33,12 @@ def stage_name_table(stages):
     return out
 
 
+def save_stages(fname, stages):
+    out = stage_name_table(stages)
+    with open(fname + '_stages', 'w') as fp:
+        fp.write(out)
+
+
 def fragment_header(frag, scenario=None):
     return '{\\hypertarget{%.5s}{\\Large \\texttt{%.5s}}}\\subsection{%s}\n{\\large %s: %g %s %s}\\\\[8pt]\n%s\n' % (
         frag.get_uuid(), frag.get_uuid(), frag['Name'], comp_dir(frag.direction), frag.exchange_value(scenario),

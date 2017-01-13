@@ -33,14 +33,14 @@ def color_range(num, hue, sat=0.5):
         yield colorsys.hsv_to_rgb(next(h), sat, next(v))
 
 
-def _label_bar(patch, value=None, label=None, valueformat='%5.3g', labelformat='%s'):
+def _label_bar(patch, value=None, label=None, valueformat='%4.3g', labelformat='%s'):
     bl = patch.get_xy()
     x = 0.5 * patch.get_width() + bl[0]
     y = 0.5 * patch.get_height() + bl[1]
     if value is not None:
         patch.axes.text(x, y, valueformat % value, ha='center', va='center')
     if label is not None:
-        patch.axes.text(x, y + (0.52* patch.get_height()), labelformat % label, ha='center', va='bottom')
+        patch.axes.text(x, y + (0.52 * patch.get_height()), labelformat % label, ha='center', va='bottom')
 
 
 def _label_segment(patch, data, label, threshold):
@@ -131,17 +131,17 @@ def stack_bar_figure(results, stages, hues=None):
 
 def _stackbar_subfig_height(results):
     """
-    returns the
+    returns the height of
     :param results: an array of LciaResult objects
     :return:
     """
-    height = 0.2
+    height = 0
 
     for r in results:
         if _has_nonzero(r):
-            height += 0.8
+            height += 0.9
             if _has_pos_neg(r):
-                height += 0.6
+                height += 0.7
     return height
 
 
@@ -150,9 +150,13 @@ def _scenario_fig_height(results, scenario=False):
     if scenario:
         for m, res in enumerate(results):
             height += _stackbar_subfig_height(res)
+        height += len(results[0]) - 1
     else:
         for m, res in enumerate(results):
             height += _stackbar_subfig_height([res])
+            height += 1
+
+    print('### Height is: %f' % height)
     return height
 
 
@@ -329,7 +333,7 @@ def spread_scenario_compare(ax, results, stages, colors=None, scenarios=None, re
     ax.set_title(unit[0][0], fontsize=14)
 
 
-def scenario_compare_figure(results, stages, hues=None, scenarios=None):
+def scenario_compare_figure(results, stages, hues=None, scenarios=None, savefile=None):
     """
     A bit of a swiss army knife.
 
@@ -344,6 +348,7 @@ def scenario_compare_figure(results, stages, hues=None, scenarios=None):
     :param stages: k query terms to results
     :param hues: for n quantities represented (quick-compute from UUID)
     :param scenarios:
+    :param savefile: if present, save the fig to the specified file
     :return:
     """
 
@@ -389,6 +394,9 @@ def scenario_compare_figure(results, stages, hues=None, scenarios=None):
             """
     leg = 'Stages: \n' + '\n'.join(['%s -- %s' % (chr(ord('A') + i), k) for i, k in enumerate(stages)])
     print(leg)
+
+    if savefile is not None:
+        save_plot(savefile, close_after=False)
 
     return fig
 
@@ -504,7 +512,7 @@ def stack_bars(ax, series, hue, units, labels=None, title='Scenario Analysis', s
     data_range = right - left
     threshold = 0.07 * data_range
     top = 1.1
-    bar_skip = 1.4
+    bar_skip = 1.6
 
     # defaults
     pos_y = .55

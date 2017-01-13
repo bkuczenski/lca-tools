@@ -2,7 +2,7 @@ import os
 
 from lcatools.lcia_results import LciaResults
 from lcatools.charts import scenario_compare_figure, save_plot
-from lcatools.foreground.report import stage_name_table, grab_stages
+from lcatools.foreground.report import save_stages, grab_stages
 
 
 def _to_tuple(frag):
@@ -154,6 +154,12 @@ class ForegroundQuery(object):
         return self._agg_stages
 
     @property
+    def all_stages(self):
+        if self._res is None:
+            self._run_query()
+        return self._all_stages
+
+    @property
     def fragments(self):
         return [self._fm.frag(k) for k in self._frag_refs]
 
@@ -215,6 +221,4 @@ class ForegroundQuery(object):
         print('Saving figure %s' % fname)
         save_plot(fname + '.eps')
         if stages is not None:
-            out = stage_name_table(stages)
-            with open(fname + '_stages', 'w') as fp:
-                fp.write(out)
+            save_stages(fname, stages)

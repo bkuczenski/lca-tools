@@ -4,7 +4,7 @@ import uuid
 import re
 from itertools import chain
 
-from lcatools.exchanges import Exchange, ExchangeValue, AllocatedExchange, DuplicateExchangeError
+from lcatools.exchanges import Exchange, ExchangeValue, DuplicateExchangeError, AmbiguousReferenceError
 from lcatools.characterizations import Characterization
 from lcatools.lcia_results import LciaResult, LciaResults
 
@@ -262,21 +262,19 @@ class LcProcess(LcEntity):
     _new_fields = ['SpatialScope', 'TemporalScope']
 
     @classmethod
-    def new(cls, name, ref_exchange, **kwargs):
+    def new(cls, name, **kwargs):
         """
         :param name: the name of the process
-        :param ref_exchange: the reference exchange
         :return:
         """
-        return cls(uuid.uuid4(), Name=name, ReferenceExchange=ref_exchange, **kwargs)
+        return cls(uuid.uuid4(), Name=name, **kwargs)
 
     def __init__(self, entity_uuid, **kwargs):
         self._exchanges = dict()
         super(LcProcess, self).__init__('process', entity_uuid, **kwargs)
-        if self.reference_entity is None:
-            self.reference_entity = set()
-        else:
-            self.reference_entity = {self.reference_entity}
+        if self.reference_entity is not None:
+            raise AttributeError('How could the reference entity not be None?')
+        self.reference_entity = set()  # it is not possible to specify a valid reference_entity on init
 
         if 'SpatialScope' not in self._d:
             self._d['SpatialScope'] = 'GLO'
@@ -316,10 +314,7 @@ class LcProcess(LcEntity):
 
     def _validate_reference(self, ref_set):
         for x in ref_set:
-            if super(LcProcess, self)._validate_reference(x):
-                if isinstance(x, AllocatedExchange):
-                    x._check_ref()
-            else:
+            if not super(LcProcess, self)._validate_reference(x):
                 return False
         return True
 
@@ -359,22 +354,26 @@ class LcProcess(LcEntity):
         return hits[0]
 
     def inventory(self, reference=None):
-        print('%s' % self)
         out = []
+        it = self.exchanges(reference)
         if reference is None:
-            it = self.exchanges()
+            print('%s' % self)
         else:
-            it = self.allocated_exchanges(reference)
+            print('Reference: %s' % ExchangeValue.from_allocated(reference, reference))  # get in unit terms
         for i in it:
             print('%2d %s' % (len(out), i))
             out.append(i)
         return out
 
-    def exchange(self, flow):
+    def exchange(self, flow, direction=None):
         if isinstance(flow, LcFlow):
             for x in self._exchanges.values():
                 if x.flow == flow:
-                    yield x
+                    if direction is None:
+                        yield x
+                    else:
+                        if x.direction == direction:
+                            yield x
         elif flow in self._scenarios:
             for x in self._exchanges.values():
                 if x.flow == self._scenarios[flow]:
@@ -382,53 +381,117 @@ class LcProcess(LcEntity):
         else:
             raise TypeError('LcProcess.exchange input %s %s' % (flow, type(flow)))
 
-    def exchanges(self):
+    def has_exchange(self, flow, direction=None):
+        try:
+            x = next(self.exchange(flow, direction=direction))
+        except StopIteration:
+            return False
+        return True
+
+    def exchanges(self, reference=None, scenario=None, strict=False):
+        """
+        generate a process's exchanges.  If no reference is supplied, generate unallocated exchanges, including all
+        reference exchanges.  If a reference is supplied, generate ExchangeValues as allocated to that reference flow,
+        and exclude reference exchanges.  Reference must be a flow or exchange found in the process's reference entity.
+
+        Replaces allocated_exchange(reference), which is deprecated.
+        this is going to be part of a major upcoming refactor, since ExchangeValue and AllocatedExchange are going to
+        be merged.
+        :param reference:
+        :param scenario: not fully implemented
+        :param strict: [False] whether to use strict flow name matching [default- first regex match]
+        :return:
+        """
+        if reference is not None:
+            reference = self.find_reference(reference, strict=strict)
         for i in sorted(self._exchanges.values(), key=lambda x: x.direction):
-            yield i
+            if reference is None:
+                yield i
+            else:
+                if i in self.reference_entity:
+                    pass
+                else:
+                    if scenario is not None:
+                        yield ExchangeValue.from_scenario(i, scenario, reference)
+                    else:
+                        # this pushes the problem up to ExchangeValue
+                        yield ExchangeValue.from_allocated(i, reference)
 
     def find_reference(self, reference, strict=False):
+        """
+        returns an exchange. NOTE: this has been refactored.
+        :param reference:
+        :param strict:
+        :return:
+        """
         if reference is None:
             if len(self.reference_entity) > 1:
                 raise NoReferenceFound('Must specify reference!')
-            ref = list(self.reference_entity)[0].flow
+            ref = next(x for x in self.reference_entity)
         elif isinstance(reference, str):
             x = self.find_reference_by_string(reference, strict=strict)
-            ref = x.flow
+            ref = x
         elif isinstance(reference, LcFlow):
-            ref = reference
+            try:
+                ref = next(rf for rf in self.reference_entity if rf.flow == reference)
+            except StopIteration:
+                raise NoReferenceFound('No reference exchange found with flow %s' % reference)
         elif isinstance(reference, Exchange):
-            ref = reference.flow
+            if reference in self.reference_entity:
+                return reference
+            else:
+                raise NoReferenceFound('Exchange is not a reference exchange %s' % reference)
         else:
             raise NoReferenceFound('Unintelligible reference %s' % reference)
         return ref
-
-    def allocated_exchanges(self, reference, strict=False):
-        # need to disambiguate the reference
-        in_scenario = False
-        if isinstance(reference, LcFlow):
-            ref = self.find_reference(reference, strict=strict)
-        elif reference in self._scenarios.keys():
-            in_scenario = True
-            ref = self._scenarios[reference]
-        else:
-            try:
-                ref = self.find_reference(reference, strict=strict)
-            except NoReferenceFound:
-                pass  # will fail if any exchanges are allocated
-
-        for i in sorted(self._exchanges.values(), key=lambda t: t.direction):
-            if isinstance(i, AllocatedExchange):
-                if in_scenario:
-                    yield ExchangeValue.from_scenario(i, reference, ref)
-                else:
-                    yield ExchangeValue.from_allocated(i, ref.get_uuid())
-            else:
-                yield i
 
     def add_reference(self, flow, dirn):
         rx = Exchange(self, flow, dirn)
         self._set_reference(rx)
         return rx
+
+    def references(self, flow=None):
+        for rf in self.reference_entity:
+            if flow is None:
+                yield self._exchanges[rf]
+            else:
+                if rf.flow == flow:
+                    yield self._exchanges[rf]
+
+    def reference(self, flow=None):
+        ref = [rf for rf in self.references(flow)]
+        if len(ref) == 0:
+            raise NoReferenceFound
+        elif len(ref) > 1:
+            raise AmbiguousReferenceError('Multiple matching references found')
+        return ref[0]
+
+    def allocate_by_quantity(self, quantity=None):
+        """
+        Apply allocation factors to all non-reference exchanges, determined by the quantity specified.  For each
+        reference exchange, computes the magnitude of the quantity output from the unallocated process. Reference flows
+        lacking characterization in that quantity will receive zero allocation.
+
+        Each magnitude is the allocation numerator for that reference, and the sum of the magnitudes is the allocation
+        denominator. For each reference the allocated exchanges are normalized by the magnitude of the reference
+        exchange's reference quantity.  This means that the normalizing allocation factor is actually the reference
+        exchange's characterization divided by the total.
+        :param quantity: an LcQuantity
+        :return:
+        """
+        exchs = dict()
+        mags = dict()
+        for rf in self.reference_entity:
+            exchs[rf.flow] = self._exchanges[rf].value
+            mags[rf.flow] = exchs[rf.flow] * rf.flow.cf(quantity)
+
+        total = sum([v for v in mags.values()])
+
+        for rf in self.reference_entity:
+            alloc_factor = rf.flow.cf(quantity) / total  # qty magnitude divided by total, divided by exch magnitude
+            for x in self.exchanges():
+                if x not in self.reference_entity:
+                    x[rf] = x.value * alloc_factor
 
     def add_exchange(self, flow, dirn, reference=None, value=None, add_dups=False, **kwargs):
         """
@@ -455,7 +518,9 @@ class LcProcess(LcEntity):
                 return None
             e = self._exchanges[_x]
             if reference is None:
-                if isinstance(e, AllocatedExchange):
+                if isinstance(value, dict):
+                    e.update(value)
+                else:
                     try:
                         e.value = value  # this will catch already-set errors
                     except DuplicateExchangeError:
@@ -464,46 +529,23 @@ class LcProcess(LcEntity):
                         else:
                             print('Duplicate exchange in process %s:\n%s' % (self.get_uuid(), e))
                             raise
-                    return e
-                else:
-                    try:
-                        exch = ExchangeValue.from_exchange(e, value=value)  # this will catch already-set errors
-                        self._exchanges[e] = exch
-                        assert self._exchanges[exch] == exch
-                        # self._exchanges.remove(e)
-                        # self._exchanges.add(exch)
-                        return exch
-                    except DuplicateExchangeError:
-                        if add_dups:
-                            e.add_to_value(value)
-                            return e
-                        else:
-                            print('Duplicate exchange in process %s:\n%s' % (self.get_uuid(), e))
-                            raise
+                return e
 
             else:
-                exch = AllocatedExchange.from_exchange(e)
-                if isinstance(value, dict):
-                    exch.update(value)
-                else:
-                    try:
-                        exch[reference] = value  # this will catch already-set errors
-                    except DuplicateExchangeError:
-                        if add_dups:
-                            exch.add_to_value(value, reference=reference)
-                        else:
-                            print('Duplicate exchange in process %s:\n%s' % (self.get_uuid(), e))
-                            raise
-                    except ValueError:
-                        print('Error adding [%s] = %10.3g for exchange\n%s\nto process\n%s' % (
-                            reference.flow.get_uuid(), value, e, self.get_external_ref()))
+                try:
+                    e[reference] = value  # this will catch already-set errors
+                except DuplicateExchangeError:
+                    if add_dups:
+                        e.add_to_value(value, reference=reference)
+                    else:
+                        print('Duplicate exchange in process %s:\n%s' % (self.get_uuid(), e))
                         raise
+                except ValueError:
+                    print('Error adding [%s] = %10.3g for exchange\n%s\nto process\n%s' % (
+                        reference.flow.get_uuid(), value, e, self.get_external_ref()))
+                    raise
 
-                self._exchanges[e] = exch
-                assert self._exchanges[exch] == exch
-                # self._exchanges.remove(e)
-                # self._exchanges.add(exch)
-                return exch
+                return e
 
         else:
             if value is None or value == 0:
@@ -514,11 +556,11 @@ class LcProcess(LcEntity):
                 else:
                     if reference not in self.reference_entity:
                         raise KeyError('Specified reference is not registered with process: %s' % reference)
-                    e = AllocatedExchange(self, flow, dirn, value=value, **kwargs)
+                    e = ExchangeValue(self, flow, dirn, value=None, **kwargs)
                     e[reference] = value
 
             elif isinstance(value, dict):
-                e = AllocatedExchange.from_dict(self, flow, dirn, value=value, **kwargs)
+                e = ExchangeValue.from_dict(self, flow, dirn, value_dict=value, **kwargs)
             else:
                 raise TypeError('Unhandled value type %s' % type(value))
             if e in self._exchanges:
@@ -536,7 +578,7 @@ class LcProcess(LcEntity):
     def lcia(self, quantity, ref_flow=None, scenario=None, flowdb=None):
         result = LciaResult(quantity, scenario)
         result.add_component(self.get_uuid(), entity=self)
-        for ex in self.allocated_exchanges(scenario or ref_flow):
+        for ex in self.exchanges(ref_flow, scenario=scenario):
             if not ex.flow.has_characterization(quantity):
                 if flowdb is not None:
                     if quantity in flowdb.known_quantities():

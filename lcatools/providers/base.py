@@ -9,7 +9,7 @@ import uuid
 
 from lcatools.interfaces import ArchiveInterface, to_uuid
 from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcUnit  # , LcEntity
-from lcatools.exchanges import Exchange
+from lcatools.exchanges import Exchange, comp_dir
 
 if six.PY2:
     bytes = str
@@ -262,6 +262,11 @@ class LcArchive(ArchiveInterface):
     def lcia_methods(self, **kwargs):
         return [q for q in self._entities_by_type('quantity', **kwargs) if q.is_lcia_method()]
 
+    def terminate(self, exchange):
+        for p in self.processes():
+            if p.has_exchange(exchange.flow, comp_dir(exchange.direction)):
+                yield p
+
     def fg_proxy(self, proxy):
         """
         A catalog service- to grab the 'native' process in the event that the locally-cached one is a stub.
@@ -282,9 +287,7 @@ class LcArchive(ArchiveInterface):
         :return:
         """
         process = self.fg_proxy(process_id)
-        if ref_flow is not None:
-            return process.allocated_exchanges(reference=ref_flow)
-        return process.exchanges()
+        return process.exchanges(ref_flow)
 
     def bg_lookup(self, process_id, ref_flow=None, reference=None, quantities=None, scenario=None, flowdb=None):
         """
@@ -302,7 +305,7 @@ class LcArchive(ArchiveInterface):
         if quantities is None:
             quantities = self.lcia_methods()
         if ref_flow is None:
-            ref_flow = process.find_reference(reference)
+            ref_flow = process.find_reference(reference).flow
         cfs_out = dict()
         for q in quantities:
             result = process.lcia(q, ref_flow=ref_flow, scenario=scenario, flowdb=flowdb)

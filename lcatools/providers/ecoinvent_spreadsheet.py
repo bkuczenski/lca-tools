@@ -156,7 +156,7 @@ class EcoinventSpreadsheet(NsUuidArchive):
             if rf is None:
                 return p.exchanges()
             else:
-                return p.allocated_exchanges(rf)
+                return p.exchanges(rf)
 
     '''
     def lci_lookup(self, process_id):
@@ -199,7 +199,7 @@ class EcoinventSpreadsheet(NsUuidArchive):
             '''
             lci = self.bg_proxy(process_id)
             if ref_flow is None:
-                ref_flow = lci.find_reference(reference)
+                ref_flow = lci.find_reference(reference).flow
             rf = self._find_rf(lci, ref_flow=ref_flow)
             lcia = LciaResults(lci)
             for q in quantities:
@@ -214,7 +214,7 @@ class EcoinventSpreadsheet(NsUuidArchive):
         else:
             p = self.lcia_validation_proxy(process_id)
             if ref_flow is None:
-                ref_flow = p.find_reference(reference)
+                ref_flow = p.find_reference(reference).flow
             rf = self._find_rf(p, ref_flow=ref_flow)
             return self.lcia.retrieve_lcia_scores('_'.join([process_id, rf.get_uuid()]) + '.spold',
                                                   quantities=quantities)

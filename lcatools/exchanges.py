@@ -7,6 +7,14 @@ def comp_dir(direction):
     raise InvalidDirection('%s' % direction)
 
 
+class ExchangeError(Exception):
+    pass
+
+
+class NoAllocation(Exception):
+    pass
+
+
 class InvalidDirection(Exception):
     pass
 
@@ -48,20 +56,46 @@ class Exchange(object):
         assert flow.entity_type == 'flow', "'flow' must be an LcFlow"
         assert direction in directions, "direction must be a string in (%s)" % ', '.join(directions)
 
-        self.process = process
-        self.flow = flow
-        self.direction = direction
+        self._process = process
+        self._flow = flow
+        self._direction = direction
         try:
             self.unit = unit or flow.reference_entity.reference_entity
         except AttributeError:
             self.unit = None
-        self.termination = None
+        self._termination = None
         if termination is not None:
-            self.termination = str(termination)
-        self.value = None
+            self._termination = str(termination)
+
+    """
+    These all need to be immutable because they form the exchange's hash
+    """
+    @property
+    def value(self):
+        return None
+
+    @value.setter
+    def value(self, exch_val):
+        raise ExchangeError('Cannot set Exchange value')
+
+    @property
+    def process(self):
+        return self._process
+
+    @property
+    def flow(self):
+        return self._flow
+
+    @property
+    def direction(self):
+        return self._direction
+
+    @property
+    def termination(self):
+        return self._termination
 
     def __hash__(self):
-        return hash((self.process.get_uuid(), self.flow.get_uuid(), self.direction, self.termination))
+        return hash((self._process.get_uuid(), self._flow.get_uuid(), self._direction, self._termination))
 
     def __eq__(self, other):
         if other is None:
@@ -111,8 +145,15 @@ class Exchange(object):
 
 class ExchangeValue(Exchange):
     """
-    An ExchangeValue is an exchange with a value
+    An ExchangeValue is an exchange with a single value (corresponding to unallocated exchange value) plus a dict of
+    values allocated to different reference flows.
     """
+    @classmethod
+    def from_dict(cls, process, flow, direction, value=None, **kwargs):
+        self = cls(process, flow, direction, **kwargs)
+        self._value_dict.update(value)  # this will fail unless value was specified
+        return self
+
     @classmethod
     def from_exchange(cls, exch, value=None, **kwargs):
         if isinstance(exch, ExchangeValue):
@@ -123,6 +164,12 @@ class ExchangeValue(Exchange):
 
     @classmethod
     def from_allocated(cls, allocated, reference):
+        """
+        Use to flatten an allocated process inventory into a standalone inventory
+        :param allocated:
+        :param reference:
+        :return:
+        """
         return cls(allocated.process, allocated.flow, allocated.direction, value=allocated[reference],
                    termination=allocated.termination)
 
@@ -136,12 +183,72 @@ class ExchangeValue(Exchange):
                    termination=allocated.termination)
 
     def add_to_value(self, value):
-        self.value += value
+        self._value += value
 
-    def __init__(self, *args, value=None, **kwargs):
+    def __init__(self, *args, value=None, value_dict=None, **kwargs):
         super(ExchangeValue, self).__init__(*args, **kwargs)
         assert isinstance(value, float), 'ExchangeValues must be floats (or subclasses)'
-        self.value = value
+        self._value = value
+        if value_dict is None:
+            self._value_dict = dict()  # keys must live in self.process.reference_entity
+        else:
+            self._value_dict = value_dict
+
+    @property
+    def value(self):
+        """
+        unallocated value
+        :return:
+        """
+        return self._value
+
+    @value.setter
+    def value(self, exch_val):
+        """
+        May only be set once. Otherwise use add_to_value
+        :param exch_val:
+        :return:
+        """
+        if self._value is not None:
+            raise DuplicateExchangeError('Unallocated exchange value already set')
+        self._value = exch_val
+
+    def __getitem__(self, item):
+        """
+        Allocated Exchange values for reference flows are always 1 for the self-same flow and 0 otherwise.
+        Allocated exchange values for non-reference flows are as-reported in a dict.
+        :param item:
+        :return:
+        """
+        if item not in self.process.reference_entity:
+            raise AmbiguousReferenceError('Allocation key is not a reference exchange')
+        if item.flow == self.flow and item.direction == self.direction:
+            return 1.0
+        elif self in self.process.reference_entity:  # but i
+            return 0.0
+        elif item in self._value_dict:
+            return self._value_dict[item]
+        elif len(self.process.reference_entity) == 1:
+            # no allocation necessary -- only normalization
+            return self.value / self.process.reference().value
+        raise NoAllocation('No allocation found for key %s in process %s' % (item, self.process))
+
+    def __setitem__(self, key, value):
+        if key not in self.process.reference_entity:
+            raise AmbiguousReferenceError('Allocation key is not a reference exchange')
+        if key in self._value_dict:
+            # print(self._value_dict)
+            raise DuplicateExchangeError('Exchange value already defined for this reference!')
+        '''
+        if self._ref_flow in self._value_dict:  # reference exchange
+            if key == self._ref_flow:
+                if value == 0:
+                    raise ValueError('Reference exchange cannot be zero')
+            else:
+                if value != 0:
+                    raise ValueError('Allocation for non-reference exchange must be zero')
+        '''
+        self._value_dict[key] = value
 
     def __str__(self):
         if self.process.entity_type == 'fragment':
@@ -163,6 +270,8 @@ class ExchangeValue(Exchange):
         j = super(ExchangeValue, self).serialize()
         if values:
             j['value'] = float(self.value)
+            if len(self._value_dict) > 0:
+                j['valueDict'] = self._value_dict
         return j
 
 
@@ -263,175 +372,4 @@ class MarketExchange(Exchange):
             j['marketSuppliers'] = self._market_dict
         else:
             j['marketSuppliers'] = [k for k in self.keys()]
-        return j
-
-
-class AllocatedExchange(Exchange):
-    """
-    An AllocatedExchange is an alternative implementation of an ExchangeValue that handles the multiple-output
-    process case.  Each allocatable output must be registered as part of the process's reference entity.
-    The AllocatedExchange stores multiple exchange values, indexed via a dict of uuids for reference
-    flows.  (It is assumed that no process features the same flow in both input and output directions AS REFERENCE
-    FLOWS.)  An allocation factor can only be set for flows that are listed in the parent process's reference entity.
-
-    A multi-output process (with AllocatedExchanges) and a multi-input process (with MarketExchanges) are mutually
-    exclusive.
-
-    If an AllocatedExchange's flow UUID is found in the value_dict, it is a reference exchange. In this case, it
-    is an error if the exchange value for the reference flow is zero, or if the exchange value for any non-
-    reference-flow is nonzero.  This can be checked internally without any knowledge by the parent process.
-
-    Open question is how to serialize- whether to report only the un-allocated, only the allocated exchange values, or
-    both.  Then an open task is to deserialize same.-- but that just requires serializing them as dicts
-    """
-    @classmethod
-    def from_dict(cls, process, flow, direction, value=None, **kwargs):
-        self = cls(process, flow, direction, **kwargs)
-        self._value_dict.update(value)  # this will fail unless value was specified
-        return self
-
-    @classmethod
-    def from_exchange(cls, exchange):
-        if isinstance(exchange, AllocatedExchange):
-            return exchange
-        self = cls(exchange.process, exchange.flow, exchange.direction, termination=exchange.termination)
-        self._value = exchange.value
-        return self
-
-    def __init__(self, process, flow, direction, value=None, **kwargs):
-        self._ref_flow = flow.get_uuid()  # shortcut
-        self._value = value
-        self._value_dict = dict()
-        super(AllocatedExchange, self).__init__(process, flow, direction, **kwargs)
-
-    def _check_ref(self):
-        pass
-        '''
-        for r, v in self._value_dict.items():
-            if r == self._ref_flow and v == 0:
-                print('r: %s ref: %s v: %d' % (r, self._ref_flow, v))
-                raise ValueError('Reference exchange value cannot be zero')
-            if r != self._ref_flow and v != 0:
-                print('r: %s ref: %s v: %g' % (r, self._ref_flow, v))
-                raise ValueError('Reference exchange value must be zero for non-reference exchanges')
-        '''
-
-    @property
-    def value(self):
-        """
-        Get the exchange's "generic" value.
-        If the exchange is a reference exchange, then this is the exchange's self-reference
-        otherwise, if the exchange has only one entry, return it
-        otherwise, return _value, whatever it be
-        :return:
-        """
-        if self._ref_flow in self._value_dict:
-            return self[self._ref_flow]
-        if self._value is None:
-            if len(self._value_dict) == 1:
-                return [v for k, v in self._value_dict][0]
-        return self._value
-
-    @value.setter
-    def value(self, exch_val):
-        if exch_val is None:
-            return
-        if self._ref_flow in self._value_dict:
-            raise DuplicateExchangeError('default value is already in dictionary! %g (new value %g)' % (
-                self._value_dict[self._ref_flow], exch_val))
-        self._value_dict[self._ref_flow] = exch_val
-        self._value = exch_val
-
-    def add_to_value(self, value, reference=None):
-        if reference is None:
-            self._value_dict[self._ref_flow] = self._value_dict[self._ref_flow] + value
-            self._value = self._value_dict[self._ref_flow]
-        else:
-            reference = self._normalize_key(reference)
-            self._value_dict[reference] = self._value_dict[reference] + value
-
-    def keys(self):
-        """
-        This should be a subset of [f.get_uuid() for f in self.process.reference_entity()]
-        :return:
-        """
-        return self._value_dict.keys()
-
-    def values(self):
-        """
-        bad form to rename items() to values() ? here, values refers to exchange values- but that
-        is probably weak tea to an irritated client code.
-        :return:
-        """
-        return self._value_dict.items()
-
-    def update(self, d):
-        self._value_dict.update(d)
-
-    @staticmethod
-    def _normalize_key(key):
-        if isinstance(key, Exchange):
-            key = key.flow
-        if hasattr(key, 'get_uuid'):
-            key = key.get_uuid()
-        return key
-
-    def __getitem__(self, item):
-        """
-        If the key is known, return it
-        otherwise, if the key is the exchange's reference flow, return generic _value
-        otherwise, if the key is some other reference flow, return 0
-        otherwise, KeyError
-        :param item:
-        :return:
-        """
-        k = self._normalize_key(item)
-        if k in self._value_dict:
-            return self._value_dict[k]
-        if k == self._ref_flow:
-            return self._value
-        if k in [x.flow.get_uuid() for x in self.process.reference_entity]:
-            return 0.0
-        raise KeyError('Key %s is not identified as a reference exchange for the parent process' % k)
-
-    def __setitem__(self, key, value):
-        key = self._normalize_key(key)
-        if key in self._value_dict:
-            # print(self._value_dict)
-            raise DuplicateExchangeError('Exchange value already defined for this reference!')
-        if key not in [x.flow.get_uuid() for x in self.process.reference_entity]:
-            raise KeyError('Cannot set allocation for a non-reference flow')
-        '''
-        if self._ref_flow in self._value_dict:  # reference exchange
-            if key == self._ref_flow:
-                if value == 0:
-                    raise ValueError('Reference exchange cannot be zero')
-            else:
-                if value != 0:
-                    raise ValueError('Allocation for non-reference exchange must be zero')
-        '''
-        self._value_dict[key] = value
-        if key == self._ref_flow:
-            self._check_ref()
-
-    def __str__(self):
-        if self.process.entity_type == 'fragment':
-            if self.process.reference_entity is None:
-                ref = '{*}'
-            else:
-                ref = '   '
-        else:
-            if self in self.process.reference_entity:
-                ref = '{*}'
-            else:
-                ref = '   '
-        return '%6.6s: %s [%.3g %s] %s' % (self.direction, ref, self.value, self.unit, self.tflow)
-
-    def f_view(self):
-        return '%6.6s: [%.3g %s] %s' % (self.direction, self.value, self.unit, self.process)
-
-    def serialize(self, values=False):
-        j = super(AllocatedExchange, self).serialize()
-        if values:
-            j['value'] = self._value_dict
         return j

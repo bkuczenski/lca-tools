@@ -7,7 +7,7 @@ import uuid
 from collections import namedtuple, defaultdict
 
 from lcatools.entities import LcEntity, LcFlow
-from lcatools.exchanges import comp_dir, ExchangeValue, AllocatedExchange
+from lcatools.exchanges import comp_dir, ExchangeValue
 from lcatools.characterizations import Characterization
 from lcatools.literate_float import LiterateFloat
 from lcatools.lcia_results import LciaResult, LciaResults, DetailedLciaResult, SummaryLciaResult
@@ -318,10 +318,7 @@ class FlowTermination(object):
                 try:
                     ex = next(x for x in process.exchange(self.term_flow)
                               if x.direction == self.direction)
-                    if isinstance(ex, AllocatedExchange):
-                        inbound_ev = ex[self.term_flow]
-                    else:
-                        inbound_ev = ex.value
+                    inbound_ev = ex[self.term_flow]
                 except StopIteration:
                     inbound_ev = 1.0
             elif self.term_node.entity_type == 'fragment':

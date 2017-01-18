@@ -321,15 +321,23 @@ class EcospoldV2Archive(LcArchive):
         self._print('Identified reference exchange\n %s' % rx)
         if exchanges:
             for exch in self._collect_exchanges(o):
+                if exch.is_ref:
+                    p.add_reference(exch.flow, exch.direction)
+                    if exch.termination is not None:
+                        '''
+                        # this should be an error, but you know ecoinvent...
+                        raise EcospoldV2Error('Terminated Reference flow encountered in %s\nFlow %s Term %s' %
+                                              (p.get_uuid(), exch.flow.get_uuid(), exch.termination))
+                        '''
+                        print('Ignoring termination in reference exchange, Process: %s\nFlow %s Term %s' %
+                                              (p.get_uuid(), exch.flow.get_uuid(), exch.termination))
+                        p.add_exchange(exch.flow, exch.direction, reference=rx, value=exch.value,
+                                       termination=None)
+                        continue
                 if exch.value != 0:
                     self._print('Exch %s [%s] (%g)' % (exch.flow, exch.direction, exch.value))
                     p.add_exchange(exch.flow, exch.direction, reference=rx, value=exch.value,
                                    termination=exch.termination)
-                if exch.is_ref:
-                    if exch.termination is not None:
-                        raise EcospoldV2Error('Terminated Reference flow encountered in %s\nFlow %s Term %s' %
-                                              (p.get_uuid(), exch.flow.get_uuid(), exch.termination))
-                    p.add_reference(exch.flow, exch.direction)
 
         return p
 

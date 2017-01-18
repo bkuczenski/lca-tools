@@ -4,7 +4,7 @@ import uuid
 import re
 from itertools import chain
 
-from lcatools.exchanges import Exchange, ExchangeValue, DuplicateExchangeError, AmbiguousReferenceError
+from lcatools.exchanges import Exchange, ExchangeValue, DuplicateExchangeError, AmbiguousReferenceError, NoAllocation
 from lcatools.characterizations import Characterization
 from lcatools.lcia_results import LciaResult, LciaResults
 
@@ -228,7 +228,7 @@ class LcEntity(object):
         return self._d.keys()
 
     def show(self):
-        print('%s Entity' % self.entity_type.title())
+        print('%s Entity (ref %s)' % (self.entity_type.title(), self.get_external_ref()))
         fix = ['Name', 'Comment']
         postfix = set(self._d.keys()).difference(fix)
         ml = len(max(self._d.keys(), key=len))
@@ -343,7 +343,7 @@ class LcProcess(LcEntity):
         for i, e in enumerate(self.reference_entity):
             if e.flow.get_uuid().startswith(term):
                 hits[i] = e
-            elif e.flow['Name'].find(term) >= 0:
+            elif e.flow['Name'].lower().find(term.lower()) >= 0:
                 hits[i] = e
         hits = list(filter(None, hits))
         if strict:
@@ -450,6 +450,11 @@ class LcProcess(LcEntity):
         self._set_reference(rx)
         return rx
 
+    def remove_reference(self, reference):
+        if reference in self.reference_entity:
+            self.remove_allocation(reference)
+            self.reference_entity.remove(reference)
+
     def references(self, flow=None):
         for rf in self.reference_entity:
             if flow is None:
@@ -466,7 +471,7 @@ class LcProcess(LcEntity):
             raise AmbiguousReferenceError('Multiple matching references found')
         return ref[0]
 
-    def allocate_by_quantity(self, quantity=None):
+    def allocate_by_quantity(self, quantity):
         """
         Apply allocation factors to all non-reference exchanges, determined by the quantity specified.  For each
         reference exchange, computes the magnitude of the quantity output from the unallocated process. Reference flows
@@ -492,6 +497,35 @@ class LcProcess(LcEntity):
             for x in self.exchanges():
                 if x not in self.reference_entity:
                     x[rf] = x.value * alloc_factor
+        self['AllocatedByQuantity'] = quantity
+
+    def is_allocated(self, reference):
+        """
+        Tests whether a process's exchanges contain allocation factors for a given reference.
+        :param reference:
+        :return: True - allocations exist; False - no allocations exist; raise MissingFactor - some allocations exist
+        """
+        missing_allocations = []
+        has_allocation = []
+        for x in self._exchanges.values():
+            if x in self.reference_entity:
+                continue
+            try:
+                v = x[reference]
+                has_allocation.append(v)
+            except NoAllocation:
+                missing_allocations.append(x)
+        if len(has_allocation) * len(missing_allocations) == 0:
+            if len(has_allocation) == 0:
+                return False
+            return True
+        for x in missing_allocations:
+            print('%s' % x)
+            raise MissingFactor('Missing allocation factors for above exchanges')
+
+    def remove_allocation(self, reference):
+        for x in self._exchanges.values():
+            x.remove_allocation(reference)
 
     def add_exchange(self, flow, dirn, reference=None, value=None, add_dups=False, **kwargs):
         """

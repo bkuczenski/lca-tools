@@ -8,7 +8,7 @@ import six
 import uuid
 
 from lcatools.interfaces import ArchiveInterface, to_uuid
-from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcUnit  # , LcEntity
+from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcUnit, NoReferenceFound  # , LcEntity
 from lcatools.exchanges import Exchange, comp_dir
 
 if six.PY2:
@@ -160,9 +160,12 @@ class LcArchive(ArchiveInterface):
             if exchs is not None:
                 for x in exchs:
                     v = None
+                    t = None
                     # is_ref = False
                     f = self[x['flow']]
                     d = x['direction']
+                    if 'termination' in x:
+                        t = x['termination']
                     if 'value' in x:
                         v = x['value']
                     if 'isReference' in x:
@@ -262,10 +265,43 @@ class LcArchive(ArchiveInterface):
     def lcia_methods(self, **kwargs):
         return [q for q in self._entities_by_type('quantity', **kwargs) if q.is_lcia_method()]
 
-    def terminate(self, exchange):
+    def terminate(self, exchange, refs_only=False):
+        """
+        Generate processes in the archive that terminate a given exchange i.e. - have the same flow and a complementary
+        direction.  If refs_only is specified, only report processes that terminate the exchange with a reference
+        exchange.
+        :param exchange:
+        :param refs_only: [False] limit to reference exchanges
+        :return:
+        """
         for p in self.processes():
-            if p.has_exchange(exchange.flow, comp_dir(exchange.direction)):
-                yield p
+            if refs_only:
+                try:
+                    for x in p.references(exchange.flow):
+                        if x.direction == comp_dir(exchange.direction):
+                            yield p
+                except StopIteration:
+                    continue
+            else:
+                if p.has_exchange(exchange.flow, comp_dir(exchange.direction)):
+                    yield p
+
+    def exchanges(self, flow, direction=None):
+        """
+        Generate exchanges that contain the given flow. Optionally limit to exchanges having the specified direction.
+        Default is to include both inputs and outputs.
+        :param flow:
+        :param direction: [None]
+        :return:
+        """
+        for p in self.processes():
+            for x in p.exchanges():
+                if x.flow == flow:
+                    if direction is None:
+                        yield x
+                    else:
+                        if x.direction == direction:
+                            yield x
 
     def fg_proxy(self, proxy):
         """

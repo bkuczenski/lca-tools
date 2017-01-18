@@ -134,6 +134,8 @@ class Exchange(object):
             'flow': self.flow.get_uuid(),
             'direction': self.direction,
         }
+        if self.termination is not None:
+            j['termination'] = self.termination
         if self in self.process.reference_entity:
             j['isReference'] = True
         return j
@@ -187,7 +189,7 @@ class ExchangeValue(Exchange):
 
     def __init__(self, *args, value=None, value_dict=None, **kwargs):
         super(ExchangeValue, self).__init__(*args, **kwargs)
-        assert isinstance(value, float), 'ExchangeValues must be floats (or subclasses)'
+        # assert isinstance(value, float), 'ExchangeValues must be floats (or subclasses)'
         self._value = value
         if value_dict is None:
             self._value_dict = dict()  # keys must live in self.process.reference_entity
@@ -249,6 +251,15 @@ class ExchangeValue(Exchange):
                     raise ValueError('Allocation for non-reference exchange must be zero')
         '''
         self._value_dict[key] = value
+
+    def remove_allocation(self, key):
+        """
+        Removes allocation if it exists; doesn't complain if it doesn't.
+        :param key: a reference exchange.
+        :return:
+        """
+        if key in self._value_dict:
+            self._value_dict.pop(key)
 
     def __str__(self):
         if self.process.entity_type == 'fragment':

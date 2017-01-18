@@ -356,10 +356,11 @@ class EcospoldV2Archive(LcArchive):
                         if exch.termination is not None:
                             raise EcospoldV2Error('Terminated Reference flow encountered in %s\nFlow %s Term %s' % (
                                 p.get_uuid(), exch.flow.get_uuid(), exch.termination))
-                        p.add_reference(exch.flow, exch.direction)
                     self._print('## Exch %s [%s] (%g)' % (exch.flow, exch.direction, exch.value))
                     p.add_exchange(exch.flow, exch.direction, reference=rx, value=exch.value,
                                    termination=exch.termination)
+                    if exch.is_ref:
+                        p.add_reference(exch.flow, exch.direction)
         return p
 
     '''

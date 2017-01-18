@@ -204,6 +204,12 @@ class ExchangeValue(Exchange):
         """
         return self._value
 
+    @property
+    def value_string(self):
+        if self._value is None:
+            return ' --- '
+        return '%.3g' % self._value
+
     @value.setter
     def value(self, exch_val):
         """
@@ -250,6 +256,13 @@ class ExchangeValue(Exchange):
                 if value != 0:
                     raise ValueError('Allocation for non-reference exchange must be zero')
         '''
+        if self in self.process.reference_entity:
+            if key.flow == self.flow and key.direction == self.direction:
+                if value != 1:
+                    raise ValueError('Reference Allocation for reference exchange should be 1.0')
+            else:
+                if value != 0:
+                    raise ValueError('Non-reference Allocation for reference exchange should be 0.')
         self._value_dict[key] = value
 
     def remove_allocation(self, key):
@@ -272,10 +285,10 @@ class ExchangeValue(Exchange):
                 ref = '{*}'
             else:
                 ref = '   '
-        return '%6.6s: %s [%.3g %s] %s' % (self.direction, ref, self.value, self.unit, self.tflow)
+        return '%6.6s: %s [%s %s] %s' % (self.direction, ref, self.value_string, self.unit, self.tflow)
 
     def f_view(self):
-        return '%6.6s: [%.3g %s] %s' % (self.direction, self.value, self.unit, self.process)
+        return '%6.6s: [%s %s] %s' % (self.direction, self.value_string, self.unit, self.process)
 
     def serialize(self, values=False):
         j = super(ExchangeValue, self).serialize()

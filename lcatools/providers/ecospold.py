@@ -197,11 +197,11 @@ class EcospoldV1Archive(NsUuidArchive):
                           Classifications=cls)
             p.set_external_ref(n)
 
-            for ref in rf:
-                p.add_reference(ref, 'Output')
             for flow, f_dir, val in flowlist:
                 self._print('Exch %s [%s] (%g)' % (flow, f_dir, val))
                 p.add_exchange(flow, f_dir, reference=None, value=val, add_dups=True)
+            for ref in rf:
+                p.add_reference(ref, 'Output')
 
             self.add(p)
 

@@ -270,6 +270,23 @@ class LcProcess(LcEntity):
         return cls(uuid.uuid4(), Name=name, **kwargs)
 
     def __init__(self, entity_uuid, **kwargs):
+        """
+        THe process's data is a set of exchanges.
+
+        A process's reference entity is a subset of these.  It is an error for these exchanges to have terminations
+        (if they're terminated, they're not reference flows- they're dependencies). These references can be used
+        as allocation keys for the exchanges.
+
+        The entities in reference_entity and _exchanges are not necessarily the same, although they should hash the
+        same.  Not sure whether this is a design flaw or not- but the important thing is that reference entities do
+        not need to have exchange values associated with them (although they could).
+
+        process.find_reference(key), references() [generator], and reference(flow) all return entries from _exchanges,
+        not entries from reference_entity.  The only public interface to the objects in reference_entity is
+        reference_entity itself.
+        :param entity_uuid:
+        :param kwargs:
+        """
         self._exchanges = dict()
         super(LcProcess, self).__init__('process', entity_uuid, **kwargs)
         if self.reference_entity is not None:
@@ -329,12 +346,16 @@ class LcProcess(LcEntity):
         """
         self._validate_reference({ref_entity})
 
-        self.reference_entity.add(ref_entity)
+        if ref_entity in self._exchanges:
+            self.reference_entity.add(ref_entity)
 
-    def find_reference_by_string(self, term, strict=False):
+    def _find_reference_by_string(self, term, strict=False):
         """
         Select a reference based on a search term--- check against flow.  test get_uuid().startswith, or ['Name'].find()
         If multiple results found- if strict, return None; if strict=False, return first
+
+        This method returns an item from the reference_entity, not an item from _exchanges - the extraction is done by
+        find_reference()
         :param term:
         :param strict: [False] raise error if ambiguous search term; otherwise return first
         :return: the exchange entity
@@ -409,7 +430,7 @@ class LcProcess(LcEntity):
                 yield i
             else:
                 if i in self.reference_entity:
-                    pass
+                    continue
                 else:
                     if scenario is not None:
                         yield ExchangeValue.from_scenario(i, scenario, reference)
@@ -429,8 +450,7 @@ class LcProcess(LcEntity):
                 raise NoReferenceFound('Must specify reference!')
             ref = next(x for x in self.reference_entity)
         elif isinstance(reference, str):
-            x = self.find_reference_by_string(reference, strict=strict)
-            ref = x
+            ref = self._find_reference_by_string(reference, strict=strict)
         elif isinstance(reference, LcFlow):
             try:
                 ref = next(rf for rf in self.reference_entity if rf.flow == reference)
@@ -438,12 +458,12 @@ class LcProcess(LcEntity):
                 raise NoReferenceFound('No reference exchange found with flow %s' % reference)
         elif isinstance(reference, Exchange):
             if reference in self.reference_entity:
-                return reference
+                ref = reference
             else:
                 raise NoReferenceFound('Exchange is not a reference exchange %s' % reference)
         else:
             raise NoReferenceFound('Unintelligible reference %s' % reference)
-        return ref
+        return self._exchanges[ref]
 
     def add_reference(self, flow, dirn):
         rx = Exchange(self, flow, dirn)
@@ -464,6 +484,8 @@ class LcProcess(LcEntity):
                     yield self._exchanges[rf]
 
     def reference(self, flow=None):
+        if isinstance(flow, Exchange):
+            flow = flow.flow
         ref = [rf for rf in self.references(flow)]
         if len(ref) == 0:
             raise NoReferenceFound
@@ -551,6 +573,10 @@ class LcProcess(LcEntity):
             if value is None or value == 0:
                 return None
             e = self._exchanges[_x]
+            if not isinstance(e, ExchangeValue):
+                e = ExchangeValue(self, flow, dirn, value=value, **kwargs)
+                self._exchanges[e] = e
+                assert self._exchanges[_x] is self._exchanges[e]  # silly me, always skeptical of hashing
             if reference is None:
                 if isinstance(value, dict):
                     e.update(value)

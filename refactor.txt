@@ -140,7 +140,7 @@ p = LC[process-key]
 
 p.exchanges() should yield exchanges
 
-p.exchanges(flow-ref)
+p.exchanges(flow-ref) should operate as (and replace) p.allocated_exchanges()
 
 p.exchange(flow-ref, direction[=None])  # all instances
   basically FirstOrDefault()

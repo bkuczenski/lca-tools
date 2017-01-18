@@ -378,10 +378,11 @@ class EcoinventSpreadsheet(NsUuidArchive):
                 ref_check = 'group'
 
             exch_flow = self[self._key_to_id(exch_name)]
-            if row[ref_check] == 'ReferenceProduct':
-                p.add_reference(exch_flow, 'Output')
 
             p.add_exchange(exch_flow, 'Output')
+
+            if row[ref_check] == 'ReferenceProduct':
+                p.add_reference(exch_flow, 'Output')
 
     def _load_all(self):
         _elementary = self._little_read('elementary exchanges')

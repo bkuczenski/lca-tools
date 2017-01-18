@@ -58,11 +58,13 @@ class EcospoldV2Archive(LcArchive):
     nsmap = 'http://www.EcoInvent.org/EcoSpold02'  # only valid for v1 ecospold files
     spold_version = tail.search(nsmap).groups()[0]
 
-    def __init__(self, ref, prefix=None, **kwargs):
+    def __init__(self, ref, prefix=None, linked=True, **kwargs):
         """
         Just instantiates the parent class.
         :param ref: just a reference
-        :param prefix: difference between the internal path (ref) and the ILCD base
+        :param prefix: relative path for datasets from the archive root
+        :param linked: [True] whether the archive includes unlinked or linked datasets. Reference exchanges
+        get detected differently in one case versus the other (see _create_process)
         :return:
         """
         super(EcospoldV2Archive, self).__init__(ref, **kwargs)
@@ -71,6 +73,7 @@ class EcospoldV2Archive(LcArchive):
             self._serialize_dict['prefix'] = self.internal_prefix
 
         self._archive = Archive(self.ref)
+        self._linked = linked
 
     def fg_proxy(self, proxy):
         for ds in self.list_datasets(proxy):
@@ -296,6 +299,7 @@ class EcospoldV2Archive(LcArchive):
         return scores
 
     def objectify(self, filename):
+        self._print('\nObjectifying %s' % filename)
         try:
             o = self._get_objectified_entity(filename)
         except XMLSyntaxError:
@@ -309,36 +313,53 @@ class EcospoldV2Archive(LcArchive):
 
     def _create_process(self, filename, exchanges=True):
         """
-        Extract dataset object from XML file
+        Extract dataset object from XML file.  Handles unlinked and linked archives differently:
+         * for unlinked (unallocated) archives, there is exactly one spold file for each process.  Reference flows are
+           determined contextually, based on outputGroup and By-product classification (see _collect_exchanges).
+
+         * for linked (allocated) archives, there is a distinct spold file for each allocation. References are
+           determined based on the filename, which specifies the reference exchange for which the allocation was
+           performed.
+
         :param filename:
         :return:
         """
         o = self.objectify(filename)
 
         p = self._create_process_entity(o)
-        rf = self._grab_reference_flow(o, spold_reference_flow(filename))
-        rx = p.add_reference(rf, 'Output')
-        self._print('Identified reference exchange\n %s' % rx)
+        if self._linked:
+            rf = self._grab_reference_flow(o, spold_reference_flow(filename))
+            p.add_exchange(rf, 'Output')  # this should get overwritten with an ExchangeValue later
+            rx = p.add_reference(rf, 'Output')
+            self._print('# Identified reference exchange\n %s' % rx)
+        else:
+            rx = None
         if exchanges:
             for exch in self._collect_exchanges(o):
-                if exch.is_ref:
-                    p.add_reference(exch.flow, exch.direction)
-                    if exch.termination is not None:
-                        '''
-                        # this should be an error, but you know ecoinvent...
-                        raise EcospoldV2Error('Terminated Reference flow encountered in %s\nFlow %s Term %s' %
-                                              (p.get_uuid(), exch.flow.get_uuid(), exch.termination))
-                        '''
-                        print('Ignoring termination in reference exchange, Process: %s\nFlow %s Term %s' %
-                                              (p.get_uuid(), exch.flow.get_uuid(), exch.termination))
+                """
+                If the dataset is linked, all we do is load non-zero exchanges, ideally all with terminations
+                If the dataset is unlinked, we first test if the exchange is marked with a conflicting termination
+                  (a reference flow with a termination is regarded as an error) and if so, we raise.
+                   if not, we proceed normally.  EXCEPT- we don't want to wind up with a reference exchange
+                   that is not present in the exchange list because it's zero-valued.  There shouldn't be any zero-
+                   valued reference exchanges in unlinked datasets, so we will err on the side of adding zero-valued
+                   exchanges.  The unlinked data should include as much information as possible.
+                """
+                if self._linked:
+                    if exch.value != 0:
+                        self._print('## Exch %s [%s] (%g)' % (exch.flow, exch.direction, exch.value))
                         p.add_exchange(exch.flow, exch.direction, reference=rx, value=exch.value,
-                                       termination=None)
-                        continue
-                if exch.value != 0:
-                    self._print('Exch %s [%s] (%g)' % (exch.flow, exch.direction, exch.value))
+                                       termination=exch.termination)
+                else:
+                    # use exch.is_ref to identify references
+                    if exch.is_ref:
+                        if exch.termination is not None:
+                            raise EcospoldV2Error('Terminated Reference flow encountered in %s\nFlow %s Term %s' % (
+                                p.get_uuid(), exch.flow.get_uuid(), exch.termination))
+                        p.add_reference(exch.flow, exch.direction)
+                    self._print('## Exch %s [%s] (%g)' % (exch.flow, exch.direction, exch.value))
                     p.add_exchange(exch.flow, exch.direction, reference=rx, value=exch.value,
                                    termination=exch.termination)
-
         return p
 
     '''

@@ -168,11 +168,11 @@ class LcArchive(ArchiveInterface):
                         t = x['termination']
                     if 'value' in x:
                         v = x['value']
-                    if 'isReference' in x:
-                        # is_ref = x['isReference']
-                        entity.add_reference(f, d)
                     # TODO: handle allocations -- I think this will "just work" if v is a dict
                     entity.add_exchange(f, d, value=v)
+                    if 'isReference' in x:
+                        if x['isReference'] is True:
+                            entity.add_reference(f, d)
                 rx = None
             if rx is not None and rx != 'None':
                 try:

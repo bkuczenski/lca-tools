@@ -440,10 +440,10 @@ class IlcdArchive(LcArchive):
         p = self._create_process_entity(o, ns)
 
         for flow, f_dir, val in exch_list:
-            if rf == flow.get_uuid() and rf_dir == f_dir:
-                p.add_reference(flow, f_dir)
             p.add_exchange(flow, f_dir, reference=None, value=val,
                            add_dups=True)  # add_dups: poor quality control on ELCD
+            if rf == flow.get_uuid() and rf_dir == f_dir:
+                p.add_reference(flow, f_dir)
 
         return p
 

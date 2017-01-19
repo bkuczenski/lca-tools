@@ -555,6 +555,9 @@ class LcProcess(LcEntity):
                 has_allocation.append(v)
             except NoAllocation:
                 missing_allocations.append(x)
+            if not strict:
+                if len(has_allocation) > 0:
+                    return True  # for nonstrict, bail out as soon as any allocation is detected
         if len(has_allocation) * len(missing_allocations) == 0:
             if len(has_allocation) == 0:
                 return False

@@ -240,16 +240,20 @@ class ExchangeValue(Exchange):
         """
         if item not in self.process.reference_entity:
             raise MissingReference('Allocation key is not a reference exchange')
-        if item.flow == self.flow and item.direction == self.direction:
-            return self.value
-        elif self in self.process.reference_entity:  # but i
+        if self in self.process.reference_entity:  # if self is a reference entity, the allocation is either .value or 0
+            if item.flow == self.flow and item.direction == self.direction:
+                return self.value
             return 0.0
-        elif item in self._value_dict:
-            return self._value_dict[item]
         elif len(self.process.reference_entity) == 1:
             # no allocation necessary
             return self.value
-        raise NoAllocation('No allocation found for key %s in process %s' % (item, self.process))
+        else:
+            try:
+                return self._value_dict[item]
+            except KeyError:
+                return 0.0
+                # no need to raise on zero allocation
+        # raise NoAllocation('No allocation found for key %s in process %s' % (item, self.process))
 
     def __setitem__(self, key, value):
         if key not in self.process.reference_entity:

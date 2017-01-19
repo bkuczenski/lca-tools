@@ -348,6 +348,14 @@ class EcospoldV2Archive(LcArchive):
                 if self._linked:
                     if exch.value != 0:
                         self._print('## Exch %s [%s] (%g)' % (exch.flow, exch.direction, exch.value))
+                        # still need to sanitize termination on reference flows, lest we get a double entry
+                        if exch.is_ref:
+                            if exch.termination is not None:
+                                print('Squashing bad termination in linked reference exchange, %s\nFlow %s Term %s' % (
+                                    p.get_uuid(), exch.flow.get_uuid(), exch.termination))
+                                p.add_exchange(exch.flow, exch.direction, reference=rx, value=exch.value,
+                                               termination=None)
+                                continue
                         p.add_exchange(exch.flow, exch.direction, reference=rx, value=exch.value,
                                        termination=exch.termination)
                 else:

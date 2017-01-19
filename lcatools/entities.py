@@ -56,9 +56,9 @@ class LcEntity(object):
     def __init__(self, entity_type, entity_uuid, **kwargs):
 
         if isinstance(entity_uuid, uuid.UUID):
-            self._uuid = entity_uuid
+            self._uuid = str(entity_uuid)
         else:
-            self._uuid = uuid.UUID(entity_uuid)
+            self._uuid = str(uuid.UUID(entity_uuid))
         self._d = dict()
 
         self.entity_type = entity_type
@@ -100,7 +100,9 @@ class LcEntity(object):
         self._external_ref = ref
 
     def get_external_ref(self):
-        return '%s' % self._uuid if self._external_ref is None else self._external_ref
+        if self._external_ref is None:
+            return self._uuid
+        return self._external_ref
 
     def get_signature(self):
         k = dict()
@@ -109,7 +111,15 @@ class LcEntity(object):
         return k
 
     def get_uuid(self):
-        return str(self._uuid)
+        """
+        deprecated.  switch to .uuid property.
+        :return:
+        """
+        return self._uuid
+
+    @property
+    def uuid(self):
+        return self._uuid
 
     def get_link(self):
         return '%s%s' % (self.origin, self.get_external_ref())
@@ -380,7 +390,7 @@ class LcProcess(LcEntity):
         if reference is None:
             print('%s' % self)
         else:
-            print('Reference: %s' % ExchangeValue.from_allocated(reference, reference))  # get in unit terms
+            print('Reference: %s' % reference)
         for i in it:
             print('%2d %s' % (len(out), i))
             out.append(i)
@@ -409,34 +419,36 @@ class LcProcess(LcEntity):
             return False
         return True
 
-    def exchanges(self, reference=None, scenario=None, strict=False):
+    def exchanges(self, reference=None, strict=False):
         """
         generate a process's exchanges.  If no reference is supplied, generate unallocated exchanges, including all
-        reference exchanges.  If a reference is supplied, generate ExchangeValues as allocated to that reference flow,
-        and exclude reference exchanges.  Reference must be a flow or exchange found in the process's reference entity.
+        reference exchanges.  If a reference is supplied AND the process is allocated with respect to that reference,
+        generate ExchangeValues as allocated to that reference flow, and exclude reference exchanges.  If a reference
+        is supplied but the process is NOT allocated to that reference, generate unallocated ExchangeValues (excluding
+        the reference itself).  Reference must be a flow or exchange found in the process's reference entity.
 
-        Replaces allocated_exchange(reference), which is deprecated.
-        this is going to be part of a major upcoming refactor, since ExchangeValue and AllocatedExchange are going to
-        be merged.
         :param reference:
-        :param scenario: not fully implemented
         :param strict: [False] whether to use strict flow name matching [default- first regex match]
         :return:
         """
         if reference is not None:
-            reference = self.find_reference(reference, strict=strict)
+            try:
+                reference = self.find_reference(reference, strict=strict)
+            except NoReferenceFound:
+                reference = None
+        chk_alloc = self.is_allocated(reference)
         for i in sorted(self._exchanges.values(), key=lambda x: x.direction):
             if reference is None:
                 yield i
+            elif not chk_alloc:
+                if i != reference:
+                    yield i
             else:
                 if i in self.reference_entity:
                     continue
                 else:
-                    if scenario is not None:
-                        yield ExchangeValue.from_scenario(i, scenario, reference)
-                    else:
-                        # this pushes the problem up to ExchangeValue
-                        yield ExchangeValue.from_allocated(i, reference)
+                    # this pushes the problem up to ExchangeValue
+                    yield ExchangeValue.from_allocated(i, reference)
 
     def find_reference(self, reference, strict=False):
         """
@@ -500,9 +512,7 @@ class LcProcess(LcEntity):
         lacking characterization in that quantity will receive zero allocation.
 
         Each magnitude is the allocation numerator for that reference, and the sum of the magnitudes is the allocation
-        denominator. For each reference the allocated exchanges are normalized by the magnitude of the reference
-        exchange's reference quantity.  This means that the normalizing allocation factor is actually the reference
-        exchange's characterization divided by the total.
+        denominator.
         :param quantity: an LcQuantity
         :return:
         """
@@ -515,18 +525,26 @@ class LcProcess(LcEntity):
         total = sum([v for v in mags.values()])
 
         for rf in self.reference_entity:
-            alloc_factor = rf.flow.cf(quantity) / total  # qty magnitude divided by total, divided by exch magnitude
+            alloc_factor = mags[rf.flow] / total  # sum of all allocated exchanges should equal unallocated value
             for x in self.exchanges():
                 if x not in self.reference_entity:
                     x[rf] = x.value * alloc_factor
         self['AllocatedByQuantity'] = quantity
 
-    def is_allocated(self, reference):
+    def is_allocated(self, reference, strict=False):
         """
         Tests whether a process's exchanges contain allocation factors for a given reference.
         :param reference:
+        :param strict: [False] if True, raise an exception if some (but not all) exchanges are missing allocations.
         :return: True - allocations exist; False - no allocations exist; raise MissingFactor - some allocations exist
         """
+        if reference is None:
+            return False
+        try:
+            reference = self.find_reference(reference)
+        except NoReferenceFound:
+            print('Not a reference exchange.')
+            return False
         missing_allocations = []
         has_allocation = []
         for x in self._exchanges.values():
@@ -541,9 +559,11 @@ class LcProcess(LcEntity):
             if len(has_allocation) == 0:
                 return False
             return True
-        for x in missing_allocations:
-            print('%s' % x)
-            raise MissingFactor('Missing allocation factors for above exchanges')
+        if strict:
+            for x in missing_allocations:
+                print('in process %s [%s]\nReference: %s' % (self['Name'], self.uuid, reference.flow.uuid))
+                print('%s' % x)
+                raise MissingFactor('Missing allocation factors for above exchanges')
 
     def remove_allocation(self, reference):
         for x in self._exchanges.values():
@@ -574,7 +594,7 @@ class LcProcess(LcEntity):
                 return None
             e = self._exchanges[_x]
             if not isinstance(e, ExchangeValue):
-                e = ExchangeValue(self, flow, dirn, value=value, **kwargs)
+                e = ExchangeValue(self, flow, dirn, **kwargs)
                 self._exchanges[e] = e
                 assert self._exchanges[_x] is self._exchanges[e]  # silly me, always skeptical of hashing
             if reference is None:
@@ -635,10 +655,10 @@ class LcProcess(LcEntity):
             results[q.get_uuid()] = self.lcia(q, **kwargs)
         return results
 
-    def lcia(self, quantity, ref_flow=None, scenario=None, flowdb=None):
-        result = LciaResult(quantity, scenario)
+    def lcia(self, quantity, ref_flow=None, flowdb=None):
+        result = LciaResult(quantity)
         result.add_component(self.get_uuid(), entity=self)
-        for ex in self.exchanges(ref_flow, scenario=scenario):
+        for ex in self.exchanges(ref_flow, ):
             if not ex.flow.has_characterization(quantity):
                 if flowdb is not None:
                     if quantity in flowdb.known_quantities():
@@ -833,7 +853,7 @@ class LcFlow(LcEntity):
                                             key=lambda x: x['quantity'])
         else:
             j['characterizations'] = [x.serialize(**kwargs) for x in self._characterizations.values()
-                                      if x.quantity == self.reference_entity]
+                                      if x.quantity is self.reference_entity]
 
         return j
 
@@ -899,7 +919,7 @@ class LcQuantity(LcEntity):
         try:
             outbound = uc_table[to]
         except KeyError:
-            if to == self.reference_entity:
+            if to is self.reference_entity:
                 outbound = 1.0
             else:
                 print('Outbound unit %s not found in unit conversion table.' % to)

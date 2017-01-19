@@ -31,6 +31,10 @@ class AmbiguousReferenceError(Exception):
     pass
 
 
+class MissingReference(Exception):
+    pass
+
+
 class Exchange(object):
     """
     An exchange is an affiliation of a process, a flow, and a direction. An exchange does
@@ -184,8 +188,12 @@ class ExchangeValue(Exchange):
         return cls(allocated.process, allocated.flow, allocated.direction, value=value,
                    termination=allocated.termination)
 
-    def add_to_value(self, value):
-        self._value += value
+    def add_to_value(self, value, reference=None):
+        if reference is None:
+            self._value += value
+        else:
+            if reference in self._value_dict:
+                self._value_dict[reference] += value
 
     def __init__(self, *args, value=None, value_dict=None, **kwargs):
         super(ExchangeValue, self).__init__(*args, **kwargs)
@@ -218,27 +226,29 @@ class ExchangeValue(Exchange):
         :return:
         """
         if self._value is not None:
-            raise DuplicateExchangeError('Unallocated exchange value already set')
+            raise DuplicateExchangeError('Unallocated exchange value already set to %g (new: %g)' % (self._value,
+                                                                                                     exch_val))
         self._value = exch_val
 
     def __getitem__(self, item):
         """
-        Allocated Exchange values for reference flows are always 1 for the self-same flow and 0 otherwise.
-        Allocated exchange values for non-reference flows are as-reported in a dict.
+        Allocated exchange values should add up to unallocated value.  When using the exchange values, don't forget to
+        normalize by the chosen reference flow's input value (i.e. utilize an inbound exchange when computing
+        node weight or when constructing A + B matrices)
         :param item:
         :return:
         """
         if item not in self.process.reference_entity:
-            raise AmbiguousReferenceError('Allocation key is not a reference exchange')
+            raise MissingReference('Allocation key is not a reference exchange')
         if item.flow == self.flow and item.direction == self.direction:
-            return 1.0
+            return self.value
         elif self in self.process.reference_entity:  # but i
             return 0.0
         elif item in self._value_dict:
             return self._value_dict[item]
         elif len(self.process.reference_entity) == 1:
-            # no allocation necessary -- only normalization
-            return self.value / self.process.reference().value
+            # no allocation necessary
+            return self.value
         raise NoAllocation('No allocation found for key %s in process %s' % (item, self.process))
 
     def __setitem__(self, key, value):
@@ -258,8 +268,9 @@ class ExchangeValue(Exchange):
         '''
         if self in self.process.reference_entity:
             if key.flow == self.flow and key.direction == self.direction:
-                if value != 1:
-                    raise ValueError('Reference Allocation for reference exchange should be 1.0')
+                self.value = value
+                # if value != 1:
+                #    raise ValueError('Reference Allocation for reference exchange should be 1.0')
             else:
                 if value != 0:
                     raise ValueError('Non-reference Allocation for reference exchange should be 0.')
@@ -290,12 +301,19 @@ class ExchangeValue(Exchange):
     def f_view(self):
         return '%6.6s: [%s %s] %s' % (self.direction, self.value_string, self.unit, self.process)
 
+    def _serialize_value_dict(self):
+        j = dict()
+        for k, v in self._value_dict.items():
+            j['%s:%s' % (k.direction, k.flow.uuid)] = v
+        return j
+
     def serialize(self, values=False):
         j = super(ExchangeValue, self).serialize()
         if values:
-            j['value'] = float(self.value)
-            if len(self._value_dict) > 0:
-                j['valueDict'] = self._value_dict
+            if self.value is not None:
+                j['value'] = float(self.value)
+            if self not in self.process.reference_entity and len(self._value_dict) > 0:
+                j['valueDict'] = self._serialize_value_dict()
         return j
 
 

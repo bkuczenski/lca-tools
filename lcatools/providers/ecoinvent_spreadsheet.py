@@ -45,7 +45,7 @@ class EcoinventSpreadsheet(NsUuidArchive):
         self.lcia = None
         if self._data_dir is not None:
             if model == 'undefined':
-                self.fg = EcospoldV2Archive(self._fg_filename, prefix='datasets - public')
+                self.fg = EcospoldV2Archive(self._fg_filename, prefix='datasets - public', linked=False)
             else:
                 self.fg = EcospoldV2Archive(self._fg_filename, prefix='datasets')
                 if os.path.exists(self._bg_filename):
@@ -153,10 +153,7 @@ class EcoinventSpreadsheet(NsUuidArchive):
             p = self.fg_proxy(process_id)
             print('FG: %s' % p)
             rf = self._find_rf(p, ref_flow=ref_flow)
-            if rf is None:
-                return p.exchanges()
-            else:
-                return p.exchanges(rf)
+            return p.exchanges(rf)
 
     '''
     def lci_lookup(self, process_id):

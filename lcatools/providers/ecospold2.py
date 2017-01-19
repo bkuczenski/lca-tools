@@ -351,7 +351,7 @@ class EcospoldV2Archive(LcArchive):
                         p.add_exchange(exch.flow, exch.direction, reference=rx, value=exch.value,
                                        termination=exch.termination)
                 else:
-                    # use exch.is_ref to identify references
+                    # use exch.is_ref to identify references; store unallocated values (rx already None)
                     if exch.is_ref:
                         if exch.termination is not None:
                             raise EcospoldV2Error('Terminated Reference flow encountered in %s\nFlow %s Term %s' % (

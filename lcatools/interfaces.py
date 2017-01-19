@@ -174,7 +174,7 @@ class ArchiveInterface(object):
             [self.check_counter(entity_type=k) for k in ('process', 'flow', 'quantity')]
         else:
             print('%d new %s entities added (%d total)' % (self._counter[entity_type], entity_type,
-                                                           len(self._entities_by_type(entity_type))))
+                                                           len([e for e in self._entities_by_type(entity_type)])))
             self._counter[entity_type] = 0
 
     @staticmethod
@@ -310,9 +310,10 @@ class ArchiveInterface(object):
         print('Loading %s' % self.ref)
         self._load_all(**kwargs)
 
-    def _entities_by_type(self, entity_type, **kwargs):
-        result_set = [self._get_entity(k) for k, v in self._entities.items() if v['EntityType'] == entity_type]
-        return self._narrow_search(result_set, **kwargs)
+    def _entities_by_type(self, entity_type):
+        for v in self._entities.values():
+            if v.entity_type == entity_type:
+                yield v
 
     '''
     @staticmethod

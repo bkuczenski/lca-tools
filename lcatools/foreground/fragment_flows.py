@@ -7,7 +7,7 @@ import uuid
 from collections import namedtuple, defaultdict
 
 from lcatools.entities import LcEntity, LcFlow
-from lcatools.exchanges import comp_dir, ExchangeValue
+from lcatools.exchanges import comp_dir, ExchangeValue, MissingReference
 from lcatools.characterizations import Characterization
 from lcatools.literate_float import LiterateFloat
 from lcatools.lcia_results import LciaResult, LciaResults, DetailedLciaResult, SummaryLciaResult
@@ -316,9 +316,11 @@ class FlowTermination(object):
             elif self.term_node.entity_type == 'process':
                 process = self._process_ref.fg()
                 try:
-                    ex = next(x for x in process.exchange(self.term_flow)
-                              if x.direction == self.direction)
-                    inbound_ev = ex[self.term_flow]
+                    ex = next(x for x in process.exchange(self.term_flow, direction=self.direction))
+                    try:
+                        inbound_ev = ex[self.term_flow]
+                    except MissingReference:
+                        inbound_ev = ex.value
                 except StopIteration:
                     inbound_ev = 1.0
             elif self.term_node.entity_type == 'fragment':
@@ -367,7 +369,7 @@ class FlowTermination(object):
             if flow is None:
                 flow = self._parent.flow
             try:
-                next(self._process_ref.fg().exchange(flow))
+                next(self._process_ref.fg().exchange(flow, direction=self.direction))
             except StopIteration:
                 r_e = self._process_ref.fg().reference_entity
                 if len(r_e) == 1:

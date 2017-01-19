@@ -164,15 +164,21 @@ class LcArchive(ArchiveInterface):
                     # is_ref = False
                     f = self[x['flow']]
                     d = x['direction']
-                    if 'termination' in x:
-                        t = x['termination']
                     if 'value' in x:
                         v = x['value']
                     # TODO: handle allocations -- I think this will "just work" if v is a dict
-                    entity.add_exchange(f, d, value=v)
+                    if 'termination' in x:
+                        t = x['termination']
+                    ex = entity.add_exchange(f, d, value=v, termination=t)
                     if 'isReference' in x:
                         if x['isReference'] is True:
                             entity.add_reference(f, d)
+                    if 'valueDict' in x:
+                        for k, v in x['valueDict']:
+                            drr, fuu = k.split(':')
+                            rx = Exchange(entity, self[fuu], drr)
+                            ex[rx] = v
+
                 rx = None
             if rx is not None and rx != 'None':
                 try:
@@ -244,26 +250,17 @@ class LcArchive(ArchiveInterface):
         entity.set_external_ref(e['entityId'])
         self.add(entity)
 
-    def processes(self, dataframe=False, **kwargs):
-        p = self._entities_by_type('process', **kwargs)
-        if dataframe:
-            pass  # return self._to_pandas(p, LcProcess)
-        return p
+    def processes(self):
+        return [p for p in self._entities_by_type('process')]
 
-    def flows(self, dataframe=False, **kwargs):
-        f = self._entities_by_type('flow', **kwargs)
-        if dataframe:
-            pass  # return self._to_pandas(f, LcFlow)
-        return f
+    def flows(self):
+        return [f for f in self._entities_by_type('flow')]
 
-    def quantities(self, dataframe=False, **kwargs):
-        q = self._entities_by_type('quantity', **kwargs)
-        if dataframe:
-            pass  # return self._to_pandas(q, LcQuantity)
-        return q
+    def quantities(self):
+        return [q for q in self._entities_by_type('quantity')]
 
-    def lcia_methods(self, **kwargs):
-        return [q for q in self._entities_by_type('quantity', **kwargs) if q.is_lcia_method()]
+    def lcia_methods(self):
+        return [q for q in self._entities_by_type('quantity') if q.is_lcia_method()]
 
     def terminate(self, exchange, refs_only=False):
         """

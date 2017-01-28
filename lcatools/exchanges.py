@@ -244,9 +244,9 @@ class ExchangeValue(Exchange):
             if item.flow == self.flow and item.direction == self.direction:
                 return self.value
             return 0.0
-        elif len(self.process.reference_entity) == 1:
-            # no allocation necessary
-            return self.value
+        # elif len(self.process.reference_entity) == 1:
+        #    # no allocation necessary
+        #    return self.value
         else:
             try:
                 return self._value_dict[item]

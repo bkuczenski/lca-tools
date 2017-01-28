@@ -550,11 +550,11 @@ class LcProcess(LcEntity):
         for x in self._exchanges.values():
             if x in self.reference_entity:
                 continue
-            try:
-                v = x[reference]
-                has_allocation.append(v)
-            except NoAllocation:
+            v = x[reference]
+            if v == 0:
                 missing_allocations.append(x)
+            else:
+                has_allocation.append(v)
             if not strict:
                 if len(has_allocation) > 0:
                     return True  # for nonstrict, bail out as soon as any allocation is detected

@@ -850,10 +850,10 @@ class LcFragment(LcEntity):
         if self.reference_entity is None:
             return True
         elif self.balance_flow:
-            print('value set by balance.')
+            self._print('observability: value set by balance.')
             return False
         elif self.reference_entity.termination(scenario).is_subfrag:
-            print('value set during traversal')
+            self._print('observability: value set during traversal')
             return False
         else:
             return True
@@ -1002,10 +1002,12 @@ class LcFragment(LcEntity):
         :param value:
         :return:
         """
-        if isinstance(scenario, tuple):
-            raise ScenarioConflict('Set EV must specify single scenario')
-        if scenario.find('____') >= 0:
-            raise ValueError('"____" used as a delimiter; disallowed in scenario name')
+        if self._check_observability(scenario=scenario):
+            # error-check for true observations
+            if isinstance(scenario, tuple):
+                raise ScenarioConflict('Set EV must specify single scenario')
+            if scenario.find('____') >= 0:
+                raise ValueError('"____" used as a delimiter; disallowed in scenario name')
         if scenario == 0 or scenario == '0':
             self.cached_ev = value
         elif scenario == 1 or scenario == '1':

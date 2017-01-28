@@ -142,6 +142,8 @@ def _stackbar_subfig_height(results):
             height += 0.9
             if _has_pos_neg(r):
                 height += 0.7
+        else:
+            height += 0.6
     return height
 
 

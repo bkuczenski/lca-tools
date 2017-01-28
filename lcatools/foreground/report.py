@@ -201,23 +201,28 @@ class TeXAuthor(object):
         :return:
 xs        """
         coords = [('%.5s' % fragment.get_uuid(), depth, level)]
+        term = fragment.termination(scenario)
 
         children = [c for c in fragment.child_flows]
-        if len(children) > 0:
+        if len(children) > 0 and not term.is_null:
             # setup coords for first child
             depth += 1.5
-            if fragment.term.is_frag and not fragment.term.is_bg and not fragment.term.is_fg:
+            if term.is_subfrag:
                 depth += .5
             level += 1
-            for c in sorted(children, key=lambda x: (x['StageName'], not x.term.is_null, x.term.is_bg)):
+            for c in sorted(children, key=lambda x: (x['StageName'],
+                                                     x.direction,
+                                                     not x.termination(scenario).is_null,
+                                                     x.termination(scenario).is_bg)):
+                c_term = c.termination(scenario)
                 if c.exchange_value(scenario, observed=True) == 0:
                     continue
-                if c.term.is_frag and not c.term.is_bg and not fragment.term.is_fg:
+                if c_term.is_subfrag:
                     level += .25
-                coords.extend(self.frag_layout_recurse(c, level=level, depth=depth))
+                coords.extend(self.frag_layout_recurse(c, level=level, depth=depth, scenario=scenario))
                 level = coords[-1][2]
                 # setup coords for next child -- background nodes are smaller
-                if c.term.is_bg or c.term.is_fg or c.term.is_null:
+                if c_term.is_bg or c_term.is_fg or c_term.is_null:
                     level += 0.7
                 else:
                     level += 1
@@ -239,36 +244,37 @@ xs        """
         """
         subfrag_scale = 1.0
         subfrags = []
+        term = fragment.termination(scenario)
 
         if not first:
             node_weight *= fragment.exchange_value(scenario, observed=True)
         if node_weight == 0:
             return '\n', '\n', subfrags
-        if fragment.term.is_frag:
-            if fragment.term.is_fg:
+        if term.is_frag:
+            if term.is_fg:
                 # foreground
                 boxes = fg_box(fragment.get_uuid())
                 frag_name = fragment['Name']
-            elif fragment.term.is_bg:
-                if fragment.term.term_node.term.is_null:
+            elif term.is_bg:
+                if term.term_node.term.is_null:
                     # cutoff
                     boxes = cutoff_box(fragment.get_uuid())
                 else:
                     # background
                     boxes = bg_box(fragment.get_uuid())
-                frag_name = fragment.term.term_node['Name']
+                frag_name = term.term_node['Name']
             else:
                 # subfragment
-                top_frag = fragment.term.term_node.top()
+                top_frag = term.term_node.top()
                 subfrags.append(top_frag)
                 boxes = subfrag_box(fragment.get_uuid(), top_frag.get_uuid())
                 try:
-                    subfrag_scale = 1.0 / fragment.term.term_node.exchange_value(scenario, observed=True)
+                    subfrag_scale = 1.0 / term.term_node.exchange_value(scenario, observed=True)
                 except ZeroDivisionError:
                     # zero exchange value usually means unobserved-- for reference flow that is not usually important
                     subfrag_scale = 0.0
                 print('subfrag scaling: %g' % subfrag_scale)
-                frag_name = fragment.term.term_node['Name']
+                frag_name = term.term_node['Name']
                 '''
                 exchs = [x for x in fragment.get_fragment_inventory(scenario=scenario, scale=node_weight)]
                 if len(exchs) > 0:
@@ -277,15 +283,15 @@ xs        """
                         frag_name += '%6s: %6.3g %s\\\\' % (x.direction, x.value, x.flow['Name'])
                     frag_name += '}'
                 '''
-        elif fragment.term.is_null:
+        elif term.is_null:
             # I/O
             boxes = io_box(fragment.get_uuid())
             frag_name = '%s: %s' % (fragment.direction, fragment.flow['Name'])
         else:
             # process
             boxes = process_box(fragment.get_uuid())
-            frag_name = fragment.term.term_node['Name']
-            subfrag_scale = fragment.term.node_weight_multiplier
+            frag_name = term.term_node['Name']
+            subfrag_scale = term.node_weight_multiplier
         mag_mod = ''
         if node_weight < 0:
             frag_name = '(AVOIDED) ' + frag_name
@@ -310,7 +316,7 @@ xs        """
                                                                                               fragment.flow.unit())
 
         children = [c for c in fragment.child_flows]
-        if len(children) > 0:
+        if len(children) > 0 and not term.is_null:
             parbox_width -= 2
 
             for c in children:

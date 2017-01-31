@@ -10,6 +10,10 @@ from lcatools.exchanges import comp_dir
 from lcatools.charts import scenario_compare_figure, save_plot
 
 
+class TraversalError(Exception):
+    pass
+
+
 default_tex_folder = 'tex-files'
 
 
@@ -268,11 +272,17 @@ xs        """
                 top_frag = term.term_node.top()
                 subfrags.append(top_frag)
                 boxes = subfrag_box(fragment.get_uuid(), top_frag.get_uuid())
-                try:
-                    subfrag_scale = 1.0 / term.term_node.exchange_value(scenario, observed=True)
-                except ZeroDivisionError:
+                if term.term_node is top_frag:
+                    subfrag_scale = 1.0 / top_frag.exchange_value(scenario, observed=True)
+                else:
+                    ffs = [f for f in top_frag.io_flows(scenario, observed=True) if f.fragment is term.term_node]
+                    if len(ffs) != 1:
+                        raise TraversalError('top:%s\nterm:%s\n%d matching flow found' % (top_frag, term.term_node,
+                                                                                          len(ffs)))
+                    subfrag_scale = 1.0 / ffs[0].node_weight
+                # except ZeroDivisionError:
                     # zero exchange value usually means unobserved-- for reference flow that is not usually important
-                    subfrag_scale = 0.0
+                    #subfrag_scale = 0.0
                 print('subfrag scaling: %g' % subfrag_scale)
                 frag_name = term.term_node['Name']
                 '''

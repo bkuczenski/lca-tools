@@ -1262,10 +1262,15 @@ class LcFragment(LcEntity):
                     val *= (ev / in_ex)
             if v == 0:
                 continue
+            elif val < 1.0e-16:
+                # controversial?
+                self._print('SQUASHING %s: %g' % (ent[k], v), level=3)
+                continue
             elif v < 0:
                 dirn = 'Output'
             else:
                 dirn = 'Input'
+
             frag_exchs.append(ExchangeValue(self, ent[k], dirn, value=val))
         return sorted(frag_exchs, key=lambda x: x.direction)
 

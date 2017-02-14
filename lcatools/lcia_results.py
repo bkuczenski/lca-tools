@@ -143,6 +143,8 @@ class AggregateLciaScore(object):
 
     @property
     def cumulative_result(self):
+        if len(self.LciaDetails) == 0:
+            return 0.0
         return sum([i.result for i in self.LciaDetails])
 
     def _augment_entity_contents(self, other):
@@ -288,6 +290,7 @@ class LciaResult(object):
                 yield v
             elif str(k).startswith(str(item)):
                 yield v
+        yield AggregateLciaScore(None)
 
     def __getitem__(self, item):
         return next(self._match_key(item))

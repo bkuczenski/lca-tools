@@ -1,9 +1,11 @@
 from __future__ import division
 import colorsys
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from textwrap import wrap
 
+mpl.rcParams['patch.force_edgecolor'] = True
 
 prefab_colors = ((0.1, 0.6, 0.7), (0.9, 0.3, 0.4), (0.3, 0.9, 0.6), (0.1, 0.1, 0.8), (0.4, 0.9, 0.3), (0.3, 0.4, 0.9))
 net_color = (0.6, 0.6, 0.6)
@@ -43,11 +45,14 @@ def _label_bar(patch, value=None, label=None, valueformat='%4.3g', labelformat='
         patch.axes.text(x, y + (0.52 * patch.get_height()), labelformat % label, ha='center', va='bottom')
 
 
-def _label_segment(patch, data, label, threshold):
+def _label_segment(patch, data, label, threshold, sparse_flag):
     if abs(data) > threshold:
         _label_bar(patch, value=data, label=label)
-    else:
+    if sparse_flag or abs(data) > (threshold / 4):
         _label_bar(patch, label=label)
+    if abs(data) < (threshold / 4):
+        return False
+    return True
 
 
 def _label_vbar(patch, value, valueformat='%6.3g', sep=0):
@@ -439,18 +444,19 @@ def _one_bar(ax, pos_y, neg_y, data, hue, units, threshold):
 
     # print('NY: %f  PY: %f  TY: %f  ha: %s' % (neg_y, pos_y, total_y, total_ha))
 
+    sparse_label_flag = True
     for (i, d) in enumerate(data):
         color = next(colors)
         if d > 0:
             patch = ax.barh(pos_y, d, color=color, align='center', left=right, height=1)
             patch_handles.append(patch)
-            _label_segment(patch[0], d, chr(ord('A') + i), threshold)
+            sparse_label_flag = _label_segment(patch[0], d, chr(ord('A') + i), threshold, sparse_label_flag)
             right += d
         elif d < 0:
             left += d
             patch = ax.barh(neg_y, abs(d), color=color, align='center', left=left, height=1)
             patch_handles.append(patch)
-            _label_segment(patch[0], d, chr(ord('A') + i), threshold)
+            sparse_label_flag = _label_segment(patch[0], d, chr(ord('A') + i), threshold, sparse_label_flag)
 
     if units is None:
         unitstring = ''
@@ -462,11 +468,11 @@ def _one_bar(ax, pos_y, neg_y, data, hue, units, threshold):
                 ha='left', va='center')
 
     if negs != 0:
-        ax.text(right, neg_y, '%6.3g%s' % (left, unitstring), ha='left', va='center', fontsize=12, fontweight='bold')
+        ax.text(right, neg_y, ' %6.3g%s' % (left, unitstring), ha='left', va='center', fontsize=12, fontweight='bold')
 
     if total_y is not None:
-        ax.plot(total, total_y, 'd', markersize=10)
-        ax.barh(total_y - 0.3, total, color=(0.74, 0.74, 0.74), height=0.6, edgecolor='none')
+        ax.plot(total, total_y, 'd', markersize=10, markeredgecolor='k', markeredgewidth=0.5)
+        ax.barh(total_y, total, color=(0.74, 0.74, 0.74), height=0.65, edgecolor='none')
         ax.text(total, total_y, '   %6.3g   ' % total, ha=total_ha, va='center')
 
     return neg_y - 0.55

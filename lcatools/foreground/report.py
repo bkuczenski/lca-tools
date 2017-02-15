@@ -83,7 +83,7 @@ def frag_pnodes(coords):
 
 
 def cutoff_box(uid):
-    return '\\rput(px%.5s){\\rput(1,0){\\rnode[style=phantom]{nx%.5s}{CUTOFF}}}' % (uid, uid)
+    return '\\rput(px%.5s){\\rput[l](1,0){\\rnode[style=phantom]{nx%.5s}{CUTOFF}}}' % (uid, uid)
 
 
 def bg_box(uid):

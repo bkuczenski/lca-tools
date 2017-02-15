@@ -239,6 +239,7 @@ class LcEntity(object):
 
     def show(self):
         print('%s Entity (ref %s)' % (self.entity_type.title(), self.get_external_ref()))
+        print('origin: %s' % self.origin)
         fix = ['Name', 'Comment']
         postfix = set(self._d.keys()).difference(fix)
         ml = len(max(self._d.keys(), key=len))

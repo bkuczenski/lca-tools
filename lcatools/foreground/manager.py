@@ -455,6 +455,7 @@ class ForegroundManager(object):
         results = LciaResults(process_ref.entity())
         for q in qs:
             q_result = LciaResult(q)
+            q_result.add_component(process_ref['Name'], process_ref.entity())
             if q in self.db.known_quantities():
                 for x in exch:
                     if not x.flow.has_characterization(q):
@@ -471,7 +472,7 @@ class ForegroundManager(object):
                                 x.flow.add_characterization(cf)
                                 self.add_to_foreground(x.flow)
                     fac = x.flow.factor(q)
-                    q_result.add_score(process_ref.id, x, fac, process_ref['SpatialScope'])
+                    q_result.add_score(process_ref['Name'], x, fac, process_ref['SpatialScope'])
             results[q.get_uuid()] = q_result
         return results
 
@@ -561,8 +562,10 @@ class ForegroundManager(object):
     def frag(self, string, strict=True):
         """
         strict=True is slow
+        Works as an iterator. If nothing is found, raises StopIteration. If multiple hits are found and strict is set,
+        raises Ambiguous Reference.
         :param string:
-        :param strict:
+        :param strict: [True] whether to check for ambiguous reference. if False, return first matching fragment.
         :return:
         """
         if strict:
@@ -571,7 +574,10 @@ class ForegroundManager(object):
                 for i in k:
                     print('%s' % i)
                 raise AmbiguousReference()
-            return k[0]
+            try:
+                return k[0]
+            except IndexError:
+                raise StopIteration
         else:
             return next(f for f in self[0].fragments(show_all=True) if f.get_uuid().startswith(string.lower()))
 
@@ -581,11 +587,22 @@ class ForegroundManager(object):
         ffs = fragment.traversal_entry(scenario, observed=observed)
         return ffs
 
-    def fragment_lcia(self, fragment, scenario=None, observed=False, scale=None):
+    def fragment_lcia(self, fragment, scenario=None, observed=False, scale=1.0, normalize=False):
+        """
+
+        :param fragment:
+        :param scenario:
+        :param observed:
+        :param scale:
+        :param normalize:
+        :return:
+        """
         if isinstance(fragment, str):
             fragment = self.frag(fragment)
         r = fragment.fragment_lcia(scenario=scenario, observed=observed)
-        if scale is not None:
+        if normalize:
+            scale /= fragment.exchange_value(scenario)
+        if scale != 1.0:
             r.scale(scale)
         return r
 

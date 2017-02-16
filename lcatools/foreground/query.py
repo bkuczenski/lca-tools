@@ -24,9 +24,15 @@ class ForegroundQuery(object):
 
     def _ensure_frag(self, abbrev):
         if isinstance(abbrev, str):
-            frag = self._fm.frag(abbrev)
+            try:
+                frag = self._fm.frag(abbrev)
+            except StopIteration:
+                frag = self._fm.ref(0, abbrev)
+        elif isinstance(abbrev, tuple):
+            frag = self._fm.ref(*abbrev)
         else:
             frag = abbrev
+        assert frag.entity_type in ('process', 'fragment')
         return frag
 
     def _do_weighting(self, res):
@@ -45,9 +51,12 @@ class ForegroundQuery(object):
         :param frag:
         :return:
         """
-        frag = self._ensure_frag(frag)
-
-        res = self._fm.fragment_lcia(frag, **self._query_args)  # return LciaResults object
+        if frag.entity_type == 'fragment':
+            res = self._fm.fragment_lcia(frag, **self._query_args)  # return LciaResults object
+        elif frag.entity_type == 'process':
+            res = self._fm.fg_lcia(frag)  # query_args currently not implemented-- since pf params and scales
+        else:
+            raise TypeError('unhandled  entity type %s' % frag.entity_type)
         res = self._do_weighting(res)
 
         return [res[k] for k in self._qs]
@@ -76,17 +85,26 @@ class ForegroundQuery(object):
         """
 
         :param manager: a Foreground interface of some kind e.g. ForegroundManager
-        :param frags: a list of tuples (uuid, nickname) to query in sequence.
+        :param frags: a list of tuples (object, nickname) to query in sequence.
+          'object' can be one of:
+          * a literal fragment
+          * a catalog_ref for a process
+          * a fragment abbreviation -- F.frag(abbreviation) must resolve to a fragment
+          * a UUID of a process in the foreground -- manager.ref(0, uuid) must resolve to a process)
+          * a 2-tuple (index, uuid) -- manager.ref(index, uuid) must resolve to a process
+          implementation in _ensure_frag
         :param quantities: a list of uuids for quantities to query (the ones in foreground??)
         :param weightings: a list of LciaWeighting objects (.weigh() and .q())
         :param savepath: defaults to 'figures' subdirectory in current directory
         :param kwargs: passed to manager.fragment_lcia:
          - scenario
-         - observed
-         - scale
+         - observed (bool; False)
+         - scale (float; 1.0)
+         - normalize (bool; False)
         """
         self._fm = manager
-        self._frags = frags
+        self._frag_names = [k[1] for k in frags]
+        self._frag_entities = [self._ensure_frag(k[0]) for k in frags]
         self._qs = quantities
         self._ws = weightings or []
         self._query_args = kwargs
@@ -122,6 +140,12 @@ class ForegroundQuery(object):
         return 1.0
 
     @property
+    def normalize(self):
+        if 'normalize' in self._query_args:
+            return self._query_args['normalize']
+        return False
+
+    @property
     def results(self):
         """
         The query result is a 2d array, indexed by [frag in frags][q in quantities] of the query
@@ -135,7 +159,7 @@ class ForegroundQuery(object):
     def agg_results(self):
         if self._res is None:
             self._run_query()
-        return [self.aggregate(k) for k in self._res]
+        return [self.aggregate(self._res[i], key=self._key(i)) for i in range(len(self._frag_entities))]
 
     @property
     def stages(self):
@@ -161,15 +185,17 @@ class ForegroundQuery(object):
 
     @property
     def fragments(self):
-        return [self._fm.frag(k) for k in self._frag_refs]
+        return self._frag_entities
 
     @property
-    def _frag_refs(self):
-        return [f[0] for f in self._frags]
+    def frag_names(self):
+        return self._frag_names
 
-    @property
-    def _frag_names(self):
-        return [f[1] for f in self._frags]
+    def _key(self, i):
+        if self._frag_entities[i].entity_type == 'process':
+            return lambda x: x['Name']
+        else:  # frag_entities are already _ensured fragment or process
+            return lambda x: x.fragment['StageName']
 
     def aggregate(self, res, key=lambda x: x.fragment['StageName']):
         """
@@ -184,7 +210,7 @@ class ForegroundQuery(object):
         """
         :return:
         """
-        self._res = [self._do_fragment_lcia(f) for f in self._frag_refs]  # this is a list of LciaResults objs
+        self._res = [self._do_fragment_lcia(f) for f in self._frag_entities]  # this is a list of LciaResults objs
         self._stages = [self._do_stages(k) for k in self._res]
         agg = self.agg_results
         self._agg_stages = [self._do_stages(k) for k in agg]

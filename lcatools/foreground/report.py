@@ -15,6 +15,8 @@ class TraversalError(Exception):
 
 
 default_tex_folder = 'tex-files'
+default_frag_data = 'fragment-data.tex'
+default_model_doc = 'model-doc.tex'
 
 
 def grab_stages(results):
@@ -83,7 +85,7 @@ def frag_pnodes(coords):
 
 
 def cutoff_box(uid):
-    return '\\rput(px%.5s){\\rput[l](1,0){\\rnode[style=phantom]{nx%.5s}{CUTOFF}}}' % (uid, uid)
+    return '\\rput(px%.5s){\\rput[l](1,0){\\rnode[style=phantom]{nx%.5s}{\scriptsize CUTOFF}}}' % (uid, uid)
 
 
 def bg_box(uid):
@@ -126,11 +128,11 @@ class TeXAuthor(object):
 
     @property
     def _wrapper_fname(self):
-        return os.path.join(self.folder, 'fragment-data.tex')
+        return os.path.join(self.folder, self._fragment_data_file)
 
     @property
     def _documentation_fname(self):
-        return os.path.join(self.folder, 'model-doc.tex')
+        return os.path.join(self.folder, self._model_doc_file)
 
     @staticmethod
     def _init_report_file(fname, intro_text):
@@ -161,17 +163,26 @@ class TeXAuthor(object):
         # tex = re.sub('_', '\\\\textunderscore', tex)  # this doesn't work bc filenames have underscores
         return tex
 
-    def __init__(self, folder=default_tex_folder, overwrite=True, comments=False):
+    def __init__(self, folder=default_tex_folder, overwrite=True, comments=False,
+                 frag_data=default_frag_data, model_doc=default_model_doc):
         """
         This function
 
-        :param folder:
+        :param folder: ['tex-files'] Use different folders for different reports if the reports represent different
+         scenarios or data.
         :param overwrite: [True] whether to overwrite existing files in the folder
         :param comments: [False] whether to write FragmentFlow comments on tree drawings
+        :param frag_data: ['fragment-data.tex'] default fragment data file.  Use the same folder but different frag_data
+         files for different reports if the reports are based on the same scenario but include different contents.
+        :param model_doc: ['model-doc.tex'] model doc file.
         """
         self.folder = folder
         self.overwrite = overwrite
         self.comments = comments
+
+        self._fragment_data_file = frag_data
+        self._model_doc_file = model_doc
+
         if os.path.exists(folder):
             if not os.path.isdir(folder):
                 raise ValueError('Path is not a directory.')

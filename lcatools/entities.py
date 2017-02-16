@@ -262,6 +262,8 @@ class LcEntity(object):
         """
         if other is None:
             return False
+        if not isinstance(other, LcEntity):
+            return False
         return (self.get_external_ref() == other.get_external_ref() and
                 self.origin == other.origin and
                 self.entity_type == other.entity_type)

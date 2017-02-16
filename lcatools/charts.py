@@ -5,7 +5,17 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from textwrap import wrap
 
+# grumble something about breaking styles for no good reason with 2.0.0
 mpl.rcParams['patch.force_edgecolor'] = True
+mpl.rcParams['errorbar.capsize'] = 3
+mpl.rcParams['grid.color'] = 'k'
+mpl.rcParams['grid.linestyle'] = ':'
+mpl.rcParams['grid.linewidth'] = 0.5
+mpl.rcParams['lines.linewidth'] = 1.0
+mpl.rcParams['axes.autolimit_mode'] = 'round_numbers'
+mpl.rcParams['axes.xmargin'] = 0
+mpl.rcParams['axes.ymargin'] = 0
+
 
 prefab_colors = ((0.1, 0.6, 0.7), (0.9, 0.3, 0.4), (0.3, 0.9, 0.6), (0.1, 0.1, 0.8), (0.4, 0.9, 0.3), (0.3, 0.4, 0.9))
 net_color = (0.6, 0.6, 0.6)
@@ -46,6 +56,18 @@ def _label_bar(patch, value=None, label=None, valueformat='%4.3g', labelformat='
 
 
 def _label_segment(patch, data, label, threshold, sparse_flag):
+    """
+    Label the segment if it's big enough. The threshold is the minimum size for a value statement; one-quarter the
+    threshold is the minimum size for a bar label. Segments smaller than one-quarter the threshold are considered
+    non-sparse, and if there is more than one non-sparse segment in succession, only the first will be labeled.
+    A single non-sparse segment resets the labeling.  Positive and negative sparse_flags should be tracked separately.
+    :param patch:
+    :param data:
+    :param label:
+    :param threshold:
+    :param sparse_flag:
+    :return:
+    """
     if abs(data) > threshold:
         _label_bar(patch, value=data, label=label)
     if sparse_flag or abs(data) > (threshold / 4):
@@ -314,10 +336,10 @@ def spread_scenario_compare(ax, results, stages, colors=None, scenarios=None, re
         if net:
             mycolors += (net_color,)
 
-        spread_bars(ax, data, mycolors, lo=lo, hi=hi, barwidth=barwidth, x_offset=x_0, labels=labels)
+        spread_bars(ax, data, mycolors, lo=lo, hi=hi, barwidth=barwidth, x_offset=x_0, labels=labels, align='edge')
 
     # graph general parts
-    ax.plot(ax.get_xlim(), (0, 0), 'k')
+    ax.plot(ax.get_xlim(), (0, 0), 'k', linewidth=0.8)
 
     if max([len(l) for l in stages]) > 12:
         lbls = ['\n'.join(wrap(l, 25)) for l in stages]
@@ -444,19 +466,22 @@ def _one_bar(ax, pos_y, neg_y, data, hue, units, threshold):
 
     # print('NY: %f  PY: %f  TY: %f  ha: %s' % (neg_y, pos_y, total_y, total_ha))
 
-    sparse_label_flag = True
+    # sparsify labels-- don't pile labels up if there are multiple tiny segments. see _label_segment
+    sparse_label_flag_pos = True
+    sparse_label_flag_neg = True
+
     for (i, d) in enumerate(data):
         color = next(colors)
         if d > 0:
             patch = ax.barh(pos_y, d, color=color, align='center', left=right, height=1)
             patch_handles.append(patch)
-            sparse_label_flag = _label_segment(patch[0], d, chr(ord('A') + i), threshold, sparse_label_flag)
+            sparse_label_flag_pos = _label_segment(patch[0], d, chr(ord('A') + i), threshold, sparse_label_flag_pos)
             right += d
         elif d < 0:
             left += d
             patch = ax.barh(neg_y, abs(d), color=color, align='center', left=left, height=1)
             patch_handles.append(patch)
-            sparse_label_flag = _label_segment(patch[0], d, chr(ord('A') + i), threshold, sparse_label_flag)
+            sparse_label_flag_neg = _label_segment(patch[0], d, chr(ord('A') + i), threshold, sparse_label_flag_neg)
 
     if units is None:
         unitstring = ''
@@ -558,6 +583,21 @@ def stack_bars(ax, series, hue, units, labels=None, title='Scenario Analysis', s
         ax.set_ylim(btm, 3.6)
 
 
+def _open_ylims(ax, margin=0.1):
+    """
+    workaround for buggy Axes.margins() (https://github.com/matplotlib/matplotlib/pull/7995 and others)
+    :param ax:
+    :param margin:
+    :return:
+    """
+    bottom, top = ax.get_ylim()
+    yr = top - bottom
+    if bottom < 0 < top:
+        bottom -= margin * yr
+        top += margin * yr
+        ax.set_ylim(bottom=bottom, top=top)
+
+
 def spread_bars(ax, data, color_gen, hi=None, lo=None, y_lim=None, barwidth=0.65, x_offset=0, labels=True, **kwargs):
     """
 
@@ -600,6 +640,7 @@ def spread_bars(ax, data, color_gen, hi=None, lo=None, y_lim=None, barwidth=0.65
         ax.set_ylim(y_lim)
 
     ax.plot((-0.5, len(data)), (0, 0), 'k')
+    # _open_ylims(ax)
 
 
 """

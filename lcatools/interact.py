@@ -83,9 +83,9 @@ def _pick_list(items, *args, prompt=None):
     (0, None)
     (1, None)
     (2, None)
-    (None, 'abort')
-    (None, 'retry')
-    (None, 'fail')
+    (None, 0)  # for 'abort'
+    (None, 1)  # for 'retry'
+    (None, 2)  # for 'fail'
     (None, None)
     :param items:
     :return:

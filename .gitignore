@@ -68,3 +68,7 @@ lcatools/providers/web_cache/
 doc/tests/entities.json
 doc/tests/fragments.json
 doc/archive/
+tests/Untitled.ipynb
+
+# temp storage
+_git_temp

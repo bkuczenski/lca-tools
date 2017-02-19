@@ -2,50 +2,18 @@ from math import ceil, log10
 
 from lcatools.flowdb.create_synonyms import load_synonyms, SYNONYMS
 from lcatools.flowdb.synlist import cas_regex
-from lcatools.flowdb.compartments import load_compartments, save_compartments, traverse_compartments, Compartment, COMPARTMENTS
+from lcatools.flowdb.compartments import Compartment, CompartmentManager  #load_compartments, save_compartments, traverse_compartments, REFERENCE_EFLOWS
 from lcatools.catalog import get_entity_uuid
 from lcatools.characterizations import Characterization
 from lcatools.interfaces import uuid_regex
 from lcatools.foreground.dynamic_grid import dynamic_grid
-from lcatools.interact import pick_one, _pick_list
+from lcatools.interact import pick_one
 
 from collections import defaultdict, namedtuple
 
 
 class MissingFlow(Exception):
     pass
-
-
-class MissingCompartment(Exception):
-    pass
-
-
-def merge_compartment(compartment, missing):
-    my_missing = []
-    my_missing.extend(missing)
-    while len(my_missing) > 0:
-        sub = traverse_compartments(compartment, my_missing[:1])
-        if sub is not None:
-            my_missing.pop(0)
-            compartment = sub
-        else:
-            print('Missing compartment: %s' % my_missing[0])
-            subs = sorted(s.name for s in compartment.subcompartments())
-            print('subcompartments of %s:' % compartment)
-            c = _pick_list(subs, 'Merge "%s" into %s' % (my_missing[0], compartment),
-                           'Create new Subcompartment of %s' % compartment)
-            if c == (None, 0):
-                compartment.add_syn(my_missing.pop(0))
-            elif c == (None, 1):  # now we add all remaining compartments
-                while len(my_missing) > 0:
-                    new_sub = my_missing.pop(0)
-                    compartment.add_sub(new_sub)
-                    compartment = compartment[new_sub]
-            elif c == (None, None):
-                raise ValueError('User break')
-            else:
-                compartment = compartment[subs[c[0]]]
-    return compartment
 
 
 class CLookup(object):
@@ -121,10 +89,6 @@ class CLookup(object):
         return results
 
 
-def compartment_string(compartment):
-    return '; '.join(list(filter(None, compartment)))
-
-
 class FlowDB(object):
     """
     The purpose of this interface is to allow users to easily register / lookup elementary flow characterizations.
@@ -142,68 +106,25 @@ class FlowDB(object):
      - It is entirely possible that the FlowDB can also be used to encapsulate LCIA lookups for intermediate
      flows, but this will be subject to development outcomes.
     """
-    def __init__(self, flows=SYNONYMS, compartments=COMPARTMENTS):
+    def __init__(self, flows=SYNONYMS, compartments=None):
         """
 
         :param flows: JSON file containing the Flowables set
         :param compartments: JSON file containing the Compartment hierarchy
         """
         self.flowables = load_synonyms(flows)
-        self.compartments = load_compartments(compartments)
-        self._compartments_file = compartments
+        if isinstance(compartments, CompartmentManager):
+            self.compartments = compartments
+        else:
+            self.compartments = CompartmentManager.eflows()
 
         self._q_dict = defaultdict(set)  # dict of quantity uuid to set of characterized flowables
         self._q_id = dict()  # store the quantities themselves for reference
         self._f_dict = defaultdict(CLookup)  # dict of (flowable index, quantity uuid) to c_lookup
-        self._c_dict = dict()  # dict of '; '.join(compartments) to Compartment
 
     def known_quantities(self):
         for q in self._q_id.values():
             yield q
-
-    def is_elementary(self, flow):
-        comp = self.find_matching_compartment(flow['Compartment'])
-        return comp.elementary
-
-    def load_compartments(self, file=COMPARTMENTS):
-        self.compartments = load_compartments(file)
-        self._compartments_file = file
-
-    def save_compartments(self, file):
-        save_compartments(self.compartments, file)
-        self._compartments_file = file
-
-    # inspection methods
-    def filter_exch(self, process_ref, elem=True, **kwargs):
-        return [x for x in process_ref.archive.fg_lookup(process_ref.id, **kwargs)
-                if self.is_elementary(x.flow) is elem]
-
-    def find_matching_compartment(self, compartment, interact=True):
-        """
-
-        :param compartment: should be an iterable, as-stored in an archive
-        :param interact: if true, interactively prompt user to merge and save missing compartments
-        :return: the Compartment. Also adds it to self._c_dict
-        """
-        cs = compartment_string(compartment)
-        if cs in self._c_dict.keys():
-            return self._c_dict[cs]
-
-        match = traverse_compartments(self.compartments, compartment)
-        if match is None:
-            if interact:
-                c = merge_compartment(self.compartments, compartment)
-                match = traverse_compartments(self.compartments, compartment)
-                if c is match and c is not None:
-                    print('match: %s' % match.to_list())
-                    print('Updating compartments...')
-                    save_compartments(self.compartments, file=self._compartments_file)
-                    return c
-            else:
-                raise MissingCompartment('%s' % cs)
-        else:
-            self._c_dict[cs] = match
-            return match
 
     def friendly_flowable(self, i, width=4):
         print('(%*d) %11s %d %.95s' % (width, i, self.flowables.cas(i),

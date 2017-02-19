@@ -2,14 +2,14 @@ from math import ceil, log10
 
 from lcatools.flowdb.create_synonyms import load_synonyms, SYNONYMS
 from lcatools.flowdb.synlist import cas_regex
-from lcatools.flowdb.compartments import Compartment, CompartmentManager  #load_compartments, save_compartments, traverse_compartments, REFERENCE_EFLOWS
+from lcatools.flowdb.compartments import Compartment, CompartmentManager  # load_compartments, save_compartments, traverse_compartments, REFERENCE_EFLOWS
 from lcatools.catalog import get_entity_uuid
 from lcatools.characterizations import Characterization
 from lcatools.interfaces import uuid_regex
 from lcatools.foreground.dynamic_grid import dynamic_grid
 from lcatools.interact import pick_one
 
-from collections import defaultdict, namedtuple
+from collections import defaultdict  # , namedtuple
 
 
 class MissingFlow(Exception):
@@ -116,7 +116,7 @@ class FlowDB(object):
         if isinstance(compartments, CompartmentManager):
             self.compartments = compartments
         else:
-            self.compartments = CompartmentManager.eflows()
+            self.compartments = CompartmentManager(compartments)
 
         self._q_dict = defaultdict(set)  # dict of quantity uuid to set of characterized flowables
         self._q_id = dict()  # store the quantities themselves for reference
@@ -125,6 +125,9 @@ class FlowDB(object):
     def known_quantities(self):
         for q in self._q_id.values():
             yield q
+
+    def load_compartments(self, file):
+        self.compartments.set_local(file)
 
     def friendly_flowable(self, i, width=4):
         print('(%*d) %11s %d %.95s' % (width, i, self.flowables.cas(i),
@@ -259,7 +262,7 @@ class FlowDB(object):
     def parse_flow(self, flow):
         terms = set(filter(None, (flow['Name'].strip(), flow['CasNumber'].strip(), flow.get_uuid())))
         flowables = self.flowables.find_indices(terms)
-        comp = self.find_matching_compartment(flow['Compartment'])  # will raise MissingCompartment if not found
+        comp = self.compartments.find_matching(flow['Compartment'])  # will raise MissingCompartment if not found
         return flowables, comp
 
     def import_cfs(self, flow):

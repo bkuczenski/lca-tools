@@ -9,7 +9,7 @@ from lcatools.catalog import CatalogInterface, ExchangeRef, CatalogRef
 from lcatools.exchanges import comp_dir, Exchange, ExchangeValue
 from lcatools.entities import LcQuantity, LcFlow
 from lcatools.flowdb.flowdb import FlowDB
-from lcatools.lcia_results import LciaResult, LciaResults, InconsistentQuantity
+from lcatools.lcia_results import LciaResult, LciaResults  # , InconsistentQuantity
 from lcatools.foreground.dynamic_grid import dynamic_grid
 from lcatools.interact import pick_reference, ifinput, pick_one, pick_one_or  # , pick_compartment, parse_math
 from lcatools.foreground.query import ForegroundQuery
@@ -134,7 +134,7 @@ class ForegroundManager(object):
     def flows(self, *args, elementary=False):
         for f in sorted(self[0].flows(), key=lambda x: x['Name']):
             if isinstance(elementary, bool):
-                if not self.db.is_elementary(f) is elementary:
+                if not self.db.compartments.is_elementary(f) is elementary:
                     continue
             if len(args) != 0:
                 if not bool(re.search(args[0], str(f), flags=re.IGNORECASE)):
@@ -234,11 +234,11 @@ class ForegroundManager(object):
 
     def merge_compartments(self, item):
         if self._catalog.is_loaded(0):
-            self.db.save_compartments(self[0].compartment_file)
+            self.db.compartments.save()
         index = self._catalog.get_index(item)
         for f in self[index].flows():
             if self._catalog.is_loaded(0):
-                self.db.find_matching_compartment(f['Compartment'], interact=True)
+                self.db.compartments.find_matching(f['Compartment'], interact=True)
 
     def find_flowable(self, string):
         return self.db.flowables.search(string)
@@ -289,12 +289,12 @@ class ForegroundManager(object):
         :param direction:
         :return: an exchange generator (NOT ExchangeRefs because I haven't figured out how to be consistent on that yet)
         """
-        for x in self.db.filter_exch(process_ref, elem=False, ref_flow=ref_flow):
+        for x in self.db.compartments.filter_exch(process_ref, elem=False, ref_flow=ref_flow):
             if not (x.flow == ref_flow and x.direction == direction):
                 yield x
 
     def gen_elem(self, process_ref, ref_flow):
-        for x in self.db.filter_exch(process_ref, elem=True, ref_flow=ref_flow):
+        for x in self.db.compartments.filter_exch(process_ref, elem=True, ref_flow=ref_flow):
             yield x
 
     def inventory(self, node, **kwargs):
@@ -307,7 +307,7 @@ class ForegroundManager(object):
             node.fg().inventory()
 
     def intermediate(self, process_ref, **kwargs):
-        exch = self.db.filter_exch(process_ref, elem=False, **kwargs)
+        exch = self.db.compartments.filter_exch(process_ref, elem=False, **kwargs)
         if len(exch) == 0:
             print('No intermediate exchanges')
             return
@@ -316,7 +316,7 @@ class ForegroundManager(object):
             print('%s' % i)
 
     def elementary(self, process_ref, **kwargs):
-        exch = self.db.filter_exch(process_ref, elem=True, **kwargs)
+        exch = self.db.compartments.filter_exch(process_ref, elem=True, **kwargs)
         if len(exch) == 0:
             print('No elementary exchanges')
             return
@@ -334,10 +334,10 @@ class ForegroundManager(object):
         elem_set = set()
 
         for p in p_refs:
-            ints[p] = self.db.filter_exch(p, elem=False, **kwargs)
+            ints[p] = self.db.compartments.filter_exch(p, elem=False, **kwargs)
             int_set = int_set.union(_key(x) for x in ints[p])
             if elementary:
-                elems[p] = self.db.filter_exch(p, elem=True, **kwargs)
+                elems[p] = self.db.compartments.filter_exch(p, elem=True, **kwargs)
                 elem_set = elem_set.union(_key(x) for x in elems[p])
 
         int_rows = sorted(int_set, key=lambda x: x[1])
@@ -370,9 +370,9 @@ class ForegroundManager(object):
         cols = []
         for p in p_ref.entity().reference_entity:
             cols.append(p)
-            ints[p] = self.db.filter_exch(p_ref, elem=False, ref_flow=p.flow)
+            ints[p] = self.db.compartments.filter_exch(p_ref, elem=False, ref_flow=p.flow)
             int_set = int_set.union(_key(x) for x in ints[p])
-            elems[p] = self.db.filter_exch(p_ref, elem=True, ref_flow=p.flow)
+            elems[p] = self.db.compartments.filter_exch(p_ref, elem=True, ref_flow=p.flow)
             elem_set = elem_set.union(_key(x) for x in elems[p])
 
         int_rows = sorted(int_set, key=lambda x: x[1])
@@ -450,7 +450,7 @@ class ForegroundManager(object):
             self._catalog.load(0)
         if not self._catalog.is_loaded(process_ref.index):
             self._catalog.load(process_ref.index)
-        exch = self.db.filter_exch(process_ref, elem=True, **kwargs)
+        exch = self.db.compartments.filter_exch(process_ref, elem=True, **kwargs)
         qs = self._prep_quantities(quantities)
         results = LciaResults(process_ref.entity())
         for q in qs:
@@ -750,7 +750,7 @@ class ForegroundManager(object):
         process = process_ref.fg()
         if ref_flow is None:
             if len(process.reference_entity) == 0:
-                ref = pick_one([x for x in self.db.filter_exch(process_ref, elem=False) if x.direction == 'Output']
+                ref = pick_one([x for x in self.db.compartments.filter_exch(process_ref, elem=False) if x.direction == 'Output']
                                ).flow
             elif len(process.reference_entity) > 1:
                 ref = pick_reference(process)

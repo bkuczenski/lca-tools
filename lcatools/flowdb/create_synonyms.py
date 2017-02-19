@@ -146,29 +146,3 @@ def create_new_synonym_list():
 def load_synonyms(file=SYNONYMS):
     with open(file) as fp:
         return Flowables.from_json(json.load(fp))
-
-
-def _add_local_synonym(self, existing, new):
-    syns = self._load_local_synonyms()
-    syns[existing].append(new)
-    self.db.flowables.add_synonym(existing, new)
-
-
-def _install_local_synonyms(self, syns):
-    for k, v in syns:
-        for val in v:
-            self.db.flowables.add_synonym(k, val)
-
-
-def _load_local_synonyms(self):
-    if os.path.exists(self[0].synonyms_file):
-        with open(self[0].synonyms_file, 'r') as fp:
-            syns = json.load(fp)
-        return syns
-    return defaultdict(list)
-
-
-def _save_local_synonyms(self, syns):
-    with open(self[0].synonyms_file, 'w') as fp:
-        json.dump(syns, fp)
-

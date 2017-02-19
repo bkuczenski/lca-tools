@@ -4,23 +4,27 @@ Import ecospold2 files
 
 from __future__ import print_function, unicode_literals
 
-import os
-from collections import namedtuple
-from time import time
-
 import six
-from lcatools.exchanges import ExchangeValue, DirectionlessExchangeError
+
+import os
+import re
+
 from lxml import objectify
 from lxml.etree import XMLSyntaxError
+from time import time
 
-from entities.characterizations import Characterization
-from lcatools.entities import LcQuantity, LcFlow, LcProcess
-from lcatools.interface import uuid_regex
-from lcatools.lcia_results import LciaResult, LciaResults
+from collections import namedtuple
+
 from lcatools.providers import tail
-from lcatools.providers.archive import Archive
-from lcatools.providers.base import LcArchive
 from lcatools.providers.xml_widgets import *
+
+from lcatools.providers.base import LcArchive
+from lcatools.interfaces import uuid_regex
+from lcatools.providers.archive import Archive
+from lcatools.entities import LcQuantity, LcFlow, LcProcess
+from lcatools.exchanges import ExchangeValue, DirectionlessExchangeError
+from lcatools.characterizations import Characterization
+from lcatools.lcia_results import LciaResult, LciaResults
 
 if six.PY2:
     bytes = str

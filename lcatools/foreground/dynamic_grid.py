@@ -1,9 +1,8 @@
 from collections import defaultdict
 
-from lcatools.exchanges import Exchange
-
-from entities.characterizations import Characterization
 from lcatools.catalog import CFRef, ExchangeRef  # , CatalogRef
+from lcatools.characterizations import Characterization
+from lcatools.exchanges import Exchange
 from lcatools.lcia_results import LciaResult
 
 

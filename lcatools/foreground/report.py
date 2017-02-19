@@ -6,8 +6,7 @@ I guess for research on this, I should start by actually drawing a fragment by h
 """
 import os
 import re
-
-from entities.exchanges import comp_dir
+from lcatools.exchanges import comp_dir
 from lcatools.charts import scenario_compare_figure, save_plot
 
 

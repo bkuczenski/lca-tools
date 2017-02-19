@@ -42,7 +42,6 @@ class EcoinventSpreadsheet(NsUuidArchive):
         self._model = model
         self.fg = None
         self.bg = None
-        self._bg_cache_loaded = None
         self.lcia = None
         if self._data_dir is not None:
             if model == 'undefined':
@@ -50,17 +49,12 @@ class EcoinventSpreadsheet(NsUuidArchive):
             else:
                 self.fg = EcospoldV2Archive(self._fg_filename, prefix='datasets')
                 if os.path.exists(self._bg_filename):
-                    print('BG: Cache available via %s' % self._bg_filename)
-                    self._bg_cache_loaded = False
-                    self.bg = LcArchive(self._lci_cache)
+                    print('BG: Accessing LCI from %s' % self._bg_filename)
+                self.bg = LcArchive(self._lci_cache)
+                if os.path.exists(self._lci_cache):
+                    self.bg.load_json(from_json(self._lci_cache))
                 if os.path.exists(self._lcia_validate_filename):
                     self.lcia = EcospoldV2Archive(self._lcia_validate_filename, prefix='datasets')
-
-    def load_lci_cache(self):
-        if self._bg_cache_loaded is False:
-            print('Accessing LCI from %s' % self._bg_filename)
-            self.bg.load_json(from_json(self._lci_cache))
-            self._bg_cache_loaded = True
 
     def _fetch(self, entity, **kwargs):
         """
@@ -114,7 +108,6 @@ class EcoinventSpreadsheet(NsUuidArchive):
         return self.fg[proxy]
 
     def bg_proxy(self, proxy):
-        self.load_lci_cache()
         bg = self.bg[proxy]
         if bg is None:
             print('Looking up: %s' % proxy)
@@ -181,8 +174,6 @@ class EcoinventSpreadsheet(NsUuidArchive):
     def bg_lookup(self, process_id, ref_flow=None, reference=None, quantities=None, scenario=None, flowdb=None):
         """
         now with fallback to LCI lookup!
-        note: this causes the lci cache to load, which is slow, but it's faster than loading the individual data sets,
-        which is rather slower, which is why there's a cache
         :param process_id:
         :param ref_flow:
         :param reference:

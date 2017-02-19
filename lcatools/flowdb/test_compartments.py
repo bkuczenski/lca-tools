@@ -260,16 +260,10 @@ class CompartmentManagerTestCase(unittest.TestCase):
             os.remove(self._test_file)
 
     def test_read_reference(self):
-        kn = self.cm.known_names
+        kn = self.cm.compartments.known_names()
         self.assertEqual(len(kn), 111, "Length does not match")
         self.assertEqual(kn[42], 'Heavy metals to industrial soil')
         self.assertEqual(kn[-1], 'Intermediate Flows')
-
-    def test_idempotency(self):
-        kn = self.cm.known_names
-        self.cm.set_local(self._test_file)  # saves to file (since it doesn't exist)
-        self.cm.set_local(self._test_file)  # loads + merges the file (since it does exist)
-        self.assertEqual(kn, self.cm.known_names)
 
     def test_crawl(self):
         self.assertEqual(self.cm.find_matching('Emissions to soil').to_list(),

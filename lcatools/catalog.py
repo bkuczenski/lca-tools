@@ -1,12 +1,15 @@
+
 from __future__ import print_function, unicode_literals
 
 import json
-from collections import namedtuple
+import os
 
 from eight import *
 
-from entities.exchanges import Exchange, comp_dir
-from lcatools.interface import to_uuid
+from collections import defaultdict, namedtuple
+
+from lcatools.interfaces import to_uuid
+from lcatools.exchanges import Exchange, comp_dir
 
 # from lcatools.characterizations import CharacterizationSet  # , Characterization
 # from lcatools.logical_flows import LogicalFlow, ExchangeRef

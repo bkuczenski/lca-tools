@@ -3,12 +3,12 @@ This module contains utility functions for building fragments. It should probabl
 but that name was taken.
 """
 
-from entities.exchanges import comp_dir
-from lcatools.catalog import CatalogRef, ExchangeRef
-from lcatools.entities import LcFlow, LcQuantity
-from lcatools.foreground.fragment_flows import parse_math
+from lcatools.interact import pick_one, cyoa, ifinput, pick_list, menu_list, pick_one_or, pick_compartment
 from lcatools.foreground.manager import ForegroundManager
-from lcatools.interact import pick_one, cyoa, ifinput, menu_list, pick_one_or, pick_compartment
+from lcatools.foreground.fragment_flows import LcFragment, parse_math
+from lcatools.entities import LcFlow, LcQuantity
+from lcatools.exchanges import Exchange, comp_dir
+from lcatools.catalog import CatalogRef, ExchangeRef
 
 
 def select_archive(F):
@@ -56,7 +56,7 @@ class ForegroundBuilder(ForegroundManager):
             comment = comment or input('Enter flow comment: ')
             if compartment is None:
                 print('Choose compartment:')
-                compartment = pick_compartment(self.cm.compartments).to_list()
+                compartment = pick_compartment(self.db.compartments).to_list()
             flow = LcFlow.new(name, quantity, CasNumber=cas, Compartment=compartment, Comment=comment)
             # flow.add_characterization(q, reference=True)
         else:
@@ -108,7 +108,7 @@ class ForegroundBuilder(ForegroundManager):
             name = input('Enter flow name search string: ')
         res = self.search(index, 'flow', Name=name, show=False)
         if elementary is not None:
-            res = list(filter(lambda x: self.cm.is_elementary(x.entity()) == elementary, res))
+            res = list(filter(lambda x: self.db.is_elementary(x.entity()) == elementary, res))
         pick = pick_one(res)
         print('Picked: %s' % pick)
         return pick
@@ -174,7 +174,7 @@ class ForegroundBuilder(ForegroundManager):
                 frag.set_balance_flow()
                 self.traverse(parent)
 
-        if self.cm.is_elementary(frag.flow):
+        if self.db.is_elementary(frag.flow):
             self.terminate_to_foreground(frag)
         return frag
 

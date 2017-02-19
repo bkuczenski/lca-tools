@@ -1,10 +1,11 @@
 from __future__ import print_function, unicode_literals
 
+import re
 import os
-from itertools import chain
 
 from lxml import objectify
 from lxml.etree import XMLSyntaxError
+from itertools import chain
 
 try:  # python3
     from urllib.parse import urljoin
@@ -21,8 +22,8 @@ from lcatools.providers.base import LcArchive
 from lcatools.providers.archive import Archive
 from lcatools.providers.xml_widgets import *
 from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcUnit
-from lcatools.interface import uuid_regex
-from entities.characterizations import DuplicateCharacterizationError
+from lcatools.interfaces import uuid_regex
+from lcatools.characterizations import DuplicateCharacterizationError
 
 import posixpath
 

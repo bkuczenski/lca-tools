@@ -1,10 +1,11 @@
+
+from lcatools.providers.base import LcArchive
+from lcatools.foreground.fragment_flows import LcFragment
+from lcatools.exchanges import comp_dir
+from lcatools.interact import ifinput
 import json
 import os
 import re
-
-from lcatools.foreground.fragment_flows import LcFragment
-from lcatools.interact import ifinput
-from lcatools.providers.base import LcArchive
 
 
 class ForegroundError(Exception):

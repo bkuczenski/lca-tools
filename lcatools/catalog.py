@@ -81,7 +81,12 @@ class CatalogRef(object):
         return self.entity().entity_type
 
     def fg(self):
-        return self.archive.fg_proxy(self.id)
+        try:
+            p = self.archive.fg_proxy(self.id)
+        except ValueError:
+            print('fg lookup failed for %s' % self)
+            raise
+        return p
 
     def bg(self):
         return self.archive.bg_proxy(self.id)

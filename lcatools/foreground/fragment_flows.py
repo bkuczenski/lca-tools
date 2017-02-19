@@ -604,7 +604,7 @@ class LcFragment(LcEntity):
                  **kwargs):
         """
         Required params:
-        :param child_flows: a lambda for listing children of a fragment. Comes from foreground.
+        :param child_flows: a lambda for listing children of a fragment. iterator. Comes from foreground.
         :param the_uuid: use .new(Name, ...) for a random UUID
         :param flow: an LcFlow
         :param direction:

@@ -159,6 +159,7 @@ class LcArchive(ArchiveInterface):
             entity = LcProcess(uid, **e)
             if exchs is not None:
                 for x in exchs:
+                    # TODO: first add reference exchanges; then go back and add all the non-reference exchanges
                     v = None
                     t = None
                     # is_ref = False
@@ -166,7 +167,6 @@ class LcArchive(ArchiveInterface):
                     d = x['direction']
                     if 'value' in x:
                         v = x['value']
-                    # TODO: handle allocations -- I think this will "just work" if v is a dict
                     if 'termination' in x:
                         t = x['termination']
                     ex = entity.add_exchange(f, d, value=v, termination=t)
@@ -174,10 +174,10 @@ class LcArchive(ArchiveInterface):
                         if x['isReference'] is True:
                             entity.add_reference(f, d)
                     if 'valueDict' in x:
-                        for k, v in x['valueDict']:
+                        for k, v in x['valueDict'].items():
                             drr, fuu = k.split(':')
                             rx = Exchange(entity, self[fuu], drr)
-                            ex[rx] = v
+                            entity.add_exchange(f, d, reference=rx, value=v, termination=t)
 
                 rx = None
             if rx is not None and rx != 'None':

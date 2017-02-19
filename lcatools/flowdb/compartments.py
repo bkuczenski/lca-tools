@@ -46,6 +46,10 @@ class CompartmentManager(object):
         self._c_dict = dict()  # dict of '; '.join(compartments) to Compartment -- an example of premature optimization
 
     @property
+    def known_names(self):
+        return self.compartments.known_names()
+
+    @property
     def writeable(self):
         if self._local_file is None:
             return False

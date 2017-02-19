@@ -1,4 +1,24 @@
 ==========
+Sun Feb 19 00:46:06 -0800 2017
+
+merging compartments branch with matrix: what do we want to save from the last commit?
+
+* README
+
+* ecoinvent_spreadsheet: refine cache loading (which we will hopefully never have to use again)
+
+* compartments and test_compartments
+
+* .gitignore
+
+* entities/__init__ :
++from .quantities import LcQuantity, LcUnit
++from .flows import LcFlow
++from .processes import LcProcess
++from .entities import LcEntity
+
+
+==========
 Wed Dec 21 19:13:07 PST 2016
 
 Need to do some serious work on this shit.  Code is flung all over the place, all crazy. I need to dig through this with a pickaxe.

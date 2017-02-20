@@ -23,8 +23,6 @@ LD_CONTEXT = 'https://bkuczenski.github.io/lca-tools-datafiles/context.jsonld'
 # CatalogRef = namedtuple('CatalogRef', ['archive', 'id'])
 
 
-# import pandas as pd
-
 uuid_regex = re.compile('([0-9a-f]{8}.?([0-9a-f]{4}.?){3}[0-9a-f]{12})')
 
 
@@ -314,23 +312,6 @@ class ArchiveInterface(object):
         for v in self._entities.values():
             if v.entity_type == entity_type:
                 yield v
-
-    '''
-    @staticmethod
-    def _to_pandas(entities, EntityClass=LcEntity, **kwargs):
-        """
-        Creates an entity-type-specific DataFrame of entities.  Kind of funky and special purpose.
-        :param entities:
-        :param EntityClass: LcEntity subclass (used for determining signature fields)
-        :param kwargs:
-        :return:
-        """
-        sig = [p.get_signature() for p in entities]
-        index = [p.get_uuid() for p in entities]
-        df = pd.DataFrame(sig, index=index, columns=[i for i in EntityClass.signature_fields()], **kwargs)
-        df.index.name = 'UUID'
-        return df
-    '''
 
     def serialize(self, **kwargs):
         j = {

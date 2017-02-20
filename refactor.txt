@@ -17,6 +17,31 @@ merging compartments branch with matrix: what do we want to save from the last c
 +from .processes import LcProcess
 +from .entities import LcEntity
 
+Sun 2017-02-19 18:32:28 -0800
+
+ditching pandas.... let's do it this way:
+
+ * make a list of all the ways the pandas sheets are being accessed (there aren't many)
+ * implement a new minimal wrapper for xlrd that emulates them.
+ 
+read_excel is used three times:
+ - to read 'activity overview'
+ - to read 'elementary exchanges'
+ - to read 'intermediate exchanges'
+
+'elementary exchanges' ==> _elementary
+
+  _elementary[unitname].unique().tolist()
+  _elementary.iterrows()
+
+basically all I need is an iterrows
+
+Sun 2017-02-19 19:45:51 -0800
+
+Well, that was surprisingly easy. Disappointing note: ecoinvent_lcia generation workflow is distressingly out of date.
+
+
+
 
 ==========
 Wed Dec 21 19:13:07 PST 2016

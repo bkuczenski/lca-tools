@@ -2,11 +2,10 @@
 from __future__ import print_function, unicode_literals
 
 import json
-import os
 
 from eight import *
 
-from collections import defaultdict, namedtuple
+from collections import namedtuple
 
 from lcatools.interfaces import to_uuid
 from lcatools.exchanges import Exchange, comp_dir
@@ -628,103 +627,3 @@ class CatalogInterface(object):
             "catalogs": sorted([self._serialize_archive(index) for index in range(1, len(self.archives))],
                                key=lambda x: x['index'])
         }
-
-'''
-class ProcessFlowInterface(object):
-    """
-    a ProcessFlow interface creates a standard mechanism to answer inventory queries.  The main purpose of the
-      interface is to return exchanges for a given process or flow.
-
-    The interface provides a *dictionary of logical flows* and allows the user to specify *synonyms*.
-
-    The following queries are
-     [to be] supported:
-
-     - given a process, return all exchanges [this comes for free]
-
-     - given a flow
-
-    def list_processes(self):
-        r = []
-        for k, v in self.catalogs.items():
-            if v['EntityType'] == 'process':
-                r.append(v.get_signature())
-        return sorted(r)
-
-    def exchanges(self, dataframe=False):
-        x = [ex for ex in self._exchanges]
-        if dataframe:
-            pass  # return self._to_pandas(x, Exchange)
-        return x
-    """
-    def __init__(self, catalog):
-        self._catalog = catalog
-        self._flows = dict()
-
-    def add_archive(self, index):
-        for p in self._catalog[index].processes():
-            self.add_exchanges(index, p.exchanges())
-
-    def add_exchanges(self, index, exchanges):
-        for x in exchanges:
-            f_id = x.flow.get_uuid()
-            key = CatalogRef(self._catalog, index, f_id)
-            if f_id in self._flows:
-                self._flows[f_id].add_ref(key)
-            else:
-                self._flows[f_id] = LogicalFlow.create(key)
-            self._flows[f_id].add_exchange(key, x)
-
-    def exchanges(self, cat_ref):
-        """
-        :param cat_ref: a catalog reference
-        :return: a generator that produces exchanges
-        """
-        entity = cat_ref.entity()
-        if isinstance(entity, LcProcess):
-            # need to upgrade process exchanges to ExchangeRefs
-            return (ExchangeRef(cat_ref.index, x) for x in entity.exchanges())
-        elif isinstance(entity, LcFlow):
-            cat_ref.validate(self._catalog)
-            return self._flows[cat_ref.id].exchanges()
-
-    def characterizations(self, cat_ref):
-        cat_ref.validate(self._catalog)
-        return self._flows[cat_ref.id].characterizations()
-
-
-class FlowQuantityInterface(object):
-    """
-    A Flow-Quantity service stores linked observations of flows and quantities with "factors" which report the
-     magnitude of the quantity, in proportion to the flow's reference quantity (which is implicitly mass in
-     the ecoinvent LCIA spreadsheet).
-
-    The flow-quantity interface allows the following:
-
-      * add_cf : register a link between a flow and a quantity having a particular factor
-
-      * lookup_cf : specify characteristics to match and return a result set
-
-      *
-
-      * report characterizations that link one flow with one quantity.
-
-
-
-
-    """
-    def __init__(self, catalog):
-        self._catalog = catalog
-
-        self._characterizations = CharacterizationSet()  # set of flow characterizations among the entities
-
-    def _add_characterization(self, characterization):
-        if characterization.entity_type == 'characterization':
-            self._characterizations.add(characterization)
-
-    def characterizations(self, dataframe=False):
-        x = [ex for ex in self._characterizations]
-        if dataframe:
-            pass  # return self._to_pandas(x, Characterization)
-        return x
-'''

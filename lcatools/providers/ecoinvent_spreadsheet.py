@@ -8,9 +8,56 @@ from lcatools.lcia_results import LciaResults
 
 from lcatools.from_json import from_json
 
-import pandas as pd
+import xlrd
 import uuid
 import os
+
+
+class XlDict(object):
+    """
+    wrapper class for xlrd that exposes a simple pandas-like interface to access tabular spreadsheet data with iterrows.
+    """
+    @classmethod
+    def from_sheetname(cls, workbook, sheetname):
+        return cls(workbook.sheet_by_name(sheetname))
+
+    def __init__(self, sheet):
+        """
+
+        :param sheet: an xlrd.sheet.Sheet
+        """
+        self._sheet = sheet
+
+    def iterrows(self):
+        """
+        Using the first row as a list of headers, yields a dict for each subsequent row using the header names as keys.
+        returning index, row for pandas compatibility
+        :return:
+        """
+        _gen = self._sheet.get_rows()
+        # grab first row
+        d = dict((v.value, k) for k, v in enumerate(next(_gen)))
+        index = 0
+        for r in _gen:
+            index += 1
+            yield index, dict((k, r[v].value) for k, v in d.items())
+
+    def unique_units(self, internal=False):
+        """
+                unitname = 'unit' if self.internal else 'unitName'
+        units = set(_elementary[unitname].unique().tolist()).union(
+            set(_intermediate[unitname].unique().tolist()))
+        for u in units:
+            self._create_quantity(u)
+
+        :param internal:
+        :return:
+        """
+        units = set()
+        unitname = 'unit' if internal else 'unitName'
+        for index, row in self.iterrows():
+            units.add(row[unitname])
+        return units
 
 
 class EcoinventSpreadsheet(NsUuidArchive):
@@ -20,8 +67,11 @@ class EcoinventSpreadsheet(NsUuidArchive):
     """
 
     def _little_read(self, sheetname):
+        if not isinstance(self._xl, xlrd.book.Book):
+            print('Loading workbook')
+            self._xl = xlrd.open_workbook(self.ref)
         print('Reading %s ...' % sheetname)
-        return pd.read_excel(self.ref, sheetname=sheetname).fillna('')
+        return XlDict.from_sheetname(self._xl, sheetname)
 
     def __init__(self, ref, version='Unspecified', internal=False, data_dir=None, model=None, **kwargs):
         """
@@ -33,6 +83,7 @@ class EcoinventSpreadsheet(NsUuidArchive):
         super(EcoinventSpreadsheet, self).__init__(ref, **kwargs)
         self.version = version
         self.internal = internal
+        self._xl = None
 
         self._serialize_dict['version'] = version
         self._serialize_dict['internal'] = internal
@@ -262,9 +313,11 @@ class EcoinventSpreadsheet(NsUuidArchive):
             f.update(kwargs)
 
     def _create_quantities(self, _elementary, _intermediate):
-        unitname = 'unit' if self.internal else 'unitName'
+        """
         units = set(_elementary[unitname].unique().tolist()).union(
             set(_intermediate[unitname].unique().tolist()))
+            """
+        units = _elementary.unique_units(self.internal).union(_intermediate.unique_units(self.internal))
         for u in units:
             self._create_quantity(u)
 
@@ -305,8 +358,8 @@ class EcoinventSpreadsheet(NsUuidArchive):
         :return:
         """
         print('Handling intermediate exchanges [internal spreadsheet]')
-        inter = _intermediate[_intermediate[:2]].drop_duplicates()
-        for index, row in inter.iterrows():
+        # inter = _intermediate[_intermediate[:2]].drop_duplicates()
+        for index, row in _intermediate.iterrows():
             n = row['name']
             u = self._key_to_id(n)
             self._create_flow(u, row['unit'], n, Name=n, Compartment=['Intermediate flow'],
@@ -319,9 +372,9 @@ class EcoinventSpreadsheet(NsUuidArchive):
         :return:
         """
         print('Handling elementary exchanges [internal spreadsheet]')
-        int_elem = _elementary[_elementary[:6]].drop_duplicates()  # just take first 6 columns
+        # int_elem = _elementary[_elementary[:6]].drop_duplicates()  # just take first 6 columns
 
-        for index, row in int_elem.iterrows():
+        for index, row in _elementary.iterrows():
             key = self._elementary_key(row)
             u = self._key_to_id(key)
             n = row['name']

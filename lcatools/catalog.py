@@ -2,8 +2,9 @@
 from __future__ import print_function, unicode_literals
 
 import json
+# from eight import *
 
-from eight import *
+import os
 
 from collections import namedtuple
 

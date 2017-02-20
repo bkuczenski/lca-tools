@@ -41,7 +41,9 @@ Sun 2017-02-19 19:45:51 -0800
 Well, that was surprisingly easy. Disappointing note: ecoinvent_lcia generation workflow is distressingly out of date.
 
 
+Sun 2017-02-19 20:39:52 -0800
 
+ok- ecoinvent_lcia generation seems fine, actually.
 
 ==========
 Wed Dec 21 19:13:07 PST 2016

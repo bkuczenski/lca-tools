@@ -22,16 +22,22 @@ class ForegroundQuery(object):
         frag_tuples = [_to_tuple(x) for x in frags]
         return cls(fm, frag_tuples, quantities, **kwargs)
 
-    def _ensure_frag(self, abbrev):
-        if isinstance(abbrev, str):
+    def _ensure_frag(self, reference):
+        """
+        This converts a reference to a query object-- either a fragment or a process catalog_ref
+        :param reference: uuid abbrev for frag OR full uuid for fg process OR (index, uuid) for catalog ref OR a literal
+         fragment OR a literal catalog_ref
+        :return:
+        """
+        if isinstance(reference, str):
             try:
-                frag = self._fm.frag(abbrev)
+                frag = self._fm.frag(reference)
             except StopIteration:
-                frag = self._fm.ref(0, abbrev)
-        elif isinstance(abbrev, tuple):
-            frag = self._fm.ref(*abbrev)
+                frag = self._fm.ref(0, reference)
+        elif isinstance(reference, tuple):
+            frag = self._fm.ref(*reference)
         else:
-            frag = abbrev
+            frag = reference
         assert frag.entity_type in ('process', 'fragment')
         return frag
 

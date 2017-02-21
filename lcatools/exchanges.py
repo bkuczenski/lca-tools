@@ -46,13 +46,12 @@ class Exchange(object):
 
     entity_type = 'exchange'
 
-    def __init__(self, process, flow, direction, unit=None, termination=None):
+    def __init__(self, process, flow, direction, termination=None):
         """
 
         :param process:
         :param flow:
         :param direction:
-        :param unit: default: flow's reference quantity unit
         :param termination: string id of terminating process or None
         :return:
         """
@@ -63,17 +62,22 @@ class Exchange(object):
         self._process = process
         self._flow = flow
         self._direction = direction
-        try:
-            self.unit = unit or flow.reference_entity.reference_entity
-        except AttributeError:
-            self.unit = None
         self._termination = None
         if termination is not None:
             self._termination = str(termination)
+        self._hash = (process.uuid, flow.uuid, direction, self._termination)
 
     """
     These all need to be immutable because they form the exchange's hash
     """
+    @property
+    def unit(self):
+        try:
+            unit = self.flow.reference_entity.reference_entity
+        except AttributeError:
+            unit = None
+        return unit
+
     @property
     def value(self):
         return None
@@ -98,16 +102,19 @@ class Exchange(object):
     def termination(self):
         return self._termination
 
+    @property
+    def hash(self):
+        return self._hash
+
     def __hash__(self):
-        return hash((self._process.get_uuid(), self._flow.get_uuid(), self._direction, self._termination))
+        return hash(self._hash)
 
     def __eq__(self, other):
         if other is None:
             return False
-        return (self.process.get_uuid() == other.process.get_uuid() and
-                self.flow.get_uuid() == other.flow.get_uuid() and
-                self.direction == other.direction and
-                self.termination == other.termination)
+        if not isinstance(other, Exchange):
+            return False
+        return self._hash == other.hash
 
     @property
     def comp_dir(self):
@@ -230,6 +237,9 @@ class ExchangeValue(Exchange):
                                                                                                      exch_val))
         self._value = exch_val
 
+    def is_allocated(self, key):
+        return key in self._value_dict
+
     def __getitem__(self, item):
         """
         Allocated exchange values should add up to unallocated value.  When using the exchange values, don't forget to
@@ -278,7 +288,9 @@ class ExchangeValue(Exchange):
             else:
                 if value != 0:
                     raise ValueError('Non-reference Allocation for reference exchange should be 0.')
-        self._value_dict[key] = value
+        else:
+            # if it's a reference exchange, it's non-allocatable and should have an empty value_dict
+            self._value_dict[key] = value
 
     def remove_allocation(self, key):
         """

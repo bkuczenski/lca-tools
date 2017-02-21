@@ -240,6 +240,11 @@ class LcEntity(object):
     def show(self):
         print('%s Entity (ref %s)' % (self.entity_type.title(), self.get_external_ref()))
         print('origin: %s' % self.origin)
+        if self.entity_type == 'process':
+            for i in self.reference_entity:
+                print('reference: %s' % i)
+        else:
+            print('reference: %s' % self.reference_entity)
         fix = ['Name', 'Comment']
         postfix = set(self._d.keys()).difference(fix)
         ml = len(max(self._d.keys(), key=len))
@@ -388,16 +393,16 @@ class LcProcess(LcEntity):
         return hits[0]
 
     def inventory(self, reference=None):
-        out = []
-        it = self.exchanges(reference)
+        num = 0
+        it = sorted(self.exchanges(reference), key=lambda x: x.direction)
         if reference is None:
             print('%s' % self)
         else:
             print('Reference: %s' % reference)
         for i in it:
-            print('%2d %s' % (len(out), i))
-            out.append(i)
-        return out
+            print('%2d %s' % (num, i))
+            num += 1
+        return it
 
     def exchange(self, flow, direction=None):
         if isinstance(flow, LcFlow):
@@ -440,7 +445,7 @@ class LcProcess(LcEntity):
             except NoReferenceFound:
                 reference = None
         chk_alloc = self.is_allocated(reference)
-        for i in sorted(self._exchanges.values(), key=lambda x: x.direction):
+        for i in self._exchanges.values():
             if reference is None:
                 yield i
             elif not chk_alloc:
@@ -553,11 +558,10 @@ class LcProcess(LcEntity):
         for x in self._exchanges.values():
             if x in self.reference_entity:
                 continue
-            v = x[reference]
-            if v == 0:
-                missing_allocations.append(x)
+            if x.is_allocated(reference):
+                has_allocation.append(x)
             else:
-                has_allocation.append(v)
+                missing_allocations.append(x)
             if not strict:
                 if len(has_allocation) > 0:
                     return True  # for nonstrict, bail out as soon as any allocation is detected

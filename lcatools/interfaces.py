@@ -28,21 +28,21 @@ uuid_regex = re.compile('([0-9a-f]{8}.?([0-9a-f]{4}.?){3}[0-9a-f]{12})')
 
 def to_uuid(_in):
     if isinstance(_in, uuid.UUID):
-        return _in
+        return str(_in)
     if _in is None:
         return _in
     try:
         g = uuid_regex.search(_in)
-        if g is not None:
-            try:
-                _out = uuid.UUID(g.groups()[0])
-            except ValueError:
-                _out = None
-        else:
-            _out = None
     except TypeError:
-        _out = None
-    return _out
+        g = None
+    if g is not None:
+        return g.groups()[0]
+    # no regex match- let's see if uuid.UUID can handle the input
+    try:
+        _out = uuid.UUID(_in)
+    except ValueError:
+        return None
+    return str(_out)
 
 
 class ArchiveInterface(object):
@@ -55,7 +55,8 @@ class ArchiveInterface(object):
     def _key_to_id(cls, key):
         """
         in the base class, the key is the uuid-- this can get overridden
-        by default, to_uuid just finds a uuid by regex and returns uuid.UUID()
+        by default, to_uuid just returns a string matching the regex, or failing that, tries to generate a string
+        using uuid.UUID(key)
         :param key:
         :return:
         """
@@ -219,7 +220,7 @@ class ArchiveInterface(object):
                 etype = kwargs.pop('entity_type')
                 result_set = self._entities_by_type(etype)
             else:
-                result_set = [self._get_entity(k) for k in self._entities.keys()]
+                result_set = [v for v in self._entities.values()]
         result_set = self._narrow_search(result_set, **kwargs)
         if upstream and self._upstream is not None:
             kwargs['entity_type'] = etype  # need to reset for upstream search-- what an awkward interface

@@ -8,7 +8,7 @@ import six
 import uuid
 
 from lcatools.interfaces import ArchiveInterface, to_uuid
-from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcUnit, NoReferenceFound  # , LcEntity
+from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcUnit, NoReferenceFound, DuplicateExchangeError  # , LcEntity
 from lcatools.exchanges import Exchange, comp_dir
 
 if six.PY2:
@@ -149,17 +149,31 @@ class LcArchive(ArchiveInterface):
                         is_ref = False
                     entity.add_characterization(q, reference=is_ref, value=v)
         elif etype == 'process':
-            # note-- we want to abandon referenceExchange notation, but we need to leave it in for backward compat
-            try:
-                rx = e.pop('referenceExchange')
-            except KeyError:
-                rx = None
+            # note-- we are officially abandoning referenceExchange notation
+            if 'referenceExchange' in e:
+                e.pop('referenceExchange')
             if 'exchanges' in e:
                 exchs = e.pop('exchanges')
             entity = LcProcess(uid, **e)
             if exchs is not None:
+                refs, nonrefs = [], []
                 for x in exchs:
-                    # TODO: first add reference exchanges; then go back and add all the non-reference exchanges
+                    if 'isReference' in x and x['isReference'] is True:
+                        refs.append(x)
+                    else:
+                        nonrefs.append(x)
+                # first add reference exchanges
+                for x in refs:
+                    # eventually move this to an exchange classmethod - which is why I'm repeating myself for now
+                    v = None
+                    f = self[x['flow']]
+                    d = x['direction']
+                    if 'value' in x:
+                        v = x['value']
+                    entity.add_exchange(f, d, value=v)
+                    entity.add_reference(f, d)
+                # then add ordinary [allocated] exchanges
+                for x in nonrefs:
                     v = None
                     t = None
                     # is_ref = False
@@ -169,25 +183,24 @@ class LcArchive(ArchiveInterface):
                         v = x['value']
                     if 'termination' in x:
                         t = x['termination']
-                    ex = entity.add_exchange(f, d, value=v, termination=t)
-                    if 'isReference' in x:
-                        if x['isReference'] is True:
-                            entity.add_reference(f, d)
-                    if 'valueDict' in x:
-                        for k, v in x['valueDict'].items():
-                            drr, fuu = k.split(':')
-                            rx = Exchange(entity, self[fuu], drr)
-                            entity.add_exchange(f, d, reference=rx, value=v, termination=t)
+                    try:
+                        entity.add_exchange(f, d, value=v, termination=t)
+                    except DuplicateExchangeError:
+                        print('refs: %s' % refs)
+                        print('nonrefs: %s' % nonrefs)
+                        raise
 
-                rx = None
-            if rx is not None and rx != 'None':
-                try:
-                    direc, flow = rx.split(': ')
-                    entity['referenceExchange'] = Exchange(process=entity, flow=self[flow], direction=direc)
-                except AttributeError:
-                    print('rx: [%s]' % rx)
-                except ValueError:
-                    pass
+                    if 'valueDict' in x:
+                        for k, val in x['valueDict'].items():
+                            drr, fuu = k.split(':')
+                            try:
+                                rx = entity.reference(flow=self[fuu])
+                            except NoReferenceFound:
+                                entity.show()
+                                print('key: %s' % k)
+                                print('flow: %s' % self[fuu])
+                                raise
+                            entity.add_exchange(f, d, reference=rx, value=val, termination=t)
         else:
             raise TypeError('Unknown entity type %s' % e['entityType'])
 

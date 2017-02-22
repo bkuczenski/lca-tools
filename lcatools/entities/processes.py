@@ -51,7 +51,7 @@ class LcProcess(LcEntity):
         :param entity_uuid:
         :param kwargs:
         """
-        self._exchanges = dict()
+        self._exchanges = dict()  # maps exchange key to exchange
         super(LcProcess, self).__init__('process', entity_uuid, **kwargs)
         if self.reference_entity is not None:
             raise AttributeError('How could the reference entity not be None?')
@@ -110,7 +110,7 @@ class LcProcess(LcEntity):
         """
         self._validate_reference({ref_entity})
 
-        if ref_entity in self._exchanges:
+        if ref_entity.key in self._exchanges:
             self.reference_entity.add(ref_entity)
 
     def _find_reference_by_string(self, term, strict=False):
@@ -229,7 +229,7 @@ class LcProcess(LcEntity):
                 raise NoReferenceFound('Exchange is not a reference exchange %s' % reference)
         else:
             raise NoReferenceFound('Unintelligible reference %s' % reference)
-        return self._exchanges[ref]
+        return self._exchanges[ref.key]
 
     def add_reference(self, flow, dirn):
         rx = Exchange(self, flow, dirn)
@@ -244,10 +244,10 @@ class LcProcess(LcEntity):
     def references(self, flow=None):
         for rf in self.reference_entity:
             if flow is None:
-                yield self._exchanges[rf]
+                yield self._exchanges[rf.key]
             else:
                 if rf.flow == flow:
-                    yield self._exchanges[rf]
+                    yield self._exchanges[rf.key]
 
     def reference(self, flow=None):
         if isinstance(flow, Exchange):
@@ -273,7 +273,7 @@ class LcProcess(LcEntity):
         exchs = dict()
         mags = dict()
         for rf in self.reference_entity:
-            exchs[rf.flow] = self._exchanges[rf].value
+            exchs[rf.flow] = self._exchanges[rf.key].value
             mags[rf.flow] = exchs[rf.flow] * rf.flow.cf(quantity)
 
         total = sum([v for v in mags.values()])
@@ -325,11 +325,11 @@ class LcProcess(LcEntity):
         for x in self._exchanges.values():
             x.remove_allocation(reference)
 
-    def add_exchange(self, flow, dirn, reference=None, value=None, add_dups=False, **kwargs):
+    def add_exchange(self, flow, dirn, reference=None, value=None, termination=None, add_dups=False):
         """
         This is used to create Exchanges and ExchangeValues and AllocatedExchanges.
 
-        If the flow+dirn is already in the exchange set:
+        If the flow+dir+term is already in the exchange set:
             if no reference is specified and/or no value is specified- nothing to do
             otherwise (if reference and value are specified):
                 upgrade the exchange to an allocatedExchange and add the new reference exch val
@@ -341,18 +341,20 @@ class LcProcess(LcEntity):
         :param dirn:
         :param reference:
         :param value:
+        :param termination:
         :param add_dups: (False) set to true to handle "duplicate exchange" errors by cumulating their values
         :return:
         """
-        _x = Exchange(self, flow, dirn, **kwargs)
+        _x = (self.uuid, flow.uuid, dirn, termination)
         if _x in self._exchanges:
             if value is None or value == 0:
                 return None
             e = self._exchanges[_x]
             if not isinstance(e, ExchangeValue):
-                e = ExchangeValue(self, flow, dirn, **kwargs)
-                self._exchanges[e] = e
-                assert self._exchanges[_x] is self._exchanges[e]  # silly me, always skeptical of hashing
+                e = ExchangeValue(self, flow, dirn, termination=termination)
+                assert _x == e.key
+                self._exchanges[e.key] = e
+                # assert self._exchanges[_x] is self._exchanges[e]  # silly me, always skeptical of hashing
             if reference is None:
                 if isinstance(value, dict):
                     e.update(value)
@@ -385,24 +387,22 @@ class LcProcess(LcEntity):
 
         else:
             if value is None or value == 0:
-                e = _x
+                e = Exchange(self, flow, dirn, termination=termination)
             elif isinstance(value, float):
                 if reference is None:
-                    e = ExchangeValue(self, flow, dirn, value=value, **kwargs)
+                    e = ExchangeValue(self, flow, dirn, value=value, termination=termination)
                 else:
                     if reference not in self.reference_entity:
                         raise KeyError('Specified reference is not registered with process: %s' % reference)
-                    e = ExchangeValue(self, flow, dirn, value=None, **kwargs)
+                    e = ExchangeValue(self, flow, dirn, value=None, termination=termination)
                     e[reference] = value
 
             elif isinstance(value, dict):
-                e = ExchangeValue.from_dict(self, flow, dirn, value_dict=value, **kwargs)
+                e = ExchangeValue(self, flow, dirn, value_dict=value, termination=termination)
             else:
                 raise TypeError('Unhandled value type %s' % type(value))
-            if e in self._exchanges:
-                raise KeyError('Exchange already present')
             # self._exchanges.add(e)
-            self._exchanges[e] = e
+            self._exchanges[e.key] = e
             return e
 
     def lcias(self, quantities, **kwargs):

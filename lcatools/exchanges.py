@@ -103,7 +103,7 @@ class Exchange(object):
         return self._termination
 
     @property
-    def hash(self):
+    def key(self):
         return self._hash
 
     def __hash__(self):
@@ -114,7 +114,7 @@ class Exchange(object):
             return False
         if not isinstance(other, Exchange):
             return False
-        return self._hash == other.hash
+        return self.key == other.key
 
     @property
     def comp_dir(self):
@@ -161,12 +161,6 @@ class ExchangeValue(Exchange):
     An ExchangeValue is an exchange with a single value (corresponding to unallocated exchange value) plus a dict of
     values allocated to different reference flows.
     """
-    @classmethod
-    def from_dict(cls, process, flow, direction, value=None, **kwargs):
-        self = cls(process, flow, direction, **kwargs)
-        self._value_dict.update(value)  # this will fail unless value was specified
-        return self
-
     @classmethod
     def from_exchange(cls, exch, value=None, **kwargs):
         if isinstance(exch, ExchangeValue):

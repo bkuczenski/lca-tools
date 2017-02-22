@@ -8,12 +8,16 @@ import six
 import uuid
 
 from lcatools.interfaces import ArchiveInterface, to_uuid
-from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcUnit, NoReferenceFound, DuplicateExchangeError  # , LcEntity
-from lcatools.exchanges import Exchange, comp_dir
+from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcUnit, NoReferenceFound  # , LcEntity
+from lcatools.exchanges import comp_dir
 
 if six.PY2:
     bytes = str
     str = unicode
+
+
+class OldJson(Exception):
+    pass
 
 
 class LcArchive(ArchiveInterface):
@@ -80,8 +84,8 @@ class LcArchive(ArchiveInterface):
                 self.add(f)
             except KeyError:
                 if self[f.get_uuid()] is None:
-                    print('upstream key: %s\next_ref: %s\n uid: %s\n get_uuid(): %s' %(key, f.get_external_ref(),
-                                                                                       uid, f.get_uuid()))
+                    print('upstream key: %s\next_ref: %s\n uid: %s\n get_uuid(): %s' % (key, f.get_external_ref(),
+                                                                                        uid, f.get_uuid()))
                     raise ValueError('What the fuck is going on?')
 
                 pass  # already there- fine-
@@ -94,10 +98,6 @@ class LcArchive(ArchiveInterface):
             self.entity_from_json(e)
         for e in j['processes']:
             self.entity_from_json(e)
-        if 'exchanges' in j:
-            self.handle_old_exchanges(j['exchanges'])
-        if 'characterizations' in j:
-            self.handle_old_characterizations(j['characterizations'])
         self.check_counter()
 
     def entity_from_json(self, e):
@@ -109,10 +109,7 @@ class LcArchive(ArchiveInterface):
         :return:
         """
         if 'tags' in e:
-            self._entity_from_old_json(e)
-            return
-        chars = None
-        exchs = None
+            raise OldJson('This file type is no longer supported.')
         e_id = e.pop('entityId')
         ext_ref = e.pop('externalId')
         uid = self._key_to_id(e_id)
@@ -124,143 +121,78 @@ class LcArchive(ArchiveInterface):
             e['referenceUnit'] = unit
             entity = LcQuantity(uid, **e)
         elif etype == 'flow':
-            try:
+            if 'referenceQuantity' in e:
                 e.pop('referenceQuantity')
-            except KeyError:
-                pass
-            if 'characterizations' in e:
-                chars = e.pop('characterizations')
+            chars = e.pop('characterizations', [])
             entity = LcFlow(uid, **e)
-            if chars is not None:
-                for c in chars:
-                    v = None
-                    q = self[c['quantity']]
-                    if q is None:
-                        import json, sys
-                        print(ext_ref)
-                        json.dump(c, sys.stdout, indent=2)
+            for c in chars:
+                v = None
+                q = self[c['quantity']]
+                if q is None:
+                    import json
+                    import sys
+                    print(ext_ref)
+                    json.dump(c, sys.stdout, indent=2)
 
-                        raise KeyError
-                    if 'value' in c:
-                        v = c['value']
-                    if 'isReference' in c:
-                        is_ref = c['isReference']
-                    else:
-                        is_ref = False
-                    entity.add_characterization(q, reference=is_ref, value=v)
+                    raise KeyError
+                if 'value' in c:
+                    v = c['value']
+                if 'isReference' in c:
+                    is_ref = c['isReference']
+                else:
+                    is_ref = False
+                entity.add_characterization(q, reference=is_ref, value=v)
         elif etype == 'process':
             # note-- we are officially abandoning referenceExchange notation
             if 'referenceExchange' in e:
                 e.pop('referenceExchange')
-            if 'exchanges' in e:
-                exchs = e.pop('exchanges')
+            exchs = e.pop('exchanges', [])
             entity = LcProcess(uid, **e)
-            if exchs is not None:
-                refs, nonrefs = [], []
-                for x in exchs:
-                    if 'isReference' in x and x['isReference'] is True:
-                        refs.append(x)
-                    else:
-                        nonrefs.append(x)
-                # first add reference exchanges
-                for x in refs:
-                    # eventually move this to an exchange classmethod - which is why I'm repeating myself for now
-                    v = None
-                    f = self[x['flow']]
-                    d = x['direction']
-                    if 'value' in x:
-                        v = x['value']
-                    entity.add_exchange(f, d, value=v)
-                    entity.add_reference(f, d)
-                # then add ordinary [allocated] exchanges
-                for x in nonrefs:
-                    v = None
-                    t = None
-                    # is_ref = False
-                    f = self[x['flow']]
-                    d = x['direction']
-                    if 'value' in x:
-                        v = x['value']
-                    if 'termination' in x:
-                        t = x['termination']
-                    try:
-                        entity.add_exchange(f, d, value=v, termination=t)
-                    except DuplicateExchangeError:
-                        print('refs: %s' % refs)
-                        print('nonrefs: %s' % nonrefs)
-                        raise
+            refs, nonrefs = [], []
+            ref_x = dict()
+            for x in exchs:
+                if 'isReference' in x and x['isReference'] is True:
+                    refs.append(x)
+                else:
+                    nonrefs.append(x)
+            # first add reference exchanges
+            for x in refs:
+                # eventually move this to an exchange classmethod - which is why I'm repeating myself for now
+                v = None
+                f = self[x['flow']]
+                d = x['direction']
+                if 'value' in x:
+                    v = x['value']
+                ref_x[x['flow']] = entity.add_exchange(f, d, value=v)
+                entity.add_reference(f, d)
+            # then add ordinary [allocated] exchanges
+            for x in nonrefs:
+                t = None
+                # is_ref = False
+                f = self[x['flow']]
+                d = x['direction']
+                if 'termination' in x:
+                    t = x['termination']
+                if 'value' in x:
+                    entity.add_exchange(f, d, value=x['value'], termination=t)
 
-                    if 'valueDict' in x:
-                        for k, val in x['valueDict'].items():
-                            drr, fuu = k.split(':')
-                            try:
-                                rx = entity.reference(flow=self[fuu])
-                            except NoReferenceFound:
-                                entity.show()
-                                print('key: %s' % k)
-                                print('flow: %s' % self[fuu])
-                                raise
-                            entity.add_exchange(f, d, reference=rx, value=val, termination=t)
+                if 'valueDict' in x:
+                    for k, val in x['valueDict'].items():
+                        drr, fuu = k.split(':')
+                        try:
+                            rx = ref_x[fuu]
+                        except KeyError:
+                            entity.show()
+                            print('key: %s' % k)
+                            print('flow: %s' % self[fuu])
+                            raise
+                        assert rx.direction == drr
+                        entity.add_exchange(f, d, reference=rx, value=val, termination=t)
         else:
             raise TypeError('Unknown entity type %s' % e['entityType'])
 
         entity.origin = origin
         entity.set_external_ref(ext_ref)
-        self.add(entity)
-
-    def handle_old_exchanges(self, jx):
-        for x in jx:
-            p = self[x['process']]
-            f = self[x['flow']]
-            v = None
-            if 'value' in x:
-                v = x['value']
-            d = x['direction']
-            rx = p['referenceExchange']
-            if rx is not None:
-                is_ref = (rx.flow == f and rx.direction == d)
-            else:
-                is_ref = False
-            p.add_exchange(f, d, reference=is_ref, value=v)
-
-    def handle_old_characterizations(self, jc):
-        for c in jc:
-            f = self[c['flow']]
-            q = self[c['quantity']]
-            v = None
-            if 'value' in c:
-                v = c['value']
-            rq = f['referenceQuantity']
-            if rq is not None:
-                is_ref = rq == q
-            else:
-                is_ref = False
-            f.add_characterization(q, reference=is_ref, value=v)
-
-    def _entity_from_old_json(self, e):
-        d = e['tags']
-        uid = self._key_to_id(e['entityId'])
-        if e['entityType'] == 'quantity':
-            unit, _ = self._create_unit(e['referenceUnit'])
-            d['referenceUnit'] = unit
-            entity = LcQuantity(uid, **d)
-        elif e['entityType'] == 'flow':
-            try:
-                d['referenceQuantity'] = self[e['referenceQuantity']]
-            except TypeError:
-                pass  # allow referenceQuantity to be None
-            entity = LcFlow(uid, **d)
-        elif e['entityType'] == 'process':
-            entity = LcProcess(uid, **d)
-            try:
-                direc, flow = e['referenceExchange'].split(': ')
-                entity['referenceExchange'] = Exchange(process=entity, flow=self[flow], direction=direc)
-            except ValueError:
-                pass  # allow referenceExchange to be None
-        else:
-            raise TypeError('Unknown entity type %s' % e['entityType'])
-
-        entity.set_external_ref(e['entityId'])
         self.add(entity)
 
     def processes(self):

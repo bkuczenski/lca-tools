@@ -114,34 +114,17 @@ class ForegroundArchive(LcArchive):
         return os.path.join(self._folder, 'synonyms.json')
 
     def add(self, entity):
+        """
+        Reimplement base add to merge instead of raising a key error.
+        :param entity:
+        :return:
+        """
         try:
             super(ForegroundArchive, self).add(entity)
         except KeyError:
             # merge incoming entity's properties with existing entity
             current = self[entity.get_uuid()]
             current.merge(entity)
-
-    def add_entity_and_children(self, entity):
-        """
-        reimplementing here so that we merge instead of abandon if the child entity exists.. think about merging that
-        behavior up...
-        :param entity:
-        :return:
-        """
-        self.add(entity)
-        if entity.entity_type == 'quantity':
-            # reset unit strings- units are such a hack
-            entity.reference_entity._external_ref = entity.reference_entity._unitstring
-        elif entity.entity_type == 'flow':
-            # need to import all the flow's quantities
-            for cf in entity.characterizations():
-                self.add_entity_and_children(cf.quantity)
-        elif entity.entity_type == 'process':
-            # need to import all the process's flows
-            for x in entity.exchanges():
-                self.add_entity_and_children(x.flow)
-        elif entity.entity_type == 'fragment':
-            self.add_entity_and_children(entity.flow)
 
     def save(self):
         self.write_to_file(self._archive_file, gzip=False, exchanges=True, characterizations=True, values=True)

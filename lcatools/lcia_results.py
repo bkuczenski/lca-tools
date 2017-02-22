@@ -4,18 +4,20 @@ This object replaces the LciaResult types spelled out in Antelope-- instead, it 
 """
 from lcatools.exchanges import ExchangeValue, DissipationExchange
 from lcatools.characterizations import Characterization
-from lcatools.interfaces import to_uuid
+# from lcatools.interfaces import to_uuid
 
 
 from collections import defaultdict
 
 
+'''
 def get_entity_uuid(item):
     if to_uuid(item) is not None:
         return item
     if hasattr(item, 'get_uuid'):
         return item.get_uuid()
     raise TypeError('Don\'t know how to get ID from %s' % type(item))
+'''
 
 
 class InconsistentQuantity(Exception):
@@ -541,7 +543,6 @@ class LciaResults(dict):
     def update(self, *args, **kwargs):
         super(LciaResults, self).update(*args, **kwargs)
         self._indices = list(self.keys())
-
 
 
 class LciaWeighting(object):

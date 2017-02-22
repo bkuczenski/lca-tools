@@ -316,7 +316,7 @@ class LcArchive(ArchiveInterface):
     def fg_proxy(self, proxy):
         """
         A catalog service- to grab the 'native' process in the event that the locally-cached one is a stub.
-        NOP by default.
+        NOP by default (override in subclasses).
         :param proxy:
         :return:
         """
@@ -414,7 +414,8 @@ class NsUuidArchive(LcArchive):
                 if isinstance(self._upstream, NsUuidArchive):
                     ns_uuid = self._upstream._ns_uuid
 
-        ns_uuid = to_uuid(ns_uuid)  # if it's already a uuid, keep it; if it's a string, find it; else None
+        if not isinstance(ns_uuid, uuid.UUID):
+            ns_uuid = uuid.UUID(ns_uuid)
 
         self._ns_uuid = uuid.uuid4() if ns_uuid is None else ns_uuid
         self._serialize_dict['nsUuid'] = str(self._ns_uuid)
@@ -431,6 +432,6 @@ class NsUuidArchive(LcArchive):
         if u is not None:
             return u
         if six.PY2:
-            return uuid.uuid3(self._ns_uuid, key.encode('utf-8'))
+            return str(uuid.uuid3(self._ns_uuid, key.encode('utf-8')))
         else:
-            return uuid.uuid3(self._ns_uuid, key)
+            return str(uuid.uuid3(self._ns_uuid, key))

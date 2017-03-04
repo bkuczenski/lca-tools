@@ -185,12 +185,13 @@ class LcProcess(LcEntity):
         :param strict: [False] whether to use strict flow name matching [default- first regex match]
         :return:
         """
+        chk_alloc = None
         if reference is not None:
             try:
                 reference = self.find_reference(reference, strict=strict)
+                chk_alloc = self.is_allocated(reference)
             except NoReferenceFound:
                 reference = None
-        chk_alloc = self.is_allocated(reference)
         for i in self._exchanges.values():
             if reference is None:
                 yield i
@@ -207,7 +208,7 @@ class LcProcess(LcEntity):
     def find_reference(self, reference, strict=False):
         """
         returns an exchange. NOTE: this has been refactored.
-        :param reference:
+        :param reference: could be None, string (name or uuid), flow, or exchange
         :param strict:
         :return:
         """

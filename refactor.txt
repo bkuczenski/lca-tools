@@ -1,4 +1,121 @@
 ==========
+Tue Feb 21 13:35:50 -0800 2017
+
+OK- progress- we now have built A and B matrices, and we have an Ecoinvent Tarjan traversal in <25 sec, which is shorter than it takes to load the JSON file. (AND we implemented allocated exchange deserialization)
+
+Moving forward, on the refactoring side: we need to
+ * figure out what the foreground should do, and how matrix bg computation should fit into it
+ * figure out an interface for the foreground manager-- I suppose this should do that
+ * split entities / move deserialize into entities + exchanges
+ * flowdb -> quantity db; move to catalog from mgr
+
+ - review catalog, develop interface
+ - review interfaces
+
+
+What is currently required to perform foreground queries?
+
+ - retrieve quantities from index 0 by uuid
+ - fragment_lcia(frag, **kwargs)
+ - fg_lcia(catalog_ref)
+ - frag(abbreviation)
+ - ref(index, id)
+
+fg_lcia simply dereferences the process and runs the process's lcia
+fragment_lcia simply requires each fragment's score cache to be set-- it's practically static
+
+so what about compute_unit_scores? static, static, static.
+
+what does the manager even do? it's just a collection of utility functions.
+
+
+The whole thing needs reworked.  None of the current manager tasks need to be done by a manager- they should be done by the entities themselves.  A process can compute its own fg_lcia (and with matrix, its own bg_lcia)
+
+except not, because the foreground flows are supposed to be the ones that are characterized.  The foreground should be doing the lcia-- the archives should just be doing LCI? but that still doesn't help because the LCI they return will include heterodox flows.
+
+They should return Emission objects- just a flow uuid and direction (and value) and then the foreground can do the LCIA using its "correct" flows of record (which are rendered correct through the use of a quantity db)
+
+The Foreground should NOT store fragments, though-- the manager should store fragments.  ALL the manager should do is store and manage fragments and their unit score computations.
+
+A SEPARATE builder class (not a subclass) should be used for consstructing fragments which can then be added to a fragment manager.
+
+The manager should still be made up of a catalog.
+
+All the "child flows" and "fragment to foreground" stuff was written blind- it should all be thrown out. I should start new.
+
+
+
+
+
+Vision for how things should work:
+
+ * Entities: get separate files.
+
+ * LcArchive:
+   * can be marked background- if true, then entities may not be added; and edits (esp. to process reference exchanges) may produce unreliable results.
+   * once an archive is marked background, the archive can identify:
+     -- foreground flows (product flows in non-background sccs)
+     -- background flows (core and downstream)
+     -- cutoff flows
+     * for a given process+ref flow, return interior exchanges (exchanges found in _terminations)
+     * for a given process+ref flow, return direct cutoffs (exchanges not found in _terminations)
+     * for a given process+ref flow, return LCI (agg cutoffs)
+     == all of these are delivered as (flow.uuid, direction, value)
+     [=> dissipation flows only work in the foreground]
+     * background can also return disagg or agg foreground, dependencies, emissions
+     * foreground does LCIA computation on the results
+     * archives can also be mined to construct fragment trees, instead of the absurd build_child_flows and the like
+     
+   ** problems: mainly we want the compartment manager to detect intermediate vs elementary flows, but that is something that we really want the entities to do for themselves.
+   ** it's not really intermediate vs elementary that we're interested in, though- it's interior vs exterior-
+      - for gen_exchanges we want interior flows to build child fragments
+      - for lcia we want exterior flows to estimate impacts
+      - what knows interior vs exterior? **the background!** how does it know?
+      	- _terminations tell us whether flows are interior or exterior- the problem is initializing it-
+	  = what happens if a process's reference changes- how does _terminations get updated?
+	  = either we disallow that, or we have to provide hooks. hooks don't seem feasible.
+	  = what we CAN do is disallow new entity addition after bg is computed- but that still doesn't prevent changes to existing processes. I think it's just a "void your warranty" situation: once the bg is computed, you can't mess with it anymore.
+	  So anyway, the key into _terminations is the same as the key into _emissions: (flow uuid, direction) from a parent exchange.  Except _terminations is complete; _emissions only includes emissions that are part of the background.  So membership in _terminations should be the determining factor for interiority.
+
+	  This is great- this completely eliminates the need for a compartment manager. And since we create _terminations on __init__, we don't even need to build the background!
+	- emissions are a list of flows + directions- those we can find right away using the bg.
+
+
+
+ * Quantity DB: as before, maps flowable + compartment to CF.
+   -> contains its own compartment manager, serializes to compartments.json
+   -> compartment manager should also compartmentalize & dereference quantities -> semantic
+
+
+We still would need to load the whole archive before we can initialize background.
+
+
+ * Catalog--> contains a foreground and a quantity db.
+   -> serializes to catalog.json-- should include fg-specific flow synonyms as well
+
+ * Catalog[0] is foreground:
+   -> privileged archive because it stores authoritative flow profile data
+   -> serializes to entities.json in catalog directory
+
+ * FragmentManager is built on top of a catalog
+   -> keeps a list of fragments; serializes + deserializes them in the fragments/ directory in foreground
+   -> all the tricky fragment creation stuff comes out--> done using matrices instead.
+   -> backgrounds create fragments now, and hand them over to the manager to store.
+   
+
+
+In order to "do everything", which in this case is compute a fragment LCIA,
+ * I believe, to traverse, all we need is the fragment trees- we don't even use the term nodes
+ * to compute unit scores:
+   - if the fragment is background, do background LCIA
+   - elif the fragment is foreground, lookup CFs from fragment.flow (currently using db.factors_for_flow
+   - else, do foreground LCIA
+
+Then traversal_to_lcia does not seem to make any further requirements. so- seriously- the fragments (and terms) do *all* of the work themselves! The only hard part is building them- but that will be a lot easier if archives can identify and spit out (foreground flows, background dependencies, and cutoffs)- just like in the mother fuckin paper.
+
+
+
+==========
 Sun Feb 19 00:46:06 -0800 2017
 
 merging compartments branch with matrix: what do we want to save from the last commit?

@@ -121,25 +121,25 @@ class ArchiveInterface(object):
         the fundamental method- retrieve an entity by UUID- either a uuid.UUID or a string that can be
         converted to a valid UUID.
 
+        First checks upstream, then local.
+
         If the UUID is not found, returns None. handle this case in client code/subclass.
         :param key: something that maps to a literal UUID via _key_to_id
         :return: the LcEntity or None
         """
         if key is None:
             return None
+        if self._upstream is not None:
+            e = self._upstream[key]
+            if e is not None:
+                return e
         entity = self._key_to_id(key)
         if entity in self._entities:
             e = self._entities[entity]
             if e.origin is None:
                 e.origin = self.ref
             return e
-        elif self._upstream is not None:
-            e = self._upstream[key]
-            if e is not None:
-                self.add(e)  # e is just a reference, so this is literally just a dictionary key
-            return e
-        else:
-            return None
+        return None
 
     def __getitem__(self, item):
         return self._get_entity(item)

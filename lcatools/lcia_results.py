@@ -412,13 +412,17 @@ class LciaResult(object):
         return '%s %s' % (number(self.total()), self.quantity)
 
     # charts
-    def contrib_query(self, stages):
+    def contrib_query(self, stages=None):
         """
-        returns a handle to a pyplot axis
-        :param stages: the stages to query
+        returns a list of scores
+        :param stages: [None] a list of stages to query, or None to return all components.
+         Specify '*' to return a 1-item list containing just the total.
+
         :return:
         """
-        if stages is None:
+        if stages == '*':
+            return [self.total()]
+        elif stages is None:
             stages = self.components()
 
         data = []

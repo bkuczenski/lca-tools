@@ -35,12 +35,12 @@ class LcArchive(ArchiveInterface):
     def set_upstream(self, upstream):
         super(LcArchive, self).set_upstream(upstream)
         # create a dict of upstream flows
-        for i in self._upstream.flows():
-            up_key = self._upstream_flow_key(i)
+        for i in self._upstream.flows() + self._upstream.quantities():
+            up_key = self._upstream_key(i)
             if up_key in self._upstream_hash:
                 print('!!multiple upstream matches for %s!!' % up_key)
             else:
-                self._upstream_hash[self._upstream_flow_key(i)] = i
+                self._upstream_hash[up_key] = i
 
     def add_entity_and_children(self, entity):
         try:
@@ -62,34 +62,33 @@ class LcArchive(ArchiveInterface):
             self.add_entity_and_children(entity.flow)
 
     @staticmethod
-    def _upstream_flow_key(flow):
-        return ', '.join([flow['Name']] + flow['Compartment'])
+    def _upstream_key(entity):
+        if entity.entity_type == 'flow':
+            return ', '.join([entity['Name']] + entity['Compartment'])
+        elif entity.entity_type == 'quantity':
+            return str(entity)
+        else:
+            return None
 
     @staticmethod
     def _lcia_key(quantity):
         return ', '.join([quantity['Method'], quantity['Category'], quantity['Indicator']])
 
-    def _try_flow(self, uid, key):
-        if self[uid] is not None:
-            return self[uid]
-        if key in self._upstream_hash:
-            f = self._upstream_hash[key]
-            self._print('Found upstream match: %s' % str(f))
-            for c in f.characterizations():
-                if self[c.quantity.get_uuid()] is None:
-                    # this should never run, since retrieving the query should add it to the db automatically
-                    print('\n quantity not found: %s.\n adding quantity %s' % (key, c.quantity))
-                    self.add(c.quantity)
-            try:
-                self.add(f)
-            except KeyError:
-                if self[f.get_uuid()] is None:
-                    print('upstream key: %s\next_ref: %s\n uid: %s\n get_uuid(): %s' % (key, f.get_external_ref(),
-                                                                                        uid, f.get_uuid()))
-                    raise ValueError('What the fuck is going on?')
+    def _check_upstream(self, key):
+        """
+        Method to check if a primitive entity, not yet distinguished by a UUID, is present in the upstream database.
+        Uses a customized (DANGER!) type-dependent identifier that will have to do for now.
 
-                pass  # already there- fine-
-            return f
+        How to use this: generate a type-dependent check-key that matches the output of _upstream_key.  These will
+        be stored in a hash for flows and quantities (processes should never defer to upstream: the archive will always
+        consider itself authoritative for processes it contains).  If the check-key is found in the hash, the upstream
+        entity will be returned.  Otherwise returns None.
+        :param key:
+        :return:
+        """
+        if key in self._upstream_hash:
+            return self._upstream_hash[key]
+        return None
 
     def load_json(self, j):
         for e in j['quantities']:
@@ -354,7 +353,7 @@ class NsUuidArchive(LcArchive):
 
     def _key_to_id(self, key):
         """
-        Converts Ecospold01 "number" attributes to UUIDs using the internal UUID namespace.
+        If the supplied key matches a uuid string, returns it.  Otherwise, creates a uuid3 using the internal namespace.
         :param key:
         :return:
         """

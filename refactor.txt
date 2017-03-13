@@ -1,4 +1,52 @@
 ==========
+Sun Mar 05 00:19:37 -0800 2017
+
+Progress on catalog / fg manager refactor:
+
+ - make upstream the *default*- only replicate entities into downstream archives when asked
+ - catalog is stupid. why base the whole thing on a fragile sequential index?
+
+ - catalog refs should be [catalog, ref, id] where ref is LcArchive.ref, and the catalog manager looks it up into a list.
+ - that way, each serialized entity is completely specified on its own.
+
+ - catalog manager should dereference and should load on demand
+
+ - and some sort of librarian should have a master list of all the entities.
+ - gzip catalogs should omit data (just like I said)
+
+ - don't feel like switching into code mode right now
+ - load should recurse on upstreams.
+
+But the point is, the catalog ref can be assigned a catalog manager.  CatalogRef.lookup(catalog) should dereference it and be immutable.
+And then the catalog manager stores its list of known catalogs by .ref
+
+Foreground: is upstream of all archives that don't have an upstream.  archives that do have an upstream, load them recursively, until you land back at foreground.  that's your ordering.
+
+then from each archive, you can look up -> fg flows as interior, non-cutoff; fg emissions as cutoffs.
+
+
+ - background:
+   : already spits out a list of fg fragments and outputs
+   -> need to move it into main
+   -> get rid of extraneous stuff in LcArchive as well, with terminations and such-
+   -> background should report: it all. entity map: Af entities (foreground sccs), Ad entities (background + downstream, interior), Bf entities (cutoff)
+      -> background should aggregate- via inversion for Af and iteration for A*? that's the shit I havent done yet
+      - should create fragments and give them UUIDs (uuid3 via termination? no. simply enumerate them.)
+      - the fragment's origin then becomes whatever foreground queries it. 
+
+   - manager should: ask for a list of fragments
+     : given one fragment - get children-> column of af
+       	     	 	  - fg inventory -> columns of ad and bf
+			  - bg lci -> column of bx
+     : foreground should then ask flow db for cfs for the named flow, given the qtys loaded.
+
+
+
+
+
+
+
+==========
 Tue Feb 21 13:35:50 -0800 2017
 
 OK- progress- we now have built A and B matrices, and we have an Ecoinvent Tarjan traversal in <25 sec, which is shorter than it takes to load the JSON file. (AND we implemented allocated exchange deserialization)

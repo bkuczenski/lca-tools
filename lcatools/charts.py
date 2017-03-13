@@ -100,8 +100,11 @@ def _has_pos_neg(res):
     :return:
     """
     data = res.contrib_query(res.components())
-    poss = sum([k for k in data if k > 0])
-    negs = sum([k for k in data if k < 0])
+    try:
+        poss = next(k for k in data if k > 0)
+        negs = next(k for k in data if k < 0)
+    except StopIteration:
+        return False
     if poss != 0 and negs != 0:
         return True
     return False
@@ -522,7 +525,7 @@ def stack_bars(ax, series, hue, units, labels=None, title='Scenario Analysis', s
     """
 
     :param ax:
-    :param series: must be a list of iterables, presumably all the same length
+    :param series: must be a list of iterables of numerical data, presumably all the same length
     :param hue:
     :param units:
     :param labels: None, or a list of text strings to label each bar set

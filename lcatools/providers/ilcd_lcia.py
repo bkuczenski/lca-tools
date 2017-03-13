@@ -27,25 +27,29 @@ class IlcdLcia(IlcdArchive):
         ns = find_ns(o.nsmap, 'LCIAMethod')
 
         u = str(find_common(o, 'UUID')[0])
-        n = str(find_common(o, 'name')[0])
+        try_q = self[u]
+        if try_q is not None:
+            lcia = try_q
+        else:
+            n = str(find_common(o, 'name')[0])
 
-        c = str(find_common(o, 'generalComment')[0])
+            c = str(find_common(o, 'generalComment')[0])
 
-        m = '; '.join([str(x) for x in find_tag(o, 'methodology', ns=ns)])
-        ic = '; '.join([str(x) for x in find_tag(o, 'impactCategory', ns=ns)])
-        ii = '; '.join([str(x) for x in find_tag(o, 'impactIndicator', ns=ns)])
+            m = '; '.join([str(x) for x in find_tag(o, 'methodology', ns=ns)])
+            ic = '; '.join([str(x) for x in find_tag(o, 'impactCategory', ns=ns)])
+            ii = '; '.join([str(x) for x in find_tag(o, 'impactIndicator', ns=ns)])
 
-        ry = str(find_tag(o, 'referenceYear', ns=ns)[0])
-        dur = str(find_tag(o, 'duration', ns=ns)[0])
+            ry = str(find_tag(o, 'referenceYear', ns=ns)[0])
+            dur = str(find_tag(o, 'duration', ns=ns)[0])
 
-        r_uuid, r_uri = get_reference_quantity(o, ns=ns)
-        rq = self._check_or_retrieve_child(r_uuid, r_uri)
+            r_uuid, r_uri = get_reference_quantity(o, ns=ns)
+            rq = self._check_or_retrieve_child(r_uuid, r_uri)
 
-        lcia = LcQuantity(u, Name=n, Comment=c, Method=m, Category=ic, Indicator=ii, ReferenceYear=ry, Duration=dur)
-        lcia.set_external_ref('%s/%s' % (typeDirs['LCIAMethod'], u))
-        lcia.reference_entity = rq.reference_entity
+            lcia = LcQuantity(u, Name=n, Comment=c, Method=m, Category=ic, Indicator=ii, ReferenceYear=ry, Duration=dur)
+            lcia.set_external_ref('%s/%s' % (typeDirs['LCIAMethod'], u))
+            lcia.reference_entity = rq.reference_entity
 
-        self.add(lcia)
+            self.add(lcia)
 
         for factor in o['characterisationFactors'].getchildren():  # British spelling! brits aren't even IN the EU anymore
             f_uuid, f_uri, f_dir = get_flow_ref(factor, ns=ns)

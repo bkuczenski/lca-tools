@@ -146,7 +146,11 @@ class EcospoldV2Archive(LcArchive):
 
             q = LcQuantity(unit_uuid, Name='EcoSpold Quantity %s' % unitstring, ReferenceUnit=ref_unit,
                            Comment=self.spold_version)
-            self.add(q)
+            try_q = self._check_upstream(self._upstream_key(q))
+            if try_q is None:
+                self.add(q)
+            else:
+                q = try_q
         else:
             q = try_q
 
@@ -181,8 +185,9 @@ class EcospoldV2Archive(LcArchive):
         else:
             raise AttributeError('No exchange type found for id %s' % exchange.attrib['id'])
 
-        if self[uid] is not None:
-            return self[uid]
+        f = self[uid]
+        if f is not None:
+            return f
 
         if 'casNumber' in exchange.attrib:
             cas = exchange.attrib['casNumber']
@@ -195,9 +200,13 @@ class EcospoldV2Archive(LcArchive):
         c = 'EcoSpold02 Flow'
 
         f = LcFlow(uid, Name=n, CasNumber=cas, Comment=c, Compartment=cat)
-        f.add_characterization(quantity=q, reference=True)
+        try_f = self._check_upstream(self._upstream_key(f))
+        if try_f is None:
+            f.add_characterization(quantity=q, reference=True)
 
-        self.add(f)
+            self.add(f)
+        else:
+            f = try_f
 
         return f
 

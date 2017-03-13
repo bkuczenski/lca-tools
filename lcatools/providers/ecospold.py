@@ -106,7 +106,11 @@ class EcospoldV1Archive(NsUuidArchive):
             q = LcQuantity(uid, Name='EcoSpold Quantity %s' % unitstring,
                            ReferenceUnit=ref_unit, Comment=self.spold_version)
             q.set_external_ref(unitstring)
-            self.add(q)
+            try_q = self._check_upstream(self._upstream_key(q))
+            if try_q is None:
+                self.add(q)
+            else:
+                q = try_q
             self._q_dict[unitstring] = q
 
         return q
@@ -133,9 +137,13 @@ class EcospoldV1Archive(NsUuidArchive):
             cat = [exch.get('category'), exch.get('subCategory')]
 
             f = LcFlow(uid, Name=n, CasNumber=cas, Comment=c, Compartment=cat)
-            f.add_characterization(q, reference=True)
-            f.set_external_ref(number)
-            self.add(f)
+            try_f = self._check_upstream(self._upstream_key(f))
+            if try_f is None:
+                f.add_characterization(q, reference=True)
+                f.set_external_ref(number)
+                self.add(f)
+            else:
+                f = try_f
 
         if exch.get("unit") != f.unit():
             local_q = self._create_quantity(exch.get("unit"))

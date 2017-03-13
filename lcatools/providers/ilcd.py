@@ -305,9 +305,13 @@ class IlcdArchive(LcArchive):
         :param o: objectified FlowProperty
         :return:
         """
+        u = str(find_common(o, 'UUID')[0])
+        try_q = self[u]
+        if try_q is not None:
+            return try_q
+
         ns = find_ns(o.nsmap, 'FlowProperty')
 
-        u = str(find_common(o, 'UUID')[0])
         n = str(find_common(o, 'name')[0])
 
         c = str(find_common(o, 'generalComment')[0])
@@ -319,6 +323,10 @@ class IlcdArchive(LcArchive):
         refunit, unitconv = self._create_unit(ug_path)
 
         q = LcQuantity(u, Name=n, ReferenceUnit=refunit, UnitConversion=unitconv, Comment=c)
+        try_q = self._check_upstream(self._upstream_key(q))
+        if try_q is not None:
+            return try_q
+
         q.set_external_ref('%s/%s' % (typeDirs['FlowProperty'], u))
 
         self.add(q)
@@ -337,10 +345,13 @@ class IlcdArchive(LcArchive):
         :param o: objectified flow
         :return: an LcFlow
         """
+        u = str(find_common(o, 'UUID')[0])
+        try_f = self[u]
+        if try_f is not None:
+            return try_f
+
         ns = find_ns(o.nsmap, 'Flow')
         n = grab_flow_name(o, ns=ns)
-
-        u = str(find_common(o, 'UUID')[0])
 
         c = str(find_common(o, 'generalComment')[0])
 
@@ -352,6 +363,10 @@ class IlcdArchive(LcArchive):
         cat = [str(i) for i in cat]
 
         f = LcFlow(u, Name=n, CasNumber=cas, Comment=c, Compartment=cat)
+        try_f = self._check_upstream(self._upstream_key(f))
+        if try_f is not None:
+            return try_f
+
         f.set_external_ref('%s/%s' % (typeDirs['Flow'], u))
 
         ref_to_ref = get_reference_flow_property_id(o, ns=ns)
@@ -377,15 +392,15 @@ class IlcdArchive(LcArchive):
                 print('Duplicate Characterization in entity %s\n %s = %g' % (u, q, val))
                 # let it go
 
-        try:
-            self.add(f)
-        except KeyError:
-            print('Found duplicate entity %s' % u)
-            raise
+        self.add(f)
         return f
 
     def _create_process_entity(self, o, ns):
         u = str(find_common(o, 'UUID')[0])
+        try_p = self[u]
+        if try_p is not None:
+            return try_p
+
         n = ', '.join(chain(filter(len, [str(find_tag(o, k, ns=ns)[0])
                                          for k in ('baseName',
                                                    'treatmentStandardsRoutes',
@@ -402,6 +417,7 @@ class IlcdArchive(LcArchive):
 
         p = LcProcess(u, Name=n, Comment=c, SpatialScope=g, TemporalScope=stt,
                       Classifications=cls)
+
         self.add(p)
 
         p.set_external_ref('%s/%s' % (typeDirs['Process'], u))

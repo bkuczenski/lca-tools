@@ -42,6 +42,7 @@ class EcoinventLcia(NsUuidArchive):
     def _load_xl_rows(self):
         """
         25+sec just to open_workbook for EI3.1 LCIA (pandas is similar)
+        note: this is down to
         """
         b = xlrd.open_workbook(self.ref).sheet_by_name(self._sheet_name)
 
@@ -105,12 +106,14 @@ class EcoinventLcia(NsUuidArchive):
 
     def _create_flow(self, row):
         key = self._flow_key(row)
-        u = self._key_to_id(key)
-        f = self._try_flow(u, key)
+        f = self._check_upstream(key)
         if f is None:
+            u = self._key_to_id(key)
+            if u in self._entities:
+                return self[u]
             f = LcFlow(u, Name=row['name'], CasNumber='', Compartment=[row['compartment'], row['subcompartment']],
                        Comment=row['note'])
-            self._print('Created new flow with %s ' % self._upstream_flow_key(f))
+            self._print('Created new flow with %s ' % self._upstream_key(f))
             f.add_characterization(self._mass, reference=True)
             f.set_external_ref(key)
             self.add(f)

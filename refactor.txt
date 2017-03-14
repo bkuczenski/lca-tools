@@ -1,4 +1,19 @@
 ==========
+Sun Mar 12 22:38:10 -0700 2017
+
+What do we want an LcMatrix to do?
+
+More to the point, what do we want an LcCatalog to do?
+1- this is the thing that keeps track of compartments
+2- this is the thing that keeps track of [archive] refs
+ 2a- CatalogRef should be catalog (or None for floating ref), ref (i.e. LcArchive.ref), id (or key)
+ 2b- CatalogRef can be created w/o a catalog (floating) and be anchored to a catalog later
+
+3- json archives are not the point / data should be omitted (a la in Semantic Catalogs)
+
+4- time for fuckin bed.
+
+==========
 Sun Mar 05 00:19:37 -0800 2017
 
 Progress on catalog / fg manager refactor:

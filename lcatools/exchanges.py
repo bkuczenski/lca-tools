@@ -232,10 +232,21 @@ class ExchangeValue(Exchange):
         self._value = exch_val
 
     def is_allocated(self, key):
-        return key in self._value_dict
+        """
+        Report whether the exchange is allocated with respect to a given reference.
+        :param key: an exchange
+        :return:
+        """
+        if len(self._value_dict) > 0:
+            return key in self._value_dict
+        return False
 
     def __getitem__(self, item):
         """
+        When an exchange is asked for its value with respect to a particular reference, lookup the allocation in
+        the value_dict.  IF there is no value_dict, then the default _value is returned AS LONG AS the process has
+        only 0 or 1 reference exchange.
+
         Allocated exchange values should add up to unallocated value.  When using the exchange values, don't forget to
         normalize by the chosen reference flow's input value (i.e. utilize an inbound exchange when computing
         node weight or when constructing A + B matrices)
@@ -252,6 +263,10 @@ class ExchangeValue(Exchange):
         #    # no allocation necessary
         #    return self.value
         else:
+            if len(self._value_dict) == 0:  # no allocation
+                if len(self.process.reference_entity) > 1:
+                    raise AmbiguousReferenceError('%s: No allocation but multiple references' % self)
+                return self.value
             try:
                 return self._value_dict[item]
             except KeyError:

@@ -25,10 +25,12 @@ class SynList(object):
     And de-serialized:
      - from that list, construct the list. boo hoo!
     """
+    json_string = 'synList'
+
     @classmethod
     def from_json(cls, j):
         s = cls()
-        for i in j['synList']:
+        for i in j[cls.json_string]:
             s.add_set(i['synonyms'], name=i['name'])
         return s
 
@@ -38,6 +40,7 @@ class SynList(object):
         self._dict = dict()
 
     def _new_key(self, key, index):
+        key = key.strip()
         self._list[index].add(key)
         self._dict[key] = index
 
@@ -51,7 +54,7 @@ class SynList(object):
         return len([x for x in self._list if x is not None])
 
     def index(self, key):
-        return self._dict[key]
+        return self._dict[key.strip()]
 
     def keys(self):
         return self._dict.keys()
@@ -65,6 +68,7 @@ class SynList(object):
         :param key:
         :return:
         """
+        key = key.strip()
         if key not in self._dict.keys():
             index = self._new_group()
             self._new_key(key, index)
@@ -73,8 +77,8 @@ class SynList(object):
     def find_indices(self, it):
         found = set()
         for i in it:
-            if i in self._dict.keys():
-                found.add(self._dict[i])
+            if i.strip() in self._dict.keys():
+                found.add(self._dict[i.strip()])
         return found
 
     def merge_set_with_index(self, it, index):
@@ -145,7 +149,7 @@ class SynList(object):
         return index
 
     def synonyms_for(self, key):
-        return self.synonym_set(self._dict[key])
+        return self.synonym_set(self._dict[key.strip()])
 
     def search(self, term):
         results = set()
@@ -166,8 +170,8 @@ class SynList(object):
 
     def serialize(self):
         return {
-            'synList': [self._serialize_set(i) for i in range(len(self._list))
-                        if self._list[i] is not None]
+            self.json_string: [self._serialize_set(i) for i in range(len(self._list))
+                               if self._list[i] is not None]
         }
 
 
@@ -192,15 +196,12 @@ def trim_cas(cas):
 
 class Flowables(SynList):
     """
-    A SynList that enforces unique CAS numbers on sets
-    """
+    A SynList that enforces unique CAS numbers on sets.  Also introduces a new policy (controversial!) that adds
+    mandatory case insensitivity, by adding both key and key.lower() for every key.
 
-    @classmethod
-    def from_json(cls, j):
-        s = cls()
-        for i in j['flowables']:
-            s.add_set(i['synonyms'], name=i['name'])
-        return s
+    The CAS thing requires overloading _new_key and _new_group and just about everything else.
+    """
+    json_string = 'flowables'
 
     def __init__(self):
         super(Flowables, self).__init__()
@@ -257,9 +258,3 @@ class Flowables(SynList):
                 print('Conflicting CAS: incoming %s; existing [%s] = %d' % (cas, self._cas[index], index))
                 raise ConflictingCas('Incoming set has conflicting CAS %s' % cas)
         super(Flowables, self).merge_set_with_index(it, index)
-
-    def serialize(self):
-        return {
-            'flowables': [self._serialize_set(i) for i in range(len(self._list))
-                          if self._list[i] is not None]
-        }

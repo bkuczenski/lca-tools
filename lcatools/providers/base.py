@@ -345,10 +345,13 @@ class NsUuidArchive(LcArchive):
                 if isinstance(self._upstream, NsUuidArchive):
                     ns_uuid = self._upstream._ns_uuid
 
+        if ns_uuid is None:
+            ns_uuid = uuid.uuid4()
+
         if not isinstance(ns_uuid, uuid.UUID):
             ns_uuid = uuid.UUID(ns_uuid)
 
-        self._ns_uuid = uuid.uuid4() if ns_uuid is None else ns_uuid
+        self._ns_uuid = ns_uuid
         self._serialize_dict['nsUuid'] = str(self._ns_uuid)
 
     def _key_to_id(self, key):

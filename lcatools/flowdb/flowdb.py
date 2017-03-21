@@ -16,10 +16,14 @@ class MissingFlow(Exception):
     pass
 
 
+class MultipleCFs(Exception):
+    pass
+
+
 class CLookup(object):
     """
     A CLookup is a fuzzy mapping from compartment to characterization factor. It's basically a dict with
-    Compartments as keys and sets of CharacterizationRefs as values.
+    Compartments as keys and sets of Characterizations as values.
     """
     def __init__(self):
         self._dict = defaultdict(set)
@@ -61,6 +65,9 @@ class CLookup(object):
         :param return_first: stop hunting as soon as a cf is found
         :return:
         """
+        if not isinstance(item, Compartment):
+            return set()
+
         def found(res):
             return len(res) > 0 and return_first
         results = self.__getitem__(item)
@@ -310,6 +317,32 @@ class FlowDB(object):
             if k is not None:
                 missing_flows.add(k)
         return missing_flows
+
+    def lookup_cf_from_flowable(self, flowable, compartment, quantity, location='GLO', dist=1):
+        try:
+            fb = self.flowables.index(flowable)
+        except KeyError:
+            return None
+        comp = self.compartments.find_matching(compartment)
+        if comp is None:
+            print('flowable %s' % flowable)
+            print('no compartment found: %s' % compartment)
+        q = quantity.get_uuid()
+        if fb in self._q_dict[q]:
+            cfs = self._f_dict[(fb, q)].find(comp, dist=dist, return_first=True)
+            if len(cfs) > 0:
+                cf1 = [cf for cf in cfs if location in cf.locations()]
+                if len(cf1) == 1:
+                    return cf1[0]
+                vals = set([cf[location] for cf in cf1])
+                if len(vals) == 1:
+                    return cf1[0]
+                for k in cf1:
+                    print(str(k))
+                raise MultipleCFs(flowable)
+            if len(cfs) == 1:
+                return list(cfs)[0]
+        return None
 
     def lookup_cfs(self, flow, quantity, dist=3, intermediate=False):
         cfs = set()

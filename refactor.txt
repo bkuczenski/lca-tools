@@ -1,4 +1,26 @@
 ==========
+Mon Mar 20 11:27:04 -0700 2017
+
+On the one hand, the objective for right now is very simple: we want to take this background manager we've made, use it to generate a foreground fragment, and then use the fragment to generate a publication.  To do this properly, we want to use the same publication mechanism to publish LcFragment-based foregrounds.  The problem is, the publication depends on the background manager all the way back, in order to compute background process LCI.
+
+This is expected.
+
+The problem is: what to do when background LCIA is not computed from background LCI? e.g. in the LcFragment case. We can't exactly cast a FragmentFlow stack to a BackgroundManager.  There has to be some other way to resolve the LCIA query.  We also can't make it self-contained because, at present, the ForegroundFragment contains the characterization vector.
+
+So there you have it.  EITHER:
+ * ForegroundFragment contains the characterization vector; background nodes supply LCI
+ * ForegroundFragment contains the characterization vector and passes it to the background node on query- the problem here is that this is costly, since the c.v. is stored as a sparse matrix and not as an entity set
+ * ForegroundFragment contains the foreground characterization vector, and background is responsible for developing its own characterization (in which case I need to implement this for BackgroundManager as-is)
+ * ForegroundFragment loses characterization vector; only background managers do characterization. but this is counter to the spirit of separated concerns.
+
+I think the cleanest approach is to require background to do its own LCIA. But HOW?
+
+
+ 
+
+
+
+==========
 Sun Mar 12 22:38:10 -0700 2017
 
 What do we want an LcMatrix to do?

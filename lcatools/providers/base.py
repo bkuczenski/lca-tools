@@ -64,7 +64,7 @@ class LcArchive(ArchiveInterface):
     @staticmethod
     def _upstream_key(entity):
         if entity.entity_type == 'flow':
-            return ', '.join([entity['Name']] + entity['Compartment'])
+            return ', '.join(filter(None, [entity['Name']] + entity['Compartment']))
         elif entity.entity_type == 'quantity':
             return str(entity)
         else:

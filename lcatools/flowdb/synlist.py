@@ -98,7 +98,7 @@ class SynList(object):
                 #print('index %d: Ignoring duplicate term [%s] = %d ' % (index, i, self._dict[i]))
             else:
             '''
-            if i not in self._dict.keys():
+            if i not in self._dict:
                 self._new_key(i, index)
         return index
 

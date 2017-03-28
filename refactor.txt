@@ -1,4 +1,103 @@
 ==========
+Mon Mar 27 13:16:32 -0700 2017
+
+The Archive Interface:
+ * keeps a collection of related entities
+ * is anchored to a particular data source
+ * can have an upstream archive
+ * serializes and deserializes
+ = gets and adds entities
+ = keeps a uuid for every entity
+ * provides a mapping from key to uuid, in the event that external keys are not UUIDs
+
+the LcArchive:
+ * specifically identifies entities as processes, flows, or quantities
+ + needs to be extended to create a BackgroundManager as needed
+ + need to standardize interface to answer certain queries. current half-assed interface:
+   - flows, processes, quantities, lcia_methods
+   - terminate - outmoded- generate processes that terminate an input exchange- BackgroundManager does this better
+   - exchanges - list exchanges having the given flow, opt. direction- could be useful
+   - fg_proxy, bg_proxy- not sure
+   - fg_lookup, bg_lookup- not sure
+
+the Foreground:
+ * keeps a collection of fragments
+
+The LcCatalog interface:
+ * at its core is a RESOLVER which relates semantic references to data sources
+ * also manages access to a flow db for explicit compartmentation + characterization on demand of LcArchive flows
+ = CatalogRefs are an archive-ref/origin + external-ref/id. Catalog resolves them to data sources.
+ = also contains one (or many?) foreground(s), which store LcFragments
+ = loads + saves archives and handles nicknames for them
+ 
+
+==========
+Tue Mar 21 22:57:26 -0700 2017
+
+Progress!
+
+ 1- the new concept for archives and particularly background archives seems sound, namely:
+   * archives are read-only
+   * processes already know how to do their own fg lcia, provided flows are characterized
+   * a background manager:
+     - operates on an archive
+     - provides / is required to compute lci
+
+ 2- the flow/qty db needs to be completely rethought / reworked
+   * a query consists of a flowable, REFERENCE UNIT, compartment, GEOGRAPHY and query unit.
+   * all 5 of these components are required to compute the conversion factor
+   * should return a float, not a CF. why encumber the client with CF baggage?
+
+ 3- catalog refactor will be total.
+   * this is a drag as it could jeopardize the AUOMA work
+   * still, the concept of a catalog ref being made exclusively of entity.origin + entity.external_ref is incredibly appealing
+     - entity.uuid being a suitable substitute for entity.external_ref
+   * but more to the point, LcFragments as being constructed FROM ForegroundFragments is incredibly appealing.
+     - right now, only background managers can generate foreground fragments-- perhaps every archive should have a background manager operating by default.
+
+ 4- LCIA- seems to be correct, up to about 5%, which could easily be explained by quantity matching
+
+Optimizations I want to make at my earliest convenience:
+ * the old exchange.is_reference() / improve process reference_entity membership
+ * background should go ahead and construct ad and bf, and extract columns- will slash the time cost of make_foreground (on Ecoinvent: 2-3 msec vs 40-70 msec). Since the ecoinvent breakdown for lci is approx: 40-70 msec for make_foreground; 200 msec for iteration; 100 msec for exchanges, getting rid of make_foreground is huge
+ * E matrix- option to report all characterized flows
+ * Af, Ad, Bf- option to report full [truncate 0-rows] vs sparse
+ ( sparse report should put everything in a single data column? make it extra-sparse? nah; clearer if you can see what's being presented)
+ * Cutoff flows need to be upgraded to the foreground-- this requires the application of the flowdb, since it is the only thing that knows how to tell intermediate from elementary flows.. however, once available it should be easy to sort _bg.emissions into cutoffs and elementary flows.
+ * get pandas out of ForegroundFragment; get dependencies on pandas out of ForegroundTable
+
+ * ArchiveInterface needs to log both source and ref.  origins of all these entities should be semantic references, rather than physical sources. That's going to require migration of all the archives.
+   - or- could be done on load.  Load archive, get ref; when the archive is added to an LcCatalog, the catalog manages 
+
+
+Thu 2017-03-23 10:35:56 -0700
+
+LCIA investigation-- the LCI has always been right, so the error cannot be a matter of sign reversals on waste flows.  Instead, it must be in LCIA.  So just to confirm, I've chosen a lightweight foreground system; generated a publication with 10 different CML CC impacts; comparing against the reference results on the ecoinvent website.
+
+(maybe I should compare against the logged LCIA results in the spold distribution? they must be the same...)
+
+anyway-- the product flow is:
+treatment of poultry manure, drying, pelleting [RoW]:==poultry manure, fresh [By-product classification: Recyclable]
+
+loaded ecoinvent CFs into flow DB-- 92 excluded flows.
+
+checked against CML- 35 excluded flows have CML characterizations
+
+but matching those flows to flows in bg is what the flow db is for--- and so far that is hard to do.
+
+Thu 2017-03-23 15:13:38 -0700
+
+but of course it comes down to Ecoinvent's omission of biogenic CO2.
+
+acidification is dead on. let's try tox ... [CML] tox is spot-on (5 methods checked)
+of course, there's the sign reversal-- but why is that there? that is there because our data are already normalized to a unit output AS PER the demands of the iteration
+
+anyway, LCIA seems to be solved.
+
+
+
+
+==========
 Mon Mar 20 11:27:04 -0700 2017
 
 On the one hand, the objective for right now is very simple: we want to take this background manager we've made, use it to generate a foreground fragment, and then use the fragment to generate a publication.  To do this properly, we want to use the same publication mechanism to publish LcFragment-based foregrounds.  The problem is, the publication depends on the background manager all the way back, in order to compute background process LCI.
@@ -15,8 +114,39 @@ So there you have it.  EITHER:
 
 I think the cleanest approach is to require background to do its own LCIA. But HOW?
 
+how is LCIA done right now: well, in lca-tools it's done by the foreground manager. background is required to provide LCI.
 
- 
+There's also the lingering anxiety about mashing up emissions vectors from different sources.  EITHER we have a strong foreground manager that figures out which is which, or we leave it up to the background managers to do it themselves (and supply a qdb for the purpose).
+
+The foreground should DEFINITELY maintain its own CF data and its own list of emissions.  And it should map those CFs to background emissions on demand.  The FG -- catalog manager now -- should keep a list of each archive's emissions and map into them.
+
+Or no.  The catalog manager should just have a flowdb on tap, and hand it over to the bg archives along with any request for LCIA.  The bg archives should simply characterize their flows and run ordinary process-owned LCIA.  And background LCIA can only be answered by a background manager, since it is the only class that builds and inverts a matrix.
+
+So there we have it.  The problem with this is that it does not require fg and bg LCIA to be cut from the same CFs. But maybe that is a feature, not a bug, because different databases have e.g. different localities.  It does require that fg and bg LCIA be cut from the same FLOW DATABASE, which should be the subsequent source of inquiry because it can be independently managed.
+
+So a workflow is starting to come together here:
+
+ * a workspace includes a flow db with an accompanying flowables list and compartment manager, just as at present
+ * a foreground manager IS a catalog, which keeps a dict of archives by ref and looks up references by origin
+   - the foreground manager also holds on to the flow db
+ * an archive comes with a background automatically, which is used for answering all lci queries.
+   - The background can be used to spit out publications about the archive, such as foreground tables
+   - LCIA data has to come externally.  It can be added to the foreground fragment, which is the natural thing
+     to do, but as long as we have a background we may as well continue to explicitly use the LCI.
+ * the foreground manager also keeps a set of fragments, which are very similar to the foreground components of
+   background archives, except they vary with scenarios.
+   - LcFragments in the foreground can be cast into a structure that is very similar to a ForegroundFragment, by
+     using a traversal record (list of FragmentFlows; enhanced to include exchange value)
+   - a separate mechanism is needed to publish this. Why make them the same when they are different?
+   - this can also be used to seed an antelope implementation.
+ * The foreground/background archive has to be useful to CREATE fragments.  We need to call them by different names though.
+
+BUt not really- the point is that foreground fragments are created in the background archives.  Then we just take the product flows, which are already ordered, and make them into fragments. 
+
+
+New plan. new plan. Don't refactor anything in background. Reimplement for fragment output when we get there.
+
+the LCIA thing is still sticky though. 
 
 
 

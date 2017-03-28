@@ -347,6 +347,8 @@ class FlowDB(object):
     def lookup_cfs(self, flow, quantity, dist=3, intermediate=False):
         cfs = set()
         flowables, comp = self.parse_flow(flow)
+        if comp is None:  # elementary flows must have non-None compartments
+            return cfs
         if not comp.elementary and not intermediate:
             return cfs
         q = quantity.get_uuid()
@@ -407,9 +409,11 @@ class FlowDB(object):
         """
         if flow.has_characterization(quantity):
             return flow.factor(quantity)
-        cfs = self.lookup_cfs(flow, quantity, dist=dist)
         if location == '':
             location = 'GLO'
+        # first, find all CFs ignoring location
+        cfs = self.lookup_cfs(flow, quantity, dist=dist)
         if len(cfs) == 0:
             return None
+        # only use location if the result is ambiguous --
         return self._reduce_cfs(flow, quantity, cfs, location=location)

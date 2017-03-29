@@ -255,9 +255,9 @@ class FlowDB(object):
     def _add_cf(self, flowables, comp, cf):
         """
         Herein lies the salvation of the fractured synonyms problem - duplicated CFs!
-        :param flowables:
-        :param comp:
-        :param cf:
+        :param flowables: set of indices to flowables
+        :param comp: a compartment
+        :param cf: a cf--- add it to all applicable flowables
         :return:
         """
         q = cf.quantity.get_uuid()
@@ -267,8 +267,14 @@ class FlowDB(object):
             self._f_dict[(i, q)][comp] = cf
 
     def parse_flow(self, flow):
-        terms = set(filter(None, (flow['Name'].strip(), flow['CasNumber'].strip(), flow.get_uuid())))
-        flowables = self.flowables.find_indices(terms)
+        terms = list(filter(None, (flow['CasNumber'].strip(), flow.get_uuid(), flow['Name'].strip())))
+        flowables = {}
+        while len(flowables) == 0:
+            try:
+                term = [terms.pop(0)]
+            except IndexError:
+                break
+            flowables = self.flowables.find_indices(term)
         comp = self.compartments.find_matching(flow['Compartment'])  # will raise MissingCompartment if not found
         return flowables, comp
 

@@ -225,6 +225,10 @@ class Flowables(SynList):
         super(Flowables, self)._new_key(key.lower(), index)  # controversial?
 
     def find_indices(self, it):
+        """
+        :param it: an *iterable* of strings to match on-- if the input is a single string, use index()
+        :return:
+        """
         found = set()
         for i in it:
             i = i.strip()

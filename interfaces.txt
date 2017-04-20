@@ -1,0 +1,35 @@
+==========
+Thu Apr 20 13:01:43 -0700 2017
+
+Notes on current de-facto and future idealized interfaces between components.
+
+ForegroundQuery:
+ - requires ForegroundManager, which provides:
+   = retrieve quantities from foreground archive
+   = retrieve LcFragment or LcProcess by reference
+   = perform fragment_lcia of fragment (really owned by the fragment)
+     = this routine must accept the following keyword arguments:
+       * scenario
+       * observed
+       * scale
+       * normalized
+     = this routine must return an LciaResults object
+   = perform fg_lcia of the process
+     = this routine must return an LciaResults object
+
+ - user provides fragment references, which the foreground manager must resolve
+ - user provides quantity references, which the foreground manager must resolve
+ - user provides LciaWeightings, which must be constructed by the user
+
+LciaResults:
+ - implement dict of quantity uuid to LciaResult having that quantity
+ - input to self._do_stages
+
+LciaResult: (this is the big one) (need testing!)
+ - aggregate(self, key=lambda) returns an LciaResult having the same total, with entries grouped by key
+ - components(self) returns a list of entries in the result
+ - dict of component key to AggregateLciaScore 
+   - each component has a cumulative_result property
+ 
+lots of muddiness regarding the LciaResult / AggregateLciaScore / DetailedLciaResult interface
+

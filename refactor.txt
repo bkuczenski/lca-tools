@@ -1,4 +1,24 @@
 ==========
+Thu Apr 20 12:51:35 -0700 2017
+
+Doood, where are we even going with this??
+
+The ForegroundFragment is the new point of reference because it includes a straightforward serialization that has been submitted for publication.  Software development going forward should use this as a basis:
+
+ * Ability to serialize and deserialize fragments consistently is a performance benchmark
+ * The equivalency of ForegroundFragments and collections of LcFragments is a performance benchmark.
+
+What functionality does the ForegroundFragment require?
+
+ * access to an inventory data provider (BackgroundManager)
+   - 
+ * access to a quantity database (FlowDB)
+
+
+Not sure we accomplished much here.
+
+
+==========
 Mon Mar 27 13:16:32 -0700 2017
 
 The Archive Interface:

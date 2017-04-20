@@ -253,7 +253,9 @@ class IlcdArchive(LcArchive):
         if uri is not None:
             return self._get_objectified_entity(self._path_from_uri(uri))
         if dtype is None:
-            return self._search_for_term(term)
+            dtype = _extract_dtype(term, self._pathtype)
+            if dtype is None:  # "still"
+                return self._search_for_term(term)
 
         try:
             uid = _extract_uuid(term)

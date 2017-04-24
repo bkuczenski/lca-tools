@@ -1,0 +1,59 @@
+==========
+Mon Apr 24 11:44:18 -0700 2017
+
+The principle of fragment LCIA computation is this: there are three kinds of LCIA computations: direct foreground emissions, foreground process inventories, and background process inventories.  Right now (after .NET) the dissipation code is in the second category; but the second category doesn't even APPEAR in the JIE article. and it is sort of vestigial.
+
+to move away from it would mean--- well, it would mean making a lot more fragment flows- one for every exchange instead of simply one for every product flow. but it would simplify the foregrounding of processes, it would definitely improve transparency.  Where it WOULD be a problem is with the foregrounding of aggregated processes, e.g. GaBi processes (though maybe they would work as backgrounds??? -- ans: they would indeed. Those should not be included as foreground processes. in fact, there should be code to prevent them in case they are private.)
+
+
+and if not via conservation, how would we do dissipation flows? they would need to be computed at the time of traversal. like inbound node weights. they would be a property of flow terminations.
+
+I come back to this idea of "captive" flows that are owned by processes and whose flow properties are computed during traversal. 
+
+what would need to happen for this to work with, say, Trevor's WWTP model?
+ 
+ * the fragment flow would have to have mass as reference quantity.
+ * The flow termination would have to be marked a dissipation node.  The fragment would have to be non-conserving.
+ * At traversal time, the reference flow's characterizations would have to be determined in a scenario-specific manner
+ * the flow termination would own a captive 'residual' flow, whose characterizations get blown away upon traversa. It is made identical to the reference flow, given a specialized reference quantity (e.g. "Residual Flow 1 kg-input").
+ * store a local mass = 1 kg.  
+   == need some way to make sure the same flow's characterizations are not written multiple times in a single traversal.==
+ * for every child flow, 
+   - if the flow 'is' the residual flow: 
+     = skip
+   - check if .
+   - elif the flow's reference quantity is a NON-MASS characterization of the reference flow 
+      == [but still has units of mass??] 
+      == how would we handle e.g. energy content? 
+     = that quantity becomes the "dissipation quantity" or dq
+     = grab that flow's scenario-specific EV. this is the dissipation factor
+     = reduce the residual flow's dq AND local mass by (reference flow dq * ev). error if residual flow's dq < 0
+     = traverse it with _balance specified as reference flow dq
+     = multiple child flows with same property are allowed
+   - elif it's characterized w.r.t. mass:
+     = raise an error-- until we come up with a valid test case
+   - else: 
+     = (e.g. electricity demand) traverse it normally
+ * after all child flows (except residual) have been traversed, recompute residual:
+   - check consistency: make sure the constituent masses don't add up to more than the residual mass
+   - store residual mass as downstream ev
+   - add mass as the reference quantity for the residual-- will scale up all the other quantities
+   - residual remains as a property of the flow termination
+   - traverse residual with _balance specified as residual mass
+
+Then child flows would have THEIR terminations convert "sulfur content" to "SO2" using the normal inbound_ev mechanism.
+
+so we've done it! We've solved the dissipation problem, or at least reduced it to the scenario-specific characterization problem and some new fragment code. AND we don't need a flow-property-emission table- we only need properly characterized emissions.
+
+to be sure, this is still a long way off from functional:: 
+
+ * will it work with multiple traversal scenarios?
+ * how do we ensure the same flow's properties are not computed multiple times? or is that even a problem?
+ * how do we handle non-mass properties like energy content or price?
+   - how do we DETECT non-mass properties? I guess, just don't include them as child flows
+     = but then they will get distorted in the scale-up of the residual
+
+plus, the whole unanswered question about scenario-specific flow characterizations is kind of a big deal.
+
+but on the whole it seems like a clever solution.
+

@@ -96,10 +96,12 @@ class ArchiveInterface(object):
 
     def truncate_upstream(self):
         """
+        BROKEN!
         removes upstream reference and rewrites entity uuids to match current index. note: deprecates the upstream
         upstream_
         :return:
         """
+        # TODO: this needs to be fixed: truncate needs localize all upstream entities (retaining their origins)
         for k, e in self._entities.items():
             e._uuid = k
         self._upstream = None
@@ -199,32 +201,44 @@ class ArchiveInterface(object):
                               bool(re.search(vv, _recurse_expand_subtag(r[k]), flags=re.IGNORECASE))]
         return result_set
 
-    def search(self, *args, upstream=False, **kwargs):
+    def find_partial_id(self, uid, upstream=False, startswith=True):
+        """
+        :param uid: is a fragmentary (or complete) uuid string. (additional positional
+         params are ignored)
+        :param upstream: [False] whether to look upstream if it exists
+        :param startswith: [True] use .startswith instead of full regex
+        :return: result set
+        """
+        if startswith:
+            def test(x, y):
+                return y.startswith(x)
+        else:
+            def test(x, y):
+                return bool(re.search(x, y))
+        result_set = [v for k, v in self._entities.items() if test(uid, k)]
+        if upstream and self._upstream is not None:
+            result_set += self._upstream.find_partial_id(uid, upstream=upstream, startswith=startswith)
+        return result_set
+
+    def search(self, etype=None, upstream=False, **kwargs):
         """
         Find entities by search term, either full or partial uuid or entity property like 'Name', 'CasNumber',
         or so on.
-        :param uuid: optional positional argument is a fragmentary (or complete) uuid string. (additional positional
-         params are ignored)
+        :param etype: optional first argument is entity type
         :param upstream: (False) if upstream archive exists, search there too
         :param kwargs: regex search through entities' properties as named in the kw arguments
-        :return:
+        :return: result set
         """
-        etype = None
-        uid = None if len(args) == 0 else args[0]
-        if uid is not None:
-            # search on uuids
-            result_set = [self._get_entity(k) for k in self._entities.keys()
-                          if bool(re.search(uid, str(k), flags=re.IGNORECASE))]
-        else:
+        if etype is None:
             if 'entity_type' in kwargs.keys():
                 etype = kwargs.pop('entity_type')
-                result_set = self._entities_by_type(etype)
-            else:
-                result_set = [v for v in self._entities.values()]
+        if etype is not None:
+            result_set = self._entities_by_type(etype)
+        else:
+            result_set = self._entities.values()
         result_set = self._narrow_search(result_set, **kwargs)
         if upstream and self._upstream is not None:
-            kwargs['entity_type'] = etype  # need to reset for upstream search-- what an awkward interface
-            result_set += self._upstream.search(*args, **kwargs)
+            result_set += self._upstream.search(etype=etype, **kwargs)
         return result_set
 
     def _fetch(self, entity, **kwargs):

@@ -362,7 +362,7 @@ class FlowTermination(object):
             flow = self._parent.flow
         elif self._process_ref.entity_type == 'fragment':
             if flow is None:
-                ## let's try relaxing this
+                # let's try relaxing this
                 # term flow must be sub-fragment's reference flow
                 flow = self.term_node.flow
         else:
@@ -586,8 +586,8 @@ class LcFragment(LcEntity):
         :param exchange:
         :return:
         """
-        frag = cls(child_flows, uuid.uuid4(), exchange.flow, exchange.direction, parent=parent, exchange_value=exchange.value,
-                   Name=exchange.flow['Name'])
+        frag = cls(child_flows, uuid.uuid4(), exchange.flow, exchange.direction, parent=parent,
+                   exchange_value=exchange.value, Name=exchange.flow['Name'])
 
         if exchange.termination is not None:
             parent_term = parent.termination(None)

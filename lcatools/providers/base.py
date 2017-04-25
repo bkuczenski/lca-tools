@@ -8,7 +8,7 @@ import six
 import uuid
 
 from lcatools.interfaces import ArchiveInterface, to_uuid
-from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcUnit, NoReferenceFound  # , LcEntity
+from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcUnit, entity_types
 from lcatools.exchanges import comp_dir
 
 if six.PY2:
@@ -205,6 +205,15 @@ class LcArchive(ArchiveInterface):
 
     def lcia_methods(self):
         return [q for q in self._entities_by_type('quantity') if q.is_lcia_method()]
+
+    def _entities_by_type(self, entity_type):
+        if entity_type not in entity_types:
+            entity_type = {
+                'p': 'process',
+                'f': 'flow',
+                'q': 'quantity'
+            }[entity_type[0]]
+        return super(LcArchive, self)._entities_by_type(entity_type)
 
     def terminate(self, exchange, refs_only=False):
         """

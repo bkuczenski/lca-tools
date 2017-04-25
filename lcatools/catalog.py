@@ -1,22 +1,12 @@
-
 from __future__ import print_function, unicode_literals
 
 import json
-# from eight import *
-
 import os
-
 from collections import namedtuple
 
-from lcatools.interfaces import to_uuid
 from lcatools.exchanges import Exchange, comp_dir
-
-# from lcatools.characterizations import CharacterizationSet  # , Characterization
-# from lcatools.logical_flows import LogicalFlow, ExchangeRef
-# from lcatools.entities import LcProcess, LcFlow
-
-
 from lcatools.tools import split_nick, archive_from_json, archive_factory
+from providers.interfaces import to_uuid
 
 
 ArchiveRef = namedtuple('ArchiveRef', ['source', 'nicknames', 'dataSourceType', 'parameters'])

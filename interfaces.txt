@@ -125,6 +125,7 @@ ForegroundQuery:
        * scale
        * normalized
      = this routine must return an LciaResults object
+     = this requires unit scores to be computed in advance
    = perform fg_lcia of the process
      = this routine must return an LciaResults object
 
@@ -154,10 +155,107 @@ In particular: I want to dispense with explicit factors wherever possible: the f
 PART 2: NEW INTERFACES, conceptual spec
 ###########################################################################
 
+What are the computations that we need to do? refer to workflows spec:
+
+ * list process instances, flows, quantities
+ * find process instances that terminate an exchange
+ * get inventory (list of exchanges w.r.t. reference)
+ * get exchange value for a given exchange
+ * compute life cycle inventory
+ * [compute life cycle impact assessment]
+ * get characterization
+
+SO-- from a functional perspective, if we break this into four groups:
+
+ QuantityInterface:
+q0 - get characterization for flowable | compartment | locale | ref qty
+      Input: ref qty, flowable, compartment, query quantity, [optional locale]
+      Output: value
+q1 - show quantity metadata
+      Input: quantity entity
+      Output: quantity metadata document (JSON serialization)
+q2 - show flowables characterized for qty + compartment
+      Input: query quantity, [optional compartment string]
+      Output: list of flowable strings
+q3 - show compartments characterized for qty + flowable
+      Input: query quantity, [optional flowable string]
+      Output: compartment strings
+q4 - show quantities characterized for flowable + compartment
+      Input: flowable string, [optional compartment string]
+      Output: list of quantities
+
+ CatalogInterface:
+c0 - list process instances, flows, quantities known to an archive
+      Input: semantic ref, entity type, [optional search params?]
+      Output: list of entities
+c1 - show metadata for one process instance
+      Input: one process
+      Output: process metadata document (JSON serialization)
+c2 - show metadata for one flow instance
+      Input: one flow
+      Output: flow metadata document (JSON serialization)
+c3 - show reference entity for process instance
+      Input: one process
+      Output: list of exchanges
+c4 - show reference entity for flow instance
+      Input: flow
+      Output: quantity
+c5 - show processes that terminate an exchange (directions complement; reference only)
+      Input: exchange, or flow + direction
+      Output: list of processes
+c6 - show processes that originate an exchange (directions match; reference only)
+      Input: exchange, or flow + direction
+      Output: list of processes
+..... other semantic services
+
+ ForegroundInterface:
+f0 - list process exchanges
+      Input: process
+      Output: list of valueless exchanges
+f1 - get exchange values for a given exchange w.r.t. reference
+      Input: exchange + opt. reference
+      Output: exchange value
+f2 - compute foreground LCIA
+      Input: process, query quantity
+      Output: LciaResult for quantity
+f6 - show processes that originate an exchange (directions match; reference or non-reference)
+    (enclosed access to flow db)
+
+ BackgroundInterface:
+b0 - list foreground processes
+b1 - list background processes
+b2 - list cutoff flows
+b3 - get lci for process (bx~)
+b4 - get agg background dependencies for process (ad~)
+b5 - get agg cutoffs for process (bf~)
+b6 - get background LCIA
+    (enclosed access to flow db)
+
+
+ Study Construction:
+s0 - create reference fragment with flow + direction
+s1 - terminate fragment with:
+     Null -> IO
+     0 -> FG
+     uuid -> 
+
+
+Activities we want to do:
+
+When building a model:
+ - choose or create a flow
+ - add characterizations to that flow
+ - terminate the flow => to foreground, to background
+ - get inventory
+
+When traversing a model:
+ - get characterizations for foreground emissions
+ - get exchange values of listed exchanges
+ - compute LCIA of non-listed exchanges (fg lcia)
+ - compute LCIA of background nodes (bg lcia)
 
 
 
-LciInterface:
- - specialization of the LcArchive interface
- - adds LCI computation from a single, monolithic background database such as USLCI or an ecoinvent system model / ocelot spec
+How will it work?
 
+We have an LcCatalog, which dereferences origins + external ids to entities stored in LcArchives.  

@@ -20,6 +20,16 @@ TODO:
  - terminations: need tests
 
 ==========
+Tue Apr 25 09:31:30 -0700 2017
+
+Time to officially start with the catalog refactor.
+
+The resolver is the core of it-- takes entity 'origins' or catalog 'refs' and translates them to data sources.  The data sources will have three different types that will provide different levels of functionality.
+
+ - "Catalog" will provide a listing of entities.
+
+
+==========
 Thu Apr 20 12:51:35 -0700 2017
 
 Doood, where are we even going with this??

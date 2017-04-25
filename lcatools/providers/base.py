@@ -4,12 +4,13 @@ Interim classes with useful building blocks
 
 from __future__ import print_function, unicode_literals
 
-import six
 import uuid
 
-from lcatools.interfaces import ArchiveInterface, to_uuid
+import six
+
 from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcUnit, entity_types
 from lcatools.exchanges import comp_dir
+from providers.interfaces import ArchiveInterface, to_uuid
 
 if six.PY2:
     bytes = str

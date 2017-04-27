@@ -53,14 +53,7 @@ class ForegroundArchive(LcArchive):
 
     def _load_json_file(self, filename):
         with open(filename, 'r') as fp:
-            j = json.load(fp)
-
-        for q in j['quantities']:
-            self.entity_from_json(q)
-        for q in j['flows']:
-            self.entity_from_json(q)
-        for q in j['processes']:
-            self.entity_from_json(q)
+            self.load_json(json.load(fp))
 
     def __init__(self, folder, ref, upstream=None, quiet=True, **kwargs):
         """

@@ -106,6 +106,14 @@ class Exchange(object):
     def key(self):
         return self._hash
 
+    def is_allocated(self, reference):
+        """
+        Stub for compatibility
+        :param reference:
+        :return:
+        """
+        return False
+
     def __hash__(self):
         return hash(self._hash)
 

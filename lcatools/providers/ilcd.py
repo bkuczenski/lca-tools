@@ -1,11 +1,10 @@
 from __future__ import print_function, unicode_literals
 
-import re
 import os
+from itertools import chain
 
 from lxml import objectify
 from lxml.etree import XMLSyntaxError
-from itertools import chain
 
 try:  # python3
     from urllib.parse import urljoin
@@ -22,7 +21,7 @@ from lcatools.providers.base import LcArchive
 from lcatools.providers.archive import Archive
 from lcatools.providers.xml_widgets import *
 from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcUnit
-from lcatools.interfaces import uuid_regex
+from providers.interfaces import uuid_regex
 from lcatools.characterizations import DuplicateCharacterizationError
 
 import posixpath
@@ -253,7 +252,9 @@ class IlcdArchive(LcArchive):
         if uri is not None:
             return self._get_objectified_entity(self._path_from_uri(uri))
         if dtype is None:
-            return self._search_for_term(term)
+            dtype = _extract_dtype(term, self._pathtype)
+            if dtype is None:  # "still"
+                return self._search_for_term(term)
 
         try:
             uid = _extract_uuid(term)

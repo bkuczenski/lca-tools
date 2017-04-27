@@ -1,3 +1,102 @@
+TODO:
+
+ - entities: @property external_ref
+ - entities: set origin, external_ref at init
+ - interfaces: need both source and ref. source is argument to Archive(); ref is entity.origin
+   = does this weaken provenance?
+   : no because the archive gets serialized en bloc and both source and ref are there.
+   : The entity on its own should represent the semantic entity, not the physical entity.
+ - entities: merge requires equal origins (pending above)
+ - lca-data-files; update with semantic origins
+ - flows: factor, cf, convert need to be scenario-aware
+   = characterizations need to be scenario-aware
+ - flow terminations: inbound_ev should not be cached; should be computed live at query
+   = but flow conversion is *already* computed at query time; ev is not parameterizable
+ - refactor LcFragment-- make it an entity
+ - FlowTermination-- a top-level entry? I think so.
+ - termination - flow conversions - move into LcFlow
+ - exchanges: need tests
+ - characterizations: need tests
+ - terminations: need tests
+
+==========
+Tue Apr 25 09:31:30 -0700 2017
+
+Time to officially start with the catalog refactor.
+
+The resolver is the core of it-- takes entity 'origins' or catalog 'refs' and translates them to data sources.  The data sources will have three different types that will provide different levels of functionality.
+
+ - "Catalog" will provide a listing of entities.
+
+
+==========
+Thu Apr 20 12:51:35 -0700 2017
+
+Doood, where are we even going with this??
+
+The ForegroundFragment is the new point of reference because it includes a straightforward serialization that has been submitted for publication.  Software development going forward should use this as a basis:
+
+ * Ability to serialize and deserialize fragments consistently is a performance benchmark
+ * The equivalency of ForegroundFragments and collections of LcFragments is a performance benchmark.
+
+What functionality does the ForegroundFragment require?
+
+ * access to an inventory data provider (BackgroundManager)
+   - 
+ * access to a quantity database (FlowDB)
+
+
+Not sure we accomplished much here.
+
+Fri 2017-04-21 10:59:06 -0700
+
+Let's think about scenarios a bit.
+
+Of the original 10 parameter types in the .NET antelope, two types remain:
+
+1 - fragment flow param => ev param
+2 - discontinued
+3 - discontinued
+4 - flow property param => characterization param
+5 - composition param => characterization param
+6 - dissipation param => eliminated?  see discussion below
+7 - discontinued
+8 - process flow param => disallowed for background processes; so require Lcfragment and make it an ev param
+9 - discontinued
+10 - characterization param => .
+
+ev params are computed during traversal; their result is encoded in the FragmentFlow stack.
+
+a slick thing would be for LciaResults to automatically account for params by composition. The exchanges are already stored, and totals are already dynamically computed, so in principle that should not be a problem.
+
+in practice-- LCIA results are made up of two different objects: DetailedLciaResults and SummaryLciaResults.
+
+SummaryLciaResults are static node weights and unit scores.  They are not scenario-sensitive.  It would be very hard to make them scenario-sensitive.  unless we made a SummaryLciaResult simply a wrapper for an LciaResult. then it's dynamic computation all the way down.
+
+We have an __add__ method for LciaResults.
+
+Appealing.  but we need test cases in order to validate it.  add_summary_result is only called from two places: LciaResult.aggregate(), where the input is already an AggregateLciaScore.cumulative_result; and in FlowTermination.from_json, where the input is not expected to be dynamic.
+
+Hold up- we also have a way of transferring duplicate DetailedLciaResults to a single SummaryLciaResult when their locations don't conflict.  But we could do that with a clever __add__ as well.
+
+ok, it's 12:00- time to go to lunch.  But just the takeaway-- what this gives us is the ability to have DetailedLciaScores dynamically computed with respect to scenarios; what it would require is for ExchangeValues and Characterizations to accept scenario arguments and thus to store scenario-specific values. That is very complicated with allocation and with spatialization, because each would have to be replicated for each scenario. that could get pretty tricky. and it would all have to be serialized.
+
+AND WE STILL have the problem where flow properties are supposed to affect traversal.
+
+so it may yet not work.
+
+and we didn't make any progress on the catalog interface. much less on AUOMA.
+
+
+
+
+Dissipation Processes
+
+dissipation processes may only dissipate 100% ???? this does not make sense
+    Dissipation is a killer. choose one: consistent mass balance, 100% dissipation. we can't have it both ways.
+    unless we start doing crazy shit like dynamic flow property computation.  I mean, that's not out of the question -- given the dissi ---> to dissipation.txt
+    
+
 ==========
 Mon Mar 27 13:16:32 -0700 2017
 

@@ -1,0 +1,261 @@
+==========
+Thu Apr 20 13:01:43 -0700 2017
+
+Notes on current de-facto and future idealized interfaces between components.
+
+###########################################################################
+PART 1: EXISTING INTERFACES, empirical
+###########################################################################
+
+
+--- Data File Storage and Retrieval
+
+
+Archive: ('physical' layer)
+ + init: path, query string (remotes: append to request), cache (remotes: dl local copy)
+   + cache is a recursive physical archive
+ - listfiles(in_prefix) (local only)
+ - countfiles (local only)
+ - writefile (local uncompressed only)
+ - readfile
+
+ArchiveInterface: caching digest of contents of an archive
+ - add
+ - [getitem] by key or UUID
+ + upstream-- look first
+   + truncate upstream: TODO
+ - retrieve or fetch
+ - search
+ - validate entity list
+ - serialize, write to file
+
+ - load all (must be implemented in subclass)
+ - fetch (must be implemented in subclass)
+
+LcArchive(ArchiveInterface):
+ - deserialize process, flow, quantity from json
+ - add entity and children
+ - processes, flows, quantities, lcia_methods
+ - terminate
+ : serialize p, f, q
+
+NsUuidArchive(LcArchive):
+ + create a UUID3 namespace for translating keys to ID
+
+
+
+--- Data Entities
+
+LcEntity:
+ - origin, uuid, external_ref, entity_type
+   + entity's true id should be origin + external_ref
+ - signature_fields -- type-specific list of mandatory properties
+ - properties -- exclusive of signature fields (why? never used)
+ - update (properties dict)
+ - validate (called by archive to validate all entities):
+   + valid entity_type
+   + valid reference (None allowed)
+   + signature fields all defined
+ - serialize
+ + show() - pretty print
+ - eq: origin, entity type, external ref all the same
+ - merge:
+   - differing origins allowed! (only because origins right now are not semantic)
+   + add missing properties; do not overwrite existing properties
+
+LcQuantity:
+ + reference entity is LcUnit -- which is just a dummy: unitstring with an external ref
+ - unit : return self.reference_entity.unitstring()
+ - is_lcia_method (has_propoerty 'Indicator')
+ - convert: use existing 'UnitConversion' property as spec'd
+
+LcFlow:
+ + reference_entity is LcQuantity
+ - add_characterization (quantity, reference=False, value=None, ...)
+   + ... passed to characterization.add_value()
+ + has_characterization
+ - del_characterization
+ - characterizations (generator)
+ - factor, cf (backwards??) 
+ - convert (to=quantity, fr=quantity)  both default to reference_entity
+ + match: check if uuids or names or cas numbers or external refs are equal
+ + profile: list of characterizations
+ + serialize: include characterizations
+ - merge
+   - add characterizations, only if missing
+
+LcProcess:
+ + reference_entity is set of Exchanges.
+ + inventory(ref): print + return list of exchanges
+ - exchange(flow, direction): generate matching exchanges
+ - exchanges(reference) generate allocated exchanges
+ + has_exchange(flow, dir)
+ - find_reference(ref) flexible input
+ - add_reference(flow, dir) *both required*
+ - remove_reference(ref_exch)
+ + references: generator
+ - reference(flow): return one; error if ambiguous
+ - allocate_by_quantity(quantity): perform automatic allocation
+ - is_allocated(ref) - determine whether ref appears as allocation key in any exchanges
+ - remove allocation(ref)
+ - add_exchange(flow, dirn, ...)
+ + lcias(quantities): return LciaResults
+ - lcia(quantity): return LciaResult (flowdb????) should only use flows' native cfs
+ - serialize: include exchanges
+ x merge not implemented
+
+
+
+
+
+
+
+
+
+
+
+ForegroundQuery:
+ - requires ForegroundManager, which provides:
+   = retrieve quantities from foreground archive
+   = retrieve LcFragment or LcProcess by reference
+   = perform fragment_lcia of fragment (really owned by the fragment)
+     = this routine must accept the following keyword arguments:
+       * scenario
+       * observed
+       * scale
+       * normalized
+     = this routine must return an LciaResults object
+     = this requires unit scores to be computed in advance
+   = perform fg_lcia of the process
+     = this routine must return an LciaResults object
+
+ - user provides fragment references, which the foreground manager must resolve
+ - user provides quantity references, which the foreground manager must resolve
+ - user provides LciaWeightings, which must be constructed by the user
+
+LciaResults:
+ - implement dict of quantity uuid to LciaResult having that quantity
+ - input to self._do_stages
+
+LciaResult: (this is the big one) (need testing!)
+ - aggregate(self, key=lambda) returns an LciaResult having the same total, with entries grouped by key
+ - components(self) returns a list of entries in the result
+ - dict of component key to AggregateLciaScore 
+   - each component has a cumulative_result property
+ 
+lots of muddiness regarding the LciaResult / AggregateLciaScore / DetailedLciaResult interface
+
+In particular: I want to dispense with explicit factors wherever possible: the factor can be queried from the exchange's flow.  To do otherwise would imply 
+
+
+
+
+
+###########################################################################
+PART 2: NEW INTERFACES, conceptual spec
+###########################################################################
+
+What are the computations that we need to do? refer to workflows spec:
+
+ * list process instances, flows, quantities
+ * find process instances that terminate an exchange
+ * get inventory (list of exchanges w.r.t. reference)
+ * get exchange value for a given exchange
+ * compute life cycle inventory
+ * [compute life cycle impact assessment]
+ * get characterization
+
+SO-- from a functional perspective, if we break this into four groups:
+
+ QuantityInterface:
+q0 - get characterization for flowable | compartment | locale | ref qty
+      Input: ref qty, flowable, compartment, query quantity, [optional locale]
+      Output: value
+q1 - show quantity metadata
+      Input: quantity entity
+      Output: quantity metadata document (JSON serialization)
+q2 - show flowables characterized for qty + compartment
+      Input: query quantity, [optional compartment string]
+      Output: list of flowable strings
+q3 - show compartments characterized for qty + flowable
+      Input: query quantity, [optional flowable string]
+      Output: compartment strings
+q4 - show quantities characterized for flowable + compartment
+      Input: flowable string, [optional compartment string]
+      Output: list of quantities
+
+ CatalogInterface:
+c0 - list process instances, flows, quantities known to an archive
+      Input: semantic ref, entity type, [optional search params?]
+      Output: list of entities
+c1 - show metadata for one process instance
+      Input: one process
+      Output: process metadata document (JSON serialization)
+c2 - show metadata for one flow instance
+      Input: one flow
+      Output: flow metadata document (JSON serialization)
+c3 - show reference entity for process instance
+      Input: one process
+      Output: list of exchanges
+c4 - show reference entity for flow instance
+      Input: flow
+      Output: quantity
+c5 - show processes that terminate an exchange (directions complement; reference only)
+      Input: exchange, or flow + direction
+      Output: list of processes
+c6 - show processes that originate an exchange (directions match; reference only)
+      Input: exchange, or flow + direction
+      Output: list of processes
+..... other semantic services
+
+ ForegroundInterface:
+f0 - list process exchanges
+      Input: process
+      Output: list of valueless exchanges
+f1 - get exchange values for a given exchange w.r.t. reference
+      Input: exchange + opt. reference
+      Output: exchange value
+f2 - compute foreground LCIA
+      Input: process, query quantity
+      Output: LciaResult for quantity
+f6 - show processes that originate an exchange (directions match; reference or non-reference)
+    (enclosed access to flow db)
+
+ BackgroundInterface:
+b0 - list foreground processes
+b1 - list background processes
+b2 - list cutoff flows
+b3 - get lci for process (bx~)
+b4 - get agg background dependencies for process (ad~)
+b5 - get agg cutoffs for process (bf~)
+b6 - get background LCIA
+    (enclosed access to flow db)
+
+
+ Study Construction:
+s0 - create reference fragment with flow + direction
+s1 - terminate fragment with:
+     Null -> IO
+     0 -> FG
+     uuid -> 
+
+
+Activities we want to do:
+
+When building a model:
+ - choose or create a flow
+ - add characterizations to that flow
+ - terminate the flow => to foreground, to background
+ - get inventory
+
+When traversing a model:
+ - get characterizations for foreground emissions
+ - get exchange values of listed exchanges
+ - compute LCIA of non-listed exchanges (fg lcia)
+ - compute LCIA of background nodes (bg lcia)
+
+
+
+How will it work?
+
+We have an LcCatalog, which dereferences origins + external ids to entities stored in LcArchives.  

@@ -10,8 +10,9 @@ column_mapping = {
     'Known issue': ('Tag', 'Factor')
 }
 
-from lcatools.interfaces import FlowQuantityInterface
-from py2neo import Graph, Schema, Node, Relationship
+from py2neo import Graph
+
+from providers.interfaces import FlowQuantityInterface
 
 
 class FlowQuantityGraphDb(FlowQuantityInterface):

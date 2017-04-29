@@ -1,0 +1,92 @@
+==========
+Tue Apr 25 15:07:52 -0700 2017
+
+An LcCatalog provides an automated service for obtaining information about LCA data objects.
+
+There are four different forms of (read-only) information available to be queried (see API.md):
+
+ * Quantity data are informations about the quantitative properties of flows.  These are stored in a quantity database, which can exist independently of any inventory information.  Quantity data apply to 'flowables', often when going into or coming out of different 'compartments'.  An LcFlow is a flowable and a particular compartment.
+
+ * Catalog data are metadata and non-quantitative data about entities, including their names, characteristics. At least a subset of these are generally publicly available for all entities.
+
+ * Foreground data are quantitative data that describe computational information about the entities when used in models.  For flows, these include characterizations. For processes, these include exchanges.
+
+ * Background data are quantitative data that describe the aggregated life cycle inventory or life cycle impact assessment results for processes embedded in computable databases.
+
+When a catalog ref is looked up, the catalog specifies whether the entity is known to the catalog in a catalog, fg, or bg sense.
+
+This means that the catalog is also separate from the foreground in a way that's different from before. it's more focused on data retrieval (as should be).
+
+We still haven't broached the study construction- which comes next.
+
+Thu 2017-04-27 12:17:52 -0700
+
+But-- for the time being, the important facts are: the catalog PROVIDES access to the API routes specified in API.md.  The Catalog CAN be implemented as a web service.  The catalog CAN ALSO operate as a web CLIENT- in which case the data source would be another instance of the catalog service-- but this is a complicated step that requires the catalog to de-serialize JSON data.  That can get folded into the archive factory, though, I think.
+
+SO, TO SUMMARIZE:
+ - the LcCatalog is the culmination of the semantic catalog work. the idea is to translate a REST-style query into usable lca data. I *think* the API spec is adequate to do complete LCA. (minus uncertainty; minus study-specific allocation).
+
+ - The catalog operates on a catalog ref, which is an origin + external ref, which should be unique.
+
+ - the STUDY should use the catalog to obtain data and also enable the user to directly input data. Everything is fragments; nothing is processes.
+
+ - fragments are basically exchanges, and terminations are complementary exchanges.  Thus a terminated fragment is a link.
+
+REMAINING WORK:
+
+ - implement the catalog, obviously
+
+ - implement the CatalogInterface, ForegroundInterface, BackgroundInterface.  get them tested and running.  Those interfaces are eminently testable.
+
+ - re-design the foreground to be the study-- construct fragments incrementally using the API queries.
+
+ - for now we don't need fg lcia, since all the child flows will be rendered as fragments.  If we want, we can do something where 'flows not present as child fragments but present in the process inventory can be characterized'.  but rather than jump to that, we should AUTOMATICALLY CREATE SUB-FRAGMENTS from processes, store the process ref, and then write a routine to update fragment exchange values from queries.  best of all worlds.
+
+ - lastly, write the web service, and get it running on the lca-tools-datafiles data.  THAT will be instantly disruptive.
+
+time to get the bus.
+
+PLUMBING
+
+OK, in the interest of postponing ACTUAL PROGRAMMING for as long as possible, let's continue to think through exactly how this will work.
+
+Fri 2017-04-28 18:23:14 -0700
+
+OK.  SOME modest progress.
+
+
+
+
+Option 1: Prototype the CatalogInterface, ForegroundInterface, and BackgroundInterface.
+
+ * CatalogInterface inherits from NsUuidArchive
+ * key is '/'.join(origin, external_ref)
+ * Catalog's entity list acts as a cache -- stores non-quantitative data for all entities requested (quant too?)
+ * CatalogInterface implements the API
+ * CatalogInterface composed with a Qdb (separate interface)
+ * CatalogInterface maintains a collection of LcArchives
+
+ * CatalogInterface has a resolver input file that maps semantic roots to lists of data sources
+   - each data source has attributes:
+     = Priority - lowest priority accessed first
+     = dataSourceType - argument to archive_factory
+     = dataContents - controlled vocabulary: 'catalog', 'foreground', 'background'
+       ** foreground provides catalog
+       ** foreground archive input to BackgroundManager provides background
+       ** background provides catalog
+       ** background cannot provide foreground
+     = ExcludeRoutes: list of API routes that the source should not provide
+     = AccessControl: controlled vocabulary:
+       ** 'open' -- any query is answered
+       ** 'metered' -- authentication must be provided; every query is billable
+       ** 'protected' -- authentication must be provided; authorization TBD
+       ** ... others TBD
+
+There is going to have to be some kind of regression.  When a query is received, the resolver needs to:
+ - receive the query, including origin + ref + authentication info
+ - determine whether the catalog can answer the query at all
+   = determine if a source is known for the given origin
+   = determine if the request is authorized to access the source
+     ** list the same source multiple times?? sure-- the thing that gets 
+   = determine if the query type (catalog, fg, bg) is available
+ - determin

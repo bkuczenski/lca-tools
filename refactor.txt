@@ -13,11 +13,23 @@ TODO:
  - flow terminations: inbound_ev should not be cached; should be computed live at query
    = but flow conversion is *already* computed at query time; ev is not parameterizable
  - refactor LcFragment-- make it an entity
- - FlowTermination-- a top-level entry? I think so.
+   = it's already an entity; take out stuff that it doesn't need to own
+   = the big question being: can we avoid passing a child_flows lambda as an initialization parameter?
+ X FlowTermination-- a top-level entry? I think so.
  - termination - flow conversions - move into LcFlow
  - exchanges: need tests
  - characterizations: need tests
  - terminations: need tests
+
+ - BackgroundManager: need to slightly rework how it handles multi-output processes to enable graceful handling of unallocated foreground processes
+   = need to assess whether it is possible to gracefully handle unallocated background processes, and what would be required
+   = it already runs... what it does is cutoff completely. What we want it to do is:
+     * first time through, drop in complete unallocated inventory, including other references
+     * all subsequent times through: cutoff everything.
+     * except subsequent times would not occur because the product flows would be detected.
+   = I think it would be possible to simply assign each non-acc
+ - BackgroundManager; need to split into the matrix-handling part and the interface-providing part
+
 
 ==========
 Tue Apr 25 09:31:30 -0700 2017

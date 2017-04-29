@@ -17,7 +17,7 @@ def concatenate(*lists):
     return chain(*lists)
 
 
-class OriginExists(Exception):
+class PropertyExists(Exception):
     pass
 
 
@@ -38,7 +38,7 @@ class LcEntity(object):
             self._uuid = str(uuid.UUID(entity_uuid))
         self._d = dict()
 
-        self.entity_type = entity_type
+        self._entity_type = entity_type
         self.reference_entity = None
         self._scenarios = dict()
         self._origin = None
@@ -52,6 +52,10 @@ class LcEntity(object):
             self[k] = v
 
     @property
+    def entity_type(self):
+        return self._entity_type
+
+    @property
     def origin(self):
         return self._origin
 
@@ -60,26 +64,43 @@ class LcEntity(object):
         if self._origin is None:
             self._origin = value
         else:
-            raise OriginExists('Origin already set to %s' % self._origin)
+            raise PropertyExists('Origin already set to %s' % self._origin)
 
     @classmethod
     def signature_fields(cls):
         return concatenate(cls._pre_fields, cls._new_fields,
                            [cls._ref_field] if cls._ref_field is not [] else [], cls._post_fields)
 
-    def set_external_ref(self, ref):
+    @property
+    def external_ref(self):
+        if self._external_ref is None:
+            return self._uuid
+        return self._external_ref
+
+    @external_ref.setter
+    def external_ref(self, ref):
         """
         Specify how the entity is referred to in the source dataset. If this is unset, the UUID is assumed
         to be used externally.
         :param ref:
         :return:
         """
-        self._external_ref = ref
+        if self._external_ref is None:
+            self._external_ref = ref
+        else:
+            raise PropertyExists('External Ref already set to %s' % self._external_ref)
+
+    def set_external_ref(self, ref):
+        """
+        deprecated
+        """
+        self.external_ref = ref
 
     def get_external_ref(self):
-        if self._external_ref is None:
-            return self._uuid
-        return self._external_ref
+        """
+        deprecated
+        """
+        return self.external_ref
 
     def get_signature(self):
         k = dict()

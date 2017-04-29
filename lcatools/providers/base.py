@@ -10,7 +10,7 @@ import six
 
 from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcUnit, entity_types
 from lcatools.exchanges import comp_dir
-from providers.interfaces import ArchiveInterface, to_uuid
+from lcatools.providers.interfaces import ArchiveInterface, to_uuid
 
 if six.PY2:
     bytes = str

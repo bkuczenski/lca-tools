@@ -21,7 +21,7 @@ from lcatools.providers.base import LcArchive
 from lcatools.providers.archive import Archive
 from lcatools.providers.xml_widgets import *
 from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcUnit
-from providers.interfaces import uuid_regex
+from lcatools.providers.interfaces import uuid_regex
 from lcatools.characterizations import DuplicateCharacterizationError
 
 import posixpath

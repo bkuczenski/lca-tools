@@ -20,7 +20,7 @@ from lcatools.providers import tail
 from lcatools.providers.archive import Archive
 from lcatools.providers.base import LcArchive
 from lcatools.providers.xml_widgets import *
-from providers.interfaces import uuid_regex
+from lcatools.providers.interfaces import uuid_regex
 
 if six.PY2:
     bytes = str

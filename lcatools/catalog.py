@@ -6,7 +6,7 @@ from collections import namedtuple
 
 from lcatools.exchanges import Exchange, comp_dir
 from lcatools.tools import split_nick, archive_from_json, archive_factory
-from providers.interfaces import to_uuid
+from lcatools.providers.interfaces import to_uuid
 
 
 ArchiveRef = namedtuple('ArchiveRef', ['source', 'nicknames', 'dataSourceType', 'parameters'])

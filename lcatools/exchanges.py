@@ -52,7 +52,7 @@ class Exchange(object):
         :param process:
         :param flow:
         :param direction:
-        :param termination: string id of terminating process or None
+        :param termination: external id of terminating process or None (note: this is uuid for ecospold2)
         :return:
         """
         # assert process.entity_type == 'process', "- we'll allow null exchanges and fragment-terminated exchanges"
@@ -203,6 +203,9 @@ class ExchangeValue(Exchange):
         else:
             if reference in self._value_dict:
                 self._value_dict[reference] += value
+
+    def trim(self):
+        return Exchange(self.process, self.flow, self.direction, termination=self.termination)
 
     def __init__(self, *args, value=None, value_dict=None, **kwargs):
         super(ExchangeValue, self).__init__(*args, **kwargs)

@@ -27,6 +27,10 @@ class LcArchive(ArchiveInterface):
     specific to processes, flows, and quantities. Also adds upstreaming capabilities, including (possibly
     in the future) upstream flow lookups by standardized key reference, as currently implemented in Ecoinvent lcia.
 
+    Note: in lieu of having a @classmethod from_json, we have an archive factory that produces archives using the
+    appropriate constructor given the data type.  This is found in lcatools.tools and calls the base entity_from_json
+    method-- which itself should be offloaded to the entities wherever possible.
+
     """
 
     @classmethod
@@ -195,17 +199,17 @@ class LcArchive(ArchiveInterface):
         entity.set_external_ref(ext_ref)
         self.add(entity)
 
-    def processes(self):
-        return [p for p in self._entities_by_type('process')]
+    def processes(self, **kwargs):
+        return [p for p in self.search('process', **kwargs)]
 
-    def flows(self):
-        return [f for f in self._entities_by_type('flow')]
+    def flows(self, **kwargs):
+        return [f for f in self.search('flow', **kwargs)]
 
-    def quantities(self):
-        return [q for q in self._entities_by_type('quantity')]
+    def quantities(self, **kwargs):
+        return [q for q in self.search('quantity', **kwargs)]
 
-    def lcia_methods(self):
-        return [q for q in self._entities_by_type('quantity') if q.is_lcia_method()]
+    def lcia_methods(self, **kwargs):
+        return [q for q in self.search('quantity', **kwargs) if q.is_lcia_method()]
 
     def _entities_by_type(self, entity_type):
         if entity_type not in entity_types:
@@ -236,6 +240,42 @@ class LcArchive(ArchiveInterface):
             else:
                 if p.has_exchange(exchange.flow, comp_dir(exchange.direction)):
                     yield p
+
+    @staticmethod
+    def resolve_termination(exchange, terms, strategy):
+        """
+             'cutoff' - call the flow a cutoff and ignore it
+             'mix' - create a new "market" process that mixes the inputs
+             'first' - take the first match (alphabetically by process name)
+             'last' - take the last match (alphabetically by process name)
+
+        This is some kind of crazy orphan function.  Maybe it belongs here- really, this stands in for the entire
+         ocelot project.  Think of it as a stub, to put it mildly.  THe only serious disadvantage is that it introduces
+         a dependency on lca-tools, which is really not acceptable.  It should be moved into LcArchive.
+
+         OK, now it's here. it's still dumb.
+        :param exchange:
+        :param terms:
+        :param strategy:
+        :return:
+        """
+        if len(terms) == 1:
+            return terms[0]
+        elif len(terms) == 0 or strategy == 'cutoff':
+            return None
+        elif strategy == 'mix':
+            p = LcProcess.new('Market for %s' % exchange.flow['Name'], Comment='Auto-generated')
+            p.add_exchange(exchange.flow, comp_dir(exchange.direction), value=float(len(terms)))
+            p.add_reference(exchange.flow, comp_dir(exchange.direction))
+            for t in terms:
+                p.add_exchange(exchange.flow, exchange.direction, value=1.0, termination=t.external_ref)
+            return p
+        elif strategy == 'first':
+            return [t for t in sorted(terms, key=lambda x: x['Name'])][0]
+        elif strategy == 'last':
+            return [t for t in sorted(terms, key=lambda x: x['Name'])][-1]
+        else:
+            raise KeyError('Unknown multi-termination strategy %s' % strategy)
 
     def exchanges(self, flow, direction=None):
         """

@@ -37,6 +37,15 @@ class LcFlow(LcEntity):
         """
         return cls(uuid.uuid4(), Name=name, ReferenceQuantity=ref_qty, **kwargs)
 
+    def trim(self):
+        """
+        Return an identical LcFlow that has had its non-reference characterizations removed
+        :return:
+        """
+        trimmed = super(LcFlow, self).trim()
+        trimmed.add_characterization(self.reference_entity, reference=True, value=self._ref_quantity_factor)
+        return trimmed
+
     def __init__(self, entity_uuid, **kwargs):
         super(LcFlow, self).__init__('flow', entity_uuid, **kwargs)
 
@@ -151,6 +160,13 @@ class LcFlow(LcEntity):
         return Characterization(self, quantity)
 
     def cf(self, quantity, location='GLO'):
+        """
+        These are backwards.  cf should return the Characterization ; factor should return the value.  instead, it's
+        the other way around.
+        :param quantity:
+        :param location: ['GLO']
+        :return: value of quantity per unit of reference, or 0.0
+        """
         if quantity.get_uuid() in self._characterizations:
             try:
                 return self._characterizations[quantity.get_uuid()][location]

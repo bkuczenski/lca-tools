@@ -33,6 +33,17 @@ class LcProcess(LcEntity):
         """
         return cls(uuid.uuid4(), Name=name, **kwargs)
 
+    def trim(self):
+        """
+        Return an identical LcProcess that has had its non-reference exchanges removed
+        :return:
+        """
+        trimmed = super(LcProcess, self).trim()
+        for rf in self.references():
+            trimmed.add_exchange(rf.flow, rf.direction, value=rf.value)
+            trimmed.add_reference(rf.flow, rf.direction)
+        return trimmed
+
     def __init__(self, entity_uuid, **kwargs):
         """
         THe process's data is a set of exchanges.
@@ -151,6 +162,13 @@ class LcProcess(LcEntity):
         return it
 
     def exchange(self, flow, direction=None):
+        """
+        Generate a list of exchanges matching the supplied flow and direction. This will yield multiple exchanges
+        only in the event that several different terminations exist for the same flow and direction.
+        :param flow:
+        :param direction:
+        :return:
+        """
         if isinstance(flow, LcFlow):
             for x in self._exchanges.values():
                 if x.flow == flow:

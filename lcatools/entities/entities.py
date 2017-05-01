@@ -30,7 +30,7 @@ class LcEntity(object):
     _ref_field = ''
     _post_fields = ['Comment']
 
-    def __init__(self, entity_type, entity_uuid, **kwargs):
+    def __init__(self, entity_type, entity_uuid, origin=None, external_ref=None, **kwargs):
 
         if isinstance(entity_uuid, uuid.UUID):
             self._uuid = str(entity_uuid)
@@ -41,15 +41,18 @@ class LcEntity(object):
         self._entity_type = entity_type
         self.reference_entity = None
         self._scenarios = dict()
-        self._origin = None
+        self._origin = origin
 
         self._d['Name'] = ''
         self._d['Comment'] = ''
 
-        self._external_ref = None
+        self._external_ref = external_ref
 
         for k, v in kwargs.items():
             self[k] = v
+
+    def trim(self):
+        return type(self)(self.uuid, origin=self.origin, external_ref=self.external_ref, **self._d)
 
     @property
     def entity_type(self):
@@ -58,6 +61,19 @@ class LcEntity(object):
     @property
     def origin(self):
         return self._origin
+
+    def map_origin(self, omap, fallback=None):
+        """
+        This is used to propagate a change in origin semantics. Provide a dict that maps old origins to new origins.
+        External ref should remain the same with respect to the new origin.
+        :param omap: dict mapping old origin to new origin
+        :param fallback: if present, use in cases where old origin not found
+        :return:
+        """
+        if self._origin in omap:
+            self._origin = omap[self._origin]
+        elif fallback is not None:
+            self._origin = fallback
 
     @origin.setter
     def origin(self, value):

@@ -88,6 +88,7 @@ class ArchiveInterface(object):
 
         self.catalog_names = dict()  # this is a place to map semantic references to data sources
         if ref is not None:
+            self._serialize_dict['dataReference'] = ref
             self.catalog_names[ref] = source
 
     '''
@@ -118,6 +119,25 @@ class ArchiveInterface(object):
         if 'upstreamSource' in self._serialize_dict:
             return self._serialize_dict['upstreamSource']
         return None
+
+    def get_names(self):
+        """
+        Return a mapping of data source to semantic reference, based on the catalog_names property.  This is used by
+        a catalog interface to convert entity origins from physical to semantic.
+
+        If a single data source has multiple semantic references, only the most-downstream one will be kept.  If there
+        are multiple semantic references for the same data source in the same archive, one will be kept at random.
+        This should be avoided and I should probably test for it when setting catalog_names.
+        :return:
+        """
+        if self._upstream is None:
+            names = dict()
+        else:
+            names = self._upstream.get_names()
+
+        for k, v in self.catalog_names:
+            names[v] = k
+        return names
 
     def truncate_upstream(self):
         """
@@ -204,12 +224,12 @@ class ArchiveInterface(object):
             self._counter[entity_type] = 0
 
     @staticmethod
-    def _narrow_search(result_set, **kwargs):
+    def _narrow_search(entity, **kwargs):
         """
         Narrows a result set using sequential keyword filtering
-        :param result_set:
+        :param entity:
         :param kwargs:
-        :return:
+        :return: bool
         """
         def _recurse_expand_subtag(tag):
             if tag is None:
@@ -218,13 +238,15 @@ class ArchiveInterface(object):
                 return tag
             else:
                 return ' '.join([_recurse_expand_subtag(t) for t in tag])
+        keep = True
         for k, v in kwargs.items():
+            if k not in entity.keys():
+                return False
             if isinstance(v, str):
                 v = [v]
             for vv in v:
-                result_set = [r for r in result_set if k in r.keys() and
-                              bool(re.search(vv, _recurse_expand_subtag(r[k]), flags=re.IGNORECASE))]
-        return result_set
+                keep = keep and bool(re.search(vv, _recurse_expand_subtag(entity[k]), flags=re.IGNORECASE))
+        return keep
 
     def find_partial_id(self, uid, upstream=False, startswith=True):
         """
@@ -258,13 +280,15 @@ class ArchiveInterface(object):
             if 'entity_type' in kwargs.keys():
                 etype = kwargs.pop('entity_type')
         if etype is not None:
-            result_set = self._entities_by_type(etype)
+            for ent in self._entities_by_type(etype):
+                if self._narrow_search(ent, **kwargs):
+                    yield ent
         else:
-            result_set = self._entities.values()
-        result_set = self._narrow_search(result_set, **kwargs)
+            for ent in self._entities.values():
+                if self._narrow_search(ent, **kwargs):
+                    yield ent
         if upstream and self._upstream is not None:
-            result_set += self._upstream.search(etype=etype, **kwargs)
-        return result_set
+            self._upstream.search(etype, upstream=upstream, **kwargs)
 
     def _fetch(self, entity, **kwargs):
         """

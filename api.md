@@ -14,6 +14,7 @@ This is a list of queryable API routes for the catalog interface.  All these rou
 /catalog/[semantic.ref]/[id]/reference -> return reference entity (R1)-(R2)
 /catalog/[semantic.ref]/terminate/[flow-id]/{direction} -> return list of processes (R1)
 /catalog/[semantic.ref]/originate/[flow-id]/{direction} -> return list of processes (ref only) (R1)
+/catalog/[semantic.ref]/mix/[flow-id]/{direction} -> return mixer process [what, with unit weights? that's stupid]
 
 ## QuantityInterface
 
@@ -44,15 +45,21 @@ This is a list of queryable API routes for the catalog interface.  All these rou
 /fg/[semantic.ref]/[id] -> same as /catalog/[s.r.]/[id], but include numeric data (R1*)
 
 /fg/[semantic.ref]/[process-id]/exchanges -> return direct exchanges without values (R2)
-/fg/[semantic.ref]/[process-id]/[exch-flow-id]/{direction} -> (single-ref) return exch value (R2*)
-/fg/[semantic.ref]/[process-id]/[exch-flow-id]/{direction} -> (multi-ref) return alloc exch (R2*)
-/fg/[semantic.ref]/[process-id]/[ref-flow]/[exch-flow-id]/{direction} -> return norm. exch val (R4)
+/fg/[semantic.ref]/[process-id]/[exch-flow-id]/{direction} -> (single-ref) return list of exch values (R2*)
+/fg/[semantic.ref]/[process-id]/[exch-flow-id]/{direction} -> (multi-ref) return list of alloc exchs (R2*)
+/fg/[semantic.ref]/[process-id]/[exch-flow-id]/{direction}/[termination] -> return single alloc exch (R2*)
+/fg/[semantic.ref]/[process-id]/[ref-flow]/[exch-flow-id]/{direction} -> (single result) return norm. exch val (R4)
+/fg/[semantic.ref]/[process-id]/[ref-flow]/[exch-flow-id]/{direction} -> (mult. terminations) return norm. sum exch val (R4)
+/fg/[semantic.ref]/[process-id]/[ref-flow]/[exch-flow-id]/{direction}/[termination] return norm. exch val (R4)
 
 /fg/[semantic.ref]/[process-id]/lcia/[q-qty] -> (single ref) return qty fg LciaResult (R5)
 /fg/[semantic.ref]/[process-id]/lcia/[q-qty] -> (multi ref) return array qty fg LciaResult (R5)
 /fg/[semantic.ref]/[process-id]/[ref-flow]/lcia/[q-qty] -> return norm. qty fg LciaResult (R5)
 
 /fg/[semantic.ref]/originate/[flow-id]/{direction} -> return list of processes (ref or non) (R1)
+
+IF the foreground is ALLOCATED (or even if it isn't.... ) then it can be used as input to a Background Manager which solves for LCI.  
+
 
 ## BackgroundInterface
 
@@ -68,6 +75,8 @@ NOTE: BG references must be fully allocated in order to be operable. or maybe we
 /bg/[semantic.ref]/exterior -> list all B matrix rows (R7)
 /bg/[semantic.ref]/cutoff -> list intermediate B matrix rows (requires qdb or compartments) (R7)
 /bg/[semantic.ref]/emissions -> list elementary B matrix rows (requires qdb or compartments) (R7)
+
+/bg/[semantic.ref]/[pf]/foreground -> list of nodes in pf's foreground (R6)
 
 /bg/[semantic.ref]/[process-id]/lci -> (single ref) return LCI (R2)
 /bg/[semantic.ref]/[process-id]/lci -> (multi ref) error
@@ -95,7 +104,7 @@ The query returns a list of valid query strings.  The strings here can be used d
 
 ## R1 - entities
 
-The query returns a list of (serialized) entities (`process`, `flow`, `quantity`).  R1* indicates a list of entities with quantitative data included.
+The query returns a list of (serialized) entities (`process`, `flow`, `quantity`).  R1* indicates a list of entities with quantitative data included -- for flows, the profile; for processes, the exchanges. 
 
 ## R2 - exchanges
 

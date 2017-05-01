@@ -60,17 +60,17 @@ class EcospoldV1Archive(NsUuidArchive):
     nsmap = 'http://www.EcoInvent.org/EcoSpold01'  # only valid for v1 ecospold files
     spold_version = tail.search(nsmap).groups()[0]
 
-    def __init__(self, ref, prefix=None, **kwargs):
+    def __init__(self, source, prefix=None, **kwargs):
         """
         Just instantiates the parent class.
-        :param ref: just a reference
+        :param source: physical data source
         :param prefix: difference between the internal path (ref) and the ILCD base
         :return:
         """
-        super(EcospoldV1Archive, self).__init__(ref, **kwargs)
+        super(EcospoldV1Archive, self).__init__(source, **kwargs)
         self.internal_prefix = prefix
         self._q_dict = dict()
-        self._archive = Archive(self.ref)
+        self._archive = Archive(self.source)
 
     def _build_prefix(self):
         path = ''

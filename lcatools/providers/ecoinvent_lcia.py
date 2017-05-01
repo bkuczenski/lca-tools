@@ -12,6 +12,8 @@ from lcatools.entities import LcFlow, LcQuantity
 import os
 import xlrd
 
+EI_LCIA_VERSION = '3.1'
+
 Ecoinvent_Indicators = os.path.join(os.path.dirname(__file__), 'data',
                                     'list_of_methods_and_indicators_ecoinvent_v3.2.xlsx')
 
@@ -42,24 +44,28 @@ class EcoinventLcia(NsUuidArchive):
     def _load_xl_rows(self):
         """
         25+sec just to open_workbook for EI3.1 LCIA (pandas is similar)
-        note: this is down to
+        note: this is down to 15.5 sec
         """
-        b = xlrd.open_workbook(self.ref).sheet_by_name(self._sheet_name)
+        b = xlrd.open_workbook(self.source).sheet_by_name(self._sheet_name)
 
         self._xl_rows = self._sheet_to_rows(b)
 
-    def __init__(self, ref, sheet_name='impact methods', mass_quantity=None,
-                 value_tag='CF 3.1', **kwargs):
+    def __init__(self, source, ref=None, sheet_name='impact methods', mass_quantity=None,
+                 value_tag='CF ' + EI_LCIA_VERSION, **kwargs):
         """
+        EI_LCIA_VERSION is presently 3.1 for the spreadsheet named 'LCIA implementation v3.1 2014_08_13.xlsx'
 
-        :param ref:
+        :param source:
+        :param ref: hard-coded 'local.ecoinvent.[EI_LCIA_VERSION].lcia'; specify at instantiation to override
         :param sheet_name: 'impact methods'
         :param ns_uuid:
         :param mass_quantity:
-        :param value_tag: 'CF 3.1'
+        :param value_tag: 'CF ' + EI_LCIA_VERSION
         :param kwargs: quiet, upstream
         """
-        super(EcoinventLcia, self).__init__(ref, **kwargs)
+        if ref is None:
+            ref = '.'.join(['local', 'ecoinvent', EI_LCIA_VERSION, 'lcia'])
+        super(EcoinventLcia, self).__init__(source, ref=ref, **kwargs)
         self._xl_rows = []
         self._sheet_name = sheet_name
         self._value_tag = value_tag

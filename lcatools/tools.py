@@ -80,13 +80,26 @@ def archive_from_json(fname, **archive_kwargs):
         archive_kwargs['internal'] = bool(j['internal'])
         archive_kwargs['version'] = j['version']
 
+    ref = None
+    if 'dataSourceReference' in j:
+        # old style
+        source = j['dataSourceReference']
+    else:
+        # new style
+        source = j['dataSource']
+        if 'dataReference' in j:
+            ref = j['dataReference']
+
     try:
-        a = archive_factory(j['dataSourceReference'], j['dataSourceType'], **archive_kwargs)
+        a = archive_factory(source, j['dataSourceType'], **archive_kwargs)
     except KeyError:
         raise ValueError('Unknown dataSourceType %s' % j['dataSourceType'])
 
     if 'catalogNames' in j:
         a.catalog_names = j['catalogNames']
+
+    if ref is not None:
+        a.catalog_names[ref] = source
 
     if 'upstreamReference' in j:
         print('**Upstream reference encountered: %s\n' % j['upstreamReference'])
@@ -112,7 +125,7 @@ def count_ref_flows(archive):
 
 
 def print_ref_flows(archive, count=10):
-    print(archive.ref)
+    print(archive.source)
     rfs = count_ref_flows(archive)
     print('%6s %9s %-30s' % ('Count', 'Direction', 'Flow'))
     print('%s' % '-'*50)
@@ -129,7 +142,7 @@ def count_exchanges(archive):
 
 
 def print_exch_counts(archive, count=12):
-    print(archive.ref)
+    print(archive.source)
     rfs = count_exchanges(archive)
     print('%6s %9s %-30s' % ('Count', 'Direction', 'Flow'))
     print('%s' % '-'*50)

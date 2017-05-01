@@ -142,29 +142,33 @@ class IlcdArchive(LcArchive):
     This class handles de-referencing for ILCD archives
     """
 
-    def __init__(self, ref, prefix=None, **kwargs):
+    def __init__(self, source, prefix=None, **kwargs):
         """
         Just instantiates the parent class.
-        :param ref: root of the archive
+        :param source: root of the archive
         :param prefix: difference between the internal path (ref) and the ILCD base
           (note: for local archives, this defaults to 'ILCD'; for remote arcnives it
            defaults to empty)
         :param quiet: forwarded to ArchiveInterface
         :return:
         """
-        super(IlcdArchive, self).__init__(ref, **kwargs)
+        super(IlcdArchive, self).__init__(source, **kwargs)
         self.internal_prefix = prefix
         if prefix is not None:
             self._serialize_dict['prefix'] = prefix
 
-        self._archive = Archive(self.ref)
+        self._archive = Archive(self.source)
 
         if not self._archive.OK:
             print('Trying local ELCD reference')
             self._archive = Archive(elcd3_local_fallback)
+            if self._archive.OK:
+                self._source = elcd3_local_fallback
         if not self._archive.OK:
             print('Falling back to ELCD Remote Reference')
             self._archive = Archive(elcd3_remote_fallback, query_string='format=xml')
+            if self._archive.OK:
+                self._source = elcd3_remote_fallback
 
         if self._archive.compressed or self._archive.remote:
             self._pathtype = posixpath

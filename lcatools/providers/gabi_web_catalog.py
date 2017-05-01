@@ -138,8 +138,8 @@ class GabiWebCatalog(object):
         }
 
     def install_archive(self, archive):
-        if archive.ref not in self._roots:
-            raise ValueError('Reference %s not found' % archive.ref)
-        self._archives[archive.ref] = archive
+        if archive.source not in self._roots:
+            raise ValueError('Reference %s not found' % archive.source)
+        self._archives[archive.source] = archive
         self.archive = [self._archives[k] for k in self._roots]
 

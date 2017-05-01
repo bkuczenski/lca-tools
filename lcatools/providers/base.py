@@ -301,6 +301,7 @@ class LcArchive(ArchiveInterface):
         # return ref_flow
         return cfs_out
 
+    '''
     def _quantities_with_unit(self, unitstring):
         """
         Generates a list of quantities that convert to/from the supplied unit string.
@@ -323,6 +324,7 @@ class LcArchive(ArchiveInterface):
         :return:
         """
         return next((q for q in self._quantities_with_unit(unitstring) if q.origin == self.ref), None)
+    '''
 
     def serialize(self, exchanges=False, characterizations=False, values=False):
         """
@@ -345,8 +347,8 @@ class NsUuidArchive(LcArchive):
     """
     A class that generates UUIDs in a namespace using a supplied key
     """
-    def __init__(self, ref, ns_uuid=None, **kwargs):
-        super(NsUuidArchive, self).__init__(ref, **kwargs)
+    def __init__(self, source, ns_uuid=None, **kwargs):
+        super(NsUuidArchive, self).__init__(source, **kwargs)
 
         # internal namespace UUID for generating keys
 

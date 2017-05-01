@@ -62,8 +62,17 @@ class ArchiveInterface(object):
         """
         return to_uuid(key)
 
-    def __init__(self, ref, quiet=True, upstream=None):
-        self.ref = ref
+    def __init__(self, source, ref=None, quiet=True, upstream=None):
+        """
+
+        :param source: physical data source-- where the information is being drawn from
+        :param ref: optional semantic reference for the data source. gets added to catalog_names.
+        :param quiet:
+        :param upstream:
+        """
+
+        self._source = source
+
         self._entities = {}  # uuid-indexed list of known entities
 
         self._quiet = quiet  # whether to print out a message every time a new entity is added / deleted / modified
@@ -77,7 +86,23 @@ class ArchiveInterface(object):
         if upstream is not None:
             self.set_upstream(upstream)
 
-        self.catalog_names = dict()  # this is a place to store *some kind* of upstream reference to be determined
+        self.catalog_names = dict()  # this is a place to map semantic references to data sources
+        if ref is not None:
+            self.catalog_names[ref] = source
+
+    '''
+    @property
+    def ref(self):
+        """
+        Deprecated.  Archives have a source; catalogs have a ref.
+        :return:
+        """
+        return self._source
+    '''
+
+    @property
+    def source(self):
+        return self._source
 
     def entities(self):
         for v in self._entities.values():
@@ -85,13 +110,13 @@ class ArchiveInterface(object):
 
     def set_upstream(self, upstream):
         assert isinstance(upstream, ArchiveInterface)
-        if upstream.ref != self.ref:
-            self._serialize_dict['upstreamReference'] = upstream.ref
+        if upstream.source != self.source:
+            self._serialize_dict['upstreamSource'] = upstream.source
         self._upstream = upstream
 
     def query_upstream_ref(self):
-        if 'upstreamReference' in self._serialize_dict:
-            return self._serialize_dict['upstreamReference']
+        if 'upstreamSource' in self._serialize_dict:
+            return self._serialize_dict['upstreamSource']
         return None
 
     def truncate_upstream(self):
@@ -113,7 +138,7 @@ class ArchiveInterface(object):
             print(*args)
 
     def __str__(self):
-        s = '%s with %d entities at %s' % (self.__class__.__name__, len(self._entities), self.ref)
+        s = '%s with %d entities at %s' % (self.__class__.__name__, len(self._entities), self.source)
         if self._upstream is not None:
             s += ' [upstream %s]' % self._upstream.__class__.__name__
         return s
@@ -139,7 +164,7 @@ class ArchiveInterface(object):
         if entity in self._entities:
             e = self._entities[entity]
             if e.origin is None:
-                e.origin = self.ref
+                e.origin = self.source
             return e
         return None
 
@@ -147,7 +172,7 @@ class ArchiveInterface(object):
         return self._get_entity(item)
 
     def add(self, entity):
-        if entity.origin is None or entity.origin == self.ref:
+        if entity.origin is None or entity.origin == self.source:
             key = entity.get_external_ref()
         else:
             key = entity.get_uuid()
@@ -163,7 +188,7 @@ class ArchiveInterface(object):
                 print('Adding %s entity with %s: %s' % (entity.entity_type, u, entity['Name']))
             if entity.origin is None:
                 assert entity.get_uuid() == str(u), 'New entity uuid must match origin repository key!'
-                entity.origin = self.ref
+                entity.origin = self.source
             self._entities[u] = entity
             self._counter[entity.entity_type] += 1
 
@@ -294,7 +319,7 @@ class ArchiveInterface(object):
                 print("%s: No origin!" % k)
                 valid = False
 
-            if v.origin == self.ref:
+            if v.origin == self.source:
                 # 2: confirm entity's external key maps to its uuid
                 if self._key_to_id(v.get_external_ref()) != k:
                     print("%s: Key doesn't match UUID in origin!" % v.get_external_ref())
@@ -320,7 +345,7 @@ class ArchiveInterface(object):
         raise NotImplemented
 
     def load_all(self, **kwargs):
-        print('Loading %s' % self.ref)
+        print('Loading %s' % self.source)
         self._load_all(**kwargs)
 
     def _entities_by_type(self, entity_type):
@@ -332,7 +357,7 @@ class ArchiveInterface(object):
         j = {
             '@context': LD_CONTEXT,
             'dataSourceType': self.__class__.__name__,
-            'dataSourceReference': self.ref,
+            'dataSource': self.source,
             'catalogNames': self.catalog_names
         }
         j.update(self._serialize_dict)

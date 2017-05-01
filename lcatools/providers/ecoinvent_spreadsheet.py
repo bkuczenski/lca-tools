@@ -69,18 +69,21 @@ class EcoinventSpreadsheet(NsUuidArchive):
     def _little_read(self, sheetname):
         if not isinstance(self._xl, xlrd.book.Book):
             print('Loading workbook')
-            self._xl = xlrd.open_workbook(self.ref)
+            self._xl = xlrd.open_workbook(self.source)
         print('Reading %s ...' % sheetname)
         return XlDict.from_sheetname(self._xl, sheetname)
 
-    def __init__(self, ref, version='Unspecified', internal=False, data_dir=None, model=None, **kwargs):
+    def __init__(self, source, ref=None, version='Unspecified', internal=False, data_dir=None, model=None, **kwargs):
         """
-        :param ref:
+        :param source:
+        :param ref: hard-coded 'local.ecoinvent.[version].[model].spreadsheet'; specify at instantiation to override
         :param version:
         :param internal:
         :param kwargs: quiet, upstream
         """
-        super(EcoinventSpreadsheet, self).__init__(ref, **kwargs)
+        if ref is None:
+            ref = '.'.join(['local', 'ecoinvent', version, model, 'spreadsheet'])
+        super(EcoinventSpreadsheet, self).__init__(source, ref=ref, **kwargs)
         self.version = version
         self.internal = internal
         self._xl = None
@@ -284,10 +287,10 @@ class EcoinventSpreadsheet(NsUuidArchive):
         :param unitstring:
         :return:
         """
-        try_q = self.quantity_with_unit(unitstring)
+        u = self._key_to_id(unitstring)
+        try_q = self[u]
         if try_q is None:
             ref_unit, _ = self._create_unit(unitstring)
-            u = self._key_to_id(unitstring)
 
             q = LcQuantity(u, Name='Ecoinvent Spreadsheet Quantity %s' % unitstring,
                            ReferenceUnit=ref_unit, Comment=self.version)

@@ -54,21 +54,21 @@ class EcospoldV2Archive(LcArchive):
     nsmap = 'http://www.EcoInvent.org/EcoSpold02'  # only valid for v1 ecospold files
     spold_version = tail.search(nsmap).groups()[0]
 
-    def __init__(self, ref, prefix=None, linked=True, **kwargs):
+    def __init__(self, source, prefix=None, linked=True, **kwargs):
         """
         Just instantiates the parent class.
-        :param ref: just a reference
+        :param source: physical data source
         :param prefix: relative path for datasets from the archive root
         :param linked: [True] whether the archive includes unlinked or linked datasets. Reference exchanges
         get detected differently in one case versus the other (see _create_process)
         :return:
         """
-        super(EcospoldV2Archive, self).__init__(ref, **kwargs)
+        super(EcospoldV2Archive, self).__init__(source, **kwargs)
         self.internal_prefix = prefix
         if self.internal_prefix is not None:
             self._serialize_dict['prefix'] = self.internal_prefix
 
-        self._archive = Archive(self.ref)
+        self._archive = Archive(self.source)
         self._linked = linked
 
     def fg_proxy(self, proxy):

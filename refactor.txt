@@ -1,11 +1,11 @@
 TODO:
 
- - entities: @property external_ref
- - entities: set origin, external_ref at init
- - interfaces: need both source and ref. source is argument to Archive(); ref is entity.origin
+ X entities: @property external_ref
+ X entities: set origin, external_ref at init
+ X interfaces: need both source and ref. source is argument to Archive(); ref is entity.origin
    = does this weaken provenance?
-   : no because the archive gets serialized en bloc and both source and ref are there.
-   : The entity on its own should represent the semantic entity, not the physical entity.
+   X archive handles physical access
+   X catalog handles semantic reference
  - entities: merge requires equal origins (pending above)
  - lca-data-files; update with semantic origins
  - flows: factor, cf, convert need to be scenario-aware
@@ -30,6 +30,28 @@ TODO:
    = I think it would be possible to simply assign each non-acc
  - BackgroundManager; need to split into the matrix-handling part and the interface-providing part
 
+==========
+Mon May 01 00:44:54 -0700 2017
+
+todo on background manager:
+ - setup to use the ForegroundInterface instead of the raw archive
+ - officially move termination into the archive
+ - move all the client code into a BackgroundManager-- crib from background.py and foreground.py into background_manager.py in lca-tools
+   Just look at the API spec:
+   + foreground, background, emissions
+   + LCI of productflow
+   + ad-tilde of productflow
+   + bf-tilde of productflow
+   + lcia of productflow wrt qty
+
+and if we look at ForegroundFragment, we see:
+   + foreground of productflow
+   + is_background productflow
+   + make_foreground productflow
+   and then:
+   + background, foreground, emissions
+   + lci of product flow
+   + lcia in sparse-format
 
 ==========
 Tue Apr 25 09:31:30 -0700 2017

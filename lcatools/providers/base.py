@@ -241,42 +241,6 @@ class LcArchive(ArchiveInterface):
                 if p.has_exchange(exchange.flow, comp_dir(exchange.direction)):
                     yield p
 
-    @staticmethod
-    def resolve_termination(exchange, terms, strategy):
-        """
-             'cutoff' - call the flow a cutoff and ignore it
-             'mix' - create a new "market" process that mixes the inputs
-             'first' - take the first match (alphabetically by process name)
-             'last' - take the last match (alphabetically by process name)
-
-        This is some kind of crazy orphan function.  Maybe it belongs here- really, this stands in for the entire
-         ocelot project.  Think of it as a stub, to put it mildly.  THe only serious disadvantage is that it introduces
-         a dependency on lca-tools, which is really not acceptable.  It should be moved into LcArchive.
-
-         OK, now it's here. it's still dumb.
-        :param exchange:
-        :param terms:
-        :param strategy:
-        :return:
-        """
-        if len(terms) == 1:
-            return terms[0]
-        elif len(terms) == 0 or strategy == 'cutoff':
-            return None
-        elif strategy == 'mix':
-            p = LcProcess.new('Market for %s' % exchange.flow['Name'], Comment='Auto-generated')
-            p.add_exchange(exchange.flow, comp_dir(exchange.direction), value=float(len(terms)))
-            p.add_reference(exchange.flow, comp_dir(exchange.direction))
-            for t in terms:
-                p.add_exchange(exchange.flow, exchange.direction, value=1.0, termination=t.external_ref)
-            return p
-        elif strategy == 'first':
-            return [t for t in sorted(terms, key=lambda x: x['Name'])][0]
-        elif strategy == 'last':
-            return [t for t in sorted(terms, key=lambda x: x['Name'])][-1]
-        else:
-            raise KeyError('Unknown multi-termination strategy %s' % strategy)
-
     def exchanges(self, flow, direction=None):
         """
         Generate exchanges that contain the given flow. Optionally limit to exchanges having the specified direction.

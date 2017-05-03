@@ -12,9 +12,9 @@ from lcatools.entities import LcFragment
 FG_TEMPLATE = os.path.join(os.path.dirname(__file__), 'data', 'foreground_template.json')
 
 
-class ForegroundArchive(LcArchive):
+class LcStudy(LcArchive):
     """
-    A foreground is defined by its being anchored to a physical directory, which is used to serialize the non-fragment
+    An LcStudy is defined by its being anchored to a physical directory, which is used to serialize the non-fragment
     entities.  Also within this directory is a subdirectory called fragments, which is used to store fragments.
     """
     def _load_json_file(self, filename):
@@ -22,7 +22,7 @@ class ForegroundArchive(LcArchive):
             self.load_json(json.load(fp))
 
     def __init__(self, fg_path, **kwargs):
-        super(ForegroundArchive, self).__init__(fg_path, **kwargs)
+        super(LcStudy, self).__init__(fg_path, **kwargs)
         if not os.path.isdir(self.source):
             os.makedirs(self.source)
         if os.path.exists(self._archive_file):
@@ -38,7 +38,7 @@ class ForegroundArchive(LcArchive):
         :return:
         """
         try:
-            super(ForegroundArchive, self).add(entity)
+            super(LcStudy, self).add(entity)
         except KeyError:
             # merge incoming entity's properties with existing entity
             current = self[entity.get_uuid()]
@@ -73,9 +73,9 @@ class ForegroundArchive(LcArchive):
         return sorted([f for f in self._fragments(**kwargs)], key=lambda x: (x.is_background, x['Name']))
 
     def check_counter(self, entity_type=None):
-        super(ForegroundArchive, self).check_counter(entity_type=entity_type)
+        super(LcStudy, self).check_counter(entity_type=entity_type)
         if entity_type is None:
-            super(ForegroundArchive, self).check_counter(entity_type='fragment')
+            super(LcStudy, self).check_counter(entity_type='fragment')
 
     def _do_load(self, catalog, fragments):
         for f in fragments:

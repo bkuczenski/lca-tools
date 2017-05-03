@@ -11,6 +11,10 @@ sources within the same semantic context, not for mixing semantic sources (you n
 At the moment the interfaces only deal with elementary LcEntities-- but once a scenario management framework is in
 place it is feasible to imagine them used for fragment access as well.
 """
+
+INTERFACE_TYPES = {'entity', 'study', 'background'}
+
+
 class CatalogRequired(Exception):
     pass
 
@@ -99,8 +103,16 @@ class QueryInterface(object):
         raise CatalogRequired('Catalog access required')
 
     """
-    ForegroundInterface core methods: disabled at this level
+    ForegroundInterface core methods: individual processes, quantitative data.
     """
+    def fetch(self, eid):
+        """
+        Retrieve entity by external Id, or fetch it from an archive.
+        :param eid:
+        :return:
+        """
+        raise ForegroundRequired('Foreground access required')
+
     def exchanges(self, process):
         """
         Retrieve process's full exchange list, without values
@@ -109,7 +121,7 @@ class QueryInterface(object):
         """
         raise ForegroundRequired('No access to exchange data')
 
-    def exchange_value(self, process, flow, direction, termination=None):
+    def exchange_values(self, process, flow, direction, termination=None):
         """
         Return a list of exchanges matching the specification
         :param process:
@@ -150,29 +162,40 @@ class QueryInterface(object):
     def cutoffs(self, direction=None, search=None):
         raise BackgroundRequired('No knowledge of cutoff flows')
 
-    def emissions(self):
+    def emissions(self, direction=None, search=None):
         raise BackgroundRequired('No knowledge of elementary compartments')
 
-    def lci(self, process):
+    def lci(self, process, ref_flow=None):
         raise BackgroundRequired('No knowledge of background system')
 
-    def ref_lci(self, process, ref_flow):
-        raise BackgroundRequired('No knowledge of background system')
-
-    def ad(self, process):
+    def ad(self, process, ref_flow=None):
         raise BackgroundRequired('No knowledge of background dependencies')
 
-    def ref_ad(self, process, ref_flow):
-        raise BackgroundRequired('No knowledge of background dependencies')
+    def bf(self, process, ref_flow=None):
+        raise BackgroundRequired('No knowledge of study emissions')
 
-    def bf(self, process):
-        raise BackgroundRequired('No knowledge of foreground emissions')
-
-    def ref_bf(self, process, ref_flow):
-        raise BackgroundRequired('No knowledge of foreground emissions')
-
-    def lcia(self, process, query_qty):
+    def lcia(self, process, query_qty, ref_flow=None, **kwargs):
         raise BackgroundRequired('No knowledge of background system')
 
-    def ref_lcia(self, process, ref_flow, query_qty):
-        raise BackgroundRequired('No knowledge of background system')
+
+class BasicInterface(QueryInterface):
+    def __init__(self, archive, privacy=None):
+        """
+        Creates a semantic catalog from the specified archive.  Uses archive.get_names() to map data sources to
+        semantic references.
+        :param archive: a StaticArchive.  Foreground and background information
+        :param privacy: [None] Numeric scale indicating the level of privacy protection.  This is TBD... for now the
+        scale has the following meaning:
+         0 - no restrictions, fully public
+         1 - exchange lists are public, but exchange values are private
+         2 - exchange lists and exchange values are private
+        """
+        self._archive = archive
+        self._privacy = privacy or 0
+
+    @property
+    def privacy(self):
+        return self._privacy
+
+    def __getitem__(self, item):
+        return self._archive[item]

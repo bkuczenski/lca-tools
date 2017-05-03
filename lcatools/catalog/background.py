@@ -1,47 +1,80 @@
-from lcatools.catalog.foreground import ForegroundInterface
+import re
+from lcatools.catalog.interfaces import BasicInterface
 
 
-class BackgroundInterface(ForegroundInterface):
+class BackgroundInterface(BasicInterface):
     """
     The BackgroundInterface exposes LCI computation with matrix ordering and inversion, and LCIA computation with
-    enclosed private access to a quantity db (optional).
+    enclosed private access to a quantity db.
     """
+    def __init__(self, archive, qdb, **kwargs):
+        super(BackgroundInterface, self).__init__(archive, **kwargs)
+        self._qdb = qdb
+
     def foreground(self, process, ref_flow=None):
-        return self._archive.bg.foreground(process, ref_flow)
+        return self._archive.bg.foreground(process, ref_flow=ref_flow)
 
-    def background(self):
-        raise BackgroundRequired('No knowledge of background')
+    def foreground_flows(self, search=None):
+        for k in self._archive.bg.foreground_flows:
+            if search is None:
+                yield k
+            else:
+                if bool(re.search(search, str(k), flags=re.IGNORECASE)):
+                    yield k
 
-    def exterior(self):
-        raise BackgroundRequired('No knowledge of exterior flows')
+    def background_flows(self, search=None):
+        for k in self._archive.bg.background_flows:
+            if search is None:
+                yield k
+            else:
+                if bool(re.search(search, str(k), flags=re.IGNORECASE)):
+                    yield k
 
-    def cutoff(self):
-        raise BackgroundRequired('No knowledge of cutoff flows')
+    def exterior_flows(self, direction=None, search=None):
+        for k in self._archive.bg.exterior_flows:
+            if direction is not None:
+                if k.direction != direction:
+                    continue
+            if search is not None:
+                if not bool(re.search(search, str(k), flags=re.IGNORECASE)):
+                    continue
+            yield k
 
-    def emissions(self):
-        raise BackgroundRequired('No knowledge of elementary compartments')
+    def cutoffs(self, direction=None, search=None):
+        for k in self._archive.bg.exterior_flows:
+            if self._qdb.is_elementary(k):
+                continue
+            if direction is not None:
+                if k.direction != direction:
+                    continue
+            if search is not None:
+                if not bool(re.search(search, str(k), flags=re.IGNORECASE)):
+                    continue
+            yield k
 
-    def lci(self, process):
-        raise BackgroundRequired('No knowledge of background system')
+    def emissions(self, direction=None, search=None):
+        for k in self._archive.bg.exterior_flows:
+            if not self._qdb.is_elementary(k):
+                continue
+            if direction is not None:
+                if k.direction != direction:
+                    continue
+            if search is not None:
+                if not bool(re.search(search, str(k), flags=re.IGNORECASE)):
+                    continue
+            yield k
 
-    def ref_lci(self, process, ref_flow):
-        raise BackgroundRequired('No knowledge of background system')
+    def lci(self, process, ref_flow=None):
+        return self._archive.bg.lci(process, ref_flow=ref_flow)
 
-    def ad(self, process):
-        raise BackgroundRequired('No knowledge of background dependencies')
+    def ad(self, process, ref_flow=None):
+        return self._archive.bg.ad_tilde(process, ref_flow=ref_flow)
 
-    def ref_ad(self, process, ref_flow):
-        raise BackgroundRequired('No knowledge of background dependencies')
+    def bf(self, process, ref_flow=None):
+        return self._archive.bg.bf_tilde(process, ref_flow=ref_flow)
 
-    def bf(self, process):
-        raise BackgroundRequired('No knowledge of foreground emissions')
-
-    def ref_bf(self, process, ref_flow):
-        raise BackgroundRequired('No knowledge of foreground emissions')
-
-    def lcia(self, process, query_qty):
-        raise BackgroundRequired('No knowledge of background system')
-
-    def ref_lcia(self, process, ref_flow, query_qty):
-        raise BackgroundRequired('No knowledge of background system')
-
+    def lcia(self, process, query_qty, ref_flow=None, **kwargs):
+        q = self._qdb.get(query_qty)  # get canonical
+        if not self._archive.is_characterized(q):
+            self._archive.characterize(self._qdb, q, **kwargs)
+        return self._archive.bg.lcia(process, query_qty, ref_flow=ref_flow)

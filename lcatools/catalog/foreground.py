@@ -1,11 +1,11 @@
-from lcatools.catalog.entity import EntityInterface
+from lcatools.catalog.interfaces import BasicInterface
 
 
 class PrivateArchive(Exception):
     pass
 
 
-class ForegroundInterface(EntityInterface):
+class ForegroundInterface(BasicInterface):
     """
     This provides access to detailed exchange values and computes the exchange relation
     """
@@ -21,7 +21,7 @@ class ForegroundInterface(EntityInterface):
         for x in p.exchanges():
             yield x.trim()
 
-    def exchange_value(self, process, flow, direction, termination=None):
+    def exchange_values(self, process, flow, direction, termination=None):
         if self.privacy > 0:
             raise PrivateArchive('Exchange values are protected')
         p = self._archive[process]

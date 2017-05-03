@@ -2,19 +2,19 @@
 
 This is a list of queryable API routes for the catalog interface.  All these routes are read-only.  The only writeable routes are for study construction.
 
-## CatalogInterface
+## EntityInterface
 
-/catalog/references -> return list of semantic refs known to the catalog interface (R0)
+/entity/references -> return list of semantic refs known to the catalog interface (R0)
 
-/catalog/[semantic.ref]/processes -> return list of processes (R1)
-/catalog/[semantic.ref]/flows -> "" 
-/catalog/[semantic.ref]/quantities -> ""
-/catalog/[semantic.ref]/{entity type}?[property]=[string]&... -> perform a search (R1)
-/catalog/[semantic.ref]/[id] -> return entity (without numerical data)  (R1)
-/catalog/[semantic.ref]/[id]/reference -> return reference entity (R1)-(R2)
-/catalog/[semantic.ref]/terminate/[flow-id]/{direction} -> return list of processes (R1)
-/catalog/[semantic.ref]/originate/[flow-id]/{direction} -> return list of processes (ref only) (R1)
-/catalog/[semantic.ref]/mix/[flow-id]/{direction} -> return mixer process [what, with unit weights? that's stupid]
+/entity/[semantic.ref]/processes -> return list of processes (R1)
+/entity/[semantic.ref]/flows -> "" 
+/entity/[semantic.ref]/quantities -> ""
+/entity/[semantic.ref]/{entity type}?[property]=[string]&... -> perform a search (R1)
+/entity/[semantic.ref]/[id] -> return entity (without numerical data)  (R1)
+/entity/[semantic.ref]/[id]/reference -> return reference entity (R1)-(R2)
+/entity/[semantic.ref]/terminate/[flow-id]/{direction} -> return list of processes (R1)
+/entity/[semantic.ref]/originate/[flow-id]/{direction} -> return list of processes (ref only) (R1)
+/entity/[semantic.ref]/mix/[flow-id]/{direction} -> return mixer process [what, with unit weights? that's stupid]
 
 ## QuantityInterface
 
@@ -76,7 +76,7 @@ NOTE: BG references must be fully allocated in order to be operable. or maybe we
 /bg/[semantic.ref]/cutoff -> list intermediate B matrix rows (requires qdb or compartments) (R7)
 /bg/[semantic.ref]/emissions -> list elementary B matrix rows (requires qdb or compartments) (R7)
 
-/bg/[semantic.ref]/[pf]/foreground -> list of nodes in pf's foreground (R6)
+/bg/[semantic.ref]/[pf]/foreground -> pf's foreground (Af only, no Ad or Bf) as a list of terminated exchanges (R2)
 
 /bg/[semantic.ref]/[process-id]/lci -> (single ref) return LCI (R2)
 /bg/[semantic.ref]/[process-id]/lci -> (multi ref) error
@@ -93,6 +93,47 @@ NOTE: BG references must be fully allocated in order to be operable. or maybe we
 /bg/[semantic.ref]/[process-id]/lcia/[q-qty] -> (single ref) return qty bg LCIA (R5)
 /bg/[semantic.ref]/[process-id]/lcia/[q-qty] -> (multi ref) return array qty bg LCIA (R5)
 /bg/[semantic.ref]/[process-id]/[ref flow]/lcia/[q-qty] -> return qty bg LCIA (R5)
+
+
+# Operational form
+
+Here is a list of queries: {} = controlled vocabulary. () = optional. [] = argument. '' = literal.
+
+Archive-level queries (not applicable for individual entities); all support search arguments to filter results
+
+ * `{entity_types}` 
+ * `foreground_flows`
+ * `background_flows`
+ * `exterior_flows`
+ * `cutoffs`
+ * `emissions`
+
+Catalog Ref provides:
+ * `fetch` - [id] * automatic for catalog-refs if foreground available
+ * `get` - [id] * automatic for catalog-refs if entity available
+
+Entity queries:
+
+ * `terminate` - [flow-id] ({direction})
+ * `originate` - [flow-id] ({direction})
+ * `mix` - [flow-id] {direction}
+
+Foreground queries:
+
+ * `exchanges` - [process-id]
+ * `exchange_values` - [process-id] [flow-id] {direction} ([termination])
+ * `exchange_relation` - [process-id] [ref-flow-id] [query-flow-id] {direction} ([termination])
+
+Background queries:
+
+ * `foreground` - [process-id] ([ref-flow-id])
+ * `ad` - [process-id] ([ref-flow-id])
+ * `bf` - [process-id] ([ref-flow-id])
+ * `lci` - [process-id] ([ref-flow-id])
+ * `lcia` - [process-id] ([ref-flow-id]) [query-qty] 
+
+ 
+
 
 # Return Data Formats
 

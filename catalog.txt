@@ -1,4 +1,16 @@
 ==========
+Tue May 02 14:53:31 -0700 2017
+
+This is STALLED OUT.
+
+Here's the approach:
+
+ The CatalogRef is the magic key.  It implements all the API interfaces, and then it asks the catalog to satisfy them.
+ The Catalog leans heavily on the resolver to get from a semantic ref to a physical archive.
+ 
+
+
+==========
 Tue Apr 25 15:07:52 -0700 2017
 
 An LcCatalog provides an automated service for obtaining information about LCA data objects.

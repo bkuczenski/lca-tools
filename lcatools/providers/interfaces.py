@@ -299,37 +299,25 @@ class ArchiveInterface(object):
         """
         raise NotImplemented
 
-    def retrieve_or_fetch_entity(self, *args, **kwargs):
+    def retrieve_or_fetch_entity(self, key, **kwargs):
         """
         Client-facing function to retrieve entity by ID, first locally, then in archive.
 
         Input is flexible-- could be a UUID or key (partial uuid is just not useful)
 
-        :param args: the identifying string (uuid or partial uuid)
-        :param kwargs: used to filter search results on the local archive
+        :param key: the identifying string (uuid or external ref)
+        :param kwargs: used to pass provider-specific information
         :return:
         """
-        if len(args) > 0:
-            uid = args[0]
-        else:
-            uid = None
 
-        entity = self._get_entity(uid)  # this checks upstream if it exists
-        if entity is not None:
-            # retrieve
-            return entity
-
-        '''
-        # why would I search locally for partial uuids??? this function is not for retrieve or fetch approximate entity
-        result_set = self.search(uid, **kwargs)
-        if len(result_set) == 1:
-            return result_set[0]
-        elif len(result_set) > 1:
-            return result_set
-        '''
+        if key is not None:
+            entity = self._get_entity(self._key_to_id(key))  # this checks upstream if it exists
+            if entity is not None:
+                # retrieve
+                return entity
 
         # fetch
-        return self._fetch(uid, **kwargs)
+        return self._fetch(key, **kwargs)
 
     def validate_entity_list(self):
         count = 0

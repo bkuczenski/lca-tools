@@ -415,7 +415,7 @@ class MarketExchange(Exchange):
     The client code has to explicitly create a market exchange.  How does it know to do that? in the case of
     ecospold2, it has to determine whether the process has duplicate [non-zero] flows with activityLinkIds.
 
-    In other cases, it will be foreground / linker code that does it.
+    In other cases, it will be study / linker code that does it.
 
     Add market suppliers using dictionary notation.  Use exchange values or production volumes, but do it consistently.
     The exchange value returned is always the individual supplier's value divided by the sum of values.

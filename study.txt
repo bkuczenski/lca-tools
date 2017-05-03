@@ -1,0 +1,50 @@
+==========
+Tue May 02 22:27:10 -0700 2017
+
+OK, what do we want to do with studies?
+
+Building a study involves the following steps, in any order:
+
+ * Create flows
+ * search + grab flows
+ * create fragment from flow
+ * create a background fragment: process reference, background = True
+ * create a sub-fragment: terminate a flow to a foreground process reference, background = False
+   = child fragments for every exchange
+   = terminate elementary flows in foreground => become foreground emissions
+   = for each exchange with termination, create (or find existing) background fragment and terminate
+   = for each exchange without termination, leave I/O
+ * terminate a fragment:
+   = to background fragment
+   = to sub-fragment (could be reference or non)
+   = to foreground
+ * uproot a fragment: delete its parent reference; make it a reference
+
+ * Select quantities
+
+Operations on existing fragments:
+ * traverse => generate list of FragmentFlows -> can be serialized or written to file
+ * inventory => create list of I/Os [foreground cutoffs]
+ * fragment_lcia => compute LciaResults
+
+ * create scenario
+
+ * parameterize: exchange value for scenario
+ * parameterize: termination for scenario.  Easy- select a different subfragment.  no need to specify different process ref--> since a process ref should simply become a new subfragment instead.
+
+OKAY, so flow termination -> process ref is a thing of the past?
+
+The only headache about this will be migrating the old patagonia study.
+
+Anyway, the next steps should be to:
+ 1. actually build and run this code- I'm sure there is at least 3 hours of debugging to do
+ 2. try out building AUOMA fragments, longhand, to help specify the study manager
+ 3. start writing tests for the catalog- it's just built for tests.
+
+Longer-term steps:
+ a. implement the catalog web interface
+ b. implement an antelope interface
+ c. build some trick show-off fragments and start showing them off.
+
+for now: sign off.
+

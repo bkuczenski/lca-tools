@@ -20,7 +20,7 @@ class TarjanStack(object):
         self._downstream = set()  # sccs on which background depends
 
         self._bg_processes = []  # ordered list of background nodes
-        self._fg_processes = []  # ordered list of foreground nodes
+        self._fg_processes = []  # ordered list of study nodes
         self._bg_index = dict()  # maps product_flow.index to a* / b* column -- STATIC
         self._fg_index = dict()  # maps product_flow.index to af / ad/ bf column -- VOLATILE
 
@@ -155,7 +155,7 @@ class TarjanStack(object):
 
     def _foreground_components(self, index):
         """
-        Returns a list of foreground SCCs that are downstream of the named index (inclusive). Sorts the list by
+        Returns a list of study SCCs that are downstream of the named index (inclusive). Sorts the list by
         order in _fg_index.
         :param index:
         :return:
@@ -171,8 +171,8 @@ class TarjanStack(object):
 
     def foreground(self, pf):
         """
-        computes a list of foreground SCCs that are downstream of the supplied product flow.
-        Then converts the SCCs into an ordered list of product flows that make up the columns of the foreground.
+        computes a list of study SCCs that are downstream of the supplied product flow.
+        Then converts the SCCs into an ordered list of product flows that make up the columns of the study.
         :param pf: a product flow.
         :return: topologically-ordered, loop-detecting list of non-background product flows
         """
@@ -189,7 +189,7 @@ class TarjanStack(object):
 
     def foreground_flows(self, outputs=False):
         """
-        Generator. Yields product flows in the volatile foreground
+        Generator. Yields product flows in the volatile study
         :param outputs: [False] (bool) if True, only report strict outputs (nodes on which no other nodes depend)
         :return:
         """
@@ -250,7 +250,7 @@ class TarjanStack(object):
     def is_background(self, pf):
         """
         Tells whether a Product Flow OR index is background. Note: SCC IDs are indexes of the first product flow
-        encountered in a given SCC, or the only product flow for a singleton (i.e. acyclic foreground) SCC
+        encountered in a given SCC, or the only product flow for a singleton (i.e. acyclic study) SCC
         :param pf: product_flow OR product_flow.index
         :return: bool
         """

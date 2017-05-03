@@ -107,10 +107,10 @@ class BackgroundEngine(object):
     """
     Class for converting a collection of linked processes into a coherent technology matrix.
     """
-    def __init__(self, foreground):
+    def __init__(self, static_archive):
         """
         """
-        self.fg = foreground
+        self.fg = static_archive
         self._lowlinks = dict()  # dict mapping product_flow key to lowlink -- which is a key into TarjanStack.sccs
 
         self.tstack = TarjanStack()  # ordering of sccs
@@ -123,7 +123,9 @@ class BackgroundEngine(object):
         self._interior = []  # MatrixEntries whose parent (column) is background - A*
         self._foreground = []  # MatrixEntries whose parent is upstream of the background - Af + Ad
         self._bg_emission = []  # CutoffEntries whose parent is background - B*
-        self._cutoff = []  # CutoffEntries whose parent is foreground - Bf
+        self._cutoff = []  # CutoffEntries whose parent is study - Bf
+
+        self._surplus_coproducts = dict()  # maps surplus coproducts to their reference products
 
         self._product_flows = dict()  # maps product_flow.key to index-- being position in _pf_index
         self._pf_index = []  # maps index to product_flow in order added
@@ -131,12 +133,20 @@ class BackgroundEngine(object):
         self._a_matrix = None  # includes only interior exchanges -- dependencies in _interior
         self._b_matrix = None  # SciPy.csc_matrix for bg only
 
-        self._rec_limit = len(self.fg.processes())
+        self._rec_limit = len([p for p in self.fg.processes()])
         if self.required_recursion_limit > MAX_SAFE_RECURSION_LIMIT:
             raise EnvironmentError('This database may require too high a recursion limit-- time to learn lisp.')
 
         self._emissions = dict()  # maps emission key to index
         self._ef_index = []  # maps index to emission
+
+    @property
+    def surplus_coproducts(self):
+        return self._surplus_coproducts
+
+    @property
+    def fully_allocated(self):
+        return len(self._surplus_coproducts) == 0
 
     @property
     def required_recursion_limit(self):
@@ -303,7 +313,7 @@ class BackgroundEngine(object):
     def _construct_b_matrix(self):
         """
         b matrix only includes emissions from background + downstream processes.
-        [foreground processes LCI will have to be computed the foreground way]
+        [study processes LCI will have to be computed the study way]
         :return:
         """
         if self._b_matrix is not None:
@@ -346,7 +356,7 @@ class BackgroundEngine(object):
 
     def foreground(self, pf):
         """
-        Computes a list of indices for foreground nodes that are downstream of the named pf (inclusive).
+        Computes a list of indices for study nodes that are downstream of the named pf (inclusive).
         :param pf: ProductFlow OR ProductFlow.index
         :return: ordered list of product flows
         """
@@ -367,8 +377,8 @@ class BackgroundEngine(object):
     def make_foreground(self, product_flow=None):
         """
         make af, ad, bf for a given list of product flows, or entire if input list is omitted.
-        :param product_flow: a single ProductFlow to generate the foreground. If omitted, generate entire foreground.
-         if the product_flow is itself in the background, create a foreground model based on its inventory.
+        :param product_flow: a single ProductFlow to generate the study. If omitted, generate entire study.
+         if the product_flow is itself in the background, create a study model based on its inventory.
         :return: af, ad, bf sparse csc_matrixes
 
         Not dealing with cutoffs because they are out-of-band here. cutoffs belong to the Big Foreground, not to the
@@ -465,11 +475,11 @@ class BackgroundEngine(object):
                     self._add_ref_product(x.flow, p, multi_term, default_allocation, net_coproducts)
         self._update_component_graph()
 
-    def add_ref_product(self, flow, termination, multi_term='first', default_allocation=None, net_coproducts=True):
+    def add_ref_product(self, flow, term, multi_term='first', default_allocation=None, net_coproducts=True):
         """
         Here we are adding a reference product - column of the A + B matrix.  The termination must be supplied.
         :param flow: a product flow
-        :param termination: a process that includes the product flow among its reference exchanges (input OR output).
+        :param term: a process that includes the product flow among its reference exchanges (input OR output).
         :param multi_term: ['first'] specify how to handle ambiguous terminations.  Possible answers are:
          'cutoff' - call the flow a cutoff and ignore it
          'mix' - create a new "market" process that mixes the inputs
@@ -481,8 +491,7 @@ class BackgroundEngine(object):
          of allocating.
         :return:
         """
-        j = self.check_product_flow(flow, termination)
-        term = self.fg.get(termination.external_ref)
+        j = self.check_product_flow(flow, term)
 
         if j is None:
             j = self._add_ref_product(flow, term, multi_term, default_allocation, net_coproducts)
@@ -547,14 +556,13 @@ class BackgroundEngine(object):
                     i = self.check_product_flow(exch.flow, parent.process)
                     if i == parent:
                         # don't add ourself as a coproduct
-                        # Except this masks self-dependencies!!!!!!! hmmmm. it shouldn't bc self-dependencies are not
-                        # refs. hmmm.........
                         continue
                     if i is None:
                         i = self._create_product_flow(exch.flow, parent.process)
                         net = self._add_emission(exch.flow, exch.direction)
                         # TODO: This should be 1.0 instead of val, but entries get auto-normalized in adjust_val()
                         self.add_cutoff(i, net, val)
+                        self._surplus_coproducts[i] = parent
                     # then the first also generates the coproducts; activity levels of free sources will be net demand
                     self.add_interior(parent, i, pval)
                 # in either case, we're done with the exchange

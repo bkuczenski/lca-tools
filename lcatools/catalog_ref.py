@@ -1,3 +1,6 @@
+# doesn't import ANYTHING!
+
+
 class NoCatalog(Exception):
     pass
 
@@ -18,10 +21,15 @@ class OriginNotFound(Exception):
     pass
 
 
+class InvalidQuery(Exception):
+    pass
+
+
 class CatalogRef(object):
     """
     A catalog ref is a resolveable reference to a semantic entity. When paired with an LcCatalog, the reference
-    can operate equivalently to an actual entity.
+    can operate equivalently to an actual entity. The CatalogRef also implements a standard interface for accessing
+    LCA information RESTfully.
     """
     @classmethod
     def from_json(cls, j, catalog=None):
@@ -41,15 +49,28 @@ class CatalogRef(object):
 
         If the reference is linked to a catalog, then the catalog can be used to retrieve the entity and return its
         attributes.  Certain attributes require the entity to be known in a basic ('catalog') sense, while others
-        require it to be known in a foreground or background sense.
+        require it to be known in a study or background sense.
         :param origin: semantic reference to data source (catalog must resolve to a physical data source)
         :param ref: external reference of entity in semantic data source
         :param catalog: semantic resolver. Must provide the interface:
+          Automatic - entity information
            catalog.lookup(origin, external_ref) - returns [bool, bool, bool] -> catalog, fg, bg avail.
-           catalog.entity_type(CatalogRef) - returns entity type
-           catalog.fetch(CatalogRef) - return catalog entity
-           catalog.fg_lookup(CatalogRef) - return fg entity
-           catalog.bg_lookup(CatalogRef) - return bg entity
+           catalog.entity_type(origin, external_ref) - returns entity type
+           catalog.fetch(origin, external_ref) - return catalog entity (fg preferred; fallback to entity)
+
+          LC Queries:
+           catalog.terminate(origin, external_ref, direction)
+           catalog.originate(origin, external_ref, direction)
+           catalog.mix(origin, external_ref, direction)
+           catalog.exchanges(origin, external_ref)
+           catalog.exchange_values(origin, external_ref, flow, direction, termination=termination)
+           catalog.exchange_relation(origin, external_ref, ref_flow, exch_flow, direction,
+                        termination=termination)
+           catalog.ad(origin, external_ref, ref_flow)
+           catalog.bf(origin, external_ref, ref_flow)
+           catalog.lci(origin, external_ref, ref_flow)
+           catalog.lcia(origin, external_ref, ref_flow, lcia_qty)
+
         :param entity_type: optional- can be placeholder to enable type validation without retrieving entity
         """
         self._origin = origin
@@ -95,20 +116,6 @@ class CatalogRef(object):
         else:
             raise EntityNotKnown
 
-    @property
-    def fg(self):
-        if self._known[1]:
-            return self._catalog.fg_lookup(self)
-        else:
-            raise ForegroundNotKnown
-
-    @property
-    def bg(self):
-        if self._known[2]:
-            return self._catalog.bg_lookup(self)
-        else:
-            raise BackgroundNotKnown
-
     def lookup(self, catalog):
         self._known = catalog.lookup(self.origin, self.external_ref)
 
@@ -136,3 +143,55 @@ class CatalogRef(object):
         if self._etype is not None:
             j['entityType'] = self._etype
         return j
+
+    """
+    Query Methods -- this is the operational version of the API
+    """
+    def _require_flow(self):
+        if self.entity_type != 'flow':
+            raise InvalidQuery('This query only applies to flows')
+
+    def _require_process(self):
+        if self.entity_type != 'process':
+            raise InvalidQuery('This query only applies to processes')
+
+    def terminate(self, direction=None):
+        self._require_flow()
+        return self._catalog.terminate(self.origin, self.external_ref, direction)
+
+    def originate(self, direction=None):
+        self._require_flow()
+        return self._catalog.originate(self.origin, self.external_ref, direction)
+
+    def mix(self, direction):
+        self._require_flow()
+        return self._catalog.mix(self.origin, self.external_ref, direction)
+
+    def exchanges(self):
+        self._require_process()
+        return self._catalog.exchanges(self.origin, self.external_ref)
+
+    def exchange_values(self, flow, direction, termination=None):
+        self._require_process()
+        return self._catalog.exchange_values(self.origin, self.external_ref, flow, direction, termination=termination)
+
+    def exchange_relation(self, ref_flow, exch_flow, direction, termination=None):
+        self._require_process()
+        return self._catalog.exchange_values(self.origin, self.external_ref, ref_flow, exch_flow, direction,
+                                             termination=termination)
+
+    def ad(self, ref_flow=None):
+        self._require_process()
+        return self._catalog.ad(self.origin, self.external_ref, ref_flow)
+
+    def bf(self, ref_flow=None):
+        self._require_process()
+        return self._catalog.bf(self.origin, self.external_ref, ref_flow)
+
+    def lci(self, ref_flow=None):
+        self._require_process()
+        return self._catalog.lci(self.origin, self.external_ref, ref_flow)
+
+    def lcia(self, ref_flow, lcia_qty):
+        self._require_process()
+        return self._catalog.lcia(self.origin, self.external_ref, ref_flow, lcia_qty)

@@ -136,7 +136,7 @@ class LcEntity(object):
         return self._uuid
 
     def get_link(self):
-        return '%s%s' % (self.origin, self.get_external_ref())
+        return '%s/%s' % (self.origin, self.get_external_ref())
 
     def _validate_reference(self, ref_entity):
         if ref_entity is None:

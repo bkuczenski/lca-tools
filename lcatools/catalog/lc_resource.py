@@ -1,6 +1,7 @@
 import os
 import json
 from lcatools.catalog.interfaces import INTERFACE_TYPES
+from lcatools.catalog.static_archive import local_ref
 
 
 class LcResource(object):
@@ -14,8 +15,15 @@ class LcResource(object):
 
     """
     @classmethod
-    def from_lcarchive(cls, archive):
-        ref = archive.ref
+    def from_archive(cls, archive, interfaces, **kwargs):
+        source = archive.source
+        if source in archive.get_names:
+            ref = archive.get_names[source]
+        else:
+            ref = local_ref(source)
+        ds_type = type(archive)  # TODO: figure out how to detect whether archive was created from a JSON file
+        kwargs.update(archive.init_args)
+        return cls(ref, source, ds_type, interfaces, **kwargs)
 
     @classmethod
     def from_dict(cls, ref, d):

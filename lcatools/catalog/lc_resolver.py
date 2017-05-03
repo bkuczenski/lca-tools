@@ -1,5 +1,6 @@
 from collections import defaultdict
 import os
+import json
 
 from lcatools.catalog.lc_resource import LcResource
 
@@ -35,12 +36,21 @@ class LcCatalogResolver(object):
         for res in os.listdir(self._resource_dir):
             self._update_semantic_ref(res)
 
-    def add_resource(self, ref, source, ds_type, **kwargs):
+    def add_resource(self, resource):
+        resource.write_to_file(self._resource_dir)
+        self._update_semantic_ref(resource.reference)
+
+    def new_resource(self, ref, source, ds_type, **kwargs):
         new_res = LcResource(ref, source, ds_type, **kwargs)
-        new_res.write_to_file(self._resource_dir)
-        self._update_semantic_ref(ref)
+        self.add_resource(new_res)
 
     def resolve(self, ref, interfaces=None):
         for res in self._resources[ref]:
             if res.satisfies(interfaces):
                 yield res
+
+    def write_resource_files(self):
+        for ref, resources in self._resources.items():
+            j = [k.serialize() for k in resources]
+            with open(os.path.join(self._resource_dir, ref), 'w') as fp:
+                json.dump(fp, {ref: j})

@@ -59,6 +59,12 @@ class LcCatalog(object):
         self._archives = dict()
         self._nicknames = dict()  # keep a collection of shorthands
 
+    def new_resource(self, *args, **kwargs):
+        self._resolver.new_resource(*args, **kwargs)
+
+    def add_resource(self, resource):
+        self._resolver.add_resource(resource)
+
     def _make_static_archive(self, resource):
         if resource.ds_type.lower() == 'json':
             a = archive_from_json(resource.source, ref=resource.reference, **resource.args)

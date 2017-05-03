@@ -365,6 +365,10 @@ class ArchiveInterface(object):
             if v.entity_type == entity_type:
                 yield v
 
+    @property
+    def init_args(self):
+        return self._serialize_dict
+
     def serialize(self, **kwargs):
         j = {
             '@context': LD_CONTEXT,

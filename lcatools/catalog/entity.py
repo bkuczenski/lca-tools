@@ -1,4 +1,4 @@
-from lcatools.catalog.interfaces import BasicInterface
+from lcatools.catalog.basic import BasicInterface
 
 
 class EntityInterface(BasicInterface):

@@ -43,6 +43,7 @@ class LcCatalogResolver(object):
     def new_resource(self, ref, source, ds_type, **kwargs):
         new_res = LcResource(ref, source, ds_type, **kwargs)
         self.add_resource(new_res)
+        return new_res
 
     def resolve(self, ref, interfaces=None):
         for res in self._resources[ref]:

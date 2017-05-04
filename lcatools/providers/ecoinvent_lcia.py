@@ -131,7 +131,7 @@ class EcoinventLcia(NsUuidArchive):
         else:
             return row[self._value_tag]
 
-    def load_all(self):
+    def _load_all(self):
         self._create_all_quantities()
         if len(self._xl_rows) == 0:
             self._load_xl_rows()

@@ -1,8 +1,4 @@
-# doesn't import ANYTHING!
-
-
-class NoCatalog(Exception):
-    pass
+from lcatools.catalog.interfaces import QueryInterface, NoCatalog
 
 
 class EntityNotKnown(Exception):
@@ -78,7 +74,7 @@ class CatalogRef(object):
 
         self._etype = entity_type
 
-        self._catalog = None
+        self._query = None
 
         self._known = [False, False, False]
 
@@ -117,23 +113,22 @@ class CatalogRef(object):
             raise EntityNotKnown
 
     def lookup(self, catalog):
-        self._known = catalog.lookup(self.origin, self.external_ref)
+        _known = catalog.lookup(self.origin, self.external_ref)
 
-        if self.known:
-            self._catalog = catalog
+        if _known[0]:
+            self._known = _known
+            self._query = QueryInterface(catalog)
             self._etype = catalog.entity_type(self)
+            self._fetch()
 
     def _fetch(self):
         if self.known:
-            self._entity = self._catalog.fetch(self)
+            self._entity = self._query.fetch(self.external_ref)
 
-    def __getattr__(self, item):
-        if self._catalog is None:
+    def __getitem__(self, item):
+        if self._query is None:
             raise NoCatalog()
-        if self._entity is None:
-            self._fetch()
-        if self.known:
-            return self._entity.__getattr__(item)
+        return self.entity.__getitem__(item)
 
     def serialize(self):
         j = {
@@ -157,11 +152,11 @@ class CatalogRef(object):
 
     def terminate(self, direction=None):
         self._require_flow()
-        return self._catalog.terminate(self.origin, self.external_ref, direction)
+        return self._query.terminate(self.external_ref, direction)
 
     def originate(self, direction=None):
         self._require_flow()
-        return self._catalog.originate(self.origin, self.external_ref, direction)
+        return self._query.originate(self.external_ref, direction)
 
     def mix(self, direction):
         self._require_flow()

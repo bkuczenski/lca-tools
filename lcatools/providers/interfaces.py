@@ -83,6 +83,9 @@ class ArchiveInterface(object):
         self._upstream = None
         self._upstream_hash = dict()  # for lookup use later
 
+        self._loaded = False
+        self._static = False
+
         if upstream is not None:
             self.set_upstream(upstream)
 
@@ -90,6 +93,14 @@ class ArchiveInterface(object):
         if ref is not None:
             self._serialize_dict['dataReference'] = ref
             self.catalog_names[ref] = source
+
+    @property
+    def ref(self):
+        return next(k for k, v in self.catalog_names.items() if v == self.source)
+
+    @property
+    def static(self):
+        return self._static or self._loaded
 
     '''
     @property
@@ -192,11 +203,7 @@ class ArchiveInterface(object):
         return self._get_entity(item)
 
     def add(self, entity):
-        if entity.origin is None or entity.origin == self.source:
-            key = entity.get_external_ref()
-        else:
-            key = entity.get_uuid()
-        u = self._key_to_id(key)
+        u = to_uuid(entity.uuid)
         if u is None:
             raise ValueError('Key must be a valid UUID')
 
@@ -207,7 +214,7 @@ class ArchiveInterface(object):
             if self._quiet is False:
                 print('Adding %s entity with %s: %s' % (entity.entity_type, u, entity['Name']))
             if entity.origin is None:
-                assert entity.get_uuid() == str(u), 'New entity uuid must match origin repository key!'
+                assert entity.uuid() == str(u), 'New entity uuid must match origin repository key!'
                 entity.origin = self.source
             self._entities[u] = entity
             self._counter[entity.entity_type] += 1
@@ -357,8 +364,10 @@ class ArchiveInterface(object):
         raise NotImplemented
 
     def load_all(self, **kwargs):
-        print('Loading %s' % self.source)
-        self._load_all(**kwargs)
+        if self._loaded is False:
+            print('Loading %s' % self.source)
+            self._load_all(**kwargs)
+            self._loaded = True
 
     def _entities_by_type(self, entity_type):
         for v in self._entities.values():

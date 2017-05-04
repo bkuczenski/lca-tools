@@ -32,14 +32,16 @@ entity is available.
 """
 
 import logging
+import re
 
-from .interfaces import BasicInterface
+from .interfaces import NoInterface
 from .entity import EntityInterface
 from .foreground import ForegroundInterface
 from .background import BackgroundInterface
-from .static_archive import StaticArchive
 from .lc_resolver import LcCatalogResolver
-from lcatools.tools import archive_from_json, archive_factory
+from lcatools.tools import create_archive  # archive_from_json, archive_factory
+
+_protocol = re.compile('^(\w+)://')
 
 
 class LcCatalog(object):
@@ -54,9 +56,10 @@ class LcCatalog(object):
         :param qdb: quantity database
         """
         self._resolver = LcCatalogResolver(resource_dir)
-        self._entities = dict()
+        self._entities = dict()  # maps '/'.join(origin, external_ref) to entity
         self._qdb = qdb
-        self._archives = dict()
+        self._archives = dict()  # maps source to archive
+        self._names = dict()  # maps reference to source
         self._nicknames = dict()  # keep a collection of shorthands
 
     def new_resource(self, *args, **kwargs):
@@ -65,17 +68,22 @@ class LcCatalog(object):
     def add_resource(self, resource):
         self._resolver.add_resource(resource)
 
-    def _make_static_archive(self, resource):
-        if resource.ds_type.lower() == 'json':
-            a = archive_from_json(resource.source, ref=resource.reference, **resource.args)
-        else:
-            a = archive_factory(resource.source, resource.ds_type, ref=resource.reference, **resource.args)
-        self._archives[resource.source] = StaticArchive(a, ref=resource.reference)
-        self._nicknames[resource.reference.split('.')[-1]] = resource.source
+    def _register_archive(self, archive):
+        self._archives[archive.source] = archive
+        self._names.update(archive.get_names())
+
+    @property
+    def names(self):
+        return list(self._names.keys())
+
+    def get_archive(self, name):
+        return self._archives[self._names[name]]
 
     def _ensure_resource(self, res):
         if res.source not in self._archives:
-            self._make_static_archive(res)
+            a = create_archive(res.source, res.ds_type, ref=res.reference, **res.args)
+            self._register_archive(a)
+            self._nicknames[res.reference.split('.')[-1]] = res.source
 
     def _check_entity(self, source, external_ref):
         ent = self._archives[source][external_ref]
@@ -114,11 +122,11 @@ class LcCatalog(object):
             elif itype == 'background':
                 yield BackgroundInterface(self._archives[res.source], self._qdb, privacy=res.privacy)
 
-    def _next_i(self, origin, itype):
+    def get_interface(self, origin, itype):
         try:
             arch = next(self._get_interfaces(origin, itype))
         except StopIteration:
-            arch = BasicInterface(None)
+            raise NoInterface('%s for origin %s' % (itype, origin))
         return arch
 
     """
@@ -138,9 +146,7 @@ class LcCatalog(object):
 
     def lookup(self, origin, external_ref):
         """
-        Returns a trio of booleans indicating whether the catalog knows how to perform entity, study, background
-        lookups respectively.
-        This function needs work- what exactly are we trying to do? shouldn't we return true if a source is found?
+        Attempts to secure an entity
         :param origin:
         :param external_ref:
         :return:
@@ -153,97 +159,9 @@ class LcCatalog(object):
         return results
 
     def fetch(self, origin, external_ref):
-        return self._dereference(origin, external_ref, 'study') or \
+        return self._dereference(origin, external_ref, 'quantity') or \
+               self._dereference(origin, external_ref, 'foreground') or \
                self._dereference(origin, external_ref, 'entity')
 
     def entity_type(self, origin, external_ref):
         return self.fetch(origin, external_ref).entity_type
-
-    """
-    API functions - archive-wide
-    """
-    def processes(self, origin, **kwargs):
-        arch = self._next_i(origin, 'entity')
-        return arch.processes(**kwargs)
-
-    def flows(self, origin, **kwargs):
-        arch = self._next_i(origin, 'entity')
-        return arch.processes(**kwargs)
-
-    def quantities(self, origin, **kwargs):
-        arch = self._next_i(origin, 'entity')
-        return arch.processes(**kwargs)
-
-    def foreground_flows(self, origin, search=None):
-        arch = self._next_i(origin, 'background')
-        return arch.foreground_flows(search=search)
-
-    def background_flows(self, origin, search=None):
-        arch = self._next_i(origin, 'background')
-        return arch.background_flows(search=search)
-
-    def exterior_flows(self, origin, direction=None, search=None):
-        arch = self._next_i(origin, 'background')
-        return arch.exterior_flows(direction=direction, search=search)
-
-    def cutoffs(self, origin, direction=None, search=None):
-        arch = self._next_i(origin, 'background')
-        return arch.cutoffs(direction=direction, search=search)
-
-    def emissions(self, origin, direction=None, search=None):
-        arch = self._next_i(origin, 'background')
-        return arch.cutoffs(direction=direction, search=search)
-
-    """
-    API functions- entity-specific
-    entity interface
-    """
-    def get(self, origin, external_ref):
-        arch = self._next_i(origin, 'entity')
-        return arch.get(external_ref)
-
-    def terminate(self, origin, external_ref, direction=None):
-        arch = self._next_i(origin, 'entity')
-        return arch.terminate(external_ref, direction=direction)
-
-    def originate(self, origin, external_ref, direction=None):
-        arch = self._next_i(origin, 'entity')
-        return arch.originate(external_ref, direction=direction)
-
-    def mix(self, origin, external_ref, direction):
-        arch = self._next_i(origin, 'entity')
-        return arch.mix(external_ref, direction)
-
-    """
-    study interface
-    """
-    def exchanges(self, origin, external_ref):
-        arch = self._next_i(origin, 'study')
-        return arch.exchanges(external_ref)
-
-    def exchange_values(self, origin, external_ref, exch_flow, direction, termination=None):
-        arch = self._next_i(origin, 'study')
-        return arch.exchange_values(external_ref, exch_flow, direction, termination=termination)
-
-    def exchange_relation(self, origin, process_ref, ref_flow, exch_flow, direction, termination=None):
-        arch = self._next_i(origin, 'study')
-        return arch.exchange_relation(process_ref, ref_flow, exch_flow, direction, termination=termination)
-
-    """
-    background interface
-    """
-    def ad(self, origin, external_ref, ref_flow):
-        arch = self._next_i(origin, 'background')
-        return arch.ad(external_ref, ref_flow)
-
-    def bf(self, origin, external_ref, ref_flow):
-        arch = self._next_i(origin, 'background')
-        return arch.bf(external_ref, ref_flow)
-
-    def lci(self, origin, external_ref, ref_flow):
-        arch = self._next_i(origin, 'background')
-        return arch.lci(external_ref, ref_flow)
-
-    def lcia(self, origin, external_ref, ref_flow, lcia_qty):
-        arch = self._next_i(origin, 'background')
-        return arch.lcia(external_ref, lcia_qty, ref_flow)

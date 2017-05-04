@@ -10,7 +10,7 @@ web paper, to a collection of process data, to wit:
 
 from __future__ import print_function, unicode_literals
 
-import six
+import eight
 
 import os
 
@@ -42,6 +42,7 @@ conversion_dict = {
     ('m3', 'l'): 1000
 }
 
+
 def not_none(x):
     return x if x is not None else ''
 
@@ -68,9 +69,15 @@ class EcospoldV1Archive(NsUuidArchive):
         :return:
         """
         super(EcospoldV1Archive, self).__init__(source, **kwargs)
-        self.internal_prefix = prefix
+        self._internal_prefix = prefix
+        if prefix is not None:
+            self._serialize_dict['prefix'] = prefix
         self._q_dict = dict()
         self._archive = Archive(self.source)
+
+    @property
+    def internal_prefix(self):
+        return self._internal_prefix
 
     def _build_prefix(self):
         path = ''
@@ -215,15 +222,27 @@ class EcospoldV1Archive(NsUuidArchive):
 
         return p
 
-    def _fetch(self, uid, **kwargs):
+    def retrieve_or_fetch_entity(self, key, **kwargs):
         """
-        Nothing to do here-- if it's not found, it needs to be loaded
-        :param uid:
+        If the argument is an external reference for a process, try loading the file
+        :param key:
         :param kwargs:
         :return:
         """
-        print('No way to fetch by UUID. Loading all processes...')
-        self.load_all()
+        entity = self[key]
+        if entity is None:
+            return entity
+        try:
+            self._create_process(os.path.join(self._build_prefix(), key + '.xml'))
+            return self[key]
+        except KeyError:
+            print('No way to fetch that key. loading processes one by one...')
+        for k in self.list_datasets():
+            self._create_process(k)
+            entity = self[key]
+            if entity is not None:
+                break
+        return entity
 
     def _load_all(self):
         """
@@ -236,9 +255,3 @@ class EcospoldV1Archive(NsUuidArchive):
         self.check_counter('quantity')
         self.check_counter('flow')
         self.check_counter('process')
-
-    def serialize(self, **kwargs):
-        j = super(EcospoldV1Archive, self).serialize(**kwargs)
-        if self.internal_prefix is not None:
-            j['prefix'] = self.internal_prefix
-        return j

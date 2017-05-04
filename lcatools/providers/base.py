@@ -5,6 +5,7 @@ Interim classes with useful building blocks
 from __future__ import print_function, unicode_literals
 
 import uuid
+from collections import defaultdict
 
 import six
 
@@ -15,6 +16,74 @@ from lcatools.providers.interfaces import ArchiveInterface, to_uuid
 if six.PY2:
     bytes = str
     str = unicode
+
+
+def local_ref(source):
+    """
+    Create a semantic ref for a local filename.  Just uses basename.  what kind of monster would access multiple
+    different files with the same basename without specifying ref?
+
+    alternative is splitext(source)[0].translate(maketrans('/\\','..'), ':~') but ugghh...
+
+    Okay, FINE.  I'll use the full path.  WITH leading '.' removed.
+
+    Anyway, to be clear, local semantic references are not supposed to be distributed.
+    :param source:
+    :return:
+    """
+    xf = splitext(source)[0].translate(str.maketrans('/\\', '..'), ':~')
+    while xf[0] == '.':
+        xf = xf[1:]
+    while xf[-1] == '.':
+        xf = xf[:-1]
+    return '.'.join(['local', xf])
+
+
+class XlDict(object):
+    """
+    wrapper class for xlrd that exposes a simple pandas-like interface to access tabular spreadsheet data with iterrows.
+    """
+    @classmethod
+    def from_sheetname(cls, workbook, sheetname):
+        return cls(workbook.sheet_by_name(sheetname))
+
+    def __init__(self, sheet):
+        """
+
+        :param sheet: an xlrd.sheet.Sheet
+        """
+        self._sheet = sheet
+
+    def iterrows(self):
+        """
+        Using the first row as a list of headers, yields a dict for each subsequent row using the header names as keys.
+        returning index, row for pandas compatibility
+        :return:
+        """
+        _gen = self._sheet.get_rows()
+        # grab first row
+        d = dict((v.value, k) for k, v in enumerate(next(_gen)))
+        index = 0
+        for r in _gen:
+            index += 1
+            yield index, dict((k, r[v].value) for k, v in d.items())
+
+    def unique_units(self, internal=False):
+        """
+                unitname = 'unit' if self.internal else 'unitName'
+        units = set(_elementary[unitname].unique().tolist()).union(
+            set(_intermediate[unitname].unique().tolist()))
+        for u in units:
+            self._create_quantity(u)
+
+        :param internal:
+        :return:
+        """
+        units = set()
+        unitname = 'unit' if internal else 'unitName'
+        for index, row in self.iterrows():
+            units.add(row[unitname])
+        return units
 
 
 class OldJson(Exception):
@@ -32,6 +101,11 @@ class LcArchive(ArchiveInterface):
     method-- which itself should be offloaded to the entities wherever possible.
 
     """
+    def __init__(self, source, ref=None, **kwargs):
+        if ref is None:
+            ref = local_ref(source)
+        super(LcArchive, self).__init__(source, ref=ref, **kwargs)
+        self._terminations = defaultdict(set)
 
     @classmethod
     def _create_unit(cls, unitstring):
@@ -96,6 +170,12 @@ class LcArchive(ArchiveInterface):
         return None
 
     def load_json(self, j):
+        """
+        Archives loaded from JSON files are considered static.
+        :param j:
+        :return:
+        """
+        self._static = True
         for e in j['quantities']:
             self.entity_from_json(e)
         for e in j['flows']:
@@ -220,26 +300,48 @@ class LcArchive(ArchiveInterface):
             }[entity_type[0]]
         return super(LcArchive, self)._entities_by_type(entity_type)
 
-    def terminate(self, exchange, refs_only=False):
+    def _index_terminations(self):
+        self._terminations = defaultdict(set)  # reset the index
+        for p in self.processes():
+            for rx in p.reference_entity:
+                self._terminations[rx.flow.external_ref].add((rx.direction, p))
+
+    def terminate(self, flow_ref, direction=None):
         """
         Generate processes in the archive that terminate a given exchange i.e. - have the same flow and a complementary
         direction.  If refs_only is specified, only report processes that terminate the exchange with a reference
         exchange.
-        :param exchange:
-        :param refs_only: [False] limit to reference exchanges
+        :param flow_ref: flow or flow's external key
+        :param direction: [None] filter
         :return:
         """
-        for p in self.processes():
-            if refs_only:
-                try:
-                    for x in p.references(exchange.flow):
-                        if x.direction == comp_dir(exchange.direction):
-                            yield p
-                except StopIteration:
-                    continue
+        if isinstance(flow_ref, LcFlow):
+            flow_ref = flow_ref.external_ref
+        if not self.static:
+            self._index_terminations()
+        for x in self._terminations[flow_ref]:  # defaultdict, so no KeyError
+            if direction is None:
+                yield x[1].trim()
             else:
-                if p.has_exchange(exchange.flow, comp_dir(exchange.direction)):
-                    yield p
+                if comp_dir(direction) == x[0]:
+                    yield x[1].trim()
+
+    def originate(self, flow_ref, direction=None):
+        if direction is not None:
+            direction = comp_dir(direction)
+        return self.terminate(flow_ref, direction)
+
+    def mix(self, flow_ref, direction):
+        if isinstance(flow_ref, LcFlow):
+            flow_ref = flow_ref.external_ref
+        terms = [t for t in self.terminate(flow_ref, direction=direction)]
+        flow = self[flow_ref]
+        p = LcProcess.new('Market for %s' % flow['Name'], Comment='Auto-generated')
+        p.add_exchange(flow, comp_dir(direction), value=float(len(terms)))
+        p.add_reference(flow, comp_dir(direction))
+        for t in terms:
+            p.add_exchange(flow, direction, value=1.0, termination=t.external_ref)
+        return p
 
     def exchanges(self, flow, direction=None):
         """
@@ -258,77 +360,9 @@ class LcArchive(ArchiveInterface):
                         if x.direction == direction:
                             yield x
 
-    def fg_proxy(self, proxy):
-        """
-        A catalog service- to grab the 'native' process in the event that the locally-cached one is a stub.
-        NOP by default (override in subclasses).
-        :param proxy:
-        :return:
-        """
-        return self[proxy]
-
-    def bg_proxy(self, proxy):
-        return self[proxy]
-
-    def fg_lookup(self, process_id, ref_flow=None):
-        """
-        This is a template process that subclasses should override. By default, just returns the process's exchanges.
-        :param process_id:
-        :param ref_flow: for
-        :return:
-        """
-        process = self.fg_proxy(process_id)
-        return process.exchanges(ref_flow)
-
-    def bg_lookup(self, process_id, ref_flow=None, reference=None, quantities=None, scenario=None, flowdb=None):
-        """
-        bg_lookup returns a flow representing the process's reference flow (must specify if the process is allocated)
-        containing characterizations for the LCIA quantities specified
-        :param process_id: the ID of the process
-        :param ref_flow: the literally-specified reference flow
-        :param reference: a keyword to use to find the reference flow among the process's exchanges
-        :param quantities:
-        :param scenario:
-        :param flowdb:
-        :return:
-        """
-        process = self.fg_proxy(process_id)
-        if quantities is None:
-            quantities = self.lcia_methods()
-        if ref_flow is None:
-            ref_flow = process.find_reference(reference).flow
-        cfs_out = dict()
-        for q in quantities:
-            result = process.lcia(q, ref_flow=ref_flow, scenario=scenario, flowdb=flowdb)
-            # ref_flow.add_characterization(q, value=result.total, location=process['SpatialScope'])
-            cfs_out[q.get_uuid()] = result
-        # return ref_flow
-        return cfs_out
-
-    '''
-    def _quantities_with_unit(self, unitstring):
-        """
-        Generates a list of quantities that convert to/from the supplied unit string.
-        not sure why this is useful, except I use it below to generate the first such quantity.
-        :param unitstring:
-        :return:
-        """
-        for q in self._entities_by_type('quantity'):
-            if q.has_property('UnitConv'):
-                if unitstring in q['UnitConv']:
-                    yield q
-            else:
-                if q['referenceUnit'].unitstring() == unitstring:
-                    yield q
-
-    def quantity_with_unit(self, unitstring):
-        """
-        Just the first quantity encountered that has a given unitstring-- for locally created units only
-        :param unitstring:
-        :return:
-        """
-        return next((q for q in self._quantities_with_unit(unitstring) if q.origin == self.ref), None)
-    '''
+    def load_all(self, **kwargs):
+        super(LcArchive, self).load_all(**kwargs)
+        self._index_terminations()
 
     def serialize(self, exchanges=False, characterizations=False, values=False):
         """
@@ -385,3 +419,9 @@ class NsUuidArchive(LcArchive):
             return str(uuid.uuid3(self._ns_uuid, key.encode('utf-8')))
         else:
             return str(uuid.uuid3(self._ns_uuid, key))
+
+
+class XlsArchive(NsUuidArchive):
+    """
+    A specialization of NsUUID archive that has some nifty spreadsheet tools.
+    """

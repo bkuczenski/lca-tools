@@ -36,6 +36,14 @@ def split_nick(fname):
     return re.sub('\.json\.gz$', '', os.path.basename(fname))
 
 
+def create_archive(source, ds_type, **kwargs):
+    if ds_type.lower() == 'json':
+        a = archive_from_json(source, **kwargs)
+    else:
+        a = archive_factory(source, ds_type, **kwargs)
+    return a
+
+
 def archive_factory(ref, ds_type, **kwargs):
     """
     creates an archive

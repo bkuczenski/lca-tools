@@ -33,11 +33,13 @@ entity is available.
 
 import logging
 import re
+import os
 
-from .interfaces import NoInterface
+from .interfaces import NoInterface, INTERFACE_TYPES
 from .entity import EntityInterface
 from .foreground import ForegroundInterface
 from .background import BackgroundInterface
+from .quantity import QuantityInterface
 from .lc_resolver import LcCatalogResolver
 from lcatools.tools import create_archive  # archive_from_json, archive_factory
 
@@ -49,13 +51,18 @@ class LcCatalog(object):
     Provides REST-style access to LCI information (exclusive of the flow-quantity relation)
 
     """
-    def __init__(self, resource_dir, qdb):
+    @property
+    def _resource_dir(self):
+        return os.path.join(self._rootdir, 'resources')
+
+    def __init__(self, rootdir, qdb):
         """
         Instantiates a catalog based on the resources provided in resource_dir
         :param resource_dir: directory storing LcResource files.
         :param qdb: quantity database
         """
-        self._resolver = LcCatalogResolver(resource_dir)
+        self._rootdir = rootdir
+        self._resolver = LcCatalogResolver(self._resource_dir)
         self._entities = dict()  # maps '/'.join(origin, external_ref) to entity
         self._qdb = qdb
         self._archives = dict()  # maps source to archive
@@ -81,12 +88,14 @@ class LcCatalog(object):
 
     def _ensure_resource(self, res):
         if res.source not in self._archives:
-            a = create_archive(res.source, res.ds_type, ref=res.reference, **res.args)
+            a = create_archive(res.source, res.ds_type, ref=res.reference, **res.init_args)
+            if res.static:
+                a.load_all()
             self._register_archive(a)
             self._nicknames[res.reference.split('.')[-1]] = res.source
 
     def _check_entity(self, source, external_ref):
-        ent = self._archives[source][external_ref]
+        ent = self._archives[source].retrieve_or_fetch_entity(external_ref)
         if ent is not None:
             self._entities[ent.get_link()] = ent
         return ent
@@ -103,8 +112,9 @@ class LcCatalog(object):
                 try:
                     self._ensure_resource(res)
                 except Exception as e:
+                    print('Archive Instantiation for %s failed with %s' % (origin, e))
                     # TODO: try to get more specific with exceptions.  p.s.: no idea what happens to this logging info
-                    logging.info('Static archive for %s failed with %s' % (origin, e))
+                    # logging.info('Static archive for %s failed with %s' % (origin, e))
                     continue
                 ent = self._check_entity(res.source, external_ref)
                 if ent is not None:
@@ -121,6 +131,8 @@ class LcCatalog(object):
                 yield ForegroundInterface(self._archives[res.source], privacy=res.privacy)
             elif itype == 'background':
                 yield BackgroundInterface(self._archives[res.source], self._qdb, privacy=res.privacy)
+            elif itype == 'quantity':
+                yield QuantityInterface(self._archives[res.source], self._qdb.compartments, privacy=res.privacy)
 
     def get_interface(self, origin, itype):
         try:
@@ -151,11 +163,12 @@ class LcCatalog(object):
         :param external_ref:
         :return:
         """
-        results = [False, False, False]
-        for i, iface in enumerate(('entity', 'study', 'background')):
+
+        results = []
+        for iface in INTERFACE_TYPES:
             e = self._dereference(origin, external_ref, iface)
             if e is not None:
-                results[i] = True
+                results.append(iface)
         return results
 
     def fetch(self, origin, external_ref):

@@ -114,7 +114,7 @@ def _add_set(synlist, name, syns, xid):
             for match in matches:
                 print('  [%s] = %d' % match)
         except ConflictingCas:
-            #print('Conflicting CAS on merge.. creating new group')
+            # print('Conflicting CAS on merge.. creating new group')
             index = synlist.new_set(syns, name=name)
     return index
 

@@ -11,7 +11,7 @@ web paper, to a collection of process data, to wit:
 from __future__ import print_function, unicode_literals
 
 import eight
-
+import re
 import os
 
 from lxml import objectify
@@ -26,6 +26,13 @@ from lcatools.providers.xml_widgets import find_tag
 from lcatools.interact import parse_math
 
 
+"""
+Used to install conversion factors between different flow reference units.  Satisfies the requirement:
+conversion_dict[(k1, k2)] = f implies 1 k1 = f k2
+
+Note: one conversion factor that was omitted is required by the 2015-era US LCI database: from m3 of natural gas
+combusted to kWh.  I have no idea what this is, but it needs to be supplied by the user interactively at load time.
+"""
 conversion_dict = {
     ('Bq', 'kBq'): .001,
     ('t', 'kg'): 1000,
@@ -230,26 +237,26 @@ class EcospoldV1Archive(NsUuidArchive):
         :return:
         """
         entity = self[key]
-        if entity is None:
+        if entity is not None:
             return entity
         try:
             self._create_process(os.path.join(self._build_prefix(), key + '.xml'))
             return self[key]
         except KeyError:
-            print('No way to fetch that key. loading processes one by one...')
-        for k in self.list_datasets():
-            self._create_process(k)
-            entity = self[key]
-            if entity is not None:
-                break
-        return entity
+            print('No way to fetch that key. try load_all()')
+
+        return None
 
     def _load_all(self):
         """
-        No need to "fetch" with ecospold v1, since UUIDs are not known in advance.
-        Instead, just load all the processes at once.
+        USLCI Hack: the flow "natural gas, combusted in equipment" is used in the database with three different
+        reference units (kWh, l, and m3).  We want the reference unit to be m3.  So.. we load the process with
+        that characterization first.
         :return:
         """
+        for x in self.list_datasets():
+            if bool(re.search('Natural gas, combusted in industrial equipment', x)):
+                self.retrieve_or_fetch_entity('Natural gas, combusted in industrial equipment')
         for k in self.list_datasets():
             self._create_process(k)
         self.check_counter('quantity')

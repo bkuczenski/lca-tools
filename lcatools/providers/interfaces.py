@@ -146,7 +146,7 @@ class ArchiveInterface(object):
         else:
             names = self._upstream.get_names()
 
-        for k, v in self.catalog_names:
+        for k, v in self.catalog_names.items():
             names[v] = k
         return names
 
@@ -214,7 +214,7 @@ class ArchiveInterface(object):
             if self._quiet is False:
                 print('Adding %s entity with %s: %s' % (entity.entity_type, u, entity['Name']))
             if entity.origin is None:
-                assert entity.uuid() == str(u), 'New entity uuid must match origin repository key!'
+                assert self._key_to_id(entity.external_ref) == u, 'New entity uuid must match origin repository key!'
                 entity.origin = self.source
             self._entities[u] = entity
             self._counter[entity.entity_type] += 1

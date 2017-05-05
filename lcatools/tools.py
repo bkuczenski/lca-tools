@@ -44,10 +44,10 @@ def create_archive(source, ds_type, **kwargs):
     return a
 
 
-def archive_factory(ref, ds_type, **kwargs):
+def archive_factory(source, ds_type, **kwargs):
     """
     creates an archive
-    :param ref:
+    :param source:
     :param ds_type:
     :param kwargs:
     :return:
@@ -67,7 +67,7 @@ def archive_factory(ref, ds_type, **kwargs):
         'ecoinvent_lcia': EcoinventLcia,
         'study': LcStudy
     }[ds_type.lower()]
-    return init_fcn(ref, **kwargs)
+    return init_fcn(source, **kwargs)
 #        'foregroundarchive': ForegroundArchive.load,
 #        'study': ForegroundArchive.load
 

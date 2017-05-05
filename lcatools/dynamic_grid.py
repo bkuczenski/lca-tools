@@ -1,22 +1,22 @@
 from collections import defaultdict
 
-from lcatools.catalog import CFRef, ExchangeRef  # , CatalogRef
 from lcatools.characterizations import Characterization
 from lcatools.exchanges import Exchange
 from lcatools.lcia_results import LciaResult
+# from lcatools.old_foreground.catalog import CFRef, ExchangeRef  # , CatalogRef
 
 
 def _result_to_str(result, width=8):
     if result is None:
         return '%-*.*s ' % (width, width, '  --')
-    elif isinstance(result, CFRef):
-        res = result.characterization.value
+  #  elif isinstance(result, CFRef):
+  #      res = result.characterization.value
     elif isinstance(result, Characterization):
         res = result.value
     elif isinstance(result, Exchange):
         res = result.value
-    elif isinstance(result, ExchangeRef):
-        res = result.exchange.value
+ #   elif isinstance(result, ExchangeRef):
+ #       res = result.exchange.value
     elif isinstance(result, LciaResult):
         res = result.total()
     else:

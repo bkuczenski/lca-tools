@@ -1,14 +1,22 @@
 from collections import defaultdict  # , namedtuple
 from math import ceil, log10
 
-from lcatools.catalog import get_entity_uuid
+from lcatools.dynamic_grid import dynamic_grid
 from lcatools.characterizations import Characterization
 from lcatools.flowdb.compartments import Compartment, CompartmentManager  # load_compartments, save_compartments, traverse_compartments, REFERENCE_EFLOWS
 from lcatools.flowdb.create_synonyms import load_synonyms, SYNONYMS
 from lcatools.flowdb.synlist import cas_regex
-from lcatools.foreground.dynamic_grid import dynamic_grid
 from lcatools.interact import pick_one
-from lcatools.providers.interfaces import uuid_regex
+from lcatools.providers.interfaces import to_uuid, uuid_regex
+# from old_foreground.catalog import get_entity_uuid
+
+
+def get_entity_uuid(item):
+    if to_uuid(item) is not None:
+        return item
+    if hasattr(item, 'get_uuid'):
+        return item.get_uuid()
+    raise TypeError('Don\'t know how to get ID from %s' % type(item))
 
 
 class MissingFlow(Exception):
@@ -107,7 +115,7 @@ class FlowDB(object):
 
      - Querying characterization factors. Provide a flow and a quantity. The flow's name, CAS number, and/or
       other identifying features will be mapped to a flowable, and the compartment matching will be used to find
-       a suitable CF.  The CF will be returned, and it can / should be added to the flow in the foreground.
+       a suitable CF.  The CF will be returned, and it can / should be added to the flow in the study.
 
      - It is entirely possible that the FlowDB can also be used to encapsulate LCIA lookups for intermediate
      flows, but this will be subject to development outcomes.

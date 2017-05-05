@@ -139,6 +139,8 @@ class CompartmentManager(object):
 
         :return: matching or newly merged compartment; or None if check_elem is True and no compartment found
         """
+        if compartment_name is None:
+            return None
         compartment_name = _ensure_list(compartment_name)
         cs = compartment_string(compartment_name)
         if cs in self._c_dict.keys():
@@ -290,7 +292,7 @@ class Compartment(object):
             sc._add_subs_from_json(sub['subcompartments'], elementary=elementary_sub)
 
     def __init__(self, name, parent=None, elementary=False):
-        self.name = name
+        self._name = name
         self._synonyms = set()
         assert isinstance(elementary, bool)
         self._elementary = elementary
@@ -299,6 +301,17 @@ class Compartment(object):
             assert isinstance(parent, Compartment)
         self.parent = parent
         self._id = '; '.join(self.to_list())
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        self._synonyms.add(self._name)
+        if value in self._synonyms:
+            self._synonyms.remove(value)
+        self._name = value
 
     @property
     def synonyms(self):

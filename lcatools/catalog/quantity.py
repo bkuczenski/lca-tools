@@ -14,6 +14,16 @@ class QuantityInterface(BasicInterface):
     def __init__(self, archive, compartment_manager, **kwargs):
         super(QuantityInterface, self).__init__(archive, **kwargs)
         self._cm = compartment_manager
+        self._compartments = dict()
+
+    def _check_compartment(self, string):
+        if string is None:
+            return None
+        if string in self._compartments:
+            return self._compartments[string]
+        c = self._cm.find_matching(string)
+        self._compartments[string] = c
+        return c
 
     def get(self, quantity):
         """
@@ -46,14 +56,13 @@ class QuantityInterface(BasicInterface):
         if self._archive.__hasattr__('flowables'):
             for n in self._archive.flowables(quantity=quantity, compartment=compartment):
                 yield n
-        if compartment is not None:
-            compartment = self._cm.find_matching(compartment)
+        compartment = self._check_compartment(compartment)
         if quantity is not None:
             quantity = self._archive[quantity]
         fb = set()
         for f in self._archive.flows():
             if compartment is not None:
-                if self._cm.find_matching(f['Compartment']) is not compartment:
+                if self._check_compartment(f['Compartment']) is not compartment:
                     continue
             if quantity is not None:
                 if not f.has_characterization(quantity):
@@ -75,10 +84,9 @@ class QuantityInterface(BasicInterface):
                 yield n
         comps = set()
         for f in self._archive.flows():
-            comps.add(str(self._cm.find_matching(f['Compartment'])))
+            comps.add(self._check_compartment(f['Compartment']))
         for n in comps:
-            yield n
-
+            yield str(n)
 
     def factors(self, quantity, flowable=None, compartment=None):
         """
@@ -119,4 +127,3 @@ class QuantityInterface(BasicInterface):
         :return:
         """
         raise NotImplemented  # must be overridden
-

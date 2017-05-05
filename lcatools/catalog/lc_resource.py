@@ -1,7 +1,7 @@
 import os
 import json
 from lcatools.catalog.interfaces import INTERFACE_TYPES
-from lcatools.catalog.static_archive import local_ref
+from lcatools.providers.base import local_ref
 
 
 class LcResource(object):
@@ -23,7 +23,7 @@ class LcResource(object):
             ref = local_ref(source)
         ds_type = type(archive)  # TODO: figure out how to detect whether archive was created from a JSON file
         kwargs.update(archive.init_args)
-        return cls(ref, source, ds_type, interfaces, **kwargs)
+        return cls(ref, source, ds_type, interfaces=interfaces, static=archive.static, **kwargs)
 
     @classmethod
     def from_dict(cls, ref, d):
@@ -50,9 +50,9 @@ class LcResource(object):
         with open(file, 'r') as fp:
             j = json.load(fp)
 
-        return ref, sorted([cls.from_dict(ref, d) for d in j[ref]], key=lambda x: x.priority)
+        return sorted([cls.from_dict(ref, d) for d in j[ref]], key=lambda x: x.priority)
 
-    def __init__(self, reference, source, ds_type, interfaces=None, privacy=0, priority=0, **kwargs):
+    def __init__(self, reference, source, ds_type, interfaces=None, privacy=0, priority=0, static=False, **kwargs):
         """
 
         :param reference: semantic reference
@@ -61,11 +61,13 @@ class LcResource(object):
         :param interfaces: list which can include 'entity', 'study', or 'background'. Default 'study'
         :param privacy: privacy level... TBD... 0 = public, 1 = exchange values private, 2 = all exchanges private
         :param priority: priority level.. 0-100 scale, lowest priority resource is loaded first
+        :param static: [False] if True, load_all() after initializing
         :param kwargs: additional keyword arguments to constructor
         """
         self._ref = reference
         self._source = source
         self._type = ds_type
+        self._static = static
 
         if interfaces is None:
             interfaces = ['study']
@@ -107,6 +109,14 @@ class LcResource(object):
     def priority(self):
         return self._priority
 
+    @property
+    def static(self):
+        return self._static
+
+    @property
+    def init_args(self):
+        return self._args
+
     def satisfies(self, ifaces):
         if ifaces is None:
             return True
@@ -123,7 +133,8 @@ class LcResource(object):
             "dataSourceType": self.ds_type,
             "interfaces": [k for k in self.interfaces],
             "priority": self.priority,
-            "privacy": self.privacy
+            "privacy": self.privacy,
+            "static": self.static
         }
         j.update(self._args)
         return j
@@ -150,4 +161,4 @@ class LcResource(object):
         else:
             resources = [self.serialize()]
         with open(os.path.join(path, self.reference), 'w') as fp:
-            json.dump(fp, {self.reference: resources})
+            json.dump({self.reference: resources}, fp, indent=2)

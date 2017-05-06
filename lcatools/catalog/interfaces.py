@@ -53,14 +53,18 @@ class QueryInterface(object):
     def _iface(self, itype):
         if self._catalog is None:
             raise NoCatalog
-        return self._catalog.get_interface(self._origin, itype)
+        for i in self._catalog.get_interface(self._origin, itype):
+            yield i
 
     def _perform_query(self, itype, attrname, exc, *args, **kwargs):
-        try:
-            arch = self._iface(itype)
-            return arch.__getattr__(attrname)(*args, **kwargs)
-        except NoInterface:
-            raise exc
+        for arch in self._iface(itype):
+            try:
+                return getattr(arch, attrname)(*args, **kwargs)
+            except NotImplemented:
+                continue
+            except type(exc):
+                continue
+        raise exc
 
     """
     CatalogInterface core methods
@@ -88,7 +92,11 @@ class QueryInterface(object):
         :param kwargs: keyword search
         :return:
         """
-        return self._perform_query('entity', 'quantities', CatalogRequired('Catalog access required'), **kwargs)
+        try:
+            return self._perform_query('entity', 'quantities', CatalogRequired('Catalog access required'), **kwargs)
+        except CatalogRequired:
+            return self._perform_query('quantity', 'quantities', CatalogRequired('Catalog or Quantity access required'),
+                                       **kwargs)
 
     """
     API functions- entity-specific -- get accessed by catalog ref

@@ -31,7 +31,6 @@ For each one, the first thing the catalog must do is resolve the origin to a sta
 entity is available.
 """
 
-import logging
 import re
 import os
 
@@ -55,10 +54,18 @@ class LcCatalog(object):
     def _resource_dir(self):
         return os.path.join(self._rootdir, 'resources')
 
+    @property
+    def _download_dir(self):
+        return os.path.join(self._rootdir, 'downloads')
+
+    @property
+    def _entity_cache(self):
+        return os.path.join(self._rootdir, 'entity_cache.json')
+
     def __init__(self, rootdir, qdb):
         """
         Instantiates a catalog based on the resources provided in resource_dir
-        :param resource_dir: directory storing LcResource files.
+        :param rootdir: directory storing LcResource files.
         :param qdb: quantity database
         """
         self._rootdir = rootdir
@@ -75,13 +82,18 @@ class LcCatalog(object):
     def add_resource(self, resource):
         self._resolver.add_resource(resource)
 
-    def _register_archive(self, archive):
-        self._archives[archive.source] = archive
-        self._names.update(archive.get_names())
-
     @property
     def names(self):
         return list(self._names.keys())
+
+    @property
+    def references(self):
+        for ref, ints in self._resolver.references:
+            yield ref
+
+    def show_interfaces(self):
+        for ref, ints in self._resolver.references:
+            print('%s [%s]' % (ref, ', '.join(ints)))
 
     def get_archive(self, name):
         return self._archives[self._names[name]]
@@ -91,8 +103,11 @@ class LcCatalog(object):
             a = create_archive(res.source, res.ds_type, ref=res.reference, **res.init_args)
             if res.static:
                 a.load_all()
-            self._register_archive(a)
-            self._nicknames[res.reference.split('.')[-1]] = res.source
+            self._archives[res.source] = a
+            for t in res.interfaces:
+                for k, v in a.get_names().items():
+                    self._names[':'.join([res.reference, t])] = v
+        return True
 
     def _check_entity(self, source, external_ref):
         ent = self._archives[source].retrieve_or_fetch_entity(external_ref)
@@ -135,15 +150,17 @@ class LcCatalog(object):
                 yield QuantityInterface(self._archives[res.source], self._qdb.compartments, privacy=res.privacy)
 
     def get_interface(self, origin, itype):
-        try:
-            arch = next(self._get_interfaces(origin, itype))
-        except StopIteration:
-            raise NoInterface('%s for origin %s' % (itype, origin))
-        return arch
+        for arch in self._get_interfaces(origin, itype):
+            yield arch
 
     """
     public functions
     """
+    @property
+    def sources(self):
+        for k in self._archives.keys():
+            yield k
+
     def add_nickname(self, source, nickname):
         """
         quickly refer to a specific data source already present in the archive

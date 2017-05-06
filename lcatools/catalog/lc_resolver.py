@@ -26,7 +26,16 @@ class LcCatalogResolver(object):
 
     @property
     def references(self):
-        return list(self._resources.keys())
+        """
+        Generates pairs: reference, list of supported interfaces
+        :return:
+        """
+        for k, v in self._resources.items():
+            ints = set()
+            for r in v:
+                for t in r.interfaces:
+                    ints.add(t)
+            yield k, sorted(list(ints))
 
     def _update_semantic_ref(self, ref):
         resources = LcResource.from_json(os.path.join(self._resource_dir, ref))

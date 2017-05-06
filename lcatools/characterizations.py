@@ -16,6 +16,8 @@ class Characterization(object):
 
         :param flow:
         :param quantity:
+        :param value: passed to add_value if present
+        :param location: 'GLO' passed to add_value if present
         :return:
         """
         assert flow.entity_type == 'flow', "'flow' must be an LcFlow"
@@ -92,8 +94,8 @@ class Characterization(object):
     def __str__(self):
         if self.is_null:
             return '%s has %s %s' % (self.flow, self.quantity, self.quantity.reference_entity)
-        return '%s %s %s' % ('\n'.join(['%10.3g [%s]' % (v, k) for k,v in self._locations.items()]),
-                             self.quantity.reference_entity, self.flow)
+        return '%s [%s / %s] %s' % ('\n'.join(['%10.3g [%s]' % (v, k) for k, v in self._locations.items()]),
+                             self.quantity.unit(), self.flow.unit(), self.flow)
 
     def q_view(self):
         if self.quantity is self.flow.reference_entity:
@@ -101,12 +103,12 @@ class Characterization(object):
         else:
             ref = ' | '
         if self.value is not None:
-            return '%10.3g %20.20s == %s%s%s' % (self.value, self.quantity.reference_entity.unitstring(),
-                                                 self.flow.reference_entity.reference_entity.unitstring(), ref,
+            return '%10.3g %20.20s == %s%s%s' % (self.value, self.quantity.unit(),
+                                                 self.flow.unit(), ref,
                                                  self.quantity)
         else:
-            return '%10s %20.20s == %s%s%s' % (' ', self.quantity.reference_entity.unitstring(),
-                                               self.flow.reference_entity.reference_entity.unitstring(), ref,
+            return '%10s %20.20s == %s%s%s' % (' ', self.quantity.unit(),
+                                               self.flow.unit(), ref,
                                                self.quantity)
 
     def tupleize(self):

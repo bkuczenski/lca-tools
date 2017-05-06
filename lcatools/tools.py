@@ -19,6 +19,7 @@ from lcatools.providers.ecoinvent_spreadsheet import EcoinventSpreadsheet
 from lcatools.providers.ecospold import EcospoldV1Archive
 from lcatools.providers.ecoinvent_lcia import EcoinventLcia
 from lcatools.providers.study import LcStudy
+from lcatools.providers.traci_2_1_spreadsheet import Traci21Factors
 # from lcatools.foreground.foreground import ForegroundArchive
 
 # from lcatools.db_catalog import from_json  # included for "from tools import *" by user
@@ -65,7 +66,10 @@ def archive_factory(source, ds_type, **kwargs):
         'ecoinventspreadsheet': EcoinventSpreadsheet,
         'ecoinventlcia': EcoinventLcia,
         'ecoinvent_lcia': EcoinventLcia,
-        'study': LcStudy
+        'study': LcStudy,
+        'traci2': Traci21Factors,
+        'traci21': Traci21Factors,
+        'traci21factors': Traci21Factors
     }[ds_type.lower()]
     return init_fcn(source, **kwargs)
 #        'foregroundarchive': ForegroundArchive.load,

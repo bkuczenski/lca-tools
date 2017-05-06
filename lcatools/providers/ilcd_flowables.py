@@ -38,7 +38,7 @@ ilcd_bad_cas = {
 }
 
 
-def synonyms_from_ilcd_flow(flow):
+def synonyms_from_ilcd_flow(flow, skip_syns=False):
     """
     ILCD flow files have long synonym blocks at the top. They also have a CAS number and a basename.
 
@@ -49,6 +49,7 @@ def synonyms_from_ilcd_flow(flow):
 
     Skips 'wood' from any list, which is abused badly in the ILCD synonyms list. Methanol and wood are not synonymous.
     :param flow:
+    :param skip_syns: return name, uuid, and cas but skip synonyms
     :return: uuid (str), name (str), syns (set, includes name, excludes uuid)
     """
     ns = find_ns(flow.nsmap, 'Flow')
@@ -59,7 +60,9 @@ def synonyms_from_ilcd_flow(flow):
     cas = str(find_tag(flow, 'CASNumber', ns=ns)[0]).strip()
     if cas != '':
         syns.add(cas)
-    if uid in ilcd_bad_synonyms:
+    if skip_syns:
+        print('Skipping synonyms')
+    elif uid in ilcd_bad_synonyms:
         print('Skipping Synonyms for %s' % name)
     else:
         for syn in find_common(flow, 'synonyms'):

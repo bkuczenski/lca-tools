@@ -16,6 +16,10 @@ class QuantityInterface(BasicInterface):
         self._cm = compartment_manager
         self._compartments = dict()
 
+    def quantities(self, **kwargs):
+        for q in self._archive.quantities(**kwargs):
+            yield q
+
     def _check_compartment(self, string):
         if string is None:
             return None
@@ -25,13 +29,13 @@ class QuantityInterface(BasicInterface):
         self._compartments[string] = c
         return c
 
-    def get(self, quantity):
+    def get_quantity(self, quantity):
         """
         Retrieve a canonical quantity from a qdb
         :param quantity: external_id of quantity
         :return: quantity entity
         """
-        if self._archive.__hasattr__('get_quantity'):
+        if hasattr(self._archive, 'get_quantity'):
             return self._archive.get_quantity(quantity)
         return self._archive[quantity]
 
@@ -41,7 +45,7 @@ class QuantityInterface(BasicInterface):
         :param item:
         :return: list of strings
         """
-        if self._archive.__hasattr__('synonyms'):
+        if hasattr(self._archive, 'synonyms'):
             return self._archive.synonyms(item)
         raise NotImplemented
 
@@ -51,25 +55,26 @@ class QuantityInterface(BasicInterface):
         set to those characterized by a specific quantity, those exchanged with a specific compartment, or both
         :param quantity:
         :param compartment:
-        :return: list of strings
+        :return: list of pairs: CAS number, name
         """
-        if self._archive.__hasattr__('flowables'):
+        if hasattr(self._archive, 'flowables'):
             for n in self._archive.flowables(quantity=quantity, compartment=compartment):
                 yield n
-        compartment = self._check_compartment(compartment)
-        if quantity is not None:
-            quantity = self._archive[quantity]
-        fb = set()
-        for f in self._archive.flows():
-            if compartment is not None:
-                if self._check_compartment(f['Compartment']) is not compartment:
-                    continue
+        else:
+            compartment = self._check_compartment(compartment)
             if quantity is not None:
-                if not f.has_characterization(quantity):
-                    continue
-            fb.add(f['Name'])
-        for n in sorted(list(fb)):
-            yield n
+                quantity = self._archive[quantity]
+            fb = set()
+            for f in self._archive.flows():
+                if compartment is not None:
+                    if self._check_compartment(f['Compartment']) is not compartment:
+                        continue
+                if quantity is not None:
+                    if not f.has_characterization(quantity):
+                        continue
+                fb.add((f['CasNumber'], f['Name']))
+            for n in sorted(list(fb), key=lambda x: x[1]):
+                yield n
 
     def compartments(self, quantity=None, flowable=None):
         """
@@ -79,14 +84,15 @@ class QuantityInterface(BasicInterface):
         :param flowable:
         :return: list of strings
         """
-        if self._archive.__hasattr__('compartments'):
+        if hasattr(self._archive, 'compartments'):
             for n in self._archive.compartments(quantity=quantity, flowable=flowable):
                 yield n
-        comps = set()
-        for f in self._archive.flows():
-            comps.add(self._check_compartment(f['Compartment']))
-        for n in comps:
-            yield str(n)
+        else:
+            comps = set()
+            for f in self._archive.flows():
+                comps.add(self._check_compartment(f['Compartment']))
+            for n in comps:
+                yield str(n)
 
     def factors(self, quantity, flowable=None, compartment=None):
         """
@@ -98,21 +104,22 @@ class QuantityInterface(BasicInterface):
         :param compartment:
         :return:
         """
-        if self._archive.__hasattr__('factors'):
+        if hasattr(self._archive, 'factors'):
             for n in self._archive.factors(quantity, flowable=flowable, compartment=compartment):
                 yield n
-        flowable = flowable.lower()
-        compartment = self._cm.find_matching(compartment)
-        for f in self._archive.flows():
-            if not f.has_characterization(quantity):
-                continue
-            if flowable is not None:
-                if f['Name'].lower() != flowable:
+        else:
+            flowable = flowable.lower()
+            compartment = self._cm.find_matching(compartment)
+            for f in self._archive.flows():
+                if not f.has_characterization(quantity):
                     continue
-            if compartment is not None:
-                if self._cm.find_matching(f['Compartment']) != compartment:
-                    continue
-            yield f.factor(quantity)
+                if flowable is not None:
+                    if f['Name'].lower() != flowable:
+                        continue
+                if compartment is not None:
+                    if self._cm.find_matching(f['Compartment']) != compartment:
+                        continue
+                yield f.factor(quantity)
 
     def quantity_relation(self, ref_quantity, flowable, compartment, query_quantity, locale='GLO'):
         """
@@ -126,4 +133,6 @@ class QuantityInterface(BasicInterface):
         :param locale:
         :return:
         """
+        if hasattr(self._archive, 'quantity_relation'):
+            return self._archive.quantity_relation(ref_quantity, flowable, compartment, query_quantity, locale=locale)
         raise NotImplemented  # must be overridden

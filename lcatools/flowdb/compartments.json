@@ -20,7 +20,7 @@
               "elementary": true,
               "name": [
                 "air",
-	        "Air",
+                "Air",
                 "Emissions to air",
                 "Emissions to air, unspecified",
                 "Group NMVOC to air",
@@ -52,38 +52,7 @@
                 {
                   "elementary": true,
                   "name": [
-                    "Emissions to non-urban air or from high stacks",
-                    "non-urban air or from high stacks"
-                  ],
-                  "subcompartments": []
-                },
-                {
-                  "elementary": true,
-                  "name": [
-                    "Emissions to urban air close to ground",
-                    "urban air close to ground"
-                  ],
-                  "subcompartments": []
-                },
-                {
-                  "elementary": true,
-                  "name": [
-                    "high population density"
-                  ],
-                  "subcompartments": []
-                },
-                {
-                  "elementary": true,
-                  "name": [
                     "indoor"
-                  ],
-                  "subcompartments": []
-                },
-                {
-                  "elementary": true,
-                  "name": [
-                    "low population density",
-                    "low. pop."
                   ],
                   "subcompartments": []
                 },
@@ -97,7 +66,28 @@
                 {
                   "elementary": true,
                   "name": [
+                    "rural air",
+                    "Emissions to non-urban air or from high stacks",
+                    "low population density",
+                    "low. pop.",
+                    "non-urban air or from high stacks"
+                  ],
+                  "subcompartments": []
+                },
+                {
+                  "elementary": true,
+                  "name": [
                     "stratosphere"
+                  ],
+                  "subcompartments": []
+                },
+                {
+                  "elementary": true,
+                  "name": [
+                    "urban air",
+                    "Emissions to urban air close to ground",
+                    "high population density",
+                    "urban air close to ground"
                   ],
                   "subcompartments": []
                 }
@@ -109,7 +99,7 @@
                 "soil",
                 "Emissions to soil",
                 "Emissions to soil, unspecified",
-		"Soil"
+                "Soil"
               ],
               "subcompartments": [
                 {
@@ -148,20 +138,29 @@
                 "water",
                 "Emissions to water",
                 "Emissions to water, unspecified",
-		"Water"
+                "Water"
               ],
               "subcompartments": [
                 {
                   "elementary": true,
                   "name": [
-                    "Emissions to fresh water",
+                    "Emissions to water, unspecified (long-term)"
+                  ],
+                  "subcompartments": []
+                },
+                {
+                  "elementary": true,
+                  "name": [
+                    "fresh water",
                     "Analytical measures to fresh water",
+                    "Emissions to fresh water",
                     "Heavy metals to fresh water",
                     "Inorganic emissions to fresh water",
                     "Organic emissions to fresh water",
                     "Other emissions to fresh water",
                     "Particles to fresh water",
-                    "Radioactive emissions to fresh water"
+                    "Radioactive emissions to fresh water",
+                    "freshwater"
                   ],
                   "subcompartments": [
                     {
@@ -211,13 +210,6 @@
                 {
                   "elementary": true,
                   "name": [
-                    "Emissions to water, unspecified (long-term)"
-                  ],
-                  "subcompartments": []
-                },
-                {
-                  "elementary": true,
-                  "name": [
                     "low population density, long-term"
                   ],
                   "subcompartments": []
@@ -228,7 +220,8 @@
                     "ocean",
                     "Emissions to sea water",
                     "Heavy metals to sea water",
-                    "Other emissions to sea water"
+                    "Other emissions to sea water",
+                    "sea water"
                   ],
                   "subcompartments": []
                 }
@@ -239,7 +232,7 @@
         {
           "elementary": true,
           "name": [
-	    "resources",
+            "resources",
             "Crude oil (resource)",
             "Energy resources",
             "Material resources",

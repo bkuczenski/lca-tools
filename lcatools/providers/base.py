@@ -18,27 +18,6 @@ if six.PY2:
     str = unicode
 
 
-def local_ref(source):
-    """
-    Create a semantic ref for a local filename.  Just uses basename.  what kind of monster would access multiple
-    different files with the same basename without specifying ref?
-
-    alternative is splitext(source)[0].translate(maketrans('/\\','..'), ':~') but ugghh...
-
-    Okay, FINE.  I'll use the full path.  WITH leading '.' removed.
-
-    Anyway, to be clear, local semantic references are not supposed to be distributed.
-    :param source:
-    :return:
-    """
-    xf = splitext(source)[0].translate(str.maketrans('/\\', '..'), ':~')
-    while xf[0] == '.':
-        xf = xf[1:]
-    while xf[-1] == '.':
-        xf = xf[:-1]
-    return '.'.join(['local', xf])
-
-
 class XlDict(object):
     """
     wrapper class for xlrd that exposes a simple pandas-like interface to access tabular spreadsheet data with iterrows.
@@ -102,8 +81,6 @@ class LcArchive(ArchiveInterface):
 
     """
     def __init__(self, source, ref=None, **kwargs):
-        if ref is None:
-            ref = local_ref(source)
         super(LcArchive, self).__init__(source, ref=ref, **kwargs)
         self._terminations = defaultdict(set)
 

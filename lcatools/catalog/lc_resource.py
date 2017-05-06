@@ -1,7 +1,7 @@
 import os
 import json
 from lcatools.catalog.interfaces import INTERFACE_TYPES
-from lcatools.providers.base import local_ref
+from lcatools.providers.interfaces import local_ref
 
 
 class LcResource(object):

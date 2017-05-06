@@ -10,6 +10,7 @@ duck typing and doesn't require strict interface definitions.
 from __future__ import print_function, unicode_literals
 
 import uuid
+from os.path import splitext
 import re
 import json
 import gzip as gz
@@ -45,6 +46,27 @@ def to_uuid(_in):
     return str(_out)
 
 
+def local_ref(source):
+    """
+    Create a semantic ref for a local filename.  Just uses basename.  what kind of monster would access multiple
+    different files with the same basename without specifying ref?
+
+    alternative is splitext(source)[0].translate(maketrans('/\\','..'), ':~') but ugghh...
+
+    Okay, FINE.  I'll use the full path.  WITH leading '.' removed.
+
+    Anyway, to be clear, local semantic references are not supposed to be distributed.
+    :param source:
+    :return:
+    """
+    xf = splitext(source)[0].translate(str.maketrans('/\\', '..'), ':~')
+    while xf[0] == '.':
+        xf = xf[1:]
+    while xf[-1] == '.':
+        xf = xf[:-1]
+    return '.'.join(['local', xf])
+
+
 class ArchiveInterface(object):
     """
     An abstract interface has nothing but a reference
@@ -64,6 +86,51 @@ class ArchiveInterface(object):
 
     def __init__(self, source, ref=None, quiet=True, upstream=None):
         """
+        An archive is a provenance structure for a collection of entities.  Ostensibly, an archive has a single
+        source from which entities are collected.  However, archives can also collect entities from multiple sources,
+        either by specifying an upstream archive that is subsequently truncated, or by the entity being added
+        explicitly.
+
+        The source is a resolvable URI that indicates a data resource from which entities can be extracted.  The
+        exact manner of extracting data from resources is left to the subclasses.
+
+        Internally, all entities are stored with UUID keys.  If the external references do not contain UUIDs, it is
+        recommended to derive a UUID3 using an archive-specific, stable namespace ID.  The NsUuidArchive subclass
+        does this semi-automatically (semi- because the uuid is an input argument to the entity constructor and
+        so it has to be known. but maybe we should do away with that.  entities without uuids! amazing!).
+
+        An archive has a single semantic reference that describes the data context from which its native entities
+        were gathered.  The reference is given using dot-separated hierarchical terms in order of decreasing
+        semantic significance from left to right.  The leftmost specifier should describe the maintainer of the
+         resource (which defaults to 'local' when a reference argument is not provided), followed by arbitrarily
+         more precise specifications. Some examples are:
+         local.lcia.traci.2.1.spreadsheet
+         ecoinvent.3.2.undefined
+
+        The purpose for the source / reference distinction is that in principle many different sources can all provide
+        the same semantic content: for instance, ecoinvent can be accessed from the website or from a file on the
+        user's computer.  In principle, if the semantic reference for two archives is the same, the archives should
+        contain excerpts of the same data, even if drawn from different sources.
+
+        An entity is uniquely identified by its origin and a stable reference known as an 'external_ref'.  An entity's
+        canonical identifier fits the pattern 'origin/external_ref'.  Examples:
+
+        elcd.3.2/processes/00043bd2-4563-4d73-8df8-b84b5d8902fc
+        uslci.ecospold/Acetic acid, at plant
+
+        Note that the inclusion of embedded whitespace, commas, and other delimiters indicate that these semantic
+        references are not proper URIs.
+
+        It is hoped that the user community will help develop and maintain a consistent and easily interpreted
+        namespace for semantic references.  If this is done, it should be possible to identify any published entity
+        with a concise reference.
+
+        When an entity is first added to an archive, it is assigned that archive's *reference* as its origin, following
+        the expectation that data about the same reference from different sources is the same data.
+
+        When an entity with a different origin is added to an archive, it is good practice to add a mapping from that
+        origin to its source in the receiving archive's "catalog_names" dictionary.  However, since the entity itself
+        does not know its archive's source, this cannot be done automatically.
 
         :param source: physical data source-- where the information is being drawn from
         :param ref: optional semantic reference for the data source. gets added to catalog_names.
@@ -72,7 +139,6 @@ class ArchiveInterface(object):
         """
 
         self._source = source
-
         self._entities = {}  # uuid-indexed list of known entities
 
         self._quiet = quiet  # whether to print out a message every time a new entity is added / deleted / modified
@@ -90,9 +156,11 @@ class ArchiveInterface(object):
             self.set_upstream(upstream)
 
         self.catalog_names = dict()  # this is a place to map semantic references to data sources
-        if ref is not None:
-            self._serialize_dict['dataReference'] = ref
-            self.catalog_names[ref] = source
+        if ref is None:
+            ref = local_ref(source)
+
+        self._serialize_dict['dataReference'] = ref
+        self.catalog_names[ref] = source
 
     @property
     def ref(self):
@@ -195,7 +263,7 @@ class ArchiveInterface(object):
         if entity in self._entities:
             e = self._entities[entity]
             if e.origin is None:
-                e.origin = self.source
+                e.origin = self.ref
             return e
         return None
 
@@ -215,7 +283,7 @@ class ArchiveInterface(object):
                 print('Adding %s entity with %s: %s' % (entity.entity_type, u, entity['Name']))
             if entity.origin is None:
                 assert self._key_to_id(entity.external_ref) == u, 'New entity uuid must match origin repository key!'
-                entity.origin = self.source
+                entity.origin = self.ref
             self._entities[u] = entity
             self._counter[entity.entity_type] += 1
 
@@ -257,8 +325,7 @@ class ArchiveInterface(object):
 
     def find_partial_id(self, uid, upstream=False, startswith=True):
         """
-        :param uid: is a fragmentary (or complete) uuid string. (additional positional
-         params are ignored)
+        :param uid: is a fragmentary (or complete) uuid string.
         :param upstream: [False] whether to look upstream if it exists
         :param startswith: [True] use .startswith instead of full regex
         :return: result set
@@ -308,7 +375,7 @@ class ArchiveInterface(object):
 
     def retrieve_or_fetch_entity(self, key, **kwargs):
         """
-        Client-facing function to retrieve entity by ID, first locally, then in archive.
+        Client-facing function to retrieve entity by ID, first checking in the archive, then from the source.
 
         Input is flexible-- could be a UUID or key (partial uuid is just not useful)
 

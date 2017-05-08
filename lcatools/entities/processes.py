@@ -122,6 +122,7 @@ class LcProcess(LcEntity):
         self._validate_reference({ref_entity})
 
         if ref_entity.key in self._exchanges:
+            self._exchanges[ref_entity.key].set_ref(self)
             self.reference_entity.add(ref_entity)
 
     def _find_reference_by_string(self, term, strict=False):
@@ -223,7 +224,7 @@ class LcProcess(LcEntity):
                     # this pushes the problem up to ExchangeValue
                     yield ExchangeValue.from_allocated(i, reference)
 
-    def find_reference(self, reference, strict=False):
+    def find_reference(self, reference=None, strict=False):
         """
         returns an exchange. NOTE: this has been refactored.
         :param reference: could be None, string (name or uuid), flow, or exchange
@@ -256,8 +257,9 @@ class LcProcess(LcEntity):
         return rx
 
     def remove_reference(self, reference):
+        self._exchanges[reference].unset_ref(self)
+        self.remove_allocation(reference)
         if reference in self.reference_entity:
-            self.remove_allocation(reference)
             self.reference_entity.remove(reference)
 
     def references(self, flow=None):

@@ -66,7 +66,19 @@ class Exchange(object):
         if termination is not None:
             self._termination = str(termination)
         self._hash = (process.uuid, flow.uuid, direction, self._termination)
+        self._is_reference = False
 
+    @property
+    def is_reference(self):
+        return self._is_reference
+
+    def set_ref(self, setter):
+        if setter is self._process:
+            self._is_reference = True
+
+    def unset_ref(self, setter):
+        if setter is self._process:
+            self._is_reference = False
     """
     These all need to be immutable because they form the exchange's hash
     """
@@ -155,7 +167,7 @@ class Exchange(object):
         }
         if self.termination is not None:
             j['termination'] = self.termination
-        if self in self.process.reference_entity:
+        if self.is_reference:
             j['isReference'] = True
         return j
 
@@ -264,20 +276,19 @@ class ExchangeValue(Exchange):
         :param item:
         :return:
         """
-        if item not in self.process.reference_entity:
-            raise MissingReference('Allocation key is not a reference exchange')
-        if self in self.process.reference_entity:  # if self is a reference entity, the allocation is either .value or 0
+        if len(self._value_dict) == 0:
+            # unallocated exchanges always read the same
+            return self._value
+        if self.is_reference:  # if self is a reference entity, the allocation is either .value or 0
             if item.flow == self.flow and item.direction == self.direction:
                 return self.value
             return 0.0
         # elif len(self.process.reference_entity) == 1:
         #    # no allocation necessary
         #    return self.value
+        elif not item.is_reference:
+            raise MissingReference('Allocation key is not a reference exchange')
         else:
-            if len(self._value_dict) == 0:  # no allocation
-                if len(self.process.reference_entity) > 1:
-                    raise AmbiguousReferenceError('%s: No allocation but multiple references' % self)
-                return self.value
             try:
                 return self._value_dict[item]
             except KeyError:
@@ -286,7 +297,7 @@ class ExchangeValue(Exchange):
         # raise NoAllocation('No allocation found for key %s in process %s' % (item, self.process))
 
     def __setitem__(self, key, value):
-        if key not in self.process.reference_entity:
+        if not key.is_reference:
             raise AmbiguousReferenceError('Allocation key is not a reference exchange')
         if key in self._value_dict:
             # print(self._value_dict)
@@ -300,7 +311,7 @@ class ExchangeValue(Exchange):
                 if value != 0:
                     raise ValueError('Allocation for non-reference exchange must be zero')
         '''
-        if self in self.process.reference_entity:
+        if self.is_reference:
             if key.flow == self.flow and key.direction == self.direction:
                 self.value = value
                 # if value != 1:
@@ -328,7 +339,7 @@ class ExchangeValue(Exchange):
             else:
                 ref = '   '
         else:
-            if self.process.reference_entity is not None and self in self.process.reference_entity:
+            if self.process.reference_entity is not None and self.is_reference:
                 ref = '{*}'
             else:
                 ref = '   '
@@ -348,7 +359,7 @@ class ExchangeValue(Exchange):
         if values:
             if self.value is not None:
                 j['value'] = float(self.value)
-            if self not in self.process.reference_entity and len(self._value_dict) > 0:
+            if not self.is_reference and len(self._value_dict) > 0:
                 j['valueDict'] = self._serialize_value_dict()
         return j
 
@@ -415,7 +426,7 @@ class MarketExchange(Exchange):
     The client code has to explicitly create a market exchange.  How does it know to do that? in the case of
     ecospold2, it has to determine whether the process has duplicate [non-zero] flows with activityLinkIds.
 
-    In other cases, it will be study / linker code that does it.
+    In other cases, it will be foreground / linker code that does it.
 
     Add market suppliers using dictionary notation.  Use exchange values or production volumes, but do it consistently.
     The exchange value returned is always the individual supplier's value divided by the sum of values.

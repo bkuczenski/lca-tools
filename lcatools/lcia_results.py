@@ -564,3 +564,39 @@ class LciaWeighting(object):
 
     def q(self):
         return self._q.get_uuid()
+
+
+def traversal_to_lcia(ffs):
+    """
+    This function takes in a list of fragment flow records and aggregates their ScoreCaches into a set of LciaResults.
+    The function is surprisingly slow, because AggregateLciaScore objects contain sets, so there is a lot of container
+    checking. (I think that's why, anyway...)
+    :param ffs:
+    :return: dict of quantity uuid to LciaResult -> suitable for storing directly into a new term scorecache
+    """
+    results = LciaResults(ffs[0].fragment)
+    for i in ffs:
+        if not i.term.is_null:
+            for q, v in i.term.score_cache_items():
+                quantity = v.quantity
+
+                if q not in results.keys():
+                    results[q] = LciaResult(quantity, scenario=v.scenario)
+
+                value = i.term.score_cache(quantity).total()
+                if value * i.node_weight == 0:
+                    continue
+
+                if i.term.direction == i.fragment.direction:
+                    # if the directions collide (rather than complement), the term is getting run in reverse
+                    value *= -1
+
+                results[q].add_component(i.fragment.get_uuid(), entity=i)
+                x = ExchangeValue(i.fragment, i.term.term_flow, i.term.direction, value=i.node_weight)
+                try:
+                    l = i.term.term_node.entity()['SpatialScope']
+                except KeyError:
+                    l = None
+                f = Characterization(i.term.term_flow, quantity, value=value, location=l)
+                results[q].add_score(i.fragment.get_uuid(), x, f, l)
+    return results

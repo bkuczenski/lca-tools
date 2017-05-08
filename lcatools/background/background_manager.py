@@ -14,7 +14,7 @@ class BackgroundManager(object):
     Abstracts the actual entities? do we pass entities or external_refs? TBD.
 
     BackgroundEngine needs to figure out the following:
-     - list of study and background ProductFlows (terminations), and cutoff exterior flows (flow + direction)
+     - list of foreground and background ProductFlows (terminations), and cutoff exterior flows (flow + direction)
     """
     def __init__(self, fg_interface):
         self._be = BackgroundEngine(fg_interface)

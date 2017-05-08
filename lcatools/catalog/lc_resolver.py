@@ -12,7 +12,7 @@ class LcCatalogResolver(object):
      It also acts as a factory for those resources, so when a request is provided, it is answered with a live archive.
 
      Then the Catalog turns that into a static archive and keeps a list of it. The catalog also keeps a separate
-     list of study foregrounds (which are not static; which contain fragments). These can be converted into static
+     list of foreground foregrounds (which are not static; which contain fragments). These can be converted into static
      archives by turning the fragments into processes.
 
 

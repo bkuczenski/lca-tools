@@ -115,7 +115,7 @@ class FlowDB(object):
 
      - Querying characterization factors. Provide a flow and a quantity. The flow's name, CAS number, and/or
       other identifying features will be mapped to a flowable, and the compartment matching will be used to find
-       a suitable CF.  The CF will be returned, and it can / should be added to the flow in the study.
+       a suitable CF.  The CF will be returned, and it can / should be added to the flow in the foreground.
 
      - It is entirely possible that the FlowDB can also be used to encapsulate LCIA lookups for intermediate
      flows, but this will be subject to development outcomes.

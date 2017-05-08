@@ -123,7 +123,7 @@ class BackgroundEngine(object):
         self._interior = []  # MatrixEntries whose parent (column) is background - A*
         self._foreground = []  # MatrixEntries whose parent is upstream of the background - Af + Ad
         self._bg_emission = []  # CutoffEntries whose parent is background - B*
-        self._cutoff = []  # CutoffEntries whose parent is study - Bf
+        self._cutoff = []  # CutoffEntries whose parent is foreground - Bf
 
         self._surplus_coproducts = dict()  # maps surplus coproducts to their reference products
 
@@ -313,7 +313,7 @@ class BackgroundEngine(object):
     def _construct_b_matrix(self):
         """
         b matrix only includes emissions from background + downstream processes.
-        [study processes LCI will have to be computed the study way]
+        [foreground processes LCI will have to be computed the foreground way]
         :return:
         """
         if self._b_matrix is not None:
@@ -356,7 +356,7 @@ class BackgroundEngine(object):
 
     def foreground(self, pf):
         """
-        Computes a list of indices for study nodes that are downstream of the named pf (inclusive).
+        Computes a list of indices for foreground nodes that are downstream of the named pf (inclusive).
         :param pf: ProductFlow OR ProductFlow.index
         :return: ordered list of product flows
         """
@@ -377,8 +377,8 @@ class BackgroundEngine(object):
     def make_foreground(self, product_flow=None):
         """
         make af, ad, bf for a given list of product flows, or entire if input list is omitted.
-        :param product_flow: a single ProductFlow to generate the study. If omitted, generate entire study.
-         if the product_flow is itself in the background, create a study model based on its inventory.
+        :param product_flow: a single ProductFlow to generate the foreground. If omitted, generate entire foreground.
+         if the product_flow is itself in the background, create a foreground model based on its inventory.
         :return: af, ad, bf sparse csc_matrixes
 
         Not dealing with cutoffs because they are out-of-band here. cutoffs belong to the Big Foreground, not to the

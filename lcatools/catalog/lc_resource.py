@@ -21,7 +21,7 @@ class LcResource(object):
             ref = archive.get_names[source]
         else:
             ref = local_ref(source)
-        ds_type = type(archive)  # TODO: figure out how to detect whether archive was created from a JSON file
+        ds_type = type(archive)  # static flag indicates whether archive is complete
         kwargs.update(archive.init_args)
         return cls(ref, source, ds_type, interfaces=interfaces, static=archive.static, **kwargs)
 
@@ -58,7 +58,7 @@ class LcResource(object):
         :param reference: semantic reference
         :param source: physical data source
         :param ds_type: data source type
-        :param interfaces: list which can include 'entity', 'study', or 'background'. Default 'study'
+        :param interfaces: list which can include 'entity', 'foreground', or 'background'. Default 'foreground'
         :param privacy: privacy level... TBD... 0 = public, 1 = exchange values private, 2 = all exchanges private
         :param priority: priority level.. 0-100 scale, lowest priority resource is loaded first
         :param static: [False] if True, load_all() after initializing
@@ -70,7 +70,7 @@ class LcResource(object):
         self._static = static
 
         if interfaces is None:
-            interfaces = ['study']
+            interfaces = ['foreground']
 
         if isinstance(interfaces, str):
             interfaces = [interfaces]

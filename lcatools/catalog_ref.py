@@ -45,7 +45,7 @@ class CatalogRef(object):
 
         If the reference is linked to a catalog, then the catalog can be used to retrieve the entity and return its
         attributes.  Certain attributes require the entity to be known in a basic ('catalog') sense, while others
-        require it to be known in a study or background sense.
+        require it to be known in a foreground or background sense.
         :param origin: semantic reference to data source (catalog must resolve to a physical data source)
         :param ref: external reference of entity in semantic data source
         :param catalog: semantic resolver. Must provide the interface:

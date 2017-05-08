@@ -1,6 +1,6 @@
 class ProductFlow(object):
     """
-    Class for storing study-relevant information about a single matched row-and-column in the interior matrix.
+    Class for storing foreground-relevant information about a single matched row-and-column in the interior matrix.
 
     """
     def __init__(self, index, flow, process):

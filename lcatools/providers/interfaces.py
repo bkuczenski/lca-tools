@@ -72,9 +72,7 @@ class ArchiveInterface(object):
     An abstract interface has nothing but a reference
 
     """
-
-    @classmethod
-    def _key_to_id(cls, key):
+    def _key_to_id(self, key):
         """
         in the base class, the key is the uuid-- this can get overridden
         by default, to_uuid just returns a string matching the regex, or failing that, tries to generate a string

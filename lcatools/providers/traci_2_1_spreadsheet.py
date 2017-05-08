@@ -7,6 +7,7 @@ from collections import namedtuple
 import xlrd
 from lcatools.providers.base import NsUuidArchive, XlDict
 from lcatools.entities import LcQuantity, LcFlow
+from lcatools.catalog.quantity import QuantityInterface
 from lcatools.characterizations import Characterization, DuplicateCharacterizationError
 
 
@@ -73,7 +74,7 @@ def transform_string_cas(string_cas):
     return int(''.join([x for x in filter(lambda y: y != '-', string_cas)]))
 
 
-class Traci21Factors(NsUuidArchive):
+class Traci21Factors(NsUuidArchive, QuantityInterface):
 
     def __init__(self, source, ref=None, sheet_name='Substances', mass_quantity=None, **kwargs):
         if ref is None:

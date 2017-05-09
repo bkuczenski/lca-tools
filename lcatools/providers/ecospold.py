@@ -30,8 +30,11 @@ from lcatools.interact import parse_math
 Used to install conversion factors between different flow reference units.  Satisfies the requirement:
 conversion_dict[(k1, k2)] = f implies 1 k1 = f k2
 
-Note: one conversion factor that was omitted is required by the 2015-era US LCI database: from m3 of natural gas
-combusted to kWh.  I have no idea what this is, but it needs to be supplied by the user interactively at load time.
+Note: one conversion factor that was omitted is required by the 2015-era US LCI database: The process "Biodegradable
+loose fill [RNA]" requires "natural gas, combusted in equipment" measured in kWh, but there is no conversion from m3 of
+natural gas combusted to kWh.  My best guess is on a GCV basis of fuel input, so ~40 MJ/m3 = 11.111 kWh / m3
+
+This value must be entered by hand when the USLCI database is loaded.
 """
 conversion_dict = {
     ('Bq', 'kBq'): .001,

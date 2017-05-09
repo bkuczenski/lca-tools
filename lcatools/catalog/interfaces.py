@@ -126,8 +126,8 @@ class QueryInterface(object):
         :param direction: if omitted, return all processes having the given flow as reference, regardless of direction
         :return:
         """
-        self._perform_query('entity', 'terminate', CatalogRequired('Catalog access required'),
-                            flow, direction=direction)
+        return self._perform_query('entity', 'terminate', CatalogRequired('Catalog access required'),
+                                   flow, direction=direction)
 
     def originate(self, flow, direction=None):
         """
@@ -136,8 +136,8 @@ class QueryInterface(object):
         :param direction: if omitted, return all processes having the given flow as reference, regardless of direction
         :return:
         """
-        self._perform_query('entity', 'originate', CatalogRequired('Catalog access required'),
-                            flow, direction=direction)
+        return self._perform_query('entity', 'originate', CatalogRequired('Catalog access required'),
+                                   flow, direction=direction)
 
     def mix(self, flow, direction):
         """
@@ -146,8 +146,8 @@ class QueryInterface(object):
         :param direction:
         :return:
         """
-        self._perform_query('entity', 'mix', CatalogRequired('Catalog access required'),
-                            flow, direction)
+        return self._perform_query('entity', 'mix', CatalogRequired('Catalog access required'),
+                                   flow, direction)
 
     """
     ForegroundInterface core methods: individual processes, quantitative data.
@@ -158,7 +158,7 @@ class QueryInterface(object):
         :param eid:
         :return:
         """
-        self._perform_query('foreground', 'fetch', ForegroundRequired('Foreground access required'), eid)
+        return self._perform_query('foreground', 'fetch', ForegroundRequired('Foreground access required'), eid)
 
     def exchanges(self, process):
         """
@@ -166,7 +166,7 @@ class QueryInterface(object):
         :param process:
         :return:
         """
-        self._perform_query('foreground', 'exchanges', ForegroundRequired('No access to exchange data'), process)
+        return self._perform_query('foreground', 'exchanges', ForegroundRequired('No access to exchange data'), process)
 
     def exchange_values(self, process, flow, direction, termination=None):
         """
@@ -177,8 +177,8 @@ class QueryInterface(object):
         :param termination: [None] if none, return all terminations
         :return:
         """
-        self._perform_query('foreground', 'exchange_values', ForegroundRequired('No access to exchange data'),
-                            process, flow, direction, termination=termination)
+        return self._perform_query('foreground', 'exchange_values', ForegroundRequired('No access to exchange data'),
+                                   process, flow, direction, termination=termination)
 
     def exchange_relation(self, process, ref_flow, exch_flow, direction, termination=None):
         """
@@ -191,8 +191,8 @@ class QueryInterface(object):
         :param termination:
         :return:
         """
-        self._perform_query('foreground', 'exchange_relation', ForegroundRequired('No access to exchange data'),
-                            process, ref_flow, exch_flow, direction, termination=termination)
+        return self._perform_query('foreground', 'exchange_relation', ForegroundRequired('No access to exchange data'),
+                                   process, ref_flow, exch_flow, direction, termination=termination)
 
     """
     BackgroundInterface core methods: disabled at this level; provided by use of a BackgroundManager

@@ -110,7 +110,7 @@ def archive_from_json(fname, **archive_kwargs):
         raise ValueError('Unknown dataSourceType %s' % j['dataSourceType'])
 
     if 'catalogNames' in j:
-        a.catalog_names = j['catalogNames']
+        a.catalog_names.update(j['catalogNames'])
 
     if ref is not None:
         a.catalog_names[ref] = source

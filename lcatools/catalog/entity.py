@@ -30,10 +30,12 @@ class EntityInterface(BasicInterface):
         return self.get(eid).reference_entity
 
     def terminate(self, flow, direction=None):
-        return self._archive.terminate(flow, direction=direction)
+        for p in self._archive.terminate(flow, direction=direction):
+            yield p
 
     def originate(self, flow, direction=None):
-        return self._archive.originate(flow, direction=direction)
+        for p in self._archive.originate(flow, direction=direction):
+            yield p
 
     def mix(self, flow, direction):
         return self._archive.mix(flow, direction)

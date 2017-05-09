@@ -160,6 +160,7 @@ class LcArchive(ArchiveInterface):
         for e in j['processes']:
             self.entity_from_json(e)
         self.check_counter()
+        self._index_terminations()
         self._loaded = True
 
     def entity_from_json(self, e):

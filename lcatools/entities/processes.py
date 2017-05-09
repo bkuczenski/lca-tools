@@ -162,7 +162,7 @@ class LcProcess(LcEntity):
             num += 1
         return it
 
-    def exchange(self, flow, direction=None):
+    def exchange_values(self, flow, direction=None):
         """
         Generate a list of exchanges matching the supplied flow and direction. This will yield multiple exchanges
         only in the event that several different terminations exist for the same flow and direction.
@@ -187,7 +187,7 @@ class LcProcess(LcEntity):
 
     def has_exchange(self, flow, direction=None):
         try:
-            next(self.exchange(flow, direction=direction))
+            next(self.exchange_values(flow, direction=direction))
         except StopIteration:
             return False
         return True

@@ -77,7 +77,7 @@ class FlowTermination(object):
          * fragment (same as parent) - to create a foreground node.  Must satisfy 'fragment is entity'
          * catalog ref for process - to link the fragment to a process inventory (uses self.is_background to determine
            foreground or background lookup)
-         * catalog ref for flow - to create a foreground emission
+         * catalog ref for flow - to create a foreground emission (subs parent for term, subs flow for term_flow)
 
         :param fragment:
         :param entity:
@@ -88,7 +88,12 @@ class FlowTermination(object):
         """
 
         self._parent = fragment
-        self._process_ref = entity  # this must have origin, external_ref, and entity_type
+        if entity.entity_type == 'flow':
+            if term_flow is not None:
+                raise ValueError('Conflicting termination and term_flow')
+            term_flow = entity
+            entity = fragment
+        self._term = entity  # this must have origin, external_ref, and entity_type, and be operable (if ref)
         self._descend = True
         self.term_flow = None
         self._cached_ev = 1.0
@@ -113,7 +118,7 @@ class FlowTermination(object):
             return False
         if self.term_node.entity_type != 'process':
             return False
-        return (self._process_ref.id == exchange.process.get_uuid()) and (self.term_flow.match(exchange.flow))
+        return (self._term.external_ref == exchange.process.external_ref) and (self.term_flow.match(exchange.flow))
 
     def terminates(self, exchange):
         """
@@ -131,7 +136,7 @@ class FlowTermination(object):
                     return False
                 if self.term_node.entity_type != 'process':
                     return False
-                if exchange.termination == self._process_ref.id:
+                if exchange.termination == self._term.external_ref:
                     return True
         return False
 
@@ -160,7 +165,7 @@ class FlowTermination(object):
 
     @property
     def is_null(self):
-        return self._process_ref is None
+        return self._term is None
 
     @property
     def descend(self):
@@ -179,22 +184,20 @@ class FlowTermination(object):
             raise ValueError('Descend setting must be True or False')
 
     def self_terminate(self, term_flow=None):
-        self._process_ref = self._parent
+        self._term = self._parent
         self.set_term_flow(term_flow)
         self.clear_score_cache()
         self._cached_ev = 1.0
 
     @property
     def index(self):
-        if self._process_ref is None:
+        if self._term is None:
             return 0
-        elif self._process_ref.entity_type == 'fragment':
-            return 0
-        return self._process_ref.index
+        return self._term.origin
 
     @property
     def term_node(self):
-        return self._process_ref
+        return self._term
 
     @property
     def flow_conversion(self):
@@ -233,8 +236,9 @@ class FlowTermination(object):
 
             # this is surely a hack!
             if self.term_node.entity_type != 'fragment':
+                # TODO: this is all kinds of fucked up
                 # if it's a fragment, then its flow's quantities are already in catalog[0]
-                self._process_ref.catalog[0].add(self.term_flow.reference_entity)
+                self._term.catalog[0].add(self.term_flow.reference_entity)
             # funny, it doesn't look like that bad of a hack.
 
     def _set_inbound_ev(self, inbound_ev):
@@ -243,32 +247,30 @@ class FlowTermination(object):
             self._cached_ev = 1.0
             return
         if inbound_ev is None:
-            if self._process_ref is None:
+            if self._term is None:
                 inbound_ev = 1.0
             elif self.term_node.entity_type == 'process':
-                process = self._process_ref.fg()
                 try:
-                    ex = next(x for x in process.exchange(self.term_flow, direction=self.direction))
+                    ev = next(x for x in self._term.exchange_values(self.term_flow,
+                                                                    direction=self.direction))
                     try:
-                        inbound_ev = ex[self.term_flow]
+                        inbound_ev = ev[self.term_flow]
                     except MissingReference:
-                        inbound_ev = ex.value
+                        inbound_ev = ev.value
                 except StopIteration:
                     inbound_ev = 1.0
             elif self.term_node.entity_type == 'fragment':
                 inbound_ev = 1.0  # the inbound ev must be applied at traversal time;
             else:
-                raise TypeError('How did we get here??? %s' % self._process_ref)
+                raise TypeError('How did we get here??? %s' % self._term)
         self._cached_ev = inbound_ev
 
     @property
     def id(self):
         if self.is_null:
             return None
-        elif self._process_ref.entity_type == 'process':
-            return self._process_ref.id
         else:
-            return self._process_ref.get_uuid()
+            return self._term.external_ref
 
     @property
     def inbound_exchange_value(self):
@@ -292,7 +294,7 @@ class FlowTermination(object):
         """
         if self.is_null:
             flow = self._parent.flow
-        elif self._process_ref.entity_type == 'fragment':
+        elif self._term.entity_type == 'fragment':
             if flow is None:
                 # let's try relaxing this
                 # term flow must be sub-fragment's reference flow
@@ -301,11 +303,11 @@ class FlowTermination(object):
             if flow is None:
                 flow = self._parent.flow
             try:
-                next(self._process_ref.fg().exchange(flow, direction=self.direction))
+                next(self._term.exchange_values(flow, direction=self.direction))
             except StopIteration:
-                r_e = self._process_ref.fg().reference_entity
+                r_e = [x for x in self._term.references()]
                 if len(r_e) == 1:
-                    r_e = list(r_e)[0]
+                    r_e = r_e[0]
                     flow = r_e.flow
                     self.direction = r_e.direction
                 elif len(r_e) > 0:
@@ -318,7 +320,7 @@ class FlowTermination(object):
                     # raise MissingFlow('%s missing flow %s\nAND no reference exchange' % (self._process_ref, flow))
 
             except TypeError:
-                print('Fragment: %s\nprocess_ref: %s' % (self._parent, self._process_ref))
+                print('Fragment: %s\nprocess_ref: %s' % (self._parent, self._term))
                 raise
         self.term_flow = flow
 
@@ -387,15 +389,12 @@ class FlowTermination(object):
             self._score_cache.add(res)
 
     def serialize(self):
-        if self._process_ref is None:
+        if self._term is None:
             return {}
-        if self.index == 0:
-            source = 'foreground'
-        else:
-            source = self._process_ref.catalog.source_for_index(self._process_ref.index)
+        source = self._term.origin
         j = {
             'source': source,
-            'entityId': self.id
+            'externalId': self._term.external_ref
         }
         if self.term_flow != self._parent.flow:
             j['termFlow'] = self.term_flow.get_uuid()

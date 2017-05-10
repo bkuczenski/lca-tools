@@ -95,7 +95,7 @@ class TarjanStack(object):
                     bg.append(j)
 
             self._bg_processes = bg
-            self._bg_index = dict((ind, n) for n, ind in enumerate(bg))  # mapping of *pf* index to a-matrix index
+            self._bg_index = dict((pf.index, n) for n, pf in enumerate(bg))  # mapping of *pf* index to a-matrix index
 
     def _generate_foreground_index(self):
         """

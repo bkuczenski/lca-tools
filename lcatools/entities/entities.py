@@ -210,7 +210,8 @@ class LcEntity(object):
             'origin': self.origin,
             self._ref_field: self._print_ref_field(),
         }
-        j.update(self._d)
+        for k, v in self._d.items():
+            j[k] = str(v)
         return j
 
     def __getitem__(self, item):

@@ -299,7 +299,7 @@ class LcProcess(LcEntity):
 
         total = sum([v for v in mags.values()])
 
-        for rf in self.reference_entity:
+        for rf in self.references():
             alloc_factor = mags[rf.flow] / total  # sum of all allocated exchanges should equal unallocated value
             for x in self.exchanges():
                 if x not in self.reference_entity:

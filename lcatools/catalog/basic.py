@@ -23,6 +23,9 @@ class BasicInterface(QueryInterface):
     def privacy(self):
         return self._privacy
 
+    def __str__(self):
+        return '%s for %s (%s)' % (self.__class__.__name__, self.origin, self._archive.source)
+
     def __getitem__(self, item):
         return self._archive[item]
 

@@ -59,7 +59,9 @@ def local_ref(source):
     :param source:
     :return:
     """
-    xf = splitext(source)[0].translate(str.maketrans('/\\', '..'), ':~')
+    xf = source.translate(str.maketrans('/\\', '..', ':~'))
+    while splitext(xf)[1] in {'.gz', '.json', '.zip', '.txt', '.spold', '.7z'}:
+        xf = splitext(xf)[0]
     while xf[0] == '.':
         xf = xf[1:]
     while xf[-1] == '.':
@@ -390,6 +392,9 @@ class ArchiveInterface(object):
 
         # fetch
         return self._fetch(key, **kwargs)
+
+    def get(self, key):
+        return self.retrieve_or_fetch_entity(key)
 
     def validate_entity_list(self):
         count = 0

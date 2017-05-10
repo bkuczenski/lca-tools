@@ -63,6 +63,10 @@ class LcCatalog(object):
     def _entity_cache(self):
         return os.path.join(self._rootdir, 'entity_cache.json')
 
+    @property
+    def root(self):
+        return self._rootdir
+
     def __init__(self, rootdir, qdb=None):
         """
         Instantiates a catalog based on the resources provided in resource_dir
@@ -182,17 +186,26 @@ class LcCatalog(object):
         return ent
 
     def _get_interfaces(self, origin, itype):
+        """
+        :param origin:
+        :param itype: single interface or iterable of interfaces
+        :return:
+        """
+        if isinstance(itype, str):
+            itype = [itype]
+        itype = set(itype)
         for res in self._resolver.resolve(origin, interfaces=itype):
             if not self._ensure_resource(res):
                 continue
-            if itype == 'entity':
-                yield EntityInterface(self._archives[res.source], privacy=res.privacy)
-            elif itype == 'foreground':
-                yield ForegroundInterface(self._archives[res.source], privacy=res.privacy)
-            elif itype == 'background':
-                yield BackgroundInterface(self._archives[res.source], self._qdb, privacy=res.privacy)
-            elif itype == 'quantity':
+            matches = itype.intersection(set(res.interfaces))
+            if 'quantity' in matches:
                 yield QuantityInterface(self._archives[res.source], self._qdb.compartments, privacy=res.privacy)
+            if 'entity' in matches:
+                yield EntityInterface(self._archives[res.source], privacy=res.privacy)
+            if 'foreground' in matches:
+                yield ForegroundInterface(self._archives[res.source], privacy=res.privacy)
+            if 'background' in matches:
+                yield BackgroundInterface(self._archives[res.source], self._qdb, privacy=res.privacy)
 
     def get_interface(self, origin, itype):
         for arch in self._get_interfaces(origin, itype):

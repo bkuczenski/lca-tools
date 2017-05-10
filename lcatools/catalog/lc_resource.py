@@ -17,8 +17,8 @@ class LcResource(object):
     @classmethod
     def from_archive(cls, archive, interfaces, **kwargs):
         source = archive.source
-        if source in archive.get_names:
-            ref = archive.get_names[source]
+        if source in archive.get_names():
+            ref = archive.get_names()[source]
         else:
             ref = local_ref(source)
         ds_type = type(archive)  # static flag indicates whether archive is complete

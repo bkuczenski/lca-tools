@@ -45,19 +45,45 @@ class QueryInterface(object):
     reduces code duplication (all the catalog needs to do is provide interfaces) and ensures consistent signatures.
 
     The arguments to a query should always be text strings, not entities.  When in doubt, use the external_ref.
+
+    The resolver performs fuzzy matching, meaning that a generic query (such as 'local.ecoinvent') will return both
+    exact resources and resources with greater semantic specificity (such as 'local.ecoinvent.3.2.apos').
+    All queries accept the "strict=" keyword: set to True to only accept exact matches.
     """
-    def __init__(self, origin, catalog=None):
+    def __init__(self, origin, catalog=None, debug=False):
         self._origin = origin
         self._catalog = catalog
+        self._debug = debug
 
-    def _iface(self, itype):
+    @property
+    def origin(self):
+        return self._origin
+
+    def __str__(self):
+        return '%s for %s (catalog: %s)' % (self.__class__.__name__, self.origin, self._catalog.root)
+
+    def on_debug(self):
+        self._debug = True
+
+    def off_debug(self):
+        self._debug = False
+
+    def _iface(self, itype, strict=False):
         if self._catalog is None:
             raise NoCatalog
         for i in self._catalog.get_interface(self._origin, itype):
+            if strict:
+                if i.origin != self.origin:
+                    print('strict skipping %s' % i)
+                    continue
+            if self._debug:
+                print('yielding %s' % i)
             yield i
 
-    def _perform_query(self, itype, attrname, exc, *args, **kwargs):
-        for arch in self._iface(itype):
+    def _perform_query(self, itype, attrname, exc, *args, strict=False, **kwargs):
+        if self._debug:
+            print('Performing %s query, iface %s (%s)' % (attrname, itype, self.origin))
+        for arch in self._iface(itype, strict=strict):
             try:
                 return getattr(arch, attrname)(*args, **kwargs)
             except NotImplemented:
@@ -98,18 +124,19 @@ class QueryInterface(object):
             return self._perform_query('quantity', 'quantities', CatalogRequired('Catalog or Quantity access required'),
                                        **kwargs)
 
+    def get(self, eid):
+        """
+        Retrieve entity by external Id. This will take any interface and should keep trying until it finds a match.
+        If the full quantitative dataset is required, use 'fetch', which requires a foreground interface.
+        :param eid: an external Id
+        :return:
+        """
+        return self._perform_query(INTERFACE_TYPES, 'get', CatalogRequired('Catalog access required'), eid)
+
     """
     API functions- entity-specific -- get accessed by catalog ref
     entity interface
     """
-    def get(self, eid):
-        """
-        Retrieve entity by external Id
-        :param eid: an external Id
-        :return:
-        """
-        return self._perform_query('entity', 'get', CatalogRequired('Catalog access required'), eid)
-
     def reference(self, eid):
         """
         Retrieve entity's reference(s)

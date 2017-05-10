@@ -54,10 +54,21 @@ class LcCatalogResolver(object):
         self.add_resource(new_res)
         return new_res
 
-    def resolve(self, ref, interfaces=None):
-        for res in self._resources[ref]:
-            if res.satisfies(interfaces):
-                yield res
+    def resolve(self, req, interfaces=None):
+        """
+        Fuzzy resolver returns all references that match the request and have equal or greater specificity.
+        'uslci.clean' will match queries for 'uslci' but not for 'uslci.original' or 'uslci.clean.allocated'.
+        However, 'uslci.clean.allocated' will match a query for 'uslci.clean'
+        :param req:
+        :param interfaces: could be a single interface specification or a list
+        :return:
+        """
+        terms = req.split('.')
+        for ref, res_list in self._resources.items():
+            if ref.split('.')[:len(terms)] == terms:
+                for res in res_list:
+                    if res.satisfies(interfaces):
+                        yield res
 
     def write_resource_files(self):
         for ref, resources in self._resources.items():

@@ -47,6 +47,7 @@
         "kWh": 0.2777777777777778,
         "kcal": 238.85160149998808
       },
+      "Indicator": "Cumulative Energy Demand (MJ) (gross calorific value) (renewable and non renewable)",
       "entityId": "23911c86-d4d2-4e3e-a45e-8e392af1dc4e",
       "entityType": "quantity",
       "externalId": "flowproperties/23911c86-d4d2-4e3e-a45e-8e392af1dc4e",
@@ -259,6 +260,7 @@
         "kWh": 3.5999712002303976,
         "kpm": 9.806805923310778e-06
       },
+      "Indicator": "Cumulative energy demand (MJ) (net calorific value) (renewable)",
       "entityId": "8695e049-7a18-4b83-b3bd-035747039652",
       "entityType": "quantity",
       "externalId": "flowproperties/8695e049-7a18-4b83-b3bd-035747039652",
@@ -446,6 +448,7 @@
         "kWh": 0.2777777777777778,
         "kcal": 238.85160149998808
       },
+      "Indicator": "Cumulative Energy Demand (MJ) (net calorific value) (renewable and non renewable)",
       "entityId": "a182c00f-c0e5-4b7a-b2a1-a735fbee7f9a",
       "entityType": "quantity",
       "externalId": "flowproperties/a182c00f-c0e5-4b7a-b2a1-a735fbee7f9a",

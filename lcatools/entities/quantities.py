@@ -27,7 +27,7 @@ class LcQuantity(LcEntity):
     def is_lcia_method(self):
         return 'Indicator' in self.keys()
 
-    def convert(self, from_unit, to=None):
+    def convert(self, from_unit=None, to=None):
         """
         Perform unit conversion within a quantity, using a 'UnitConversion' table stored in the object properties.
         For instance, if the quantity name was 'mass' and the reference unit was 'kg', then
@@ -43,7 +43,7 @@ class LcQuantity(LcEntity):
 
         If the quantity's reference unit is missing from the dict, it is assumed to be 1 implicitly.
 
-        :param from_unit:
+        :param from_unit: unit to convert from (default is the reference unit)
         :param to: unit to convert to (default is the reference unit)
         :return: a float indicating how many to_units there are in one from_unit
         """
@@ -53,6 +53,9 @@ class LcQuantity(LcEntity):
             print('No unit conversion table found.')
             return None
 
+        if from_unit is None:
+            from_unit = self.reference_entity.unitstring
+
         try:
             inbound = uc_table[from_unit]
         except KeyError:
@@ -60,7 +63,7 @@ class LcQuantity(LcEntity):
             return None
 
         if to is None:
-            to = self.reference_entity
+            to = self.reference_entity.unitstring
 
         try:
             outbound = uc_table[to]

@@ -249,7 +249,7 @@ class IlcdArchive(LcArchive):
             if dtype is None:
                 raise ValueError('Search result with no matching dtype')
             return self.objectify(result, dtype=dtype)
-        print('No results.')
+        print('No results for %s' % term)
         return None
 
     def objectify(self, term, dtype=None, version=None, uri=None):

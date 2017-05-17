@@ -2,7 +2,7 @@ from lcatools.catalog.interfaces import QueryInterface
 
 
 class BasicInterface(QueryInterface):
-    def __init__(self, archive, privacy=None):
+    def __init__(self, archive, privacy=None, **kwargs):
         """
         Creates a semantic catalog from the specified archive.  Uses archive.get_names() to map data sources to
         semantic references.
@@ -13,7 +13,7 @@ class BasicInterface(QueryInterface):
          1 - exchange lists are public, but exchange values are private
          2 - exchange lists and exchange values are private
         """
-        super(BasicInterface, self).__init__(archive.ref)
+        super(BasicInterface, self).__init__(archive.ref, **kwargs)
         self._archive = archive
         self._privacy = privacy or 0
 

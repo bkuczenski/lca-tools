@@ -5,7 +5,8 @@ import re
 from lcatools.interact import _pick_list
 
 
-REFERENCE_EFLOWS = os.path.join(os.path.dirname(__file__), 'compartments.json')
+REFERENCE_ELEM = os.path.join(os.path.dirname(__file__), 'compartments.json')
+REFERENCE_INT = os.path.join(os.path.dirname(__file__), 'compartments_intermediate.json')
 
 
 class MissingCompartment(Exception):
@@ -38,7 +39,7 @@ class CompartmentManager(object):
     """
 
     def __init__(self, file=None):
-        with open(REFERENCE_EFLOWS, 'r') as fp:
+        with open(REFERENCE_ELEM, 'r') as fp:
             self.compartments = Compartment.from_json(json.load(fp))
         self._local_file = None
         if file is not None:
@@ -73,21 +74,24 @@ class CompartmentManager(object):
 
         This ensures that (1) user can make local modifications to both intermediate and elementary compartments, and
         (2) no other compartment types are permitted. This may be unduly dogmatic. but I think it's OK.
+        If we decide "compartments" should include other things, like generalized categories, we can make that change.
         :return:
         """
         if self._local_file is not None:
             with open(self._local_file, 'r') as fp:
                 local = Compartment.from_json(json.load(fp))
                 self.compartments.add_syns(local.synonyms)
-                local.uproot('Intermediate Flows', self.compartments)
-                local.uproot('Elementary Flows', self.compartments)
+                if local.has_subcompartment('Intermediate Flows'):
+                    local.uproot('Intermediate Flows', self.compartments)
+                if local.has_subcompartment('Elementary Flows'):
+                    local.uproot('Elementary Flows', self.compartments)
 
     def save(self, force=False):
         if self._local_file is None:
             if force is False:
                 raise ProtectedReferenceFile('Use force=True to force a rewrite of the reference file')
             print('Overwriting reference elementary flow compartments')
-            file = REFERENCE_EFLOWS
+            file = REFERENCE_ELEM
         else:
             print('Updating local compartment file')
             file = self._local_file
@@ -436,6 +440,13 @@ class Compartment(object):
             if item in x.synonyms:
                 return x
         raise KeyError('No subcompartment found')
+
+    def has_subcompartment(self, item):
+        try:
+            self.__getitem__(item)
+        except KeyError:
+            return False
+        return True
 
     def delete(self, item):
         s1 = self._ensure_comp(item)

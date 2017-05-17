@@ -68,13 +68,24 @@ class QueryInterface(object):
     def off_debug(self):
         self._debug = False
 
+    def resolve(self, itype=INTERFACE_TYPES, strict=False):
+        """
+        Secure access to all known resources but do not answer any query
+        :param itype: default: all interfaces
+        :param strict: [False]
+        :return:
+        """
+        for k in self._iface(itype, strict=strict):
+            print('%s' % k)
+
     def _iface(self, itype, strict=False):
         if self._catalog is None:
             raise NoCatalog
         for i in self._catalog.get_interface(self._origin, itype):
             if strict:
                 if i.origin != self.origin:
-                    print('strict skipping %s' % i)
+                    if self._debug:
+                        print('strict skipping %s' % i)
                     continue
             if self._debug:
                 print('yielding %s' % i)
@@ -85,11 +96,13 @@ class QueryInterface(object):
             print('Performing %s query, iface %s (%s)' % (attrname, itype, self.origin))
         for arch in self._iface(itype, strict=strict):
             try:
-                return getattr(arch, attrname)(*args, **kwargs)
-            except NotImplemented:
+                result = getattr(arch, attrname)(*args, **kwargs)
+            except NotImplementedError:
                 continue
             except type(exc):
                 continue
+            if result is not None:
+                return result
         raise exc
 
     """

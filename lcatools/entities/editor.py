@@ -1,6 +1,6 @@
 from lcatools.interact import ifinput, pick_one, pick_compartment, cyoa, parse_math, menu_list
 from lcatools.entities import LcQuantity, LcFlow, LcFragment
-from lcatools.flowdb.flowdb import FlowDB
+from lcatools.providers.qdb import Qdb
 from lcatools.exchanges import directions, comp_dir
 from lcatools.terminations import FlowTermination
 
@@ -21,6 +21,36 @@ class EntityEditor(object):
         else:
             print('Not updating.')
 
+    def __init__(self, qdb=None, interactive=False):
+        """
+        The class needs a quantity database to give the user access to properly defined quantities and compartments.
+        :param qdb: [None] if None, uses the old FlowDB
+        """
+        if qdb is None:
+            qdb = Qdb()
+        self._qdb = qdb
+        self._interactive = interactive
+
+    def set_interactive(self):
+        self._interactive = True
+
+    def unset_interactive(self):
+        self._interactive = False
+
+    def input(self, query, default):
+        if self._interactive:
+            return input(query)
+        return default
+
+    def ifinput(self, query, default):
+        if self._interactive:
+            return ifinput(query, default)
+        return default
+
+    def _print(self, string):
+        if self._interactive:
+            print(string)
+
 
 class FlowEditor(EntityEditor):
     """
@@ -28,52 +58,54 @@ class FlowEditor(EntityEditor):
     I suppose it needs an instantiation so that it can store customization info. But really these are orphan
     functions and this class is just created to give them a home.
     """
-    def __init__(self, qdb=None):
-        """
-        The class needs a quantity database to give the user access to properly defined quantities and compartments.
-        :param qdb: [None] if None, uses the old FlowDB
-        """
-        if qdb is None:
-            qdb = FlowDB()
-        self._qdb = qdb
-
     def new_quantity(self, name=None, unit=None, comment=None):
-        name = name or input('Enter quantity name: ')
-        unit = unit or input('Unit by string: ')
-        comment = comment or ifinput('Quantity Comment: ', '')
+        name = name or self.input('Enter quantity name: ', 'New Quantity')
+        unit = unit or self.input('Unit by string: ', 'unit')
+        comment = comment or self.ifinput('Quantity Comment: ', '')
         q = LcQuantity.new(name, unit, Comment=comment)
         return q
 
     def new_flow(self, flow=None, name=None, cas=None, quantity=None, comment=None, compartment=None):
         if flow is None:
-            name = name or input('Enter flow name: ')
-            cas = cas or ifinput('Enter CAS number (or none): ', '')
+            name = name or self.input('Enter flow name: ', 'New flow')
+            cas = cas or self.ifinput('Enter CAS number (or none): ', '')
             if quantity is None:
-                print('Choose reference quantity or none to create new: ')
-                q = pick_one(self._qdb.flow_properties)
-                if q is None:
-                    q = self.new_quantity()
-                quantity = q
-            comment = comment or input('Enter flow comment: ')
+                if self._interactive:
+                    print('Choose reference quantity or none to create new: ')
+                    q = pick_one([fp for fp in self._qdb.flow_properties])
+                    if q is None:
+                        q = self.new_quantity()
+                    quantity = q
+                else:
+                    print('Using mass as reference quantity')
+                    quantity = self._qdb.get_quantity('mass')
+            comment = comment or self.input('Enter flow comment: ', '')
             if compartment is None:
-                print('Choose compartment:')
-                compartment = pick_compartment(self._qdb.compartments).to_list()
+                if self._interactive:
+                    print('Choose compartment:')
+                    compartment = pick_compartment(self._qdb.c_mgr.compartments).to_list()
+                else:
+                    print('Designating Intermediate flow')
+                    compartment = self._qdb.c_mgr.find_matching('Intermediate Flows').to_list()
+            else:
+                compartment = self._qdb.c_mgr.find_matching(compartment).to_list()
             flow = LcFlow.new(name, quantity, CasNumber=cas, Compartment=compartment, Comment=comment)
             # flow.add_characterization(q, reference=True)
         else:
             quantity = flow.reference_entity
 
-        flow.profile()
-        while ifinput('Add characterizations for this flow? y/n', 'n') != 'n':
-            ch = cyoa('[n]ew or [e]xisting quantity? ', 'en', 'e')
-            if ch == 'n':
-                cq = self.new_quantity()
-            else:
-                cq = pick_one(self._qdb.quantities())
-                if cq is None:
+        if self._interactive:
+            flow.profile()
+            while ifinput('Add characterizations for this flow? y/n', 'n') != 'n':
+                ch = cyoa('[n]ew or [e]xisting quantity? ', 'en', 'e')
+                if ch == 'n':
                     cq = self.new_quantity()
-            val = parse_math(input('Value (1 %s = x %s): ' % (quantity.unit(), cq.unit())))
-            flow.add_characterization(cq, value=val)
+                else:
+                    cq = pick_one(self._qdb.quantities())
+                    if cq is None:
+                        cq = self.new_quantity()
+                val = parse_math(input('Value (1 %s = x %s): ' % (quantity.unit(), cq.unit())))
+                flow.add_characterization(cq, value=val)
 
         return flow
 
@@ -92,49 +124,67 @@ class FlowEditor(EntityEditor):
 
 
 class FragmentEditor(FlowEditor):
-    def create_fragment(self, flow, direction, parent=None, comment=None, value=None, balance=False,
+    def create_fragment(self, flow, direction, uuid=None, parent=None, comment=None, value=None, balance=False,
                         **kwargs):
         """
 
         :param parent:
         :param flow: required. flow or catalog_ref
         :param direction: required. 'Input' or 'Output'
+        :param uuid: [None]
         :param comment:
         :param value:
         :param balance:
         :param kwargs:
         :return:
         """
-        print('Creating fragment with flow %s' % flow)
+        self._print('Creating fragment with flow %s' % flow)
         if direction not in directions:
             direction = None
-        direction = direction or {'i': 'Input', 'o': 'Output'}[cyoa('flow is (I)nput or (O)utput?', 'IO').lower()]
-        comment = comment or ifinput('Enter FragmentFlow comment: ', '')
+        if self._interactive:
+            direction = direction or {'i': 'Input', 'o': 'Output'}[cyoa('flow is (I)nput or (O)utput?', 'IO').lower()]
+        if direction is None:
+            raise ValueError('Must supply direction')
+        if 'Name' in kwargs:
+            name = kwargs.pop('Name')
+        else:
+            name = flow['Name']
+        comment = comment or self.ifinput('Enter FragmentFlow comment: ', '')
         if parent is None:
             # direction reversed for UX! user inputs direction w.r.t. fragment, not w.r.t. parent
             if value is None:
                 value = 1.0
 
-            frag = LcFragment.new(flow, comp_dir(direction), Comment=comment, exchange_value=value, **kwargs)
+            if uuid is None:
+                frag = LcFragment.new(name, flow, comp_dir(direction), Comment=comment, exchange_value=value,
+                                      **kwargs)
+            else:
+                frag = LcFragment(uuid, flow, comp_dir(direction), Comment=comment, exchange_value=value, Name=name,
+                                  **kwargs)
         else:
             if parent.term.is_null:
                 parent.to_foreground()
             if balance or parent.term.is_subfrag:
-                print('Exchange value set during traversal')
+                if self._interactive:
+                    print('Exchange value set during traversal')
                 value = 1.0
             else:
                 if value is None:
-                    val = ifinput('Exchange value (%s per %s): ' % (flow.unit(), parent.unit), '1.0')
+                    val = self.ifinput('Exchange value (%s per %s): ' % (flow.unit(), parent.unit), '1.0')
                     if val == '1.0':
                         value = 1.0
                     else:
                         value = parse_math(val)
 
-            frag = LcFragment(flow, direction, parent=parent, Comment=comment, exchange_value=value,
-                              balance_flow=balance, **kwargs)
+            if uuid is None:
+                frag = LcFragment.new(name, flow, direction, parent=parent, Comment=comment,
+                                      exchange_value=value, balance_flow=balance, **kwargs)
+            else:
+                frag = LcFragment(uuid, flow, direction, parent=parent, Comment=comment, exchange_value=value,
+                                  balance_flow=balance, Name=name, **kwargs)
 
             # traverse -- may not need to do this anymore if we switch to live traversals for everything
-            parent.traversal_entry()
+            parent.traversal_entry(None)
 
         if self._qdb.is_elementary(frag.flow):
             frag.terminate(FlowTermination(frag, frag.flow))

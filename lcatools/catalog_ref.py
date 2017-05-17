@@ -1,4 +1,5 @@
-from lcatools.catalog.interfaces import QueryInterface, NoCatalog
+class NoCatalog(Exception):
+    pass
 
 
 class EntityNotKnown(Exception):
@@ -35,7 +36,11 @@ class CatalogRef(object):
                 etype = None
         else:
             etype = None
-        return cls(j['origin'], j['externalId'], catalog=catalog, entity_type=etype)
+        if 'origin' in j:
+            origin = j['origin']
+        elif 'source' in j:
+            origin = j['source']
+        return cls(origin, j['externalId'], catalog=catalog, entity_type=etype)
 
     def __init__(self, origin, ref, catalog=None, entity_type=None):
         """
@@ -89,7 +94,7 @@ class CatalogRef(object):
 
     @property
     def known(self):
-        return self._known[0]
+        return self._known
 
     @property
     def entity(self):
@@ -101,21 +106,22 @@ class CatalogRef(object):
             raise EntityNotKnown
 
     def lookup(self, catalog):
-        _known = catalog.lookup(self.origin, self.external_ref)
+        _known = catalog.lookup(self)
 
         if _known[0]:
             self._known = _known
-            self._query = QueryInterface(self._origin, catalog=catalog)
+            self._query = catalog.query(self._origin)
             self._etype = catalog.entity_type(self)
             self._fetch()
 
     def _fetch(self):
         if self.known:
             self._entity = self._query.fetch(self.external_ref)
+            self._origin = self._entity.origin
 
     def __getitem__(self, item):
         if self._query is None:
-            raise NoCatalog()
+            raise NoCatalog
         return self.entity.__getitem__(item)
 
     def serialize(self):

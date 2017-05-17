@@ -11,8 +11,14 @@ class ForegroundInterface(BasicInterface):
     """
     def get(self, eid):
         if self.privacy > 0:
-            return self._archive.retrieve_or_fetch_entity(eid).trim()
+            res = self._archive.retrieve_or_fetch_entity(eid)
+            if res is not None:
+                return res.trim()
+            return None
         return self._archive.retrieve_or_fetch_entity(eid)
+
+    def fetch(self, eid):
+        return self.get(eid)
 
     def exchanges(self, process):
         if self.privacy > 1:

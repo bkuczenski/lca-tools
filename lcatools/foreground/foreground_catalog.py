@@ -7,7 +7,8 @@ import os
 import json
 
 from lcatools.catalog.catalog import LcCatalog
-from lcatools.providers.foreground import LcForeground
+from lcatools.providers.foreground import LcForeground, AmbiguousReference
+from lcatools.entities.editor import FragmentEditor
 
 
 class ForegroundCatalog(LcCatalog):
@@ -27,6 +28,7 @@ class ForegroundCatalog(LcCatalog):
         super(ForegroundCatalog, self).__init__(catalog_dir, qdb=qdb)
         self._foregrounds = dict()  # _foregrounds := name --> path
         self._known_fgs = dict()
+        self._ed = FragmentEditor(qdb=self._qdb, interactive=False)
 
     def add_foreground(self, name, path):
         """
@@ -48,8 +50,14 @@ class ForegroundCatalog(LcCatalog):
         self._archives[path] = f
         self._names[ref] = path
         self._nicknames[name] = path
+        self._foregrounds[ref] = path
+        return f
 
+    @property
+    def foregrounds(self):
+        for k, v in self._foregrounds.items():
+            yield v
 
-
-
-
+    def show_foregrounds(self):
+        for k, v in self._foregrounds.items():
+            print('%s [%s]' % (k, v))

@@ -33,8 +33,9 @@ entity is available.
 
 import re
 import os
+from shutil import copy2
 
-from .interfaces import NoInterface, INTERFACE_TYPES
+from .interfaces import QueryInterface, INTERFACE_TYPES
 from .entity import EntityInterface
 from .foreground import ForegroundInterface
 from .background import BackgroundInterface
@@ -42,6 +43,8 @@ from .quantity import QuantityInterface
 from .lc_resolver import LcCatalogResolver
 from lcatools.tools import create_archive  # archive_from_json, archive_factory
 from lcatools.flowdb.flowdb import FlowDB
+from lcatools.flowdb.compartments import REFERENCE_INT
+from lcatools.catalog_ref import CatalogRef
 
 _protocol = re.compile('^(\w+)://')
 
@@ -64,6 +67,10 @@ class LcCatalog(object):
         return os.path.join(self._rootdir, 'entity_cache.json')
 
     @property
+    def _compartments(self):
+        return os.path.join(self._rootdir, 'local-compartments.json')
+
+    @property
     def root(self):
         return self._rootdir
 
@@ -73,9 +80,11 @@ class LcCatalog(object):
         :param rootdir: directory storing LcResource files.
         :param qdb: quantity database (default is the old FlowDB)
         """
-        if qdb is None:
-            qdb = FlowDB()
         self._rootdir = rootdir
+        if not os.path.exists(self._compartments):
+            copy2(REFERENCE_INT, self._compartments)
+        if qdb is None:
+            qdb = FlowDB(compartments=self._compartments)
         self._resolver = LcCatalogResolver(self._resource_dir)
         self._entities = dict()  # maps '/'.join(origin, external_ref) to entity
         self._qdb = qdb
@@ -194,18 +203,18 @@ class LcCatalog(object):
         if isinstance(itype, str):
             itype = [itype]
         itype = set(itype)
-        for res in self._resolver.resolve(origin, interfaces=itype):
+        for res in sorted(self._resolver.resolve(origin, interfaces=itype), key=lambda x: x.priority):
             if not self._ensure_resource(res):
                 continue
             matches = itype.intersection(set(res.interfaces))
             if 'quantity' in matches:
-                yield QuantityInterface(self._archives[res.source], self._qdb.compartments, privacy=res.privacy)
+                yield QuantityInterface(self._archives[res.source], self._qdb.c_mgr, catalog=self, privacy=res.privacy)
             if 'entity' in matches:
-                yield EntityInterface(self._archives[res.source], privacy=res.privacy)
+                yield EntityInterface(self._archives[res.source], catalog=self, privacy=res.privacy)
             if 'foreground' in matches:
-                yield ForegroundInterface(self._archives[res.source], privacy=res.privacy)
+                yield ForegroundInterface(self._archives[res.source], catalog=self, privacy=res.privacy)
             if 'background' in matches:
-                yield BackgroundInterface(self._archives[res.source], self._qdb, privacy=res.privacy)
+                yield BackgroundInterface(self._archives[res.source], self._qdb, catalog=self, privacy=res.privacy)
 
     def get_interface(self, origin, itype):
         for arch in self._get_interfaces(origin, itype):
@@ -214,25 +223,27 @@ class LcCatalog(object):
     """
     public functions -- should these operate directly on a catalog ref instead? I think so but let's see about usage
     """
-    def lookup(self, origin, external_ref):
+    def query(self, origin):
+        return QueryInterface(origin, catalog=self)
+
+    def lookup(self, ref):
         """
         Attempts to secure an entity
-        :param origin:
-        :param external_ref:
+        :param ref: a CatalogRef
         :return: a list of interfaces that can be secured for the reference.
         """
 
         results = []
         for iface in INTERFACE_TYPES:
-            e = self._dereference(origin, external_ref, iface)
+            e = self._dereference(ref.origin, ref.external_ref, iface)
             if e is not None:
                 results.append(iface)
         return results
 
-    def fetch(self, origin, external_ref):
-        return self._dereference(origin, external_ref, 'quantity') or \
-               self._dereference(origin, external_ref, 'foreground') or \
-               self._dereference(origin, external_ref, 'entity')
+    def fetch(self, ref):
+        return self._dereference(ref.origin, ref.external_ref, 'quantity') or \
+               self._dereference(ref.origin, ref.external_ref, 'foreground') or \
+               self._dereference(ref.origin, ref.external_ref, 'entity')
 
-    def entity_type(self, origin, external_ref):
-        return self.fetch(origin, external_ref).entity_type
+    def entity_type(self, ref):
+        return self.fetch(ref).entity_type

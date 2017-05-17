@@ -12,6 +12,7 @@ from lcatools.literate_float import LiterateFloat
 from lcatools.lcia_results import DetailedLciaResult, SummaryLciaResult, traversal_to_lcia
 from lcatools.interact import ifinput, parse_math
 from lcatools.terminations import FlowTermination
+from lcatools.catalog_ref import CatalogRef, NoCatalog
 
 
 GhostFrag = namedtuple('GhostFrag', ['flow', 'direction'])
@@ -60,13 +61,9 @@ class LcFragment(LcEntity):
 
     """
 
-    _ref_field = 'parent'
-    _new_fields = ['Parent', 'StageName']
-
     @classmethod
-    def new(cls, child_flows, name, *args, **kwargs):
+    def new(cls, name, *args, **kwargs):
         """
-        :param child_flows: a lambda for listing children of a fragment. Comes from foreground.
         :param name: the name of the fragment
         :param args: need flow and direction
         :param kwargs: parent, exchange_value, private, balance_flow, background, termination
@@ -74,10 +71,13 @@ class LcFragment(LcEntity):
         """
         print('LcFragment - Name: %s:' % name)
 
-        return cls(child_flows, uuid.uuid4(), *args, Name=name, **kwargs)
+        return cls(uuid.uuid4(), *args, Name=name, **kwargs)
+    _ref_field = 'parent'
+
+    _new_fields = ['Parent', 'StageName']
 
     @classmethod
-    def from_json(cls, child_flows, catalog, j):
+    def from_json(cls, catalog, j):
         if j['parent'] is not None:
             parent = catalog[0][j['parent']]
         else:
@@ -86,7 +86,7 @@ class LcFragment(LcEntity):
         if flow is None:
             flow = LcFlow(j['flow'], Name=j['tags']['Name'], Compartment=['Intermediate Flows', 'Fragments'])
             catalog.add(flow)
-        frag = cls(child_flows, j['entityId'], flow, j['direction'], parent=parent,
+        frag = cls(j['entityId'], flow, j['direction'], parent=parent,
                    exchange_value=j['exchangeValues'].pop('0'),
                    private=j['isPrivate'],
                    balance_flow=j['isBalanceFlow'],
@@ -112,64 +112,50 @@ class LcFragment(LcEntity):
                 self.term_from_json(catalog, k, v)
 
     @classmethod
-    def from_exchange(cls, child_flows, parent, exchange):
+    def from_exchange(cls, parent, exchange):
         """
         This method creates a child flow, positioning the parent node as the 'process' component of the exchange
         and using the exchange's 'flow' and 'direction' components to define the child flow.  If the exchange
         also includes a 'termination', then that is used to automatically terminate the child flow.
-        :param child_flows: a lambda for listing children of a fragment. Comes from foreground.
         :param parent:
         :param exchange:
         :return:
         """
-        frag = cls(child_flows, uuid.uuid4(), exchange.flow, exchange.direction, parent=parent,
+        frag = cls(uuid.uuid4(), exchange.flow, exchange.direction, parent=parent,
                    exchange_value=exchange.value, Name=exchange.flow['Name'])
 
         if exchange.termination is not None:
-            parent_term = parent.termination(None)
-            term = parent_term.term_node.catalog.ref(parent_term.term_node.index, exchange.termination)
-            term_flow = exchange.flow
-            frag.terminate(term, flow=term_flow)
+            term = FlowTermination(frag, CatalogRef(exchange.flow.origin, exchange.termination, entity_type='process'),
+                                   term_flow=exchange.flow)
+            frag.terminate(term)
         return frag
 
-    def __init__(self, child_flows, the_uuid, flow, direction, parent=None,
+    def __init__(self, the_uuid, flow, direction, parent=None,
                  exchange_value=1.0,
                  private=False,
                  balance_flow=False,
                  background=False,
+                 termination=None,
                  **kwargs):
         """
         Required params:
-        :param child_flows: because fragments are linked entries in a graph, it is often necessary to know the
-        parent-child relationship between fragments.  One way to do this is for a fragment to store a list of its
-        children; another is for the children to store links to their parent.  Partly for legacy reasons but mainly for
-        simplicity (every fragment has exactly one parent), each fragment knows its parent.
-
-        This means that finding the children of a fragment requires an exhaustive search of all children.  In order for
-        this activity to be "owned" by the fragment, it needs access to a list of all the fragments.  The easiest way
-        to do this is for the collection that stores the fragment to provide this functionality as a lambda.
-
-        Fragment terminations have to be created as a separate step.
-
-        child_flows should be a lambda such that child_flows(self) generates all fragments whose parent is self.
         :param the_uuid: use .new(Name, ...) for a random UUID
-        :param flow: an LcFlow
+        :param flow: an LcFlow (catalog ref doesn't cut it)
         :param direction:
         :param parent:
         :param exchange_value: auto-set- cached; can only be set once
         :param private: forces aggregation of subfragments
         :param balance_flow: if true, exch val is always ignored and calculated based on parent
-        :param background: if true, fragment only returns LCIA results. implies parent=None; cannot be traversed
+        :param background: if true, fragment only returns LCIA results.
         :param kwargs:
         """
 
         super(LcFragment, self).__init__('fragment', the_uuid, **kwargs)
-        self._child_flows_lambda = child_flows
-        if background:
-            parent = None
-            # if parent is not None:
-            #     raise InvalidParentChild('Background flows are not allowed to have a parent')
-        self._set_reference(parent)
+        self._child_flows = set()
+
+        if parent is not None:
+            self.set_parent(parent)
+
         assert flow.entity_type == 'flow'
         self.flow = flow
         self.direction = direction  # w.r.t. parent
@@ -182,16 +168,21 @@ class LcFragment(LcEntity):
 
         self._conserved_quantity = None
 
-        self.observed_magnitude = LiterateFloat(1.0)  # in flow's reference unit - strictly documentary
-
         self._exchange_values = _new_evs()
         self.cached_ev = exchange_value
 
         self._terminations = dict()
-        self._terminations[None] = FlowTermination.null(self)
-
-        if 'StageName' not in self._d:
-            self._d['StageName'] = ''
+        if termination is None:
+            self._terminations[None] = FlowTermination.null(self)
+            if 'StageName' not in self._d:
+                self._d['StageName'] = ''
+        else:
+            self._terminations[None] = FlowTermination(self, termination)
+            if 'StageName' not in self._d:
+                try:
+                    self._d['StageName'] = termination['Name']
+                except NoCatalog:
+                    self._d['StageName'] = ''
 
         self.__dbg_threshold = -1  # higher number is more verbose
 
@@ -207,9 +198,38 @@ class LcFragment(LcEntity):
             return self
         return self.reference_entity.top()
 
+    def set_parent(self, parent):
+        self._set_reference(parent)
+        parent.add_child(self)
+
+    def unset_parent(self):
+        self.reference_entity.remove_child(self)
+        self._set_reference(None)
+
+    def add_child(self, child):
+        """
+        This should only be called from the child's set_parent function
+        :param child:
+        :return:
+        """
+        if child.reference_entity is not self:
+            raise InvalidParentChild('Fragment should list parent as reference entity')
+        self._child_flows.add(child)
+
+    def remove_child(self, child):
+        """
+        This should only be called from the child's unset_parent function
+        :param child:
+        :return:
+        """
+        if child.reference_entity is not self:
+            raise InvalidParentChild('Fragment is not a child')
+        self._child_flows.remove(child)
+
     @property
     def child_flows(self):
-        return self._child_flows_lambda(self)
+        for k in sorted(self._child_flows, key=lambda x: x.uuid):
+            yield k
 
     @property
     def _parent(self):
@@ -554,18 +574,6 @@ class LcFragment(LcEntity):
         else:
             self._exchange_values[scenario] = value
 
-    def set_magnitude(self, magnitude, quantity=None):
-        """
-        Specify magnitude, optionally in a specified quantity. Otherwise a conversion is performed.  This feature
-        is not presently used for anything.
-        :param magnitude:
-        :param quantity:
-        :return:
-        """
-        if quantity is not None:
-            magnitude = self.flow.convert(magnitude, fr=quantity)
-        self.observed_magnitude = magnitude
-
     @property
     def balance_flow(self):
         return self._balance_flow
@@ -682,10 +690,9 @@ class LcFragment(LcEntity):
         if isinstance(scenario, tuple) or isinstance(scenario, set):
             raise ScenarioConflict('Set termination must specify single scenario')
         if scenario in self._terminations:
-            raise CacheAlreadySet('Scenario termination already set. use clear_termination()')
-        else:
-            self._terminations[scenario] = FlowTermination(self, termination)
-            termination.parent = self
+            if not self._terminations[scenario].is_null:
+                raise CacheAlreadySet('Scenario termination already set. use clear_termination()')
+        self._terminations[scenario] = termination
         if scenario is None:
             if self['StageName'] == '' and not termination.is_null:
                 try:
@@ -694,7 +701,7 @@ class LcFragment(LcEntity):
                     self['StageName'] = termination.term_node['Name']
 
     def clear_termination(self, scenario=None):
-        self._terminations[scenario] = None
+        self._terminations[scenario] = FlowTermination.null(self)
 
     def to_foreground(self, scenario=None):
         """

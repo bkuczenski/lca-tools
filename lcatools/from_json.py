@@ -7,9 +7,9 @@ from eight import USING_PYTHON2
 
 def from_json(fname):
     """
-    Routine to reconstruct a catalog from a json archive.
+    Routine to extract the contents of a json file.
     :param fname: json file, optionally gzipped
-    :return: a subclass of ArchiveInterface
+    :return: a json-derived dict
     """
     print('Loading JSON data from %s:' % fname)
     if bool(re.search('\.gz$', fname)):

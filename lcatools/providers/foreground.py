@@ -9,7 +9,8 @@ from lcatools.providers.base import LcArchive, to_uuid
 from lcatools.entities import LcFragment
 
 
-FG_TEMPLATE = os.path.join(os.path.dirname(__file__), 'data', 'foreground_template.json')
+class AmbiguousReference(Exception):
+    pass
 
 
 class LcForeground(LcArchive):
@@ -53,9 +54,6 @@ class LcForeground(LcArchive):
         if os.path.exists(self._archive_file):
             self._load_json_file(self._archive_file)
             self._load_fragments()
-        else:
-            self._load_json_file(FG_TEMPLATE)
-            self.save()
 
     def add(self, entity):
         """
@@ -121,6 +119,28 @@ class LcForeground(LcArchive):
                     for k in self._show_frag_children(f):
                         yield k
 
+    def frag(self, string, strict=True):
+        """
+        strict=True is slow
+        Works as an iterator. If nothing is found, raises StopIteration. If multiple hits are found and strict is set,
+        raises Ambiguous Reference.
+        :param string:
+        :param strict: [True] whether to check for ambiguous reference. if False, return first matching fragment.
+        :return:
+        """
+        if strict:
+            k = [f for f in self.fragments(show_all=True) if f.get_uuid().startswith(string.lower())]
+            if len(k) > 1:
+                for i in k:
+                    print('%s' % i)
+                raise AmbiguousReference()
+            try:
+                return k[0]
+            except IndexError:
+                raise StopIteration
+        else:
+            return next(f for f in self.fragments(show_all=True) if f.get_uuid().startswith(string.lower()))
+
     def check_counter(self, entity_type=None):
         super(LcForeground, self).check_counter(entity_type=entity_type)
         if entity_type is None:
@@ -135,7 +155,7 @@ class LcForeground(LcArchive):
 
     def _do_load(self, fragments):
         for f in fragments:
-            frag = LcFragment.from_json(lambda x: self.child_flows(x), self._catalog, f)
+            frag = LcFragment.from_json(self._catalog, f)
             if frag.external_ref != frag.uuid:
                 self._ext_ref_mapping[frag.external_ref] = frag.uuid
             self.add(frag)

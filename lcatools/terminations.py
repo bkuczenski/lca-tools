@@ -88,11 +88,12 @@ class FlowTermination(object):
         """
 
         self._parent = fragment
-        if entity.entity_type == 'flow':
-            if term_flow is not None:
-                raise ValueError('Conflicting termination and term_flow')
-            term_flow = entity
-            entity = fragment
+        if entity is not None:
+            if entity.entity_type == 'flow':
+                if term_flow is not None:
+                    raise ValueError('Conflicting termination and term_flow')
+                term_flow = entity
+                entity = fragment
         self._term = entity  # this must have origin, external_ref, and entity_type, and be operable (if ref)
         self._descend = True
         self.term_flow = None
@@ -282,6 +283,8 @@ class FlowTermination(object):
 
     @property
     def unit(self):
+        if self.is_null:
+            return '--'
         if self.term_node.entity_type == 'fragment':  # fg, bg, or subfragment
             return '%4g unit' % self._cached_ev
         return '%4g %s' % (self._cached_ev, self.term_flow.unit())  # process

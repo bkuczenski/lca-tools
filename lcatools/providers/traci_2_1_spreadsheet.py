@@ -74,7 +74,7 @@ def transform_string_cas(string_cas):
     return int(''.join([x for x in filter(lambda y: y != '-', string_cas)]))
 
 
-class Traci21Factors(NsUuidArchive, QuantityInterface):
+class Traci21Factors(NsUuidArchive):
 
     def __init__(self, source, ref=None, sheet_name='Substances', mass_quantity=None, **kwargs):
         if ref is None:

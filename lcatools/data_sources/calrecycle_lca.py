@@ -219,6 +219,8 @@ class CalRecycleImporter(object):
                 frag.terminate(term)
                 if qi.get_privacy(term_node.origin) == 0:
                     frag.set_child_exchanges()
+                else:
+                    frag.set_background()
             elif ff['NodeTypeID'] == '2':
                 term_node = self._fragments[ff['SubFragment']['SubFragmentID']]
                 term_flow = qi.get(ff['SubFragment']['FlowUUID'])

@@ -2,15 +2,7 @@ class NoCatalog(Exception):
     pass
 
 
-class EntityNotKnown(Exception):
-    pass
-
-
-class ForegroundNotKnown(Exception):
-    pass
-
-
-class BackgroundNotKnown(Exception):
+class MultipleOrigins(Exception):
     pass
 
 
@@ -40,6 +32,8 @@ class CatalogRef(object):
             origin = j['origin']
         elif 'source' in j:
             origin = j['source']
+        else:
+            origin = 'foreground'
         return cls(origin, j['externalId'], catalog=catalog, entity_type=etype)
 
     def __init__(self, origin, ref, catalog=None, entity_type=None):
@@ -69,11 +63,7 @@ class CatalogRef(object):
 
         self._query = None
 
-        self._known = [False, False, False]
-
-        self._entity = None
-        self._fg = None
-        self._bg = None
+        self._known = []
 
         if catalog is not None:
             self.lookup(catalog)
@@ -96,33 +86,21 @@ class CatalogRef(object):
     def known(self):
         return self._known
 
-    @property
-    def entity(self):
-        if self.known:
-            if self._entity is None:
-                self._fetch()
-            return self._entity
-        else:
-            raise EntityNotKnown
-
     def lookup(self, catalog):
-        _known = catalog.lookup(self)
+        org = catalog.lookup(self)
 
-        if _known[0]:
-            self._known = _known
+        if len(org) > 0:
+            if len(org) > 1:
+                raise MultipleOrigins('%s found in:\n%s' % (self.external_ref, '\n'.join(org)))
+            self._known = True
             self._query = catalog.query(self._origin)
             self._etype = catalog.entity_type(self)
-            self._fetch()
-
-    def _fetch(self):
-        if self.known:
-            self._entity = self._query.fetch(self.external_ref)
-            self._origin = self._entity.origin
+            self._origin = org[0]
 
     def __getitem__(self, item):
         if self._query is None:
             raise NoCatalog
-        return self.entity.__getitem__(item)
+        return self._query.get_item(self.external_ref, item)
 
     def serialize(self):
         j = {
@@ -151,6 +129,10 @@ class CatalogRef(object):
     def originate(self, direction=None):
         self._require_flow()
         return self._query.originate(self.external_ref, direction)
+
+    @property
+    def reference_entity(self):
+        return self._query.get_reference(self.external_ref)
 
     def mix(self, direction):
         self._require_flow()

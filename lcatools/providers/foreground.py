@@ -95,7 +95,8 @@ class LcForeground(LcArchive):
                 print('%s%s' % ('  ' * level, k))
             else:
                 yield k
-            self._show_frag_children(k, level)
+            for j in self._show_frag_children(k, level, show=show):
+                yield j
 
     def fragments(self, *args, show_all=False, background=None, show=False):
         """
@@ -140,6 +141,11 @@ class LcForeground(LcArchive):
                 raise StopIteration
         else:
             return next(f for f in self.fragments(show_all=True) if f.get_uuid().startswith(string.lower()))
+
+    def draw(self, string, **kwargs):
+        if not isinstance(string, LcFragment):
+            string = self.frag(string)
+        string.show_tree(**kwargs)
 
     def check_counter(self, entity_type=None):
         super(LcForeground, self).check_counter(entity_type=entity_type)

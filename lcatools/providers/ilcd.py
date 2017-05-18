@@ -276,8 +276,11 @@ class IlcdArchive(LcArchive):
             o = self._get_objectified_entity(self._path_from_search(term))
         except (KeyError, FileNotFoundError):
             # we are not a search result-- let's build the entity path
-            o = self._get_objectified_entity(self._path_from_parts(dtype, uid, version=version))
-
+            try:
+                o = self._get_objectified_entity(self._path_from_parts(dtype, uid, version=version))
+            except (KeyError, FileNotFoundError):
+                # still not found- maybe it isn't here
+                return None
         return o
 
     def _create_unit(self, unit_ref):

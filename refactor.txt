@@ -31,6 +31,20 @@ TODO:
  - BackgroundManager; need to split into the matrix-handling part and the interface-providing part
 
 ==========
+Wed May 17 10:39:40 -0700 2017
+
+Things are moving fast and slowly.  Need to re-think the catalog interface information flow:
+
+Originally, catalog refs were meant to allow client code to retrieve the objects at will. that's why they included a cached entity.  But in the new way of doing things, the catalog goes-between the client code and the origin archive, and the origin has control over what information is provided.  In that case, the catalog ref should NOT cache the entity, and in fact the actual entity should almost never be returned to the client code.
+
+So what should be returned? a catalog ref.  Should ALL interface methods that return entities actually return catalog refs? I think so.
+
+New plan: fetch() only works by directly accessing the catalog.  The interfaces strictly return catalog refs, so that subsequent queries to those refs still go through the interfaces.  The catalog refs will strictly cache trimmed entities, because the quantitative data should be accessed through the query methods.
+
+Need to figure out how this works w.r.t. the qdb.  I think the qdb should store its own characterized flows-- it is an LcArchive after all-- and the external_refs for those flows should be the flows' links (origin + ref).  The characterization data stays local in the catalog; the interface provides flows by reference anyway, so the way it works is: for foreground LCIA queries, the interface provides the inventory and the catalog consults the qdb for characterization.  for background LCIA queries, the interface provides LCIA results directly.
+
+
+==========
 Mon May 01 00:44:54 -0700 2017
 
 todo on background manager:

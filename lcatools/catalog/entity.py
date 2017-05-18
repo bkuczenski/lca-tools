@@ -13,29 +13,29 @@ class EntityInterface(BasicInterface):
 
     def processes(self, **kwargs):
         for p in self._archive.processes(**kwargs):
-            yield p.trim()
+            yield self.make_ref(p)
 
     def flows(self, **kwargs):
         for f in self._archive.flows(**kwargs):
-            yield f.trim()
+            yield self.make_ref(f)
 
     def quantities(self, **kwargs):
         for q in self._archive.quantities(**kwargs):
-            yield q
+            yield self.make_ref(q)
 
     def get(self, eid):
-        return self._archive[eid].trim()
+        return self.make_ref(self._archive.retrieve_or_fetch_entity(eid))
 
     def reference(self, eid):
-        return self.get(eid).reference_entity
+        return self._archive.retrieve_or_fetch_entity(eid).reference_entity
 
     def terminate(self, flow, direction=None):
         for p in self._archive.terminate(flow, direction=direction):
-            yield p
+            yield self.make_ref(p)
 
     def originate(self, flow, direction=None):
         for p in self._archive.originate(flow, direction=direction):
-            yield p
+            yield self.make_ref(p)
 
     def mix(self, flow, direction):
         return self._archive.mix(flow, direction)

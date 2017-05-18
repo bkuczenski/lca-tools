@@ -1,4 +1,5 @@
 from lcatools.catalog.interfaces import QueryInterface
+from lcatools.catalog_ref import CatalogRef
 
 
 class BasicInterface(QueryInterface):
@@ -58,3 +59,16 @@ class BasicInterface(QueryInterface):
                     f.add_characterization(quantity, value=val)
             self._quantities.add(quantity)
         return chars
+
+    def make_ref(self, entity):
+        if entity is None:
+            return None
+        if entity.entity_type == 'flow':
+            return entity  # keep characterizations intact
+        return CatalogRef(entity.origin, entity.external_ref, catalog=self._catalog, entity_type=entity.entity_type)
+
+    def get_item(self, external_ref, item):
+        return self._archive.get_item(external_ref, item)
+
+    def get_reference(self, external_ref):
+        return self._archive.get_reference(external_ref)

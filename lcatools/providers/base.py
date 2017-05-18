@@ -126,6 +126,16 @@ class LcArchive(ArchiveInterface):
         else:
             return None
 
+    def get_item(self, key, item):
+        entity = self.retrieve_or_fetch_entity(key)
+        if entity.has_property(item):
+            return entity[item]
+        return None
+
+    def get_reference(self, key):
+        entity = self.retrieve_or_fetch_entity(key)
+        return entity.reference_entity
+
     @staticmethod
     def _lcia_key(quantity):
         return ', '.join([quantity['Method'], quantity['Category'], quantity['Indicator']])

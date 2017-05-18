@@ -37,7 +37,7 @@ class QuantityInterface(BasicInterface):
         """
         if hasattr(self._archive, 'get_quantity'):
             return self._archive.get_quantity(quantity)
-        return self._archive[quantity]
+        return self.make_ref(self._archive[quantity])
 
     def synonyms(self, item):
         """

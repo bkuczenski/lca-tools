@@ -10,15 +10,7 @@ class ForegroundInterface(BasicInterface):
     This provides access to detailed exchange values and computes the exchange relation
     """
     def get(self, eid):
-        if self.privacy > 0:
-            res = self._archive.retrieve_or_fetch_entity(eid)
-            if res is not None:
-                return res.trim()
-            return None
-        return self._archive.retrieve_or_fetch_entity(eid)
-
-    def fetch(self, eid):
-        return self.get(eid)
+        return self.make_ref(self._archive.retrieve_or_fetch_entity(eid))
 
     def exchanges(self, process):
         if self.privacy > 1:
@@ -26,6 +18,13 @@ class ForegroundInterface(BasicInterface):
         p = self._archive.retrieve_or_fetch_entity(process)
         for x in p.exchanges():
             yield x.trim()
+
+    def inventory(self, process, ref_flow=None):
+        if self.privacy > 0:
+            raise PrivateArchive('Exchange values are protected')
+        p = self._archive.retrieve_or_fetch_entity(process)
+        for x in p.exchanges(reference=ref_flow):
+            yield x
 
     def exchange_values(self, process, flow, direction, termination=None):
         if self.privacy > 0:

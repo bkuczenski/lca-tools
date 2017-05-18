@@ -44,7 +44,7 @@ from .lc_resolver import LcCatalogResolver
 from lcatools.tools import create_archive  # archive_from_json, archive_factory
 from lcatools.flowdb.flowdb import FlowDB
 from lcatools.flowdb.compartments import REFERENCE_INT
-from lcatools.catalog_ref import CatalogRef
+
 
 _protocol = re.compile('^(\w+)://')
 
@@ -81,11 +81,11 @@ class LcCatalog(object):
         :param qdb: quantity database (default is the old FlowDB)
         """
         self._rootdir = rootdir
+        self._resolver = LcCatalogResolver(self._resource_dir)
         if not os.path.exists(self._compartments):
             copy2(REFERENCE_INT, self._compartments)
         if qdb is None:
             qdb = FlowDB(compartments=self._compartments)
-        self._resolver = LcCatalogResolver(self._resource_dir)
         self._entities = dict()  # maps '/'.join(origin, external_ref) to entity
         self._qdb = qdb
         """
@@ -121,6 +121,10 @@ class LcCatalog(object):
         :return: an LcArchive subclass
         """
         return self._archives[self._names[name]]
+
+    def privacy(self, ref):
+        res = next(r for r in self._resolver.resolve(ref))
+        return res.privacy
 
     @property
     def names(self):
@@ -164,7 +168,7 @@ class LcCatalog(object):
             self._archives[res.source] = a
             for t in res.interfaces:
                 for k, v in a.get_names().items():
-                    self._names[':'.join([res.reference, t])] = v
+                    self._names[':'.join([v, t])] = k
         return True
 
     def _check_entity(self, source, external_ref):
@@ -215,6 +219,8 @@ class LcCatalog(object):
                 yield ForegroundInterface(self._archives[res.source], catalog=self, privacy=res.privacy)
             if 'background' in matches:
                 yield BackgroundInterface(self._archives[res.source], self._qdb, catalog=self, privacy=res.privacy)
+        if 'quantity' in itype:
+            yield self._qdb  # fallback to our own quantity db for Quantity Interface requests
 
     def get_interface(self, origin, itype):
         for arch in self._get_interfaces(origin, itype):
@@ -230,20 +236,18 @@ class LcCatalog(object):
         """
         Attempts to secure an entity
         :param ref: a CatalogRef
-        :return: a list of interfaces that can be secured for the reference.
+        :return: a list of origins that contain the reference.
         """
 
-        results = []
+        origins = set()
         for iface in INTERFACE_TYPES:
             e = self._dereference(ref.origin, ref.external_ref, iface)
             if e is not None:
-                results.append(iface)
-        return results
+                origins.add(e.origin)
+        return sorted(list(origins))
 
     def fetch(self, ref):
-        return self._dereference(ref.origin, ref.external_ref, 'quantity') or \
-               self._dereference(ref.origin, ref.external_ref, 'foreground') or \
-               self._dereference(ref.origin, ref.external_ref, 'entity')
+        return self._dereference(ref.origin, ref.external_ref, INTERFACE_TYPES)
 
     def entity_type(self, ref):
         return self.fetch(ref).entity_type

@@ -22,6 +22,10 @@ class NoInterface(Exception):
     pass
 
 
+class EntityNotFound(Exception):
+    pass
+
+
 class CatalogRequired(Exception):
     pass
 
@@ -58,6 +62,12 @@ class QueryInterface(object):
     @property
     def origin(self):
         return self._origin
+
+    @property
+    def privacy(self, origin=None):
+        if origin is None:
+            return self._catalog.privacy(self._origin)
+        return self._catalog.privacy(origin)
 
     def __str__(self):
         return '%s for %s (catalog: %s)' % (self.__class__.__name__, self.origin, self._catalog.root)
@@ -104,6 +114,18 @@ class QueryInterface(object):
             if result is not None:
                 return result
         raise exc
+
+    def get_item(self, external_ref, item):
+        """
+        access an entity's dictionary items
+        :param external_ref:
+        :param item:
+        :return:
+        """
+        return self._perform_query(INTERFACE_TYPES, 'get_item', EntityNotFound('%s' % item), external_ref, item)
+
+    def get_reference(self, external_ref):
+        return self._perform_query(INTERFACE_TYPES, 'get_reference', EntityNotFound('%s' % external_ref), external_ref)
 
     """
     CatalogInterface core methods
@@ -192,14 +214,6 @@ class QueryInterface(object):
     """
     ForegroundInterface core methods: individual processes, quantitative data.
     """
-    def fetch(self, eid):
-        """
-        Retrieve entity by external Id, or fetch it from an archive.
-        :param eid:
-        :return:
-        """
-        return self._perform_query('foreground', 'fetch', ForegroundRequired('Foreground access required'), eid)
-
     def exchanges(self, process):
         """
         Retrieve process's full exchange list, without values
@@ -219,6 +233,17 @@ class QueryInterface(object):
         """
         return self._perform_query('foreground', 'exchange_values', ForegroundRequired('No access to exchange data'),
                                    process, flow, direction, termination=termination)
+
+    def inventory(self, process, ref_flow=None):
+        """
+        Return a list of exchanges with values. If no reference is supplied, return all unallocated exchanges, including
+        reference exchanges. If a reference is supplied, return allocated exchanges, excluding reference exchanges.
+        :param process:
+        :param ref_flow:
+        :return:
+        """
+        return self._perform_query('foreground', 'inventory', ForegroundRequired('No access to exchange data'),
+                                   process, ref_flow=ref_flow)
 
     def exchange_relation(self, process, ref_flow, exch_flow, direction, termination=None):
         """

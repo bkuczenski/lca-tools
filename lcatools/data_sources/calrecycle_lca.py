@@ -57,7 +57,11 @@ def create_catalog(path):
 
 def install_resources(cat):
     for a in (data_main, data_improper, data_ecoinvent, data_pe22, data_pe24):
-        res = LcResource(a.root, a.path, 'IlcdArchive', interfaces='foreground',
+        if a.privacy > 0:
+            iface = 'background'
+        else:
+            iface = 'foreground'
+        res = LcResource(a.root, a.path, 'IlcdArchive', interfaces=iface,
                          privacy=a.privacy, priority=a.priority, static=False)
         cat.add_resource(res)
 
@@ -200,7 +204,6 @@ class CalRecycleImporter(object):
         if frag is None:
             raise TypeError
         self._frags[ff['FragmentFlowID']] = frag
-        print('adding %s... length is %d' % (ff['FragmentFlowID'], len(self._frags)))
 
     def terminate_fragments(self, qi):
         for ff in self.ff:
@@ -214,7 +217,7 @@ class CalRecycleImporter(object):
                 frag.clear_termination()
                 frag.terminate(term)
             elif ff['NodeTypeID'] == '2':
-                term_node = self._frags[ff['SubFragment']['SubFragmentID']]
+                term_node = self._fragments[ff['SubFragment']['SubFragmentID']]
                 term_flow = qi.get(ff['SubFragment']['FlowUUID'])
                 term = FlowTermination(frag, term_node, term_flow=term_flow)
                 frag.clear_termination()
@@ -225,6 +228,8 @@ class CalRecycleImporter(object):
                 if bg['TargetUUID'] != '':
                     if bg['NodeTypeID'] == '1':
                         term_node = qi.get(bg['TargetUUID'])
+                        if qi.privacy(term_node.origin) > 0:
+                            frag.set_background()
                     else:
                         term_node = next(_f for _f in self._fragments.values() if _f.uuid == bg['TargetUUID'])
                     term = FlowTermination(frag, term_node, term_flow=flow)

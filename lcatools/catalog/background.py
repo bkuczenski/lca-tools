@@ -26,8 +26,11 @@ class BackgroundInterface(BasicInterface):
                 self._bm = BackgroundManager(self._archive)  # resources only accessible from a BackgroundInterface
             else:
                 # non-static interfaces need to implement their own background methods
-                self._bm = self._archive.bm
+                self._bm = self._archive
         return self._bm
+
+    def get(self, eid):
+        return self.make_ref(self._archive.retrieve_or_fetch_entity(eid))
 
     def foreground(self, process, ref_flow=None):
         return self._bg.foreground(process, ref_flow=ref_flow)

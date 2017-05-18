@@ -713,6 +713,9 @@ class LcFragment(LcEntity):
         self._background = False  # a background fragment can't sometimes be foreground
         self.terminate(FlowTermination(self, self), scenario=scenario)
 
+    def set_background(self):
+        self._background = True
+
     def term_from_json(self, catalog, scenario, j):
         if isinstance(scenario, tuple):
             raise ScenarioConflict('Set termination must specify single scenario')

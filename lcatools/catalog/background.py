@@ -29,9 +29,32 @@ class BackgroundInterface(BasicInterface):
                 self._bm = self._archive
         return self._bm
 
+    '''
+    foreground compat methods
+    '''
+
     def get(self, eid):
         return self.make_ref(self._archive.retrieve_or_fetch_entity(eid))
 
+    def exchange_values(self, process, flow, direction, termination=None):
+        """
+        Just yield reference exchanges through the foreground interface
+        :param process:
+        :param flow:
+        :param direction:
+        :param termination:
+        :return:
+        """
+        if termination is not None:
+            raise TypeError('Reference exchanges cannot be terminated')
+        p = self._archive.retrieve_or_fetch_entity(process)
+        for x in p.reference_entity:
+            if x.flow.external_ref == flow and x.direction == direction:
+                yield x
+
+    '''
+    background managed methods
+    '''
     def foreground(self, process, ref_flow=None):
         return self._bg.foreground(process, ref_flow=ref_flow)
 

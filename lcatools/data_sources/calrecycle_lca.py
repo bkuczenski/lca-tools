@@ -58,7 +58,7 @@ def create_catalog(path):
 def install_resources(cat):
     for a in (data_main, data_improper, data_ecoinvent, data_pe22, data_pe24):
         if a.privacy > 0:
-            iface = 'background'
+            iface = ['foreground', 'background']
         else:
             iface = 'foreground'
         res = LcResource(a.root, a.path, 'IlcdArchive', interfaces=iface,
@@ -208,6 +208,7 @@ class CalRecycleImporter(object):
     def terminate_fragments(self, qi):
         for ff in self.ff:
             frag = self._frags[ff['FragmentFlowID']]
+
             flow = frag.flow
             # terminate the fragment
             if ff['NodeTypeID'] == '1':
@@ -216,6 +217,8 @@ class CalRecycleImporter(object):
                 term = FlowTermination(frag, term_node, term_flow=term_flow)
                 frag.clear_termination()
                 frag.terminate(term)
+                if qi.get_privacy(term_node.origin) == 0:
+                    frag.set_child_exchanges()
             elif ff['NodeTypeID'] == '2':
                 term_node = self._fragments[ff['SubFragment']['SubFragmentID']]
                 term_flow = qi.get(ff['SubFragment']['FlowUUID'])
@@ -228,7 +231,7 @@ class CalRecycleImporter(object):
                 if bg['TargetUUID'] != '':
                     if bg['NodeTypeID'] == '1':
                         term_node = qi.get(bg['TargetUUID'])
-                        if qi.privacy(term_node.origin) > 0:
+                        if qi.get_privacy(term_node.origin) > 0:
                             frag.set_background()
                     else:
                         term_node = next(_f for _f in self._fragments.values() if _f.uuid == bg['TargetUUID'])
@@ -239,8 +242,8 @@ class CalRecycleImporter(object):
     def set_balances(self):
         for f in self.ff:
             if f['NodeTypeID'] == 1:
-                if f['Process']['ConservationFragmentFlowID'] != '':
-                    self._frags[f['Process']['ConservationFragmentFlowID']].set_balance_flow()
+                if f['Process']['ConservationFFID'] != '':
+                    self._frags[f['Process']['ConservationFFID']].set_balance_flow()
 
 
 if __name__ == '__main__':

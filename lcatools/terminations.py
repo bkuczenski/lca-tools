@@ -8,6 +8,7 @@ either one from the other.
 
 from lcatools.lcia_results import LciaResult, LciaResults, traversal_to_lcia
 from lcatools.exchanges import comp_dir, ExchangeValue, MissingReference
+from lcatools.catalog.foreground import PrivateArchive
 from lcatools.interact import pick_one, parse_math
 
 
@@ -158,7 +159,7 @@ class FlowTermination(object):
 
     @property
     def is_bg(self):
-        return self.is_frag and self.term_node.is_background
+        return self._parent.is_background or (self.is_frag and self.term_node.is_background)
 
     @property
     def is_subfrag(self):
@@ -258,7 +259,7 @@ class FlowTermination(object):
                         inbound_ev = ev[self.term_flow]
                     except MissingReference:
                         inbound_ev = ev.value
-                except StopIteration:
+                except (StopIteration, PrivateArchive):
                     inbound_ev = 1.0
             elif self.term_node.entity_type == 'fragment':
                 inbound_ev = 1.0  # the inbound ev must be applied at traversal time;
@@ -307,7 +308,8 @@ class FlowTermination(object):
                 flow = self._parent.flow
             try:
                 next(self._term.exchange_values(flow, direction=self.direction))
-            except StopIteration:
+            except (StopIteration, PrivateArchive):
+                print('falling back on %s to refs' % self._term.link)
                 r_e = [x for x in self._term.references()]
                 if len(r_e) == 1:
                     r_e = r_e[0]
@@ -438,7 +440,10 @@ class FlowTermination(object):
         elif self.is_fg:
             term = '-O  '
         elif self.term_node.entity_type == 'process':
-            term = '-*  '
+            if self.is_bg:
+                term = '-B* '
+            else:
+                term = '-*  '
         elif self.term_node.entity_type == 'fragment':
             if self.term_node.is_background:
                 if self.term_node.term.is_null:

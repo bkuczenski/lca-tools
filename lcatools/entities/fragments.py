@@ -62,16 +62,18 @@ class LcFragment(LcEntity):
     """
 
     @classmethod
-    def new(cls, name, *args, **kwargs):
+    def new(cls, name, *args, verbose=False, **kwargs):
         """
         :param name: the name of the fragment
         :param args: need flow and direction
+        :param verbose: print when a fragment is created
         :param kwargs: parent, exchange_value, private, balance_flow, background, termination
         :return:
         """
-        print('LcFragment - Name: %s:' % name)
-
+        if verbose:
+            print('LcFragment - Name: %s:' % name, 0)  # this will never run since the constructor does not set dbg
         return cls(uuid.uuid4(), *args, Name=name, **kwargs)
+
     _ref_field = 'parent'
 
     _new_fields = ['Parent', 'StageName']
@@ -567,7 +569,7 @@ class LcFragment(LcEntity):
             raise DependentFragment('Fragment exchange value set during traversal')
         if isinstance(scenario, tuple) or isinstance(scenario, set):
             raise ScenarioConflict('Set EV must specify single scenario')
-        if scenario == 0 or scenario == '0':
+        if scenario == 0 or scenario == '0' or scenario is None:
             self.cached_ev = value
         elif scenario == 1 or scenario == '1':
             self._exchange_values[1] = value
@@ -732,6 +734,46 @@ class LcFragment(LcEntity):
     def terminations(self):
         return self._terminations.keys()
 
+    def set_child_exchanges(self, scenario=None, reset_cache=False):
+        """
+        Set exchange values of child flows based on inventory data for the given scenario.  The termination must be
+         a foreground process.
+        :param scenario: [None] for the default scenario, set observed ev
+        :param reset_cache: [False] if True, for the default scenario set cached ev
+        :return:
+        """
+        term = self.termination(scenario)
+        if not term.term_node.entity_type == 'process':
+            raise DependentFragment('Child flows are set during traversal')
+
+        children = defaultdict(list)  # need to allow for differently-terminated child flows -- distinguish by term.id
+
+        for k in self.child_flows:
+            key = (k.flow, k.direction)
+            children[key].append(k)
+        if len(children) == 0:
+            return
+
+        for x in term.term_node.inventory(ref_flow=term.term_flow):
+            key = (x.flow, x.direction)
+            if key in children:
+                try:
+                    if len(children[key]) > 1:
+                        child = next(c for c in children[key] if c.termination(scenario).id == x.termination)
+                    else:
+                        child = next(c for c in children[key])
+                except StopIteration:
+                    continue
+
+                self._print('setting %s' % child)
+                if scenario is None:
+                    if reset_cache:
+                        child.reset_cache()
+                        child.cached_ev = x.value
+                    else:
+                        child.observed_ev = x.value
+                child.set_exchange_value(scenario, x.value)
+
     def node_weight(self, magnitude, scenario):
         term = self.termination(scenario)
         if term is None or term.is_null:
@@ -768,7 +810,7 @@ class LcFragment(LcEntity):
         ffs = self.traversal_entry(scenario, observed=observed)
         return [ff for ff in ffs if ff.term.is_null]
 
-    def get_fragment_inventory(self, scenario=None, scale=None, observed=False):
+    def inventory(self, scenario=None, scale=None, observed=False):
         """
         Aggregates inputs and outputs (un-terminated flows) from a fragment; returns a list of exchanges.
         :param scenario:
@@ -890,7 +932,7 @@ class LcFragment(LcEntity):
         term = self.termination(scenario)
 
         # print('%6f %6f %s' % (magnitude, node_weight, self))
-        ff = [FragmentFlow(self, magnitude, node_weight, term, conserved)]
+        ff = [FragmentFlow(self, magnitude, ev, node_weight, term, conserved)]
 
         if term.is_null or self.is_background or magnitude == 0:
             return ff, conserved_val
@@ -1100,9 +1142,10 @@ class FragmentFlow(object):
     ]
 
     """
-    def __init__(self, fragment, magnitude, node_weight, term, is_conserved):
+    def __init__(self, fragment, magnitude, exch_val, node_weight, term, is_conserved):
         self.fragment = fragment
         self.magnitude = magnitude
+        self.exch_val = exch_val
         self.node_weight = node_weight
         self.term = term
         self.is_conserved = is_conserved
@@ -1138,7 +1181,7 @@ class FragmentFlow(object):
         else:
             raise TypeError("Don't know how to add type %s to FragmentFlow\n %s\n to %s" % (type(other), other, self))
         # don't check unit scores-- ?????
-        new = FragmentFlow(self.fragment, self.magnitude + mag, self.node_weight + nw,
+        new = FragmentFlow(self.fragment, self.magnitude + mag, self.exch_val, self.node_weight + nw,
                            self.term, self.is_conserved)
         return new
 

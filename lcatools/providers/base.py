@@ -128,12 +128,14 @@ class LcArchive(ArchiveInterface):
 
     def get_item(self, key, item):
         entity = self.retrieve_or_fetch_entity(key)
-        if entity.has_property(item):
+        if entity and entity.has_property(item):
             return entity[item]
         return None
 
     def get_reference(self, key):
         entity = self.retrieve_or_fetch_entity(key)
+        if entity is None:
+            return None
         return entity.reference_entity
 
     @staticmethod

@@ -63,8 +63,7 @@ class QueryInterface(object):
     def origin(self):
         return self._origin
 
-    @property
-    def privacy(self, origin=None):
+    def get_privacy(self, origin=None):
         if origin is None:
             return self._catalog.privacy(self._origin)
         return self._catalog.privacy(origin)
@@ -220,7 +219,8 @@ class QueryInterface(object):
         :param process:
         :return:
         """
-        return self._perform_query('foreground', 'exchanges', ForegroundRequired('No access to exchange data'), process)
+        return self._perform_query('foreground', 'exchanges',
+                                   ForegroundRequired('No access to exchange data'), process)
 
     def exchange_values(self, process, flow, direction, termination=None):
         """
@@ -231,13 +231,15 @@ class QueryInterface(object):
         :param termination: [None] if none, return all terminations
         :return:
         """
-        return self._perform_query('foreground', 'exchange_values', ForegroundRequired('No access to exchange data'),
+        return self._perform_query(['foreground', 'background'], 'exchange_values',
+                                   ForegroundRequired('No access to exchange data'),
                                    process, flow, direction, termination=termination)
 
     def inventory(self, process, ref_flow=None):
         """
         Return a list of exchanges with values. If no reference is supplied, return all unallocated exchanges, including
-        reference exchanges. If a reference is supplied, return allocated exchanges, excluding reference exchanges.
+        reference exchanges. If a reference is supplied, return allocated (but not normalized) exchanges, excluding
+        reference exchanges.
         :param process:
         :param ref_flow:
         :return:

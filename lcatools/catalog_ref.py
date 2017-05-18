@@ -77,10 +77,18 @@ class CatalogRef(object):
         return self._ref
 
     @property
+    def link(self):
+        return '/'.join([self.origin, self.external_ref])
+
+    @property
     def entity_type(self):
         if self._etype is None:
             return 'unknown'
         return self._etype
+
+    @property
+    def privacy(self):
+        return self._query.privacy()
 
     @property
     def known(self):
@@ -93,9 +101,9 @@ class CatalogRef(object):
             if len(org) > 1:
                 raise MultipleOrigins('%s found in:\n%s' % (self.external_ref, '\n'.join(org)))
             self._known = True
+            self._origin = org[0]
             self._query = catalog.query(self._origin)
             self._etype = catalog.entity_type(self)
-            self._origin = org[0]
 
     def __getitem__(self, item):
         if self._query is None:
@@ -130,6 +138,9 @@ class CatalogRef(object):
         self._require_flow()
         return self._query.originate(self.external_ref, direction)
 
+    def references(self):
+        return self._query.get_reference(self.external_ref)
+
     @property
     def reference_entity(self):
         return self._query.get_reference(self.external_ref)
@@ -145,6 +156,10 @@ class CatalogRef(object):
     def exchange_values(self, flow, direction, termination=None):
         self._require_process()
         return self._query.exchange_values(self.external_ref, flow.external_ref, direction, termination=termination)
+
+    def inventory(self, ref_flow=None):
+        self._require_process()
+        return self._query.inventory(self.external_ref, ref_flow=ref_flow)
 
     def exchange_relation(self, ref_flow, exch_flow, direction, termination=None):
         self._require_process()

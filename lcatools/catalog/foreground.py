@@ -19,13 +19,6 @@ class ForegroundInterface(BasicInterface):
         for x in p.exchanges():
             yield x.trim()
 
-    def inventory(self, process, ref_flow=None):
-        if self.privacy > 0:
-            raise PrivateArchive('Exchange values are protected')
-        p = self._archive.retrieve_or_fetch_entity(process)
-        for x in p.exchanges(reference=ref_flow):
-            yield x
-
     def exchange_values(self, process, flow, direction, termination=None):
         if self.privacy > 0:
             raise PrivateArchive('Exchange values are protected')
@@ -36,6 +29,13 @@ class ForegroundInterface(BasicInterface):
             else:
                 if x.termination == termination:
                     yield x
+
+    def inventory(self, process, ref_flow=None):
+        if self.privacy > 0:
+            raise PrivateArchive('Exchange values are protected')
+        p = self._archive.retrieve_or_fetch_entity(process)
+        for x in p.exchanges(reference=ref_flow):
+            yield x
 
     def exchange_relation(self, process, ref_flow, exch_flow, direction, termination=None):
         if self.privacy > 0:

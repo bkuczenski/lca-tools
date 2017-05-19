@@ -63,7 +63,7 @@ class CatalogRef(object):
 
         self._query = None
 
-        self._known = []
+        self._known = False
 
         if catalog is not None:
             self.lookup(catalog)
@@ -75,6 +75,13 @@ class CatalogRef(object):
     @property
     def external_ref(self):
         return self._ref
+
+    def __str__(self):
+        if self._known:
+            name = ' ' + self['Name']
+        else:
+            name = ''
+        return '%s/%s%s' % (self.origin, self.external_ref, name)
 
     @property
     def link(self):
@@ -130,6 +137,12 @@ class CatalogRef(object):
         if self.entity_type != 'process':
             raise InvalidQuery('This query only applies to processes')
 
+    def _require_quantity(self):
+        if self.entity_type == 'quantity':
+            if self._query.get_item(self.external_ref, 'Indicator') is not None:
+                return
+        raise InvalidQuery('This query only applies to LCIA methods')
+
     def terminate(self, direction=None):
         self._require_flow()
         return self._query.terminate(self.external_ref, direction)
@@ -167,6 +180,10 @@ class CatalogRef(object):
                                              exch_flow.external_ref, direction,
                                              termination=termination)
 
+    def factors(self):
+        self._require_quantity()
+        return self._query.factors(self.external_ref)
+
     def ad(self, ref_flow=None):
         self._require_process()
         return self._query.ad(self.external_ref, ref_flow)
@@ -181,4 +198,4 @@ class CatalogRef(object):
 
     def lcia(self, ref_flow, lcia_qty):
         self._require_process()
-        return self._query.lcia(self.external_ref, ref_flow, lcia_qty)
+        return self._query.bg_lcia(self.external_ref, ref_flow, lcia_qty)

@@ -20,6 +20,13 @@ class BackgroundManager(object):
         self._be = BackgroundEngine(fg_interface)
         self._be.add_all_ref_products()
 
+    def _get_product_flow(self, process, ref_flow):
+        rx = process.reference(flow=ref_flow)
+        pf = self._be.check_product_flow(rx.flow, process)
+        if pf is None:
+            raise TerminationNotFound
+        return pf
+
     @property
     def background_flows(self):
         for k in self._be.background_flows():
@@ -35,14 +42,13 @@ class BackgroundManager(object):
         for k in self._be.emissions:
             yield k
 
-    def _get_product_flow(self, process, ref_flow):
-        rx = process.reference(flow=ref_flow)
-        pf = self._be.check_product_flow(rx.flow, process)
-        if pf is None:
-            raise TerminationNotFound
-        return pf
-
     def foreground(self, process, ref_flow=None):
+        """
+
+        :param process:
+        :param ref_flow:
+        :return:
+        """
         product_flow = self._get_product_flow(process, ref_flow)
 
     def inventory(self, process, ref_flow=None, show=None):

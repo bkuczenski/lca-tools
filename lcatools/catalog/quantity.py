@@ -11,14 +11,15 @@ class QuantityInterface(BasicInterface):
     The interface works normally on normally-constituted archives, but also allows the archives to override the default
     implementations (which require load_all)
     """
-    def __init__(self, archive, compartment_manager, **kwargs):
+    def __init__(self, archive, qdb, **kwargs):
         super(QuantityInterface, self).__init__(archive, **kwargs)
-        self._cm = compartment_manager
+        self._qdb = qdb
+        self._cm = qdb.c_mgr
         self._compartments = dict()
 
     def quantities(self, **kwargs):
         for q in self._archive.quantities(**kwargs):
-            yield q
+            yield self._qdb.get_canonical_quantity(q)
 
     def _check_compartment(self, string):
         if string is None:
@@ -36,7 +37,7 @@ class QuantityInterface(BasicInterface):
         :return: quantity entity
         """
         if hasattr(self._archive, 'get_quantity'):
-            return self._archive.get_quantity(quantity)
+            return self.make_ref(self._archive.get_quantity(quantity))
         return self.make_ref(self._archive[quantity])
 
     def synonyms(self, item):

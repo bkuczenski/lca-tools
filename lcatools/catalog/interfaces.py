@@ -313,22 +313,55 @@ class QueryInterface(object):
                                    search=search)
 
     def foreground(self, process, ref_flow=None):
+        """
+        Returns an ordered list of exchanges- the first being the named process + reference flow, and every successive
+        one having a named termination, so that the exchanges could be linked into a fragment tree.
+        :param process:
+        :param ref_flow:
+        :return:
+        """
         return self._perform_query('background', 'foreground', BackgroundRequired('No knowledge of background'),
                                    process, ref_flow=ref_flow)
 
     def ad(self, process, ref_flow=None):
+        """
+        returns background dependencies as a list of exchanges
+        :param process:
+        :param ref_flow:
+        :return:
+        """
         return self._perform_query('background', 'ad', BackgroundRequired('No knowledge of background'),
                                    process, ref_flow=ref_flow)
 
     def bf(self, process, ref_flow=None):
+        """
+        returns foreground emissions as a list of exchanges
+        :param process:
+        :param ref_flow:
+        :return:
+        """
         return self._perform_query('background', 'bf', BackgroundRequired('No knowledge of background'),
                                    process, ref_flow=ref_flow)
 
     def lci(self, process, ref_flow=None):
+        """
+        returns aggregated LCI as a list of exchanges (privacy permitting)
+        :param process:
+        :param ref_flow:
+        :return:
+        """
         return self._perform_query('background', 'lci', BackgroundRequired('No knowledge of background'),
                                    process, ref_flow=ref_flow)
 
-    def lcia(self, process, query_qty, ref_flow=None, **kwargs):
+    def bg_lcia(self, process, query_qty, ref_flow=None, **kwargs):
+        """
+        returns an LciaResult object, aggregated as appropriate depending on the interface's privacy level.
+        :param process:
+        :param query_qty:
+        :param ref_flow:
+        :param kwargs:
+        :return:
+        """
         return self._perform_query('background', 'lcia', BackgroundRequired('No knowledge of background'),
                                    process, query_qty, ref_flow=ref_flow)
 
@@ -358,7 +391,7 @@ class QueryInterface(object):
         set to those characterized by a specific quantity, those exchanged with a specific compartment, or both
         :param quantity:
         :param compartment:
-        :return: list of strings
+        :return: list of pairs: CAS number, name
         """
         return self._perform_query('quantity', 'flowables', QuantityRequired('Quantity interface required'),
                                    quantity=quantity, compartment=compartment)

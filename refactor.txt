@@ -31,6 +31,36 @@ TODO:
  - BackgroundManager; need to split into the matrix-handling part and the interface-providing part
 
 ==========
+Thu May 18 11:41:38 -0700 2017
+
+Background overview:
+
+ - QueryInterface establishes the background interface as providing the 'partial ordering' results:
+   * enumerated foreground, background, and exterior flows
+   * exterior divided into cutoff and emissions by compartment manager
+   * foreground - linked list of terminated exchanges- basically a fragment factory!
+   * ad, bf - the foreground-aggregated versions- lists of exchanges
+   * lci - list of exchanges
+   * lcia - LciaResult
+
+ - Background interface implements these for a given archive
+   * if the archive is static, then background engine can construct and invert A matrix
+   * otherwise, the archive is assumed to be already aggregated: "foreground as background"
+     = interface access is provided by a proxy
+   * background interface accepts references as arguments - retrieve_or_fetch_entity
+   * background manager and proxy accept entities as arguments
+   * background manager and proxy produce exchanges
+   * background manager handles characterization internally
+   * proxy does not do characterization- interface does it as-foreground
+
+How about the Qdb?
+
+ * Qdb starts up just fine with a limited set of reference quantities and a narrow set of flowables (TRACI 2 xls)
+ * to add a set of CFs for an LCIA method requires:
+   - ensure all the flowables exist; create new flowables if necessary
+   
+
+==========
 Wed May 17 10:39:40 -0700 2017
 
 Things are moving fast and slowly.  Need to re-think the catalog interface information flow:

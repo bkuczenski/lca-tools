@@ -1,5 +1,6 @@
 import re
 from lcatools.background.background_manager import BackgroundManager
+from lcatools.background.proxy import BackgroundProxy
 from lcatools.catalog.basic import BasicInterface
 
 
@@ -20,13 +21,18 @@ class BackgroundInterface(BasicInterface):
 
     @property
     def _bg(self):
+        """
+        The background is provided either by a BackgroundManager (wrapper for BackgroundEngine matrix inverter)
+        or by a BackgroundProxy (assumes archive is already aggregated)
+        :return:
+        """
         if self._bm is None:
             if self._archive.static:
                 # perform costly operations only when/if required
                 self._bm = BackgroundManager(self._archive)  # resources only accessible from a BackgroundInterface
             else:
-                # non-static interfaces need to implement their own background methods
-                self._bm = self._archive
+                # non-static interfaces implement foreground-as-background
+                self._bm = BackgroundProxy(self._archive)
         return self._bm
 
     '''
@@ -109,7 +115,8 @@ class BackgroundInterface(BasicInterface):
             yield k
 
     def lci(self, process, ref_flow=None):
-        return self._bg.lci(process, ref_flow=ref_flow)
+        p = self._archive.retrieve_or_fetch_entity(process)
+        return self._bg.lci(p, ref_flow=ref_flow)
 
     def ad(self, process, ref_flow=None):
         return self._bg.ad_tilde(process, ref_flow=ref_flow)
@@ -117,11 +124,12 @@ class BackgroundInterface(BasicInterface):
     def bf(self, process, ref_flow=None):
         return self._bg.bf_tilde(process, ref_flow=ref_flow)
 
-    def lcia(self, process, query_qty, ref_flow=None, **kwargs):
-        q = self._qdb.get(query_qty)  # get canonical
-        if not self.is_characterized(q):
-            if self._archive.static:
+    def bg_lcia(self, process, query_qty, ref_flow=None, **kwargs):
+        q = self._qdb.get_quantity(query_qty)  #
+        if self._archive.static:
+            if not self.is_characterized(q):
                 self.characterize(self._qdb, q, **kwargs)
-            else:
-                raise NonStaticBackground('Not characterized for %s' % q)
-        return self._bg.lcia(process, query_qty, ref_flow=ref_flow)
+            return self._bg.lcia(process, query_qty, ref_flow=ref_flow)
+        else:
+            lci = self._bg.lci(process, ref_flow=ref_flow)
+

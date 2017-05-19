@@ -61,7 +61,7 @@ def _extract_dtype(filename, pathtype=os.path):
     return dtype[0]
 
 
-def _dtype_from_nsmap(nsmap):
+def dtype_from_nsmap(nsmap):
     for v in nsmap.values():
         cand = re.sub('(^.*/)', '', v)
         if cand in typeDirs:
@@ -186,6 +186,14 @@ class IlcdArchive(LcArchive):
 
     def _de_prefix(self, file):
         return re.sub('^' + self._pathtype.join(self._build_prefix(), ''), '', file)
+
+    def _path_from_ref(self, ref):
+        """
+        This fails if the filename has a version specification
+        :param ref:
+        :return:
+        """
+        return self._pathtype.join(self._build_prefix(), ref + '.xml')
 
     def _path_from_uri(self, uri):
         """
@@ -488,7 +496,7 @@ class IlcdArchive(LcArchive):
             return None
 
         if dtype is None:
-            dtype = _dtype_from_nsmap(o.nsmap)
+            dtype = dtype_from_nsmap(o.nsmap)
 
         if dtype == 'Flow':
             try:

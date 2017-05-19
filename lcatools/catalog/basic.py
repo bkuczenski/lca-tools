@@ -38,7 +38,7 @@ class BasicInterface(QueryInterface):
         A hook that allows the LcCatalog to lookup characterization values using a supplied quantity db.  Quantities
         that are looked up are added to a list so they aren't repeated.
         :param qdb:
-        :param quantity:
+        :param quantity: an actual entity
         :param force: [False] re-characterize even if the quantity has already been characterized.
         :param overwrite: [False] remove and replace existing characterizations.  (may have no effect if force=False)
         :param locale: ['GLO'] which CF to retrieve

@@ -42,7 +42,7 @@ from .background import BackgroundInterface
 from .quantity import QuantityInterface
 from .lc_resolver import LcCatalogResolver
 from lcatools.tools import create_archive  # archive_from_json, archive_factory
-from lcatools.flowdb.flowdb import FlowDB
+from lcatools.providers.qdb import Qdb
 from lcatools.flowdb.compartments import REFERENCE_INT
 
 
@@ -85,7 +85,7 @@ class LcCatalog(object):
         if not os.path.exists(self._compartments):
             copy2(REFERENCE_INT, self._compartments)
         if qdb is None:
-            qdb = FlowDB(compartments=self._compartments)
+            qdb = Qdb(compartments=self._compartments)
         self._entities = dict()  # maps '/'.join(origin, external_ref) to entity
         self._qdb = qdb
         """
@@ -96,6 +96,8 @@ class LcCatalog(object):
         self._archives = dict()  # maps source to archive
         self._names = dict()  # maps reference to source
         self._nicknames = dict()  # keep a collection of shorthands for sources
+
+        self._lcia_methods = set()
 
     def new_resource(self, *args, **kwargs):
         """
@@ -174,7 +176,7 @@ class LcCatalog(object):
     def _check_entity(self, source, external_ref):
         ent = self._archives[source].retrieve_or_fetch_entity(external_ref)
         if ent is not None:
-            self._entities[ent.get_link()] = ent
+            self._entities[ent.link] = ent
         return ent
 
     def _dereference(self, origin, external_ref, interface=None):
@@ -212,7 +214,7 @@ class LcCatalog(object):
                 continue
             matches = itype.intersection(set(res.interfaces))
             if 'quantity' in matches:
-                yield QuantityInterface(self._archives[res.source], self._qdb.c_mgr, catalog=self, privacy=res.privacy)
+                yield QuantityInterface(self._archives[res.source], self._qdb, catalog=self, privacy=res.privacy)
             if 'entity' in matches:
                 yield EntityInterface(self._archives[res.source], catalog=self, privacy=res.privacy)
             if 'foreground' in matches:
@@ -251,3 +253,12 @@ class LcCatalog(object):
 
     def entity_type(self, ref):
         return self.fetch(ref).entity_type
+
+    """
+    Qdb interaction
+    """
+    def load_lcia_factors(self, ref):
+        lcia = self._qdb.get_canonical_quantity(self.fetch(ref))
+        for cf in ref.factors():
+            self._qdb.add_cf(cf)
+        self._lcia_methods.add(lcia)

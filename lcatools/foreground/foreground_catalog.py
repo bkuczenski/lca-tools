@@ -27,7 +27,7 @@ class ForegroundCatalog(LcCatalog):
     def __init__(self, catalog_dir, qdb=None):
         super(ForegroundCatalog, self).__init__(catalog_dir, qdb=qdb)
         self._foregrounds = dict()  # _foregrounds := name --> path
-        self._known_fgs = dict()
+        self._known_fgs = dict()  # can't remember what this was for
         self._ed = FragmentEditor(qdb=self._qdb, interactive=False)
 
     def add_foreground(self, name, path):

@@ -334,12 +334,12 @@ class ExchangeValue(Exchange):
 
     def __str__(self):
         if self.process.entity_type == 'fragment':
-            if self.process.reference_entity is None:
+            if self.flow == self.process.flow and self.direction == comp_dir(self.process.direction):
                 ref = '{*}'
             else:
                 ref = '   '
         else:
-            if self.process.reference_entity is not None and self.is_reference:
+            if self.is_reference:
                 ref = '{*}'
             else:
                 ref = '   '

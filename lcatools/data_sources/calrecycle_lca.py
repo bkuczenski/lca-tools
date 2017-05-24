@@ -50,6 +50,10 @@ data_ecoinvent = SemanticRoot(os.path.join(DATA_ROOT, 'Full UO LCA Flat Export E
 data_pe24 = SemanticRoot(os.path.join(DATA_ROOT, 'Full UO LCA Flat Export PE-SP24'), 'calrecycle.uolca.pe.sp24', 1, 40)
 data_pe22 = SemanticRoot(os.path.join(DATA_ROOT, 'Full UO LCA Flat Export PE-SP22'), 'calrecycle.uolca.pe.sp22', 1, 50)
 
+lcia_elcd = SemanticRoot(os.path.join(DATA_ROOT, 'ELCD-LCIA'), 'calrecycle.lcia.elcd', 0, 70)
+lcia_traci = SemanticRoot(os.path.join(DATA_ROOT, 'TRACI Core-4 Export'), 'calrecycle.lcia.traci.2.0', 0, 70)
+
+
 
 def create_catalog(path):
     return LcCatalog(path)
@@ -63,6 +67,9 @@ def install_resources(cat):
             iface = 'foreground'
         res = LcResource(a.root, a.path, 'IlcdArchive', interfaces=iface,
                          privacy=a.privacy, priority=a.priority, static=False)
+        cat.add_resource(res)
+    for q in (lcia_elcd, lcia_traci):
+        res = LcResource(q.root, q.path, 'IlcdLcia', interfaces='quantity', priority=q.priority, static=False)
         cat.add_resource(res)
 
 
@@ -205,9 +212,14 @@ class CalRecycleImporter(object):
             raise TypeError
         self._frags[ff['FragmentFlowID']] = frag
 
-    def terminate_fragments(self, qi):
+    def terminate_fragments(self, qi, frags=None):
         for ff in self.ff:
             frag = self._frags[ff['FragmentFlowID']]
+            if frags is not None:
+                if ff['FragmentFlowID'] not in frags:
+                    continue
+                print('FragmentFlowID: %s' % ff['FragmentFlowID'])
+                frag.set_debug_threshold(999)
 
             flow = frag.flow
             # terminate the fragment
@@ -224,7 +236,8 @@ class CalRecycleImporter(object):
             elif ff['NodeTypeID'] == '2':
                 term_node = self._fragments[ff['SubFragment']['SubFragmentID']]
                 term_flow = qi.get(ff['SubFragment']['FlowUUID'])
-                term = FlowTermination(frag, term_node, term_flow=term_flow)
+                descend = {'1': True, '0': False}[ff['SubFragment']['Descend']]
+                term = FlowTermination(frag, term_node, term_flow=term_flow, descend=descend)
                 frag.clear_termination()
                 frag.terminate(term)
             elif ff['NodeTypeID'] == '4':
@@ -243,7 +256,7 @@ class CalRecycleImporter(object):
 
     def set_balances(self):
         for f in self.ff:
-            if f['NodeTypeID'] == 1:
+            if f['NodeTypeID'] == '1':
                 if f['Process']['ConservationFFID'] != '':
                     self._frags[f['Process']['ConservationFFID']].set_balance_flow()
 

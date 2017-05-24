@@ -36,8 +36,8 @@ import os
 from shutil import copy2
 
 from .interfaces import QueryInterface, INTERFACE_TYPES
-from .entity import EntityInterface
-from .foreground import ForegroundInterface
+from .entity import IndexInterface
+from .foreground import InventoryInterface
 from .background import BackgroundInterface
 from .quantity import QuantityInterface
 from .lc_resolver import LcCatalogResolver
@@ -180,6 +180,14 @@ class LcCatalog(object):
         return ent
 
     def _dereference(self, origin, external_ref, interface=None):
+        """
+        Converts an origin + external_ref into an entity.  Under the current design, _dereference is used only for
+        non-fragments.  foreground catalogs implement a _retrieve method that is used for fragments.
+        :param origin:
+        :param external_ref:
+        :param interface:
+        :return:
+        """
         uname = '/'.join([origin, external_ref])
         if uname in self._entities:
             return self._entities[uname]
@@ -216,9 +224,9 @@ class LcCatalog(object):
             if 'quantity' in matches:
                 yield QuantityInterface(self._archives[res.source], self._qdb, catalog=self, privacy=res.privacy)
             if 'entity' in matches:
-                yield EntityInterface(self._archives[res.source], catalog=self, privacy=res.privacy)
-            if 'foreground' in matches:
-                yield ForegroundInterface(self._archives[res.source], catalog=self, privacy=res.privacy)
+                yield IndexInterface(self._archives[res.source], catalog=self, privacy=res.privacy)
+            if 'inventory' in matches:
+                yield InventoryInterface(self._archives[res.source], catalog=self, privacy=res.privacy)
             if 'background' in matches:
                 yield BackgroundInterface(self._archives[res.source], self._qdb, catalog=self, privacy=res.privacy)
         if 'quantity' in itype:

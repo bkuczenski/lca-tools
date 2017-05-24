@@ -5,7 +5,7 @@ class PrivateArchive(Exception):
     pass
 
 
-class ForegroundInterface(BasicInterface):
+class InventoryInterface(BasicInterface):
     """
     This provides access to detailed exchange values and computes the exchange relation
     """

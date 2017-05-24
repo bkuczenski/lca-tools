@@ -11,7 +11,7 @@ At the moment the interfaces only deal with elementary LcEntities-- but once a s
 place it is feasible to imagine them used for fragment access as well.
 """
 
-INTERFACE_TYPES = {'entity', 'foreground', 'background', 'quantity'}
+INTERFACE_TYPES = {'index', 'inventory', 'background', 'quantity'}
 
 
 class NoCatalog(Exception):
@@ -30,7 +30,7 @@ class CatalogRequired(Exception):
     pass
 
 
-class ForegroundRequired(Exception):
+class InventoryRequired(Exception):
     pass
 
 
@@ -136,7 +136,7 @@ class QueryInterface(object):
         :param kwargs: keyword search
         :return:
         """
-        return self._perform_query('entity', 'processes', CatalogRequired('Catalog access required'), **kwargs)
+        return self._perform_query('index', 'processes', CatalogRequired('Catalog access required'), **kwargs)
 
     def flows(self, **kwargs):
         """
@@ -144,7 +144,7 @@ class QueryInterface(object):
         :param kwargs: keyword search
         :return:
         """
-        return self._perform_query('entity', 'flows', CatalogRequired('Catalog access required'), **kwargs)
+        return self._perform_query('index', 'flows', CatalogRequired('Catalog access required'), **kwargs)
 
     def quantities(self, **kwargs):
         """
@@ -153,7 +153,7 @@ class QueryInterface(object):
         :return:
         """
         try:
-            return self._perform_query('entity', 'quantities', CatalogRequired('Catalog access required'), **kwargs)
+            return self._perform_query('index', 'quantities', CatalogRequired('Catalog access required'), **kwargs)
         except CatalogRequired:
             return self._perform_query('quantity', 'quantities', CatalogRequired('Catalog or Quantity access required'),
                                        **kwargs)
@@ -161,7 +161,7 @@ class QueryInterface(object):
     def get(self, eid):
         """
         Retrieve entity by external Id. This will take any interface and should keep trying until it finds a match.
-        If the full quantitative dataset is required, use 'fetch', which requires a foreground interface.
+        If the full quantitative dataset is required, use the catalog 'fetch' method.
         :param eid: an external Id
         :return:
         """
@@ -169,7 +169,7 @@ class QueryInterface(object):
 
     """
     API functions- entity-specific -- get accessed by catalog ref
-    entity interface
+    index interface
     """
     def reference(self, eid):
         """
@@ -187,7 +187,7 @@ class QueryInterface(object):
         :param direction: if omitted, return all processes having the given flow as reference, regardless of direction
         :return:
         """
-        return self._perform_query('entity', 'terminate', CatalogRequired('Catalog access required'),
+        return self._perform_query('index', 'terminate', CatalogRequired('Catalog access required'),
                                    flow, direction=direction)
 
     def originate(self, flow, direction=None):
@@ -197,7 +197,7 @@ class QueryInterface(object):
         :param direction: if omitted, return all processes having the given flow as reference, regardless of direction
         :return:
         """
-        return self._perform_query('entity', 'originate', CatalogRequired('Catalog access required'),
+        return self._perform_query('index', 'originate', CatalogRequired('Catalog access required'),
                                    flow, direction=direction)
 
     def mix(self, flow, direction):
@@ -207,11 +207,11 @@ class QueryInterface(object):
         :param direction:
         :return:
         """
-        return self._perform_query('entity', 'mix', CatalogRequired('Catalog access required'),
+        return self._perform_query('index', 'mix', CatalogRequired('Catalog access required'),
                                    flow, direction)
 
     """
-    ForegroundInterface core methods: individual processes, quantitative data.
+    InventoryInterface core methods: individual processes, quantitative data.
     """
     def exchanges(self, process):
         """
@@ -219,8 +219,8 @@ class QueryInterface(object):
         :param process:
         :return:
         """
-        return self._perform_query('foreground', 'exchanges',
-                                   ForegroundRequired('No access to exchange data'), process)
+        return self._perform_query('inventory', 'exchanges',
+                                   InventoryRequired('No access to exchange data'), process)
 
     def exchange_values(self, process, flow, direction, termination=None):
         """
@@ -231,8 +231,8 @@ class QueryInterface(object):
         :param termination: [None] if none, return all terminations
         :return:
         """
-        return self._perform_query(['foreground', 'background'], 'exchange_values',
-                                   ForegroundRequired('No access to exchange data'),
+        return self._perform_query(['inventory', 'background'], 'exchange_values',
+                                   InventoryRequired('No access to exchange data'),
                                    process, flow, direction, termination=termination)
 
     def inventory(self, process, ref_flow=None):
@@ -244,7 +244,7 @@ class QueryInterface(object):
         :param ref_flow:
         :return:
         """
-        return self._perform_query('foreground', 'inventory', ForegroundRequired('No access to exchange data'),
+        return self._perform_query('inventory', 'inventory', InventoryRequired('No access to exchange data'),
                                    process, ref_flow=ref_flow)
 
     def exchange_relation(self, process, ref_flow, exch_flow, direction, termination=None):
@@ -258,7 +258,7 @@ class QueryInterface(object):
         :param termination:
         :return:
         """
-        return self._perform_query('foreground', 'exchange_relation', ForegroundRequired('No access to exchange data'),
+        return self._perform_query('inventory', 'exchange_relation', InventoryRequired('No access to exchange data'),
                                    process, ref_flow, exch_flow, direction, termination=termination)
 
     """

@@ -9,6 +9,7 @@ either one from the other.
 from lcatools.lcia_results import LciaResult, LciaResults, traversal_to_lcia
 from lcatools.exchanges import comp_dir, ExchangeValue, MissingReference
 from lcatools.catalog.foreground import PrivateArchive
+from lcatools.catalog_ref import CatalogRef
 from lcatools.interact import pick_one, parse_math
 
 
@@ -36,24 +37,29 @@ class FlowTermination(object):
     LCIA results are always cached in the terminations, and are not (by default) persistent across instantiations.
     """
     @classmethod
-    def from_json(cls, fragment, catalog, scenario, j):
+    def from_json(cls, fragment, fg, scenario, j):
         if len(j) == 0:
             return cls.null(fragment)
         if j['source'] == 'foreground':
-            index = 0
+            origin = fg.ref
         else:
-            index = catalog.index_for_source(j['source'])
-        process_ref = catalog.ref(index, j['entityId'])
-        if process_ref.entity_type == 'fragment':
-            process_ref = process_ref.entity()
+            origin = j['source']
+        external_ref = j['externalId']
         term_flow = j.pop('termFlow', None)
-        if term_flow is not None:
-            term_flow = catalog.ref(index, term_flow).entity()
+        if origin == fg.ref:
+            term = fg[external_ref]
+            if term_flow is not None:
+                term_flow = fg[term_flow]
+        else:
+            term = fg.catalog_ref(origin, external_ref, entity_type='process')
+            if term_flow is not None:
+                term_flow = fg.catalog_ref(origin, term_flow, entity_type='flow')
+
         direction = j.pop('direction', None)
         descend = j.pop('descend', None)
-        term = cls(fragment, process_ref, direction=direction, term_flow=term_flow, descend=descend)
+        term = cls(fragment, term, direction=direction, term_flow=term_flow, descend=descend)
         if 'scoreCache' in j.keys():
-            term._deserialize_score_cache(catalog, j['scoreCache'], scenario)
+            term._deserialize_score_cache(fg, j['scoreCache'], scenario)
         return term
 
     @classmethod
@@ -210,17 +216,21 @@ class FlowTermination(object):
         :return:
         """
         # TODO: this should belong to the flow
+        parent_qty = self._parent.flow.reference_entity
         tgt_qty = self.term_flow.reference_entity
         if self._parent.flow.cf(tgt_qty) == 0:
-            '''
-            print('term flow')
-            self.term_flow.show()
-            self.term_flow.profile()
-            '''
-            print('\nfragment flow')
-            self._parent.flow.show()
-            self._parent.flow.profile()
-            raise FlowConversionError('Missing cf for %s' % tgt_qty)
+            if self.term_flow.cf(parent_qty) == 0:
+                '''
+                print('term flow')
+                self.term_flow.show()
+                self.term_flow.profile()
+                '''
+                print('\nfragment flow %s' % self._parent)
+                self._parent.flow.show()
+                self._parent.flow.profile()
+                raise FlowConversionError('Missing cf for %s' % tgt_qty)
+            else:
+                return 1.0 / self.term_flow.convert(1.0, to=parent_qty)
         return self._parent.flow.convert(1.0, to=tgt_qty)
 
     def validate_flow_conversion(self):
@@ -231,6 +241,7 @@ class FlowTermination(object):
                 print('you are so lucky!')
         except FlowConversionError:
             print('Flow %s ' % self._parent.flow)
+            print('Termination %s' % self.term_node)
             print('Provide conversion factor %s (fragment) to %s (termination)' % (self._parent.flow.unit(),
                                                                                    self.term_flow.unit()))
             cf = parse_math(input('Enter conversion factor: '))
@@ -386,11 +397,15 @@ class FlowTermination(object):
         """
         return [{"quantity": q, "score": self._score_cache[q].total()} for q in self._score_cache.indices()]
 
-    def _deserialize_score_cache(self, catalog, sc, scenario):
+    def _deserialize_score_cache(self, fg, sc, scenario):
         self._score_cache = LciaResults(self._parent)
         for i in sc:
-            res = LciaResult(catalog[0][i["quantity"]], scenario=scenario)
-            res.add_summary(self._parent.get_uuid(), self._parent, 1.0, i['score'])
+            if 'origin' in i:
+                q = fg.catalog_ref(i['origin'], i['quantity'], entity_type='quantity')
+            else:
+                q = fg[i['quantity']]
+            res = LciaResult(q, scenario=scenario)
+            res.add_summary(self._parent.uuid, self._parent, 1.0, i['score'])
             self._score_cache.add(res)
 
     def serialize(self):
@@ -456,5 +471,5 @@ class FlowTermination(object):
                 else:
                     term = '-#  '
         else:
-            raise TypeError('I Do not understand this term for frag %.7s' % self._parent.get_uuid())
+            raise TypeError('I Do not understand this term for frag %.7s' % self._parent.uuid)
         return term

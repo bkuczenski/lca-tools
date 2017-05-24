@@ -62,9 +62,9 @@ def create_catalog(path):
 def install_resources(cat):
     for a in (data_main, data_improper, data_ecoinvent, data_pe22, data_pe24):
         if a.privacy > 0:
-            iface = ['foreground', 'background']
+            iface = ['inventory', 'background']
         else:
-            iface = 'foreground'
+            iface = 'inventory'
         res = LcResource(a.root, a.path, 'IlcdArchive', interfaces=iface,
                          privacy=a.privacy, priority=a.priority, static=False)
         cat.add_resource(res)
@@ -234,8 +234,17 @@ class CalRecycleImporter(object):
                 else:
                     frag.set_background()
             elif ff['NodeTypeID'] == '2':
-                term_node = self._fragments[ff['SubFragment']['SubFragmentID']]
+                term_frag = self._fragments[ff['SubFragment']['SubFragmentID']]
                 term_flow = qi.get(ff['SubFragment']['FlowUUID'])
+                if term_flow is term_frag.flow:
+                    term_node = term_frag
+                else:
+                    term_node = None
+                    for c in term_frag.io_flows(None):
+                        if c.fragment.flow is term_flow:
+                            term_node = c.fragment
+                    if term_node is None:
+                        raise ValueError('Could not find flow from inverse traversal')
                 descend = {'1': True, '0': False}[ff['SubFragment']['Descend']]
                 term = FlowTermination(frag, term_node, term_flow=term_flow, descend=descend)
                 frag.clear_termination()

@@ -7,6 +7,7 @@ import re
 
 from lcatools.providers.base import LcArchive, to_uuid
 from lcatools.entities import LcFragment
+from lcatools.catalog_ref import CatalogRef
 
 
 class AmbiguousReference(Exception):
@@ -54,6 +55,12 @@ class LcForeground(LcArchive):
         if os.path.exists(self._archive_file):
             self._load_json_file(self._archive_file)
             self._load_fragments()
+
+    def catalog_ref(self, origin, external_ref, entity_type=None):
+        ref = CatalogRef(origin, external_ref, catalog=self._catalog, entity_type=entity_type)
+        if entity_type == 'flow':
+            return self._catalog.fetch(ref)
+        return ref
 
     def add(self, entity):
         """
@@ -161,14 +168,14 @@ class LcForeground(LcArchive):
 
     def _do_load(self, fragments):
         for f in fragments:
-            frag = LcFragment.from_json(self._catalog, f)
+            frag = LcFragment.from_json(self, f)
             if frag.external_ref != frag.uuid:
                 self._ext_ref_mapping[frag.external_ref] = frag.uuid
             self.add(frag)
 
         for f in fragments:
             frag = self[f['entityId']]
-            frag.finish_json_load(self._catalog, f)
+            frag.finish_json_load(self, f)
 
     def _load_fragments(self):
         """

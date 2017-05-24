@@ -1,7 +1,7 @@
 from lcatools.catalog.basic import BasicInterface
 
 
-class EntityInterface(BasicInterface):
+class IndexInterface(BasicInterface):
     """
     A CatalogInterface provides basic-level semantic data about entities
     """

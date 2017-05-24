@@ -2,6 +2,7 @@ from __future__ import print_function, unicode_literals
 
 import uuid
 from itertools import chain
+from numbers import Number
 
 
 entity_types = ('process', 'flow', 'quantity', 'fragment')
@@ -212,7 +213,20 @@ class LcEntity(object):
             self._ref_field: self._print_ref_field(),
         }
         for k, v in self._d.items():
-            j[k] = str(v)
+            if isinstance(v, list):
+                j[k] = v
+            elif isinstance(v, set):
+                j[k] = sorted(list(v))
+            elif isinstance(v, Number):
+                j[k] = v
+            elif isinstance(v, bool):
+                j[k] = v
+            elif isinstance(v, LcEntity):
+                j[k] = {"origin": v.origin,
+                        "externalId": v.external_ref,
+                        "entity_type": v.entity_type}
+            else:
+                j[k] = str(v)
         return j
 
     def __getitem__(self, item):

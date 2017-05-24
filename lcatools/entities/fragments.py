@@ -4,7 +4,7 @@
 """
 
 import uuid
-from collections import namedtuple, defaultdict
+from collections import defaultdict
 
 from lcatools.entities import LcEntity, LcFlow
 from lcatools.exchanges import comp_dir, ExchangeValue
@@ -13,9 +13,6 @@ from lcatools.lcia_results import DetailedLciaResult, SummaryLciaResult, travers
 from lcatools.interact import ifinput, parse_math
 from lcatools.terminations import FlowTermination
 from lcatools.catalog_ref import CatalogRef, NoCatalog
-
-
-GhostFrag = namedtuple('GhostFrag', ['flow', 'direction'])
 
 
 class InvalidParentChild(Exception):
@@ -79,15 +76,15 @@ class LcFragment(LcEntity):
     _new_fields = ['Parent', 'StageName']
 
     @classmethod
-    def from_json(cls, catalog, j):
+    def from_json(cls, fg, j):
         if j['parent'] is not None:
-            parent = catalog[0][j['parent']]
+            parent = fg[j['parent']]
         else:
             parent = None
-        flow = catalog[0][j['flow']]
+        flow = fg[j['flow']]
         if flow is None:
             flow = LcFlow(j['flow'], Name=j['tags']['Name'], Compartment=['Intermediate Flows', 'Fragments'])
-            catalog.add(flow)
+            fg.add(flow)
         frag = cls(j['entityId'], flow, j['direction'], parent=parent,
                    exchange_value=j['exchangeValues'].pop('0'),
                    private=j['isPrivate'],
@@ -105,13 +102,13 @@ class LcFragment(LcEntity):
             frag[tag] = val  # just a fragtag group of values
         return frag
 
-    def finish_json_load(self, catalog, j):
-        self.reference_entity = catalog[0][j['parent']]
+    def finish_json_load(self, fg, j):
+        # self.reference_entity = catalog[0][j['parent']]
         for k, v in j['terminations'].items():
             if k == 'default' or k == 'null':
-                self.term_from_json(catalog, None, v)
+                self.term_from_json(fg, None, v)
             else:
-                self.term_from_json(catalog, k, v)
+                self.term_from_json(fg, k, v)
 
     @classmethod
     def from_exchange(cls, parent, exchange):
@@ -274,7 +271,7 @@ class LcFragment(LcEntity):
         j = super(LcFragment, self).serialize()
 
         j.update({
-            'flow': self.flow.get_uuid(),
+            'flow': self.flow.uuid,
             'direction': self.direction,
             'isPrivate': self._private,
             'isBackground': self._background,
@@ -304,8 +301,8 @@ class LcFragment(LcEntity):
             else:
                 re = ' ** ref'
         else:
-            re = self.reference_entity.get_uuid()[:7]
-        return '(%s) %s %.5s %s %s  [%s] %s' % (re, self.dirn, self.get_uuid(), self.dirn, self.term,
+            re = self.reference_entity.uuid[:7]
+        return '(%s) %s %.5s %s %s  [%s] %s' % (re, self.dirn, self.uuid, self.dirn, self.term,
                                                 self.unit, self['Name'])
 
     def show(self):
@@ -339,19 +336,14 @@ class LcFragment(LcEntity):
         children = [c for c in self.child_flows]
         term = self.termination(scenario)
         if len(children) > 0 and term.is_null:
-            raise InvalidParentChild('null-terminated fragment %.7s has children' % self.get_uuid())
+            raise InvalidParentChild('null-terminated fragment %.7s has children' % self.uuid)
 
         delim = '()'
         if self.observed_ev != 0.0:
             delim = '[]'
         if not(observed and self.observed_ev == 0.0):
             # when doing the observed mode, don't print zero results
-            dirn = {
-                'Input': '-<-',
-                'Output': '=>='
-            }[self.direction]
-
-            print('   %s%s%s %.5s %s%s%7.3g %s%s %s' % (prefix, dirn, term, self.get_uuid(),
+            print('   %s%s%s %.5s %s%s%7.3g %s%s %s' % (prefix, self.dirn, term, self.uuid,
                                                         delim[0],
                                                         self._mod(scenario),
                                                         self.exchange_value(scenario, observed=observed) or 0.0,
@@ -364,6 +356,8 @@ class LcFragment(LcEntity):
             print('   %s [%s] %s' % (prefix, term.unit, self['Name']))
             prefix += '    | '
             for c in sorted(children, key=lambda x: (x['StageName'], not x.term.is_null, x.term.is_bg)):
+                if c.exchange_value(scenario, observed=observed) == 0:
+                    continue
                 if c['StageName'] != latest_stage:
                     latest_stage = c['StageName']
                     print('   %s %5s Stage: %s' % (prefix, ' ', latest_stage))
@@ -610,10 +604,10 @@ class LcFragment(LcEntity):
         if child.reference_entity != self:
             raise InvalidParentChild
         if self._conserved_quantity is not None:
-            print('%.5s conserving %s' % (self.get_uuid(), self._conserved_quantity))
+            print('%.5s conserving %s' % (self.uuid, self._conserved_quantity))
             raise BalanceAlreadySet
         self._conserved_quantity = child.flow.reference_entity
-        print('%.5s setting balance from %.5s: %s' % (self.get_uuid(), child.get_uuid(), self._conserved_quantity))
+        print('%.5s setting balance from %.5s: %s' % (self.uuid, child.uuid, self._conserved_quantity))
 
     def unset_conserved_quantity(self):
         self._conserved_quantity = None
@@ -653,7 +647,7 @@ class LcFragment(LcEntity):
         def _p_line(f, m, d):
             try:
                 # will fail if m is None or non-number
-                print(' %+10.4g  %6s  %.5s %s' % (m, d, f.get_uuid(), f['Name']))
+                print(' %+10.4g  %6s  %.5s %s' % (m, d, f.uuid, f['Name']))
             finally:
                 pass
 
@@ -749,8 +743,8 @@ class LcFragment(LcEntity):
         if not term.term_node.entity_type == 'process':
             raise DependentFragment('Child flows are set during traversal')
 
-        if scenario is None:
-            # this counts as observing the current fragment
+        if scenario is None and self.reference_entity is None:
+            # this counts as observing the reference flow
             if self.observed_ev == 0:
                 self.observed_ev = self.cached_ev
 
@@ -764,6 +758,7 @@ class LcFragment(LcEntity):
 
         for x in term.term_node.inventory(ref_flow=term.term_flow):
             if x.value is None:
+                self._print('skipping None-valued exchange: %s' % x)
                 continue
 
             key = (x.flow, x.direction)
@@ -787,10 +782,10 @@ class LcFragment(LcEntity):
                     child.set_exchange_value(scenario, x.value)
 
     def node_weight(self, magnitude, scenario, observed):
-        if self.reference_entity is None:
+        term = self.termination(scenario)
+        if self.reference_entity is None and term.is_fg:
             magnitude /= self.exchange_value(scenario, observed=observed)
 
-        term = self.termination(scenario)
         if term is None or term.is_null:
             return magnitude
         return magnitude * term.node_weight_multiplier
@@ -846,15 +841,15 @@ class LcFragment(LcEntity):
         ev = self.exchange_value(scenario)
         if self.direction == 'Input':  # this is input to parent flow, so output to us
             ev = -ev
-        accum[self.flow.get_uuid()] = ev
+        accum[self.flow.uuid] = ev
         for i in io_ffs:
-            ent[i.fragment.flow.get_uuid()] = i.fragment.flow
+            ent[i.fragment.flow.uuid] = i.fragment.flow
             if i.fragment.direction == 'Input':
-                accum[i.fragment.flow.get_uuid()] += i.magnitude
+                accum[i.fragment.flow.uuid] += i.magnitude
             else:
-                accum[i.fragment.flow.get_uuid()] -= i.magnitude
+                accum[i.fragment.flow.uuid] -= i.magnitude
 
-        in_ex = accum.pop(self.flow.get_uuid())
+        in_ex = accum.pop(self.flow.uuid)
         if in_ex * ev < 0:  # i.e. if the signs are different
             raise ValueError('Fragment requires more reference flow than it generates')
         frag_exchs = []
@@ -878,10 +873,15 @@ class LcFragment(LcEntity):
         return sorted(frag_exchs, key=lambda x: x.direction)
 
     def traversal_entry(self, scenario, observed=False):
-        if self.reference_entity is None:
-            in_wt = self.exchange_value(scenario, observed=observed)
+        if False:
+            # this has been reformed
+            if self.reference_entity is None:
+                in_wt = self.exchange_value(scenario, observed=observed)
+            else:
+                in_wt = 1.0 / self.exchange_value(scenario, observed=observed)
         else:
-            in_wt = 1.0 / self.exchange_value(scenario, observed=observed)
+            in_wt = 1.0
+
         ffs, _ = self.traverse(in_wt, scenario, observed=observed)
         return ffs
 
@@ -924,7 +924,7 @@ class LcFragment(LcEntity):
         if _balance is None:
             ev = self.exchange_value(scenario, observed=observed)
         else:
-            _print('%.3s %g balance' % (self.get_uuid(), _balance), level=2)
+            _print('%.3s %g balance' % (self.uuid, _balance), level=2)
             ev = _balance
             self._cache_balance_ev(_balance, scenario, observed)
 
@@ -940,7 +940,7 @@ class LcFragment(LcEntity):
                 conserved = True
             if self.direction == 'Output':  # convention: inputs to parent are positive
                 conserved_val *= -1
-            _print('%.3s %g' % (self.get_uuid(), conserved_val), level=2)
+            _print('%.3s %g' % (self.uuid, conserved_val), level=2)
 
         node_weight = self.node_weight(magnitude, scenario, observed)
         term = self.termination(scenario)
@@ -959,23 +959,56 @@ class LcFragment(LcEntity):
             frags_seen = set()
 
         if self.reference_entity is None:
-            if self.get_uuid() in frags_seen:
-                raise InvalidParentChild('Frag %s seeing self\n %s' % (self.get_uuid(), '; '.join(frags_seen)))
-            frags_seen.add(self.get_uuid())
+            if self.uuid in frags_seen:
+                raise InvalidParentChild('Frag %s seeing self\n %s' % (self.uuid, '; '.join(frags_seen)))
+            frags_seen.add(self.uuid)
         # print('Traversing %s\nfrags seen: %s\n' % (self, '; '.join(frags_seen)))
 
         if term.is_fg or term.term_node.entity_type == 'process':
             '''
             Handle foreground nodes and processes--> these can be quantity-conserving, but except for
-            balancing flows the flow magnitudes are determined at the time of construction
+            balancing flows the flow magnitudes are determined at the time of construction.
+
+            Balancing flow exchange values are always determined with respect to a unit activity of the terminal node.
+
+            This is messy so it deserves some notes.
+            the fragment's exchange value specifies the scaling factor for the terminal node, EXCEPT if the
+            fragment is a reference fragment (no parent) AND the terminal node is in the foreground.  In this case
+            ONLY, the exchange value functions as an inbound exchange value, and the node weight should be 1.0.
+            The prototypical example of this is a fragment for cultivation of 1 ha of corn, with the reference
+            flow being (e.g.) 9300 kg of corn.  The reference fragment's exchange value is 9300 kg; the reference
+             node's node weight is 1.0
+
+            If the reference node has a balancing flow (say, we want to balance carbon content), then the stock
+            value is the reference flow converted to the conservation quantity, e.g. 9300 * 0.43 = 3999 kg C, sign
+            negative since it's going out (note that the reference fragment's direction is 'Input' in this case
+            because direction is always interpreted relative to the parent).
+
+            So then we traverse the child flows, let's say none of them have kg C characterization, and so our stock
+            remains -3999 kg. WHen we hit the balancing fragment "atmospheric carbon in", we catch the BalanceFlowError
+            and come back to it.
+
+            When we come back, we re-negate the stock to +3999 and pass that as _balance to the balancing flow, which
+            becomnes that flow's exchange value (again w.r.t. this node's unit node weight).
+
+            IF the terminal node is a process, or if the node is an interior (non-reference) fragment, it's much easier.
+            The stock is simply the process's inbound exchange value (with respect to a unit activity level), or if
+            it's a foreground node then the stock is simply 1, and the node_weight already accounts for the exchange
+            value and scales the balancing flow correctly.
             '''
-            stock = ev * term.inbound_exchange_value  # balance measurement w.r.t. term node's unit magnitude
+            if term.is_fg:
+                if self.reference_entity is None:
+                    stock = ev  # ev IS inbound exchange value w.r.t. term node's unit magnitude
+                else:
+                    stock = 1.0  # balance measurement w.r.t. term node's unit magnitude
+            else:
+                stock = term.inbound_exchange_value  # balance measurement w.r.t. term node's unit magnitude
             bal_f = None
             if self._conserved_quantity is not None:
                 stock *= self.flow.cf(self._conserved_quantity)
                 if self.direction == 'Input':  # convention: inputs to self are positive
                     stock *= -1
-                _print('%.3s %g inbound-balance' % (self.get_uuid(), stock), level=2)
+                _print('%.3s %g inbound-balance' % (self.uuid, stock), level=2)
 
             for f in self.child_flows:
                 try:
@@ -1044,7 +1077,7 @@ class LcFragment(LcEntity):
             # for proper subfragments, need to determine child flow magnitudes based on traversal record
             subfrag_ffs, cons = the_ref.traverse(in_ex, scenario,
                                                  observed=observed, frags_seen=set(frags_seen))
-            ios = group_ios([f for f in subfrag_ffs if f.term.is_null])
+            ios = group_ios(self, subfrag_ffs)
             subfrags = [f for f in subfrag_ffs if not f.term.is_null]
             ref_io = None
 
@@ -1055,7 +1088,7 @@ class LcFragment(LcEntity):
                         _print('%s' % _zz)
                         _print('setting in_ex = %g' % in_ex)
                 ios = [_zz for _zz in ios if _zz.fragment is not term.term_node]
-                ref_io = GhostFragmentFlow(the_ref.flow, comp_dir(the_ref.direction))
+                ref_io = FragmentFlow.cutoff(self, the_ref.flow, comp_dir(the_ref.direction), in_ex)
                 _print('adding ghost ref_io to be found later')
                 ios.append(ref_io)
 
@@ -1084,7 +1117,7 @@ class LcFragment(LcEntity):
             # this part is uncertain [wow, this function needs cleaned up]
             if self.balance_flow:
                 # need to properly log our balance flow magnitude
-                _print('%.3s %g re-setting balance' % (self.get_uuid(), _balance / in_ex), level=2)
+                _print('%.3s %g re-setting balance' % (self.uuid, _balance / in_ex), level=2)
                 self._cache_balance_ev(_balance / in_ex, scenario, observed)
 
             # then we add the results of the subfragment, either in aggregated or disaggregated form
@@ -1165,6 +1198,12 @@ class FragmentFlow(object):
     ]
 
     """
+    @classmethod
+    def cutoff(cls, parent, flow, direction, magnitude, is_conserved=False):
+        fragment = GhostFragment(parent, flow, direction)
+        term = FlowTermination.null(fragment)
+        return cls(fragment, magnitude, magnitude, term, is_conserved)
+
     def __init__(self, fragment, magnitude, node_weight, term, is_conserved):
         self.fragment = fragment
         self.magnitude = magnitude
@@ -1179,14 +1218,16 @@ class FragmentFlow(object):
     def __str__(self):
         if self.term.is_null:
             term = '--:'
+            name = self.fragment.flow['Name']
         else:
             term = '-# '
-        return '%.5s  %10.3g [%6s] %s %s' % (self.fragment.get_uuid(), self.node_weight, self.fragment.direction,
-                                             term, self.fragment['Name'])
+            name = self.fragment['Name']
+        return '%.5s  %10.3g [%6s] %s %s' % (self.fragment.uuid, self.node_weight, self.fragment.direction,
+                                             term, name)
 
     def __add__(self, other):
         if isinstance(other, FragmentFlow):
-            if other.fragment is not self.fragment:
+            if other.fragment.uuid != self.fragment.uuid:
                 raise ValueError('Fragment flows do not belong to the same fragment')
             mag = other.magnitude
             nw = other.node_weight
@@ -1226,24 +1267,52 @@ class FragmentFlow(object):
         pass
 
 
-def group_ios(ios):
+def group_ios(parent, ios):
     """
+    Creates a list of cutoff flows from the inputs and outputs from a fragment traversal.
     ios is a list of null FragmentFlows
-    :param ios:
+    :param parent: the node generating the cutoffs
+    :param ios: a list of fragment flows whose termination is Null (non-nulls ignored)
     :return:
     """
-    out = dict()
+    out = defaultdict(float)
     for ff in ios:
-        key = (ff.fragment.flow, ff.fragment.direction)
-        if key in out:
-            out[key] += ff
-        else:
-            out[key] = ff
-    return [ff for ff in out.values()]
+        if ff.term.is_null:
+            key = (ff.fragment.flow, ff.fragment.direction)
+            out[key] += ff.magnitude
+    return [FragmentFlow.cutoff(parent, key[0], key[1], value) for key, value in out.items()]
 
 
-class GhostFragmentFlow(object):
-    def __init__(self, flow, direction):
-        self.fragment = GhostFrag(flow, direction)
-        self.magnitude = 1.0
-        self.term = FlowTermination.null(self.fragment)
+class GhostFragment(object):
+    """
+    A GhostFragment is a non-actual fragment used for reporting and aggregating fragment inputs and outputs
+      during traversal.
+    """
+    def __init__(self, parent, flow, direction):
+        self._parent = parent
+        self.flow = flow
+        self.direction = direction
+
+    @property
+    def uuid(self):
+        return self.flow.uuid
+
+    @property
+    def reference_entity(self):
+        return self._parent
+
+    @property
+    def is_background(self):
+        return False
+
+    @property
+    def dirn(self):
+        return {
+            'Input': '-<-',
+            'Output': '=>='
+        }[self.direction]
+
+    def __str__(self):
+        re = self.reference_entity.uuid[:7]
+        return '(%s) %s %.5s %s --:   [%s] %s' % (re, self.dirn, self.uuid, self.dirn,
+                                                  self.flow.unit, self.flow['Name'])

@@ -362,12 +362,20 @@ class QueryInterface(object):
         :param kwargs:
         :return:
         """
-        return self._perform_query('background', 'lcia', BackgroundRequired('No knowledge of background'),
+        return self._perform_query('background', 'bg_lcia', BackgroundRequired('No knowledge of background'),
                                    process, query_qty, ref_flow=ref_flow)
 
     """
     QuantityInterface
     """
+    def lcia_methods(self, **kwargs):
+        """
+        Retrieve a list of known LCIA methods.  This is going to be implementation-dependent
+        :return:
+        """
+        return self._perform_query('quantity', 'lcia_methods', QuantityRequired('Must have quantity interface'),
+                                   **kwargs)
+
     def get_quantity(self, quantity):
         """
         Retrieve a canonical quantity from a qdb

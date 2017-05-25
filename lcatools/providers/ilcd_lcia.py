@@ -97,18 +97,25 @@ class IlcdLcia(IlcdArchive):
                 self._load_factor(ns, factor, lcia, load_all_flows=load_all_flows)
         return lcia
 
-    def load_lcia(self, **kwargs):
+    def _load_lcia(self, **kwargs):
         for f in self.list_objects('LCIAMethod'):
             u = uuid_regex.search(f).groups()[0]
             if self._get_entity(u) is not None:
                 continue
 
             self.load_lcia_method(u, **kwargs)
+
+    def load_lcia(self, **kwargs):
+        self._load_lcia(**kwargs)
         self.check_counter()
 
     '''
     Quantity Interface
     '''
+    def lcia_methods(self, **kwargs):
+        self._load_lcia(load_all_flows=False)
+        return super(IlcdLcia, self).lcia_methods(**kwargs)
+
     def get_quantity(self, quantity):
         """
         Retrieve a canonical quantity from a qdb

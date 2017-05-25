@@ -19,7 +19,11 @@ class QuantityInterface(BasicInterface):
 
     def quantities(self, **kwargs):
         for q in self._archive.quantities(**kwargs):
-            yield self._qdb.get_canonical_quantity(q)
+            yield self.make_ref(self._qdb.get_canonical_quantity(q))
+
+    def lcia_methods(self, **kwargs):
+        for l in self._archive.lcia_methods(**kwargs):
+            yield self.make_ref(self._qdb.get_canonical_quantity(l))
 
     def _check_compartment(self, string):
         if string is None:

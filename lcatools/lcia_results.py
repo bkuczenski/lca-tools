@@ -472,8 +472,9 @@ class LciaResults(dict):
             self._indices.append(key)
 
     def add(self, value):
+        # TODO: add should cumulate components if LciaResult is already present
         assert isinstance(value, LciaResult)
-        self.__setitem__(value.quantity.get_uuid(), value)
+        self.__setitem__(value.quantity.uuid, value)
 
     def indices(self):
         for i in self._indices:
@@ -583,7 +584,7 @@ def traversal_to_lcia(ffs):
                 if q not in results.keys():
                     results[q] = LciaResult(quantity, scenario=v.scenario)
 
-                value = i.term.score_cache(quantity).total()
+                value = v.total()
                 if value * i.node_weight == 0:
                     continue
 

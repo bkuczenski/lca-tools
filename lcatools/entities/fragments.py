@@ -713,6 +713,9 @@ class LcFragment(LcEntity):
         self.terminate(FlowTermination(self, self), scenario=scenario)
 
     def set_background(self):
+        for scenario, term in self._terminations.items():
+            if term.term_node.entity_type == 'fragment':
+                raise ScenarioConflict('Cannot bg: Terminated to fragment in Scenario %s' % scenario)
         self._background = True
 
     def term_from_json(self, catalog, scenario, j):

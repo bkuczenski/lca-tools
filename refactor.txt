@@ -73,6 +73,9 @@ New plan: fetch() only works by directly accessing the catalog.  The interfaces 
 
 Need to figure out how this works w.r.t. the qdb.  I think the qdb should store its own characterized flows-- it is an LcArchive after all-- and the external_refs for those flows should be the flows' links (origin + ref).  The characterization data stays local in the catalog; the interface provides flows by reference anyway, so the way it works is: for foreground LCIA queries, the interface provides the inventory and the catalog consults the qdb for characterization.  for background LCIA queries, the interface provides LCIA results directly.
 
+Wed 2017-05-24 23:04:19 -0700
+
+Instead of this we soften things, and processes and quantities stay catalog refs, but flows are returned as entities. This way the flows accumulate characterizations over the instantiation of the archives.
 
 ==========
 Mon May 01 00:44:54 -0700 2017

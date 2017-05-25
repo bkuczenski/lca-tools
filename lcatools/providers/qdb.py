@@ -24,6 +24,7 @@ import os
 from collections import defaultdict
 
 from lcatools.from_json import from_json
+from lcatools.lcia_results import LciaResult
 from lcatools.providers.base import LcArchive
 from lcatools.flowdb.compartments import Compartment, CompartmentManager  # load_compartments, save_compartments, traverse_compartments, REFERENCE_EFLOWS
 from lcatools.characterizations import Characterization
@@ -34,6 +35,9 @@ from synlist import SynList, Flowables, InconsistentIndices, ConflictingCas
 REF_QTYS = os.path.join(os.path.dirname(__file__), 'data', 'elcd_reference_quantities.json')
 Q_SYNS = os.path.join(os.path.dirname(__file__), 'data', 'quantity_synlist.json')
 F_SYNS = os.path.join(os.path.dirname(__file__), 'data', 'flowable_synlist.json')
+
+class QuantityNotLoaded(Exception):
+    pass
 
 
 class CLookup(object):
@@ -74,14 +78,14 @@ class CLookup(object):
             for cf in cfs:
                 yield cf
 
-    def find(self, item, dist=3, return_first=True):
+    def find(self, item, dist=1, return_first=True):
         """
         Hunt for a matching compartment. 'dist' param controls the depth of search:
           dist = 0: equivalent to __getitem__
           dist = 1: also check compartment's children
           dist = 2: also check compartment's parent
-          XXX dist = 3: also check compartment's siblings XXX - canceled because this results in spurious matches
-        By default (dist==3), checks compartment self and children, parent, and siblings. Returns a set.
+          dist = 3: also check all compartment's parents until root. Useful for finding unit conversions.
+        By default (dist==1), checks compartment self and children. Returns a set.
         :param item: a Compartment
         :param dist: how far to search (with limits) (default: 1= compartment + children)
         :param return_first: stop hunting as soon as a cf is found
@@ -104,17 +108,21 @@ class CLookup(object):
             return results
 
         if dist > 1:
-            if item.parent in self._dict.keys():
-                results = results.union(self._dict[item.parent])
-        '''
+            item = item.parent
+            if item in self._dict.keys():
+                results = results.union(self._dict[item])
+
         if found(results):
             return results
 
         if dist > 2:
-            for s in item.parent.subcompartments():
-                if s in self._dict.keys():
-                    results = results.union(self._dict[s])
-        '''
+            while item.parent is not None:
+                item = item.parent
+                if item in self._dict.keys():
+                    results = results.union(self._dict[item])
+                if found(results):
+                    return results
+
         return results
 
 
@@ -141,7 +149,7 @@ class Qdb(LcArchive):
         self._f_dict = defaultdict(set)  # dict of flowable index to set of characterized quantities (by index)
 
     def add_new_quantity(self, q):
-        ind = self._q.add_set((q.external_ref, q.link, q['Name'], str(q)), merge=True)
+        ind = self._q.add_set(self._q_terms(q), merge=True)
         if self._q.entity(ind) is None:
             self._q.set_entity(ind, q)
         return ind
@@ -154,6 +162,17 @@ class Qdb(LcArchive):
         """
         self.add_new_quantity(q)
         return self.get_quantity(q.link)
+
+    def is_loaded(self, q):
+        """
+        Checks whether the given quantity has been indexed by checking for a list of flowables
+        :param q:
+        :return:
+        """
+        ind = self._q.index(q.link)
+        if ind in self._q_dict:
+            return True
+        return False
 
     def _index_quantities(self):
         for q in self.quantities():
@@ -211,13 +230,22 @@ class Qdb(LcArchive):
         :param quantity:
         :return:
         """
-        return self._q.index(next(k for k in (quantity.external_ref, quantity.link, quantity['Name'])
-                                  if self._q.index(k) is not None))
+        try:
+            ind = self._q.index(next(k for k in self._q_terms(quantity)
+                                     if self._q.index(k) is not None))
+        except StopIteration:
+            ind = self.add_new_quantity(quantity)
+        return ind
 
-    def _flow_terms(self, flow):
-        if flow['CasNumber'] is None or len(flow['CasNumber']) <5:
+    @staticmethod
+    def _flow_terms(flow):
+        if flow['CasNumber'] is None or len(flow['CasNumber']) < 5:
             return flow['Name'], flow.link
         return flow['Name'], flow['CasNumber'], flow.link
+
+    @staticmethod
+    def _q_terms(q):
+        return q.external_ref, q.link, q['Name'], str(q)
 
     def add_cf(self, factor):
         """
@@ -253,7 +281,8 @@ class Qdb(LcArchive):
                 cfs.add(item)
         return cfs
 
-    def convert(self, flow=None, flowable=None, compartment=None, reference=None, query=None, locale='GLO'):
+    def convert(self, flow=None, flowable=None, compartment=None, reference=None, query=None, query_q_ind=None,
+                locale='GLO'):
         """
         EITHER flow OR (flowable AND compartment AND reference) must be non-None.
         :param flow:
@@ -261,10 +290,12 @@ class Qdb(LcArchive):
         :param compartment:
         :param reference:
         :param query:
+        :param query_q_ind: index of query quantity, to save time
         :param locale:
         :return: a floating point conversion
         """
-        query_q_ind = self._get_q_ind(query)
+        if query_q_ind is None:
+            query_q_ind = self._get_q_ind(query)
         if flow is None:
             ref_q_ind = self._q.index(reference)
             f_inds = [self._f.index(flowable)]
@@ -273,7 +304,7 @@ class Qdb(LcArchive):
                 raise ValueError('Too many elements specified')
             ref_q_ind = self._get_q_ind(flow.reference_entity)
             compartment = flow['Compartment']
-            f_inds = self.find_flowables(self._flow_terms(flow))
+            f_inds = self.find_flowables(*self._flow_terms(flow))
 
         cfs = self._lookup_cfs(f_inds, compartment, query_q_ind)
 
@@ -292,11 +323,38 @@ class Qdb(LcArchive):
                                                                                          cf.flow.reference_entity))
                     continue
             vals.append(factor)
+        if len(vals) == 0:
+            return None
         if len(set(vals)) > 1:
             print('Multiple CFs found: %s' % vals)
             print('Flow: %s [%s]' % (flow, flow.unit()))
             print('Quantity: %s' % query)
         return vals[0]
+
+    def do_lcia(self, quantity, inventory, locale='GLO'):
+        """
+        takes a quantity and an exchanges generator; returns an LciaResult for the given quantity
+        :param quantity:
+        :param inventory: generates exchanges
+        :param locale: ['GLO']
+        :return: an LciaResult whose components are the flows of the exchanges
+        """
+        if not self.is_loaded(quantity):
+            raise QuantityNotLoaded('%s' % quantity)
+        q = self.get_quantity(quantity.link)
+        q_ind = self._get_q_ind(q)
+        r = LciaResult(q)
+        for x in inventory:
+            if not x.flow.has_characterization(q):
+                factor = self.convert(flow=x.flow, query_q_ind=q_ind, locale=locale)
+                if factor is not None:
+                    x.flow.add_characterization(q, value=factor)
+                else:
+                    x.flow.add_characterization(q)
+            if x.flow.cf(q) is not None:
+                r.add_component(x.flow.uuid, entity=x.flow)
+                r.add_score(x.flow.uuid, x, x.flow.factor(q), locale)
+        return r
 
     '''
     Quantity Interface
@@ -392,4 +450,3 @@ class Qdb(LcArchive):
         :return:
         """
         pass
-

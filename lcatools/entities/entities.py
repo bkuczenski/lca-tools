@@ -63,6 +63,14 @@ class LcEntity(object):
     def origin(self):
         return self._origin
 
+    @property
+    def is_entity(self):
+        """
+        Used to distinguish between entities and catalog refs (which answer False)
+        :return: True for LcEntity subclasses
+        """
+        return True
+
     def map_origin(self, omap, fallback=None):
         """
         This is used to propagate a change in origin semantics. Provide a dict that maps old origins to new origins.

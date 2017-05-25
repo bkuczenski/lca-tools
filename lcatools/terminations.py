@@ -365,19 +365,58 @@ class FlowTermination(object):
             return
         q_run = []
         for q in quantities:
-            if q.get_uuid() not in self._score_cache.keys():
+            if q.uuid not in self._score_cache.keys():
                 q_run.append(q)
         if len(q_run) != 0:
             if self.is_fg or self.term_node.entity_type == 'process':
                 results = lcia(self.term_node, self.term_flow, q_run)
                 self._score_cache.update(results)
 
-    def score_cache(self, quantity=None):
+    def _unobserved_exchanges(self):
+        """
+        Generator which yields exchanges from the term node's inventory that are not found among the child flows, for
+          LCIA purposes
+        :return:
+        """
+        if self.is_fg:
+            x = ExchangeValue(self._parent, self._parent.flow, self._parent.direction)
+            yield x
+        else:
+            children = set()
+            for c in self._parent.child_flows:
+                children.add((c.flow, c.direction))
+            for x in self.term_node.inventory(ref_flow=self.term_flow):
+                if (x.flow, x.direction) not in children:
+                    yield x
+
+    def compute_unit_score(self, quantity, qdb):
+        """
+        three different ways to do this.
+        1- we are fg flow: give qdb self as exchange
+        2- we are fg process: give qdb unobserved exchanges
+        3- we are bg process: ask catalog to give us lcia
+        :param quantity:
+        :param qdb:
+        :return:
+        """
+        if self._parent.is_background:
+            res = self.term_node.bg_lcia(ref_flow=self.term_flow, lcia_qty=quantity.link)
+        else:
+            try:
+                locale = self.term_node['SpatialScope']
+            except KeyError:
+                locale = 'GLO'
+            res = qdb.do_lcia(quantity, self._unobserved_exchanges(), locale=locale)
+        self._score_cache[quantity.uuid] = res
+        return res
+
+    def score_cache(self, quantity=None, qdb=None):
         if quantity is None:
             return self._score_cache
-        if quantity.get_uuid() in self._score_cache:
-            return self._score_cache[quantity.get_uuid()]
-        return None
+        if quantity.uuid in self._score_cache:
+            return self._score_cache[quantity.uuid]
+        else:
+            return self.compute_unit_score(quantity, qdb)
 
     def score_cache_items(self):
         return self._score_cache.items()

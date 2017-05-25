@@ -76,6 +76,10 @@ class CatalogRef(object):
     def external_ref(self):
         return self._ref
 
+    @property
+    def is_entity(self):
+        return False
+
     def __str__(self):
         if self._known:
             name = ' ' + self['Name']
@@ -196,6 +200,6 @@ class CatalogRef(object):
         self._require_process()
         return self._query.lci(self.external_ref, ref_flow)
 
-    def lcia(self, ref_flow, lcia_qty):
+    def bg_lcia(self, ref_flow, lcia_qty):
         self._require_process()
         return self._query.bg_lcia(self.external_ref, ref_flow, lcia_qty)

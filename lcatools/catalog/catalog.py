@@ -257,6 +257,8 @@ class LcCatalog(object):
         return sorted(list(origins))
 
     def fetch(self, ref):
+        if ref.is_entity:
+            return ref
         return self._dereference(ref.origin, ref.external_ref, INTERFACE_TYPES)
 
     def entity_type(self, ref):
@@ -270,3 +272,15 @@ class LcCatalog(object):
         for cf in ref.factors():
             self._qdb.add_cf(cf)
         self._lcia_methods.add(lcia)
+
+    def lcia(self, p_ref, q_ref):
+        """
+        Perform LCIA of a process (p_ref) with respect to a given LCIA quantity (q_ref).  Returns an LciaResult.
+        :param p_ref:
+        :param q_ref: either a catalog_ref, or a quantity if the factors are already loaded.
+        :return:
+        """
+        q_e = self._qdb.get_canonical_quantity(self.fetch(q_ref))
+        if not self._qdb.is_loaded(q_e):
+            self.load_lcia_factors(q_ref)
+        return self._qdb.do_lcia(q_e, p_ref.inventory(), locale=p_ref['SpatialScope'])

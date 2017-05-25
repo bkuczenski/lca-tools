@@ -7,8 +7,11 @@ import os
 import json
 
 from lcatools.catalog.catalog import LcCatalog
-from lcatools.providers.foreground import LcForeground, AmbiguousReference
+from lcatools.providers.foreground import LcForeground  # , AmbiguousReference
 from lcatools.entities.editor import FragmentEditor
+from lcatools.lcia_results import LciaResult
+from lcatools.exchanges import comp_dir, ExchangeValue
+from lcatools.characterizations import Characterization
 
 
 class ForegroundCatalog(LcCatalog):
@@ -112,7 +115,7 @@ class ForegroundCatalog(LcCatalog):
 
     def lookup(self, ref):
         """
-        Here I am making a dangerous decision to treat foregrounds differently
+        Here I am making a dangerous decision to treat foregrounds differently - no interface, no abstraction
         :param ref:
         :return:
         """
@@ -129,3 +132,40 @@ class ForegroundCatalog(LcCatalog):
         if ent is None:
             ent = super(ForegroundCatalog, self).fetch(ref)
         return ent
+
+    def fragment_lcia(self, fragmentflows, q_ref):
+        """
+        Takes a stack of FragmentFlow objects and performs LCIA for the given quantity.
+        :param fragmentflows:
+        :param q_ref:
+        :return:
+        """
+        q = self.fetch(q_ref)
+        if not self._qdb.is_loaded(q_ref):
+            self.load_lcia_factors(q_ref)
+        result = LciaResult(q)
+        for ff in fragmentflows:
+            if ff.term.is_null:
+                continue
+
+            if ff.node_weight == 0:
+                continue
+
+            v = ff.term.score_cache(quantity=q, qdb=self._qdb)
+            value = v.total()
+            if value == 0:
+                continue
+
+            if ff.term.direction == ff.fragment.direction:
+                # if the directions collide (rather than complement), the term is getting run in reverse
+                value *= -1
+
+            result.add_component(ff.fragment.uuid, entity=ff)
+            x = ExchangeValue(ff.fragment, ff.term.term_flow, ff.term.direction, value=ff.node_weight)
+            try:
+                l = ff.term.term_node['SpatialScope']
+            except KeyError:
+                l = None
+            f = Characterization(ff.term.term_flow, q, value=value, location=l)
+            result.add_score(ff.fragment.uuid, x, f, l)
+        return result

@@ -12,6 +12,7 @@ from lcatools.entities.editor import FragmentEditor
 from lcatools.lcia_results import LciaResult
 from lcatools.exchanges import comp_dir, ExchangeValue
 from lcatools.characterizations import Characterization
+from lcatools.terminations import SubFragmentAggregation
 
 
 class ForegroundCatalog(LcCatalog):
@@ -151,7 +152,10 @@ class ForegroundCatalog(LcCatalog):
             if ff.node_weight == 0:
                 continue
 
-            v = ff.term.score_cache(quantity=q, qdb=self._qdb)
+            try:
+                v = ff.term.score_cache(quantity=q, qdb=self._qdb)
+            except SubFragmentAggregation:
+                v = self.fragment_lcia(ff.term.subfragments, q_ref)
             value = v.total()
             if value == 0:
                 continue

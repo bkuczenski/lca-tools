@@ -17,6 +17,10 @@ class FlowConversionError(Exception):
     pass
 
 
+class SubFragmentAggregation(Exception):
+    pass
+
+
 class FlowTermination(object):
     """
     these are stored by scenario in a dict on the mainland
@@ -103,6 +107,7 @@ class FlowTermination(object):
                 entity = fragment
         self._term = entity  # this must have origin, external_ref, and entity_type, and be operable (if ref)
         self._descend = True
+        self._subfragment_flows = []
         self.term_flow = None
         self._cached_ev = 1.0
         self._score_cache = LciaResults(fragment)
@@ -157,18 +162,34 @@ class FlowTermination(object):
 
     @property
     def is_frag(self):
+        """
+        Termination is a fragment
+        :return:
+        """
         return (not self.is_null) and (self.term_node.entity_type == 'fragment')
 
     @property
     def is_fg(self):
+        """
+        Termination is parent
+        :return:
+        """
         return self.is_frag and (self.term_node is self._parent)
 
     @property
     def is_bg(self):
+        """
+        parent is marked background, or termination is a background fragment
+        :return:
+        """
         return self._parent.is_background or (self.is_frag and self.term_node.is_background)
 
     @property
     def is_subfrag(self):
+        """
+        Termination is a non-background, non-self fragment
+        :return:
+        """
         return self.is_frag and (not self.is_fg) and (not self.is_bg)
 
     @property
@@ -342,11 +363,17 @@ class FlowTermination(object):
 
     def aggregate_subfragments(self, subfrags):
         """
-        Performs an aggregation of the subfragment score caches to compute a fragment score cache. use with caution!
-        :param subfrags:
+        Stores enclosed subfragments for later aggregation. This gets set during traversal and used during LCIA.
+        :param subfrags: list of FragmentFlows to be aggregated
         :return:
         """
-        self._score_cache = traversal_to_lcia(subfrags)
+        self._subfragment_flows = subfrags
+
+    @property
+    def subfragments(self):
+        if self.is_subfrag and (self.descend is False):
+            return self._subfragment_flows
+        return []
 
     def flowdb_results(self, lcia_results):
         self._score_cache = lcia_results
@@ -381,6 +408,9 @@ class FlowTermination(object):
         if self.is_fg:
             x = ExchangeValue(self._parent, self._parent.flow, self._parent.direction)
             yield x
+        elif self.is_frag:
+            for x in []:
+                yield x
         else:
             children = set()
             for c in self._parent.child_flows:
@@ -391,7 +421,7 @@ class FlowTermination(object):
 
     def compute_unit_score(self, quantity, qdb):
         """
-        three different ways to do this.
+        four different ways to do this.
         1- we are fg flow: give qdb self as exchange
         2- we are fg process: give qdb unobserved exchanges
         3- we are bg process: ask catalog to give us lcia
@@ -399,8 +429,11 @@ class FlowTermination(object):
         :param qdb:
         :return:
         """
+        if self.is_subfrag:
+            raise SubFragmentAggregation  # to be caught
+
         if self._parent.is_background:
-            res = self.term_node.bg_lcia(ref_flow=self.term_flow, lcia_qty=quantity.link)
+            res = self.term_node.bg_lcia(lcia_qty=quantity, ref_flow=self.term_flow.external_ref)
         else:
             try:
                 locale = self.term_node['SpatialScope']

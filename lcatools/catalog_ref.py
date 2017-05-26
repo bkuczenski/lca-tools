@@ -58,6 +58,7 @@ class CatalogRef(object):
         """
         self._origin = origin
         self._ref = ref
+        self._uuid = None
 
         self._etype = entity_type
 
@@ -78,8 +79,12 @@ class CatalogRef(object):
 
     @property
     def uuid(self):
-        if self._query is not None:
-            return self._query.get_uuid(self.external_ref)
+        if self._uuid is None:
+            if self._query is not None:
+                self._uuid = self._query.get_uuid(self.external_ref)
+            else:
+                raise NoCatalog('Unable to lookup UUID')
+        return self._uuid
 
     def get_uuid(self):
         """

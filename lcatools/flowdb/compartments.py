@@ -44,7 +44,7 @@ class CompartmentManager(object):
         self._local_file = None
         if file is not None:
             self.set_local(file)
-        self._c_dict = dict()  # dict of '; '.join(compartments) to Compartment -- an example of premature optimization
+        self._c_dict = dict()  # dict of '; '.join(compartments) to Compartment -- to avoid repeated crawls
 
     @property
     def known_names(self):
@@ -151,21 +151,23 @@ class CompartmentManager(object):
             return self._c_dict[cs]
 
         match = self._crawl(compartment_name, check_elem=check_elem)
-        if match is None and check_elem is False:
-            if interact:
-                try:
-                    c = self._merge_compartment(compartment_name, force=force)
-                    match = self._crawl(compartment_name)
-                    if c is match and c is not None:
-                        print('match: %s' % match.to_list())
-                        self._c_dict[cs] = match
-                        return match
-                    else:
-                        raise MissingCompartment('Merge failed: %s' % c)
-                except ProtectedReferenceFile:
-                    pass
-            return None
-            # raise MissingCompartment('%s' % compartment_name)
+        if check_elem is False:
+            if match is None:
+                if interact:
+                    try:
+                        c = self._merge_compartment(compartment_name, force=force)
+                        match = self._crawl(compartment_name)
+                        if c is match and c is not None:
+                            print('match: %s' % match.to_list())
+                            self._c_dict[cs] = match
+                            return match
+                        else:
+                            raise MissingCompartment('Merge failed: %s' % c)
+                    except ProtectedReferenceFile:
+                        pass
+                return None
+                # raise MissingCompartment('%s' % compartment_name)
+            self._c_dict[cs] = match  # cache for later discovery
         return match
 
     def add_compartment(self, compartment_name, parent='Intermediate Flows', force=False):
@@ -187,9 +189,13 @@ class CompartmentManager(object):
         """
         Recursively and interactively merge a compartment specifier into the existing hierarchy.
 
-        crawls the compartment hierarchy until it runs out of matches. Beginning with the last match, successively
-        prompts the user to pick a subcompartment to descend into, to add the current term as a synonym, or to add
-        the current term as a subcompartment.
+        crawls the compartment hierarchy until it runs out of matches.  If the last match is an intermediate
+        compartment, creates new subcompartments that correspond to the missing compartment name.
+
+        If the last match is an elementary compartment, user intervention is required to ensure that it is matched to
+        the right part of the existing compartment hierarchy.  Beginning with the last match, successively prompts the
+        user to pick a subcompartment to descend into, to add the current term as a synonym, or to add the current
+        term as a subcompartment.
 
         :param compartment_name:
         :param force: [False] set to True in order to modify the reference eflows
@@ -206,14 +212,17 @@ class CompartmentManager(object):
                 my_missing.pop(0)
                 compartment = sub
             else:
+                if not compartment.is_elementary:
+                    # automatically create subcompartments for intermediate
+                    return compartment.add_subs(my_missing)
                 print('Missing compartment: %s' % my_missing[0])
                 subs = sorted(s.name for s in compartment.subcompartments())
                 print('subcompartments of %s:' % compartment)
                 c = _pick_list(subs, 'Merge "%s" into %s' % (my_missing[0], compartment),
                                'Create new Subcompartment of %s' % compartment)
-                if c == (None, 0):
+                if c == (None, 0):  # merge
                     compartment.add_syn(my_missing.pop(0))
-                elif c == (None, 1):  # now we add all remaining compartments
+                elif c == (None, 1):  # create sub
                     return compartment.add_subs(my_missing)
                 elif c == (None, None):
                     raise ValueError('User break')

@@ -114,7 +114,7 @@ class IlcdLcia(IlcdArchive):
     Quantity Interface
     '''
     def lcia_methods(self, **kwargs):
-        self._load_lcia(load_all_flows=False)
+        self._load_lcia(load_all_flows=None)
         return super(IlcdLcia, self).lcia_methods(**kwargs)
 
     def get_quantity(self, quantity):

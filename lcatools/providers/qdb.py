@@ -375,8 +375,8 @@ class Qdb(LcArchive):
                 else:
                     x.flow.add_characterization(q)
             if x.flow.cf(q) is not None:
-                r.add_component(x.flow.uuid, entity=x.flow)
-                r.add_score(x.flow.uuid, x, x.flow.factor(q), locale)
+                r.add_component(x.flow.external_ref, entity=x.flow)
+                r.add_score(x.flow.external_ref, x, x.flow.factor(q), locale)
         return r
 
     '''

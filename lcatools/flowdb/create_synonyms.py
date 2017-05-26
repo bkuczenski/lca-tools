@@ -5,7 +5,7 @@ import re
 from lcatools.providers.ecospold2 import EcospoldV2Archive
 from lcatools.providers.ilcd_lcia import IlcdLcia
 from lcatools.providers.ilcd import grab_flow_name
-from lcatools.providers.xml_widgets import find_tag, find_common, find_ns
+from lcatools.providers.xml_widgets import find_tag, find_tags, find_common, find_ns
 from lcatools.flowdb.synlist import Flowables, InconsistentIndices, ConflictingCas
 
 
@@ -20,7 +20,7 @@ SYNONYMS = os.path.join(os.path.dirname(__file__), 'synonyms.json')
 def get_ecospold_exchanges(archive=ECOSPOLD, prefix='datasets', file=ES_FILE):
     E = EcospoldV2Archive(archive, prefix=prefix)
     o = E.objectify(file)
-    return find_tag(o, 'elementaryExchange')
+    return find_tags(o, 'elementaryExchange')
 
 
 def ilcd_flow_generator(archive=ELCD, **kwargs):
@@ -54,7 +54,7 @@ def synonyms_from_ecospold_exchange(exch):
     cas = exch.get('casNumber')
     if cas is not None:
         syns.add(cas)
-    synonym_tag = find_tag(exch, 'synonym')
+    synonym_tag = find_tags(exch, 'synonym')
     if len(synonym_tag) == 1:
         # parse the comma-separated list
         if bool(re.search('etc\.', str(synonym_tag[0]))):
@@ -79,12 +79,12 @@ def synonyms_from_ilcd_flow(flow):
     syns = set()
     name = grab_flow_name(flow, ns=ns)
     syns.add(name)
-    uid = str(find_common(flow, 'UUID')[0]).strip()
+    uid = str(find_common(flow, 'UUID')).strip()
     syns.add(uid)
-    cas = str(find_tag(flow, 'CASNumber', ns=ns)[0]).strip()
+    cas = str(find_tag(flow, 'CASNumber', ns=ns)).strip()
     if cas != '':
         syns.add(cas)
-    for syn in find_common(flow, 'synonyms'):
+    for syn in find_tags(flow, 'synonyms', ns='common'):
         for x in str(syn).split(';'):
             if x.strip() != '' and x.strip().lower() != 'wood':
                 syns.add(x.strip())

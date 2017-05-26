@@ -31,6 +31,65 @@ TODO:
  - BackgroundManager; need to split into the matrix-handling part and the interface-providing part
 
 ==========
+Thu May 25 14:49:58 -0700 2017
+
+I need to work out the argument types.  At this point I am passing a mishmash of entities, catalog refs, and strings among all the various layers of the catalog interface, and it's super messy.
+
+What's the story here, anyway?
+
+ 1- The original idea was to use CatalogRefs for everything, and provide them with the functionality necessary to acquire data from their data sources via the catalog interface.  This in particular was how term nodes were supposed to obtain inventory + lcia results during fragment traversal and fragment LCIA.
+
+ 2- There was also an idea to make everything REST-ful and text based, where we could submit a query via an HTML request and get back correct information.
+  * a major monkey wrench to this is that external references (in ILCD) contain slashes, which complicates token extraction from the request.
+  * Anyway, this does not necessarily apply to the use of CatalogRefs or the QueryInterface, since those will ultimately be accessed via wrappers if an HTTP layer is added.
+
+ 3- Then, complicating matters is the requirement that flow entities somehow maintain their characterization information, which they get from the Qdb, and which led to the decision that QueryInterface functions would return catalog refs for processes + quantities, but actual entities for flows.
+
+Now we are faced with the actual application, where we have a node in a fragment, which is a background process, and we want to get LCIA of it using a quantity catalog ref.  Presently, the qdb is expecting to get a synonym string, which it can then lookup in its Synlist for quantities.  But we are passing quantity CatalogRefs because we also want the Qdb to be able to load factors BEFORE answering the query.
+
+Let's review the various layers again:
+
+QueryInterface: Directly from the code, the documentation says "The arguments to a query should always be text strings, not entities.  When in doubt, use the external_ref."
+
+That's easy enough.  That is consistent with how the Interface Providers are written.  But I've already relaxed things, expecting that catalog refs (or even literal flow entities) be passed as ref_flow arguments when asking for process references.  Well, not exactly- those things are happening in the CatalogRef class itself, not via the query interface.
+
+The only case where we really do need to make an exception is when the Qdb is involved, because the Qdb may need to load quantity factors.  In that case, we should really require that quantities, when supplied as arguments, strictly be either entities or catalog refs.  but really catalog refs, because entities don't have the capacity to invoke a query interface.  We could construct a ref from an entity from *within* the catalog.
+
+What are all the instances where a quantity is passed as an argument?
+
+ * bg_lcia
+
+that may be it.
+
+The catalog has to be the thing to add the CFs, since the Qdb doesn't have the capability to lookup factors (though if it had a catalog ref, it could just ask the ref to do it.)
+
+BUT last night I made the late-night, pot-addled decision to continue to use quantity uuid as the key in flow termination Score Caches-- why? because the LciaResults dict gives me the ability to specify a desired quantity only by specifying a unique string.startswith, and if I were using external refs, I would need to specify 'lciaresults/37' instead of just '37'.  Not really a good reason to make an architectural decision.
+
+The qdb currently accepts quantities all kinds of different ways:
+
+Expects a string / synonym:
+
+ - get_quantity(synonym)
+ - flowables
+ - factors
+
+Expects an entity or ref:
+
+ - _q_terms
+ - add_new_quantity
+ - do_lcia - agnostic; but if str, then canonical entity must be ref in order to auto-load CFs
+
+Agnostic:
+
+ - _get_q_ind -> converts everything to index
+ - is_loaded
+ - get_canonical_quantity
+ - convert: uses _get_q_ind for both reference and query
+
+
+
+
+==========
 Thu May 18 11:41:38 -0700 2017
 
 Background overview:

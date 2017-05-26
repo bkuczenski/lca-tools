@@ -1,3 +1,4 @@
+from lcatools.background.product_flow import ProductFlow
 
 
 class BackgroundProxy(object):
@@ -13,19 +14,33 @@ class BackgroundProxy(object):
     '''
     @property
     def foreground_flows(self):
-        pass
+        """
+        No foreground flows for proxy BG archives
+        :return:
+        """
+        for x in []:
+            yield x
 
     @property
     def background_flows(self):
-        pass
+        for p in self._archive.processes():
+            for rx in p.reference_entity:
+                yield ProductFlow(None, p, rx.flow)
 
     @property
     def exterior_flows(self):
-        pass
+        for x in []:
+            yield x
 
     def foreground(self, process, ref_flow=None):
-        pass
+        """
+        for proxy BG archives, the foreground is just the process's reference exchange
+        :param process:
+        :param ref_flow:
+        :return:
+        """
+        return process.reference(flow=ref_flow)
 
     def lci(self, process, ref_flow=None):
-        pass
-
+        for x in process.exchanges(reference=ref_flow):
+            yield x

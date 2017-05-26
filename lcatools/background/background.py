@@ -196,7 +196,7 @@ class BackgroundEngine(object):
         """
         if termination is None:
             raise ValueError('Must supply a termination')
-        k = (flow.uuid, termination.uuid)
+        k = (flow.external_ref, termination.external_ref)
         if k in self._product_flows:
             return self.product_flow(self._product_flows[k])
         else:
@@ -209,7 +209,7 @@ class BackgroundEngine(object):
         return pf
 
     def _add_emission(self, flow, direction):
-        key = (flow.uuid, direction)
+        key = (flow.external_ref, direction)
         if key in self._emissions:
             return self._ef_index[self._emissions[key]]
         else:

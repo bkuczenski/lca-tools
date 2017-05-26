@@ -77,6 +77,29 @@ class CatalogRef(object):
         return self._ref
 
     @property
+    def uuid(self):
+        if self._query is not None:
+            return self._query.get_uuid(self.external_ref)
+
+    def get_uuid(self):
+        """
+        DEPRECATED
+        :return:
+        """
+        return self.uuid
+
+    def validate(self):
+        if self._query is None:
+            return False
+        return True
+
+    def unit(self):
+        if self.entity_type == 'quantity':
+            return self.reference_entity.unitstring()
+        print('CatalogRef unit burp')
+        return None
+
+    @property
     def is_entity(self):
         return False
 
@@ -158,6 +181,12 @@ class CatalogRef(object):
     def references(self):
         return self._query.get_reference(self.external_ref)
 
+    def reference(self, flow):
+        self._require_process()
+        for x in self.references():
+            if x.flow == flow:
+                return x
+
     @property
     def reference_entity(self):
         return self._query.get_reference(self.external_ref)
@@ -200,6 +229,6 @@ class CatalogRef(object):
         self._require_process()
         return self._query.lci(self.external_ref, ref_flow)
 
-    def bg_lcia(self, ref_flow, lcia_qty):
+    def bg_lcia(self, lcia_qty, ref_flow=None):
         self._require_process()
-        return self._query.bg_lcia(self.external_ref, ref_flow, lcia_qty)
+        return self._query.bg_lcia(self.external_ref, lcia_qty, ref_flow=ref_flow)

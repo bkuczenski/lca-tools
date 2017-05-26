@@ -50,6 +50,9 @@ class QueryInterface(object):
 
     The arguments to a query should always be text strings, not entities.  When in doubt, use the external_ref.
 
+    The EXCEPTION is the bg_lcia routine, which works best (auto-loads characterization factors) if the query quantity
+    is a catalog ref.
+
     The resolver performs fuzzy matching, meaning that a generic query (such as 'local.ecoinvent') will return both
     exact resources and resources with greater semantic specificity (such as 'local.ecoinvent.3.2.apos').
     All queries accept the "strict=" keyword: set to True to only accept exact matches.
@@ -126,6 +129,9 @@ class QueryInterface(object):
     def get_reference(self, external_ref):
         return self._perform_query(INTERFACE_TYPES, 'get_reference', EntityNotFound('%s' % external_ref), external_ref)
 
+    def get_uuid(self, external_ref):
+        return self._perform_query(INTERFACE_TYPES, 'get_uuid', EntityNotFound('%s' % external_ref), external_ref)
+
     """
     CatalogInterface core methods
     These are the main tools for describing information about the contents of the archive
@@ -171,15 +177,6 @@ class QueryInterface(object):
     API functions- entity-specific -- get accessed by catalog ref
     index interface
     """
-    def reference(self, eid):
-        """
-        Retrieve entity's reference(s)
-        :param eid:
-        :return:
-        """
-        ent = self.get(eid)
-        return ent.reference_entity
-
     def terminate(self, flow, direction=None):
         """
         Find processes that match the given flow and have a complementary direction
@@ -266,34 +263,40 @@ class QueryInterface(object):
     """
     def foreground_flows(self, search=None):
         """
+        Yield a list of ProductFlows, which serialize to: origin, process external ref, reference flow external ref,
+          direction.
 
         :param search:
-        :return:
+        :return: ProductFlows
         """
         return self._perform_query('background', 'foreground_flows', BackgroundRequired('No knowledge of background'),
                                    search=search)
 
     def background_flows(self, search=None):
         """
+        Yield a list of ProductFlows, which serialize to: origin, process external ref, reference flow external ref,
+          direction.
 
         :param search:
-        :return:
+        :return: ProductFlows
         """
         return self._perform_query('background', 'background_flows', BackgroundRequired('No knowledge of background'),
                                    search=search)
 
     def exterior_flows(self, direction=None, search=None):
         """
+        Yield a list of ExteriorFlows or cutoff flows, which serialize to flow, direction
 
         :param direction:
         :param search:
-        :return:
+        :return: ExteriorFlows
         """
         return self._perform_query('background', 'exterior_flows', BackgroundRequired('No knowledge of background'),
                                    search=search)
 
     def cutoffs(self, direction=None, search=None):
         """
+        Exterior Intermediate Flows
 
         :param direction:
         :param search:
@@ -304,6 +307,7 @@ class QueryInterface(object):
 
     def emissions(self, direction=None, search=None):
         """
+        Exterior Elementary Flows
 
         :param direction:
         :param search:
@@ -357,7 +361,8 @@ class QueryInterface(object):
         """
         returns an LciaResult object, aggregated as appropriate depending on the interface's privacy level.
         :param process:
-        :param query_qty:
+        :param query_qty: if this is a catalog ref, the Qdb will auto-load characterization factors.  If the
+        characterization factors are already loaded, a string reference will suffice.
         :param ref_flow:
         :param kwargs:
         :return:

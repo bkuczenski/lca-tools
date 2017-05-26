@@ -163,10 +163,10 @@ The query returns a raw float.  Someday the query may return a value with uncert
 
 The query returns one or a list of LciaResult objects, whose serializations are identical to those of the Antelope spec.
 
-## R6 - Flow Terminations
+## R6 - Flow Terminations or Product Flows
 
 The query returns a list of processes and reference flows and directions.  These are highly similar to R2, but they are relevant in background systems because they provide reference products to upstream processes.  They also will be adapted to include fragment-flow terminations, for queries involving study models.  
 
-## R7 - External flows
+## R7 - Exterior flows
 
 The query returns a list of flows with directions.  The flows are included as links rather than serialized entities.

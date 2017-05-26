@@ -26,9 +26,6 @@ class IndexInterface(BasicInterface):
     def get(self, eid):
         return self.make_ref(self._archive.retrieve_or_fetch_entity(eid))
 
-    def reference(self, eid):
-        return self._archive.retrieve_or_fetch_entity(eid).reference_entity
-
     def terminate(self, flow, direction=None):
         for p in self._archive.terminate(flow, direction=direction):
             yield self.make_ref(p)

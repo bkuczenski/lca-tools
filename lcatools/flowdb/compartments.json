@@ -124,6 +124,7 @@
                   "elementary": true,
                   "name": [
                     "industrial",
+                    "Emissions to industrial soil",
                     "Emissions to non-agricultural soil",
                     "Heavy metals to industrial soil",
                     "Other emissions to industrial soil"

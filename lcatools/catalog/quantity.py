@@ -18,12 +18,16 @@ class QuantityInterface(BasicInterface):
         self._compartments = dict()
 
     def quantities(self, **kwargs):
-        for q in self._archive.quantities(**kwargs):
-            yield self.make_ref(self._qdb.get_canonical_quantity(q))
+        for q_e in self._archive.quantities(**kwargs):
+            q_ref = self.make_ref(q_e)
+            self._qdb.get_canonical_quantity(q_ref)
+            yield q_ref
 
     def lcia_methods(self, **kwargs):
         for l in self._archive.lcia_methods(**kwargs):
-            yield self.make_ref(self._qdb.get_canonical_quantity(l))
+            l_ref = self.make_ref(l)
+            self._qdb.get_canonical_quantity(l_ref)
+            yield l_ref
 
     def _check_compartment(self, string):
         if string is None:

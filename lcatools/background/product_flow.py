@@ -25,7 +25,7 @@ class ProductFlow(object):
         self._process = process
         self._direction = None
 
-        self._hash = (flow.uuid, None)
+        self._hash = (flow.external_ref, None)
         self._inbound_ev = 1.0
 
         if process is None:
@@ -33,9 +33,9 @@ class ProductFlow(object):
 
         if len([x for x in process.reference_entity if x.flow == flow]) == 0:
             # still a cutoff- raise a flag but not an error
-            print('NoMatchingReference: Flow: %s, Termination: %s' % (flow.uuid, process.uuid))
+            print('NoMatchingReference: Flow: %s, Termination: %s' % (flow.external_ref, process.external_ref))
         else:
-            self._hash = (flow.uuid, process.uuid)
+            self._hash = (flow.external_ref, process.external_ref)
             ref_exch = process.reference(flow)
             self._direction = ref_exch.direction
             self._inbound_ev = ref_exch.value
@@ -43,8 +43,8 @@ class ProductFlow(object):
                 print('None inbound ev! using 1.0. f:%s t:%s' % (flow, process))
                 self._inbound_ev = 1.0
             elif self._inbound_ev == 0:
-                raise ZeroDivisionError('No inbound EV for f:%s t:%s' % (flow.get_external_ref(),
-                                                                         process.get_external_ref()))
+                raise ZeroDivisionError('No inbound EV for f:%s t:%s' % (flow.external_ref,
+                                                                         process.external_ref))
             if self._direction == 'Input':
                 self._inbound_ev *= -1
 
@@ -103,8 +103,13 @@ class ProductFlow(object):
     def inbound_ev(self):
         return self._inbound_ev
 
+    @property
+    def _dirn(self):
+        return {'Input': '<',
+                'Output': '>'}[self.direction]
+
     def __str__(self):
-        return '%s:==%s' % (self._process, self._flow)
+        return '%s:=%s=%s' % (self._process, self._dirn, self._flow)
 
     def table_label(self):
         return '%s (%s) [%s]' % (self._flow['Name'], self._flow.unit(), self._process['SpatialScope'])

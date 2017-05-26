@@ -36,6 +36,11 @@ REF_QTYS = os.path.join(os.path.dirname(__file__), 'data', 'elcd_reference_quant
 Q_SYNS = os.path.join(os.path.dirname(__file__), 'data', 'quantity_synlist.json')
 F_SYNS = os.path.join(os.path.dirname(__file__), 'data', 'flowable_synlist.json')
 
+
+class QuantityNotKnown(Exception):
+    pass
+
+
 class QuantityNotLoaded(Exception):
     pass
 
@@ -152,6 +157,7 @@ class Qdb(LcArchive):
         ind = self._q.add_set(self._q_terms(q), merge=True)
         if self._q.entity(ind) is None:
             self._q.set_entity(ind, q)
+            self.add(q)
         return ind
 
     def get_canonical_quantity(self, q):
@@ -160,8 +166,8 @@ class Qdb(LcArchive):
         :param q:
         :return: the canonical entity.  If none exists, the supplied quantity is made canonical
         """
-        self.add_new_quantity(q)
-        return self.get_quantity(q.link)
+        ind = self._get_q_ind(q)
+        return self._q.entity(ind)
 
     def is_loaded(self, q):
         """
@@ -169,7 +175,7 @@ class Qdb(LcArchive):
         :param q:
         :return:
         """
-        ind = self._q.index(q.link)
+        ind = self._get_q_ind(q)
         if ind in self._q_dict:
             return True
         return False
@@ -226,15 +232,26 @@ class Qdb(LcArchive):
     '''
     def _get_q_ind(self, quantity):
         """
-        get index for an actual entity
+        get index for an actual entity or synonym
         :param quantity:
         :return:
         """
-        try:
-            ind = self._q.index(next(k for k in self._q_terms(quantity)
-                                     if self._q.index(k) is not None))
-        except StopIteration:
-            ind = self.add_new_quantity(quantity)
+        if isinstance(quantity, int):
+            if quantity < len(self._q):
+                return quantity
+            raise IndexError('Quantity index %d out of range' % quantity)
+        if isinstance(quantity, str):
+            try:
+                ind = self._q.index(quantity)
+            except KeyError:
+                raise QuantityNotKnown(quantity)
+        else:
+            try:
+                ind = self._q.index(next(k for k in self._q_terms(quantity)
+                                         if self._q.index(k) is not None))
+
+            except StopIteration:
+                ind = self.add_new_quantity(quantity)
         return ind
 
     @staticmethod
@@ -297,7 +314,7 @@ class Qdb(LcArchive):
         if query_q_ind is None:
             query_q_ind = self._get_q_ind(query)
         if flow is None:
-            ref_q_ind = self._q.index(reference)
+            ref_q_ind = self._get_q_ind(reference)
             f_inds = [self._f.index(flowable)]
         else:
             if flowable or compartment or reference:
@@ -339,8 +356,14 @@ class Qdb(LcArchive):
         :param locale: ['GLO']
         :return: an LciaResult whose components are the flows of the exchanges
         """
+        if isinstance(quantity, str):
+            quantity = self.get_canonical_quantity(quantity)
         if not self.is_loaded(quantity):
-            raise QuantityNotLoaded('%s' % quantity)
+            if quantity.is_entity:
+                raise QuantityNotLoaded('%s is not a catalogRef' % quantity)
+            else:
+                for cf in quantity.factors():
+                    self.add_cf(cf)
         q = self.get_quantity(quantity.link)
         q_ind = self._get_q_ind(q)
         r = LciaResult(q)

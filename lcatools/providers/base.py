@@ -138,6 +138,9 @@ class LcArchive(ArchiveInterface):
             return None
         return entity.reference_entity
 
+    def get_uuid(self, key):
+        return self._key_to_id(key)
+
     @staticmethod
     def _lcia_key(quantity):
         return ', '.join([quantity['Method'], quantity['Category'], quantity['Indicator']])
@@ -292,6 +295,10 @@ class LcArchive(ArchiveInterface):
         return super(LcArchive, self)._entities_by_type(entity_type)
 
     def _index_terminations(self):
+        """
+        Need some way to make this not have to happen for every query
+        :return:
+        """
         self._terminations = defaultdict(set)  # reset the index
         for p in self.processes():
             for rx in p.reference_entity:
@@ -309,7 +316,7 @@ class LcArchive(ArchiveInterface):
         if isinstance(flow_ref, LcFlow):
             flow_ref = flow_ref.external_ref
         if not self.static:
-            self._index_terminations()
+            self._index_terminations()  # we don't really want to re-index *every time* but what is the alternative?
         for x in self._terminations[flow_ref]:  # defaultdict, so no KeyError
             if direction is None:
                 yield x[1].trim()

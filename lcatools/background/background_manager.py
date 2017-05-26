@@ -112,8 +112,6 @@ class BackgroundManager(object):
         """
         product_flow = self._get_product_flow(process, ref_flow)
         b = self._be.compute_lci(product_flow, **kwargs)  # comes back as a sparse vector
-        exchanges = []
         for i, em in enumerate(self._be.emissions):
             if b[i, 0] != 0:
-                exchanges.append(ExchangeValue(product_flow.process, em.flow, em.direction, value=b[i, 0]))
-        return exchanges
+                yield ExchangeValue(product_flow.process, em.flow, em.direction, value=b[i, 0])

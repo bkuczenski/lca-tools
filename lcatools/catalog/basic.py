@@ -72,3 +72,6 @@ class BasicInterface(QueryInterface):
 
     def get_reference(self, external_ref):
         return self._archive.get_reference(external_ref)
+
+    def get_uuid(self, external_ref):
+        return self._archive.get_uuid(external_ref)

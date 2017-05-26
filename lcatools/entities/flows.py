@@ -115,8 +115,6 @@ class LcFlow(LcEntity):
                 self.add_characterization(quantity.quantity, reference=reference,
                                           value=quantity[l], location=l)
             return
-        if not isinstance(quantity, LcQuantity):  # assume it's a CatalogRef
-            quantity = quantity.entity()
         if reference:
             if value is None:
                 value = 1.0

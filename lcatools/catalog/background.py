@@ -1,6 +1,8 @@
 import re
 from lcatools.background.background_manager import BackgroundManager
 from lcatools.background.proxy import BackgroundProxy
+from lcatools.background.product_flow import ProductFlow
+from lcatools.background.emission import Emission
 from lcatools.catalog.basic import BasicInterface
 
 
@@ -18,6 +20,9 @@ class BackgroundInterface(BasicInterface):
         self._qdb = qdb
 
         self._bm = None
+
+    def _make_pf_ref(self, product_flow):
+        return ProductFlow(None, self.make_ref(product_flow.process), product_flow.flow)
 
     @property
     def _bg(self):
@@ -62,23 +67,26 @@ class BackgroundInterface(BasicInterface):
     background managed methods
     '''
     def foreground(self, process, ref_flow=None):
-        return self._bg.foreground(process, ref_flow=ref_flow)
+        p = self._archive.retrieve_or_fetch_entity(process)
+        if ref_flow is not None:
+            ref_flow = self._archive.retrieve_or_fetch_entity(ref_flow)
+        return self._bg.foreground(p, ref_flow=ref_flow)
 
     def foreground_flows(self, search=None):
         for k in self._bg.foreground_flows:
             if search is None:
-                yield k
+                yield self._make_pf_ref(k)
             else:
                 if bool(re.search(search, str(k), flags=re.IGNORECASE)):
-                    yield k
+                    yield self._make_pf_ref(k)
 
     def background_flows(self, search=None):
         for k in self._bg.background_flows:
             if search is None:
-                yield k
+                yield self._make_pf_ref(k)
             else:
                 if bool(re.search(search, str(k), flags=re.IGNORECASE)):
-                    yield k
+                    yield self._make_pf_ref(k)
 
     def exterior_flows(self, direction=None, search=None):
         for k in self._bg.exterior_flows:
@@ -116,20 +124,29 @@ class BackgroundInterface(BasicInterface):
 
     def lci(self, process, ref_flow=None):
         p = self._archive.retrieve_or_fetch_entity(process)
+        if ref_flow is not None:
+            ref_flow = self._archive.retrieve_or_fetch_entity(ref_flow)
         return self._bg.lci(p, ref_flow=ref_flow)
 
     def ad(self, process, ref_flow=None):
+        if ref_flow is not None:
+            ref_flow = self._archive.retrieve_or_fetch_entity(ref_flow)
         return self._bg.ad_tilde(process, ref_flow=ref_flow)
 
     def bf(self, process, ref_flow=None):
+        if ref_flow is not None:
+            ref_flow = self._archive.retrieve_or_fetch_entity(ref_flow)
         return self._bg.bf_tilde(process, ref_flow=ref_flow)
 
     def bg_lcia(self, process, query_qty, ref_flow=None, **kwargs):
-        q = self._qdb.get_quantity(query_qty)  #
+        p = self._archive.retrieve_or_fetch_entity(process)
+        if ref_flow is not None:
+            ref_flow = self._archive.retrieve_or_fetch_entity(ref_flow)
+        q = self._qdb.get_canonical_quantity(query_qty)  #
         if self._archive.static:
             if not self.is_characterized(q):
                 self.characterize(self._qdb, q, **kwargs)
-            return self._bg.lcia(process, query_qty, ref_flow=ref_flow)
+            return self._bg.lcia(p, query_qty, ref_flow=ref_flow)
         else:
-            lci = self._bg.lci(process, ref_flow=ref_flow)
-
+            lci = self._bg.lci(p, ref_flow=ref_flow)
+            return self._qdb.do_lcia(q, lci, locale=p['SpatialScope'])

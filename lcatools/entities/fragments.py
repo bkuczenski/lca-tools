@@ -332,7 +332,7 @@ class LcFragment(LcEntity):
                     desc = '(agg)'
                 print('%20.20s: %s %s %s' % (k, v, desc, v.term_node))
 
-    def show_tree(self, prefix='', scenario=None, observed=False):
+    def show_tree(self, scenario=None, observed=False, prefix=''):
         children = [c for c in self.child_flows]
         term = self.termination(scenario)
         if len(children) > 0 and term.is_null:
@@ -361,7 +361,7 @@ class LcFragment(LcEntity):
                 if c['StageName'] != latest_stage:
                     latest_stage = c['StageName']
                     print('   %s %5s Stage: %s' % (prefix, ' ', latest_stage))
-                c.show_tree(prefix=prefix, scenario=scenario, observed=observed)
+                c.show_tree(scenario=scenario, observed=observed, prefix=prefix)
             prefix = prefix[:-3] + ' x '
             print('   %s' % prefix)
 

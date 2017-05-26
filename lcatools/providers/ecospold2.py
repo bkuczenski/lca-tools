@@ -207,26 +207,26 @@ class EcospoldV2Archive(LcArchive):
         return f
 
     def _create_process_entity(self, o):
-        ad = find_tag(o, 'activityDescription')[0]
+        ad = find_tag(o, 'activityDescription')
 
         u = ad.activity.get('id')
 
         if self[u] is not None:
             return self[u]
 
-        n = find_tag(ad, 'activityName')[0].text
+        n = find_tag(ad, 'activityName').text
         try:
-            c = find_tag(ad, 'generalComment')[0]['text'].text
+            c = find_tag(ad, 'generalComment')['text'].text
         except TypeError:
             c = 'no comment.'
         except AttributeError:
             print('activity ID %s: no comment' % u)
             c = 'no comment.'
-        g = find_tag(ad, 'geography')[0].shortname.text
+        g = find_tag(ad, 'geography').shortname.text
 
-        tp = find_tag(ad, 'timePeriod')[0]
+        tp = find_tag(ad, 'timePeriod')
         stt = {'begin': tp.get('startDate'), 'end': tp.get('endDate')}
-        cls = [self._cls_to_text(i) for i in find_tag(ad, 'classification')]
+        cls = [self._cls_to_text(i) for i in find_tags(ad, 'classification')]
 
         p = LcProcess(u, Name=n, Comment=c, SpatialScope=g, TemporalScope=stt,
                       Classifications=cls)
@@ -241,7 +241,7 @@ class EcospoldV2Archive(LcArchive):
         :param rf:
         :return:
         """
-        for x in find_tag(o, 'flowData')[0].getchildren():
+        for x in find_tag(o, 'flowData').getchildren():
             if 'intermediate' in x.tag:
                 if x.attrib['intermediateExchangeId'] == rf:
                     return self._create_flow(x)
@@ -256,7 +256,7 @@ class EcospoldV2Archive(LcArchive):
         """
         flowlist = []
 
-        for exch in find_tag(o, 'flowData')[0].getchildren():
+        for exch in find_tag(o, 'flowData').getchildren():
             if 'parameter' in exch.tag:
                 continue
             if 'impactIndicator' in exch.tag:
@@ -270,7 +270,7 @@ class EcospoldV2Archive(LcArchive):
                 if og == 0:
                     is_ref = True
                 elif og == 2:  # 1, 3 not used
-                    for cls in find_tag(exch, 'classification'):
+                    for cls in find_tags(exch, 'classification'):
                         if cls.classificationSystem == 'By-product classification':
                             if str(cls.classificationValue).startswith('allocat'):
                                 is_ref = True
@@ -293,7 +293,7 @@ class EcospoldV2Archive(LcArchive):
         scores = []
         exch = ExchangeValue(process, flow, 'Output', value=1.0)
 
-        for cf in find_tag(o, 'flowData')[0].getchildren():
+        for cf in find_tag(o, 'flowData').getchildren():
             if 'impactIndicator' in cf.tag:
                 m = cf.impactMethodName.text
                 c = cf.impactCategoryName.text
@@ -433,7 +433,7 @@ class EcospoldV2Archive(LcArchive):
 
         results = LciaResults(p)
 
-        for char in find_tag(o, 'flowData')[0].getchildren():
+        for char in find_tag(o, 'flowData').getchildren():
             if 'impactIndicator' in char.tag:
                 m = char.impactMethodName.text
                 c = char.impactCategoryName.text

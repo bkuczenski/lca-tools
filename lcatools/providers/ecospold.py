@@ -213,7 +213,7 @@ class EcospoldV1Archive(NsUuidArchive):
         else:
             # create new process
             g = p_meta.geography.get('location')
-            stt = {'begin': str(find_tag(p_meta, 'startDate')[0]), 'end': str(find_tag(p_meta, 'endDate')[0])}
+            stt = {'begin': str(find_tag(p_meta, 'startDate')), 'end': str(find_tag(p_meta, 'endDate'))}
 
             c = p_meta.referenceFunction.get('generalComment')
 

@@ -70,14 +70,14 @@ def dtype_from_nsmap(nsmap):
 
 
 def get_flow_ref(exch, ns=None):
-    f_uuid = find_tag(exch, 'referenceToFlowDataSet', ns=ns)[0].attrib['refObjectId']
-    f_uri = find_tag(exch, 'referenceToFlowDataSet', ns=ns)[0].attrib['uri']
-    f_dir = find_tag(exch, 'exchangeDirection', ns=ns)[0].text
+    f_uuid = find_tag(exch, 'referenceToFlowDataSet', ns=ns).attrib['refObjectId']
+    f_uri = find_tag(exch, 'referenceToFlowDataSet', ns=ns).attrib['uri']
+    f_dir = find_tag(exch, 'exchangeDirection', ns=ns).text
     return f_uuid, f_uri, f_dir
 
 
 def grab_flow_name(o, ns=None):
-    return ', '.join(chain(filter(len, [str(find_tag(o, k, ns=ns)[0])
+    return ', '.join(chain(filter(len, [str(find_tag(o, k, ns=ns))
                                         for k in ('baseName',
                                                   'treatmentStandardsRoutes',
                                                   'mixAndLocationTypes',
@@ -85,7 +85,7 @@ def grab_flow_name(o, ns=None):
 
 
 def get_reference_flow(process, ns=None):
-    try_ref = find_tag(process, 'referenceToReferenceFlow', ns=ns)[0]
+    try_ref = find_tag(process, 'referenceToReferenceFlow', ns=ns)
     if try_ref == '':
         return None, None, None  # multioutput, no specified reference
     else:
@@ -97,7 +97,7 @@ def get_reference_flow(process, ns=None):
 
 def get_reference_flow_property_id(flow, ns=None):
     # load or check the reference quantity
-    return int(find_tag(flow, 'referenceToReferenceFlowProperty', ns=ns)[0])
+    return int(find_tag(flow, 'referenceToReferenceFlowProperty', ns=ns))
 '''    rfp = [i for i in flow['flowProperties'].getchildren()
            if int(i.attrib['dataSetInternalID']) == ref_to_ref][0]
     rfp_uuid = find_tag(rfp, 'referenceToFlowPropertyDataSet', ns=ns)[0].attrib['refObjectId']
@@ -107,7 +107,7 @@ def get_reference_flow_property_id(flow, ns=None):
 
 
 def get_reference_unit_group(q, ns=None):
-    ref_to_ref = find_tag(q, 'referenceToReferenceUnitGroup', ns=ns)[0]
+    ref_to_ref = find_tag(q, 'referenceToReferenceUnitGroup', ns=ns)
     ug_uuid = ref_to_ref.attrib['refObjectId']
     ug_uri = ref_to_ref.attrib['uri']
     return ug_uuid, ug_uri
@@ -115,7 +115,7 @@ def get_reference_unit_group(q, ns=None):
 
 def get_exch_value(exch, ns=None):
     try:
-        v = float(find_tag(exch, 'resultingAmount', ns=ns)[0])
+        v = float(find_tag(exch, 'resultingAmount', ns=ns))
     except ValueError:
         v = None
     return v
@@ -304,8 +304,8 @@ class IlcdArchive(LcArchive):
 
         ns = find_ns(o.nsmap, 'UnitGroup')
 
-        u = str(find_common(o, 'UUID')[0])
-        reference_unit = int(find_tag(o, 'referenceToReferenceUnit', ns=ns)[0])
+        u = str(find_common(o, 'UUID'))
+        reference_unit = int(find_tag(o, 'referenceToReferenceUnit', ns=ns))
         unitstring = str(o['units'].getchildren()[reference_unit]['name'])
         ref_unit = LcUnit(unitstring, unit_uuid=u)
         ref_unit.set_external_ref('%s/%s' % (typeDirs['UnitGroup'], u))
@@ -321,16 +321,16 @@ class IlcdArchive(LcArchive):
         :param o: objectified FlowProperty
         :return:
         """
-        u = str(find_common(o, 'UUID')[0])
+        u = str(find_common(o, 'UUID'))
         try_q = self[u]
         if try_q is not None:
             return try_q
 
         ns = find_ns(o.nsmap, 'FlowProperty')
 
-        n = str(find_common(o, 'name')[0])
+        n = str(find_common(o, 'name'))
 
-        c = str(find_common(o, 'generalComment')[0])
+        c = str(find_common(o, 'generalComment'))
 
         ug, ug_uri = get_reference_unit_group(o, ns=ns)
 
@@ -351,7 +351,7 @@ class IlcdArchive(LcArchive):
 
     @staticmethod
     def _create_dummy_flow_from_exch(uid, exch):
-        n = str(find_common(exch, 'shortDescription')[0])
+        n = str(find_common(exch, 'shortDescription'))
         print('Creating DUMMY flow (%s) with name %s' % (uid, n))
         return LcFlow(uid, Name=n, Comment='Dummy flow (HTTP or XML error)', Compartment=['dummy flows'])
 
@@ -361,7 +361,7 @@ class IlcdArchive(LcArchive):
         :param o: objectified flow
         :return: an LcFlow
         """
-        u = str(find_common(o, 'UUID')[0])
+        u = str(find_common(o, 'UUID'))
         try_f = self[u]
         if try_f is not None:
             return try_f
@@ -369,13 +369,13 @@ class IlcdArchive(LcArchive):
         ns = find_ns(o.nsmap, 'Flow')
         n = grab_flow_name(o, ns=ns)
 
-        c = str(find_common(o, 'generalComment')[0])
+        c = str(find_common(o, 'generalComment'))
 
-        cas = str(find_tag(o, 'CASNumber', ns=ns)[0])
+        cas = str(find_tag(o, 'CASNumber', ns=ns))
 
-        cat = find_common(o, 'category')
+        cat = find_tags(o, 'category', ns='common')
         if cat == ['']:
-            cat = find_common(o, 'class')
+            cat = find_tags(o, 'class', ns='common')
         cat = [str(i) for i in cat]
 
         f = LcFlow(u, Name=n, CasNumber=cas, Comment=c, Compartment=cat)
@@ -391,9 +391,9 @@ class IlcdArchive(LcArchive):
                 is_ref = True
             else:
                 is_ref = False
-            val = float(find_tag(fp, 'meanValue', ns=ns)[0])
+            val = float(find_tag(fp, 'meanValue', ns=ns))
 
-            ref = find_tag(fp, 'referenceToFlowPropertyDataSet', ns=ns)[0]
+            ref = find_tag(fp, 'referenceToFlowPropertyDataSet', ns=ns)
             rfp_uuid = ref.attrib['refObjectId']
             rfp_uri = ref.attrib['uri']
 
@@ -412,24 +412,24 @@ class IlcdArchive(LcArchive):
         return f
 
     def _create_process_entity(self, o, ns):
-        u = str(find_common(o, 'UUID')[0])
+        u = str(find_common(o, 'UUID'))
         try_p = self[u]
         if try_p is not None:
             return try_p
 
-        n = ', '.join(chain(filter(len, [str(find_tag(o, k, ns=ns)[0])
+        n = ', '.join(chain(filter(len, [str(find_tag(o, k, ns=ns))
                                          for k in ('baseName',
                                                    'treatmentStandardsRoutes',
                                                    'mixAndLocationTypes',
                                                    'functionalUnitFlowProperties')])))
 
-        g = find_tag(o, 'locationOfOperationSupplyOrProduction', ns=ns)[0].attrib['location']
+        g = find_tag(o, 'locationOfOperationSupplyOrProduction', ns=ns).attrib['location']
 
-        stt = {'begin': str(find_common(o, 'referenceYear')[0]), 'end': str(find_common(o, 'dataSetValidUntil')[0])}
+        stt = {'begin': str(find_common(o, 'referenceYear')), 'end': str(find_common(o, 'dataSetValidUntil'))}
 
-        c = str(find_common(o, 'generalComment')[0])
+        c = str(find_common(o, 'generalComment'))
 
-        cls = [str(i) for i in find_common(o, 'class')]
+        cls = [str(i) for i in find_tags(o, 'class', ns='common')]
 
         p = LcProcess(u, Name=n, Comment=c, SpatialScope=g, TemporalScope=stt,
                       Classifications=cls)
@@ -462,7 +462,7 @@ class IlcdArchive(LcArchive):
             try:
                 f = self._check_or_retrieve_child(f_id, f_uri)
             except (HTTPError, XMLSyntaxError, KeyError):
-                u = str(find_common(o, 'UUID')[0])
+                u = str(find_common(o, 'UUID'))
                 print('In UUID %s:' % u)
                 f = self._create_dummy_flow_from_exch(f_id, exch)
                 self.add(f)

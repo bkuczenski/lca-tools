@@ -1,10 +1,11 @@
-from lcatools.providers.ilcd import IlcdArchive, find_ns, find_common, find_tag, typeDirs, get_flow_ref, uuid_regex, \
+from lcatools.providers.ilcd import IlcdArchive, typeDirs, get_flow_ref, uuid_regex, \
     dtype_from_nsmap
+from lcatools.providers.xml_widgets import *
 from lcatools.entities import LcEntity, LcQuantity
 
 
 def get_reference_quantity(q, ns=None):
-    ref_to_ref = find_tag(q, 'referenceQuantity', ns=ns)[0]
+    ref_to_ref = find_tag(q, 'referenceQuantity', ns=ns)
     ug_uuid = ref_to_ref.attrib['refObjectId']
     ug_uri = ref_to_ref.attrib['uri']
     return ug_uuid, ug_uri
@@ -12,7 +13,7 @@ def get_reference_quantity(q, ns=None):
 
 def get_cf_value(exch, ns=None):
     try:
-        v = float(find_tag(exch, 'resultingAmount', ns=ns)[0])
+        v = float(find_tag(exch, 'resultingAmount', ns=ns))
     except ValueError:
         v = None
     return v
@@ -26,21 +27,21 @@ class IlcdLcia(IlcdArchive):
 
     def _create_lcia_quantity(self, o, ns):
 
-        u = str(find_common(o, 'UUID')[0])
+        u = str(find_common(o, 'UUID'))
         try_q = self[u]
         if try_q is not None:
             lcia = try_q
         else:
-            n = str(find_common(o, 'name')[0])
+            n = str(find_common(o, 'name'))
 
-            c = str(find_common(o, 'generalComment')[0])
+            c = str(find_common(o, 'generalComment'))
 
-            m = '; '.join([str(x) for x in find_tag(o, 'methodology', ns=ns)])
-            ic = '; '.join([str(x) for x in find_tag(o, 'impactCategory', ns=ns)])
-            ii = '; '.join([str(x) for x in find_tag(o, 'impactIndicator', ns=ns)])
+            m = '; '.join([str(x) for x in find_tags(o, 'methodology', ns=ns)])
+            ic = '; '.join([str(x) for x in find_tags(o, 'impactCategory', ns=ns)])
+            ii = '; '.join([str(x) for x in find_tags(o, 'impactIndicator', ns=ns)])
 
-            ry = str(find_tag(o, 'referenceYear', ns=ns)[0])
-            dur = str(find_tag(o, 'duration', ns=ns)[0])
+            ry = str(find_tag(o, 'referenceYear', ns=ns))
+            dur = str(find_tag(o, 'duration', ns=ns))
 
             r_uuid, r_uri = get_reference_quantity(o, ns=ns)
             rq = self._check_or_retrieve_child(r_uuid, r_uri)
@@ -69,8 +70,8 @@ class IlcdLcia(IlcdArchive):
             if not load_all_flows:
                 # don't bother loading factors for flows that don't exist
                 return
-        cf = float(find_tag(factor, 'meanValue', ns=ns)[0])
-        loc = str(find_tag(factor, 'location', ns=ns)[0])
+        cf = float(find_tag(factor, 'meanValue', ns=ns))
+        loc = str(find_tag(factor, 'location', ns=ns))
         if loc == '':
             loc = None
         flow = self._check_or_retrieve_child(f_uuid, f_uri)

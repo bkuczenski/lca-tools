@@ -3,7 +3,7 @@ import re
 
 from lcatools.providers.ilcd_lcia import IlcdLcia
 from lcatools.providers.ilcd import grab_flow_name
-from lcatools.providers.xml_widgets import find_tag, find_common, find_ns
+from lcatools.providers.xml_widgets import *
 
 ELCD = os.path.join('/data', 'LCI', 'ELCD', 'ELCD3.2.zip')
 
@@ -53,11 +53,11 @@ def synonyms_from_ilcd_flow(flow, skip_syns=False):
     :return: uuid (str), name (str), syns (set, includes name, excludes uuid)
     """
     ns = find_ns(flow.nsmap, 'Flow')
-    uid = str(find_common(flow, 'UUID')[0]).strip()
+    uid = str(find_common(flow, 'UUID')).strip()
     syns = set()
     name = grab_flow_name(flow, ns=ns)
     syns.add(name)
-    cas = str(find_tag(flow, 'CASNumber', ns=ns)[0]).strip()
+    cas = str(find_tag(flow, 'CASNumber', ns=ns)).strip()
     if cas != '':
         syns.add(cas)
     if skip_syns:
@@ -65,7 +65,7 @@ def synonyms_from_ilcd_flow(flow, skip_syns=False):
     elif uid in ilcd_bad_synonyms:
         print('Skipping Synonyms for %s' % name)
     else:
-        for syn in find_common(flow, 'synonyms'):
+        for syn in find_tags(flow, 'synonyms', ns='common'):
             for x in str(syn).split(';'):
                 if x.strip() != '' and x.strip().lower() != 'wood':
                     syns.add(x.strip())

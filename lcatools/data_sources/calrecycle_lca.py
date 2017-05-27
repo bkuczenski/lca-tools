@@ -195,7 +195,8 @@ class CalRecycleImporter(object):
         if ff['ParentFragmentFlowID'] == '':
             # must be a reference flow
             frag_uuid = ff['Fragment']['FragmentUUID']
-            frag = self._ed.create_fragment(flow, comp_dir(direction), uuid=frag_uuid, StageName=stage, Name=name)
+            frag = self._ed.create_fragment(flow, comp_dir(direction), uuid=frag_uuid, StageName=stage, Name=name,
+                                            FragmentFlowID=ff['FragmentFlowID'])
             self._fragments[ff['Fragment']['FragmentID']] = frag
         else:
             try:
@@ -205,7 +206,8 @@ class CalRecycleImporter(object):
                 self.fragment_from_fragment_flow(qi, self.fragment_flow_by_index(ff['ParentFragmentFlowID']))
                 parent = self._frags[ff['ParentFragmentFlowID']]
 
-            frag = self._ed.create_fragment(flow, direction, Name=name, StageName=stage, parent=parent)
+            frag = self._ed.create_fragment(flow, direction, Name=name, StageName=stage, parent=parent,
+                                            FragmentFlowID=ff['FragmentFlowID'])
 
         # save the fragment
         if frag is None:
@@ -226,9 +228,8 @@ class CalRecycleImporter(object):
             if ff['NodeTypeID'] == '1':
                 term_node = qi.get(ff['Process']['ProcessUUID'])
                 term_flow = qi.get(ff['Process']['FlowUUID'])
-                term = FlowTermination(frag, term_node, term_flow=term_flow)
                 frag.clear_termination()
-                frag.terminate(term)
+                frag.terminate(term_node, term_flow=term_flow)
                 if qi.get_privacy(term_node.origin) == 0:
                     frag.set_child_exchanges()
                 else:
@@ -246,9 +247,8 @@ class CalRecycleImporter(object):
                     if term_node is None:
                         raise ValueError('Could not find flow from inverse traversal')
                 descend = {'1': True, '0': False}[ff['SubFragment']['Descend']]
-                term = FlowTermination(frag, term_node, term_flow=term_flow, descend=descend)
                 frag.clear_termination()
-                frag.terminate(term)
+                frag.terminate(term_node, term_flow=term_flow, descend=descend)
             elif ff['NodeTypeID'] == '4':
                 bg = next(row for row in self._bg
                           if row['FlowUUID'] == flow.uuid and row['DirectionID'] == ff['DirectionID'])
@@ -259,9 +259,8 @@ class CalRecycleImporter(object):
                             frag.set_background()
                     else:
                         term_node = next(_f for _f in self._fragments.values() if _f.uuid == bg['TargetUUID'])
-                    term = FlowTermination(frag, term_node, term_flow=flow)
                     frag.clear_termination()
-                    frag.terminate(term)
+                    frag.terminate(term_node, term_flow=flow, descend=False)
 
     def set_balances(self):
         for f in self.ff:

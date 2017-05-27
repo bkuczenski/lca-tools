@@ -187,7 +187,7 @@ class FragmentEditor(FlowEditor):
             parent.traversal_entry(None)
 
         if self._qdb.is_elementary(frag.flow):
-            frag.terminate(FlowTermination(frag, frag.flow))
+            frag.terminate(frag.flow)
         return frag
 
     @staticmethod
@@ -279,7 +279,9 @@ class FragmentEditor(FlowEditor):
             if term.term_node is frag:
                 new.to_foreground(scenario=t_scen)
             else:
-                new.terminate(FlowTermination.from_term(new, term), scenario=t_scen)
+                new.terminate(term.term_node, term_flow=term.term_flow, direction=term.direction,
+                              descend=term.descend, inbound_ev=term.inbound_exchange_value,
+                              scenario=t_scen)
 
         for c in frag.child_flows:
             self.clone_fragment(c, parent=new, suffix='')

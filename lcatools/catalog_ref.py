@@ -183,14 +183,18 @@ class CatalogRef(object):
         self._require_flow()
         return self._query.originate(self.external_ref, direction)
 
-    def references(self):
-        return self._query.get_reference(self.external_ref)
+    def references(self, flow=None):
+        self._require_process()
+        for x in self._query.get_reference(self.external_ref):
+            if flow is None:
+                yield x
+            else:
+                if x.flow == flow:
+                    yield x
 
     def reference(self, flow):
         self._require_process()
-        for x in self.references():
-            if x.flow == flow:
-                return x
+        return next(x for x in self.references(flow=flow))
 
     @property
     def reference_entity(self):

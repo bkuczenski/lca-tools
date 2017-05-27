@@ -212,7 +212,7 @@ class CompartmentManager(object):
                 my_missing.pop(0)
                 compartment = sub
             else:
-                if not compartment.is_elementary:
+                if not compartment.elementary:
                     # automatically create subcompartments for intermediate
                     return compartment.add_subs(my_missing)
                 print('Missing compartment: %s' % my_missing[0])

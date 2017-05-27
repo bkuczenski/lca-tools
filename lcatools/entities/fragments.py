@@ -124,9 +124,8 @@ class LcFragment(LcEntity):
                    exchange_value=exchange.value, Name=exchange.flow['Name'])
 
         if exchange.termination is not None:
-            term = FlowTermination(frag, CatalogRef(exchange.flow.origin, exchange.termination, entity_type='process'),
-                                   term_flow=exchange.flow)
-            frag.terminate(term)
+            frag.terminate(CatalogRef(exchange.flow.origin, exchange.termination, entity_type='process'),
+                           term_flow=exchange.flow)
         return frag
 
     def __init__(self, the_uuid, flow, direction, parent=None,
@@ -135,6 +134,7 @@ class LcFragment(LcEntity):
                  balance_flow=False,
                  background=False,
                  termination=None,
+                 term_flow=None,
                  **kwargs):
         """
         Required params:
@@ -176,7 +176,7 @@ class LcFragment(LcEntity):
             if 'StageName' not in self._d:
                 self._d['StageName'] = ''
         else:
-            self._terminations[None] = FlowTermination(self, termination)
+            self._terminations[None] = FlowTermination(self, termination, term_flow=term_flow)
             if 'StageName' not in self._d:
                 try:
                     self._d['StageName'] = termination['Name']
@@ -679,7 +679,7 @@ class LcFragment(LcEntity):
     Terminations and related functions
     '''
 
-    def terminate(self, termination, scenario=None):
+    def terminate(self, term_node, scenario=None, **kwargs):
         """
         specify a termination.  background=True: if the flow has a parent, will create a new
         :param termination: a FlowTermination
@@ -691,6 +691,7 @@ class LcFragment(LcEntity):
         if scenario in self._terminations:
             if not self._terminations[scenario].is_null:
                 raise CacheAlreadySet('Scenario termination already set. use clear_termination()')
+        termination = FlowTermination(self, term_node, **kwargs)
         self._terminations[scenario] = termination
         if scenario is None:
             if self['StageName'] == '' and not termination.is_null:
@@ -710,12 +711,13 @@ class LcFragment(LcEntity):
         :return:
         """
         self._background = False  # a background fragment can't sometimes be foreground
-        self.terminate(FlowTermination(self, self), scenario=scenario)
+        self.terminate(self, scenario=scenario)
 
     def set_background(self):
         for scenario, term in self._terminations.items():
-            if term.term_node.entity_type == 'fragment':
-                raise ScenarioConflict('Cannot bg: Terminated to fragment in Scenario %s' % scenario)
+            if not term.is_null:
+                if term.term_node.entity_type == 'fragment':
+                    raise ScenarioConflict('Cannot bg: Terminated to fragment in Scenario %s' % scenario)
         self._background = True
 
     def term_from_json(self, catalog, scenario, j):
@@ -732,7 +734,7 @@ class LcFragment(LcEntity):
         return None
 
     def terminations(self):
-        return self._terminations.keys()
+        return self._terminations.values()
 
     def set_child_exchanges(self, scenario=None, reset_cache=False):
         """

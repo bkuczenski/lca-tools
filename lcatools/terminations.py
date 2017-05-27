@@ -9,6 +9,7 @@ either one from the other.
 from lcatools.lcia_results import LciaResult, LciaResults, traversal_to_lcia
 from lcatools.exchanges import comp_dir, ExchangeValue, MissingReference
 from lcatools.catalog.foreground import PrivateArchive
+from lcatools.entities.processes import NoReferenceFound, AmbiguousReferenceError
 from lcatools.catalog_ref import CatalogRef
 from lcatools.interact import pick_one, parse_math
 
@@ -58,6 +59,8 @@ class FlowTermination(object):
             term = fg.catalog_ref(origin, external_ref, entity_type='process')
             if term_flow is not None:
                 term_flow = fg.catalog_ref(origin, term_flow, entity_type='flow')
+        if term_flow is None:
+            term_flow = fragment.flow
 
         direction = j.pop('direction', None)
         descend = j.pop('descend', None)
@@ -66,6 +69,7 @@ class FlowTermination(object):
             term._deserialize_score_cache(fg, j['scoreCache'], scenario)
         return term
 
+    '''
     @classmethod
     def from_exchange_ref(cls, fragment, exchange_ref):
         return cls(fragment, exchange_ref.process_ref, direction=exchange_ref.direction,
@@ -75,6 +79,7 @@ class FlowTermination(object):
     def from_term(cls, fragment, term):
         return cls(fragment, term.term_node, direction=term.direction, term_flow=term.term_flow,
                    descend=term.descend, inbound_ev=term.inbound_exchange_value)
+    '''
 
     @classmethod
     def null(cls, fragment):
@@ -117,8 +122,9 @@ class FlowTermination(object):
             self.direction = direction
 
         self.descend = descend
-        self.set_term_flow(term_flow)
-        self._set_inbound_ev(inbound_ev)
+        self.set_term_params(term_flow, inbound_ev)
+        if self._cached_ev is None and not self.is_null:
+            raise ValueError('%s\n%s' % (self._parent, self.term_node))
         self.validate_flow_conversion()
 
     def matches(self, exchange):
@@ -214,9 +220,8 @@ class FlowTermination(object):
 
     def self_terminate(self, term_flow=None):
         self._term = self._parent
-        self.set_term_flow(term_flow)
+        self.set_term_params(term_flow)
         self.clear_score_cache()
-        self._cached_ev = 1.0
 
     @property
     def index(self):
@@ -275,30 +280,6 @@ class FlowTermination(object):
                 self._term.catalog[0].add(self.term_flow.reference_entity)
             # funny, it doesn't look like that bad of a hack.
 
-    def _set_inbound_ev(self, inbound_ev):
-        if self.is_fg:
-            # foreground nodes can't have inbound EVs since there is no where to serialize them
-            self._cached_ev = 1.0
-            return
-        if inbound_ev is None:
-            if self._term is None:
-                inbound_ev = 1.0
-            elif self.term_node.entity_type == 'process':
-                try:
-                    ev = next(x for x in self._term.exchange_values(self.term_flow,
-                                                                    direction=self.direction))
-                    try:
-                        inbound_ev = ev[self.term_flow]
-                    except MissingReference:
-                        inbound_ev = ev.value
-                except (StopIteration, PrivateArchive):
-                    inbound_ev = 1.0
-            elif self.term_node.entity_type == 'fragment':
-                inbound_ev = 1.0  # the inbound ev must be applied at traversal time;
-            else:
-                raise TypeError('How did we get here??? %s' % self._term)
-        self._cached_ev = inbound_ev
-
     @property
     def id(self):
         if self.is_null:
@@ -322,44 +303,58 @@ class FlowTermination(object):
             return '%4g unit' % self._cached_ev
         return '%4g %s' % (self._cached_ev, self.term_flow.unit())  # process
 
-    def set_term_flow(self, flow):
+    def set_term_params(self, term_flow=None, inbound_ev=None):
         """
-        flow must have an exchange with process ref
-        :param flow:
+        Sets the term_flow and cached exchange value by finding a reference exchange that matches the specified flow.
+
+        Direction is as specified in the constructor, but gets overwritten by a successful exchange lookup.
+
+        If both flow and ev are specified, quell catalog lookup and use them.
+
+        If no flow is specified, use the process reference as default. raise AmbiguousReferenceError for multiple
+        references.
+
+        If the process has no references, use the parent's flow and 1.0 ev, direction as specified.
+
+        If the term is a fragment, the cached ev is always 1.0; default flow is same as parent flow.
+
+        If a reference is found, the direction and cached_ev are set based on the reference, overriding the
+        instantiation parameters.
+
+        :param term_flow: if None, autodetect
+        :param inbound_ev: if None, autodetect
         :return:
         """
         if self.is_null:
-            flow = self._parent.flow
+            term_flow = self._parent.flow
         elif self._term.entity_type == 'fragment':
-            if flow is None:
+            inbound_ev = 1.0
+            if term_flow is None:
                 # let's try relaxing this
                 # term flow must be sub-fragment's reference flow
-                flow = self.term_node.flow
+                term_flow = self.term_node.flow
         else:
-            if flow is None:
-                flow = self._parent.flow
-            try:
-                next(self._term.exchange_values(flow, direction=self.direction))
-            except (StopIteration, PrivateArchive):
-                print('falling back on %s to refs' % self._term.link)
-                r_e = [x for x in self._term.references()]
-                if len(r_e) == 1:
-                    r_e = r_e[0]
-                    flow = r_e.flow
-                    self.direction = r_e.direction
-                elif len(r_e) > 0:
-                    r_e = pick_one(list(r_e))
-                    flow = r_e.flow
-                    self.direction = r_e.direction
+            if inbound_ev is None or term_flow is None:
+                if term_flow is None:
+                    r_e = [r for r in self._term.references()]
                 else:
-                    # instead of throwing exception, just tolerate a no-reference-flow node using _parent.flow
-                    pass
-                    # raise MissingFlow('%s missing flow %s\nAND no reference exchange' % (self._process_ref, flow))
+                    try:
+                        r_e = [r for r in self._term.exchange_values(term_flow, self.direction)]
+                    except PrivateArchive:
+                        r_e = [r for r in self._term.references()]
+                if len(r_e) > 1:
+                    raise AmbiguousReferenceError
+                elif len(r_e) == 1:
+                    term_flow = r_e[0].flow
+                    self.direction = r_e[0].direction
+                    inbound_ev = r_e[0].value
+                else:
+                    inbound_ev = 1.0
+                    if term_flow is None:
+                        term_flow = self._parent.flow
 
-            except TypeError:
-                print('Fragment: %s\nprocess_ref: %s' % (self._parent, self._term))
-                raise
-        self.term_flow = flow
+        self.term_flow = term_flow
+        self._cached_ev = inbound_ev or 1.0
 
     def aggregate_subfragments(self, subfrags):
         """
@@ -467,15 +462,18 @@ class FlowTermination(object):
         serialization should preserve order, which prohibits using a simple dict
         :return: a list to be serialized directly
         """
-        return [{"quantity": q, "score": self._score_cache[q].total()} for q in self._score_cache.indices()]
+        score_cache = []
+        for q in self._score_cache.indices():
+            res = self._score_cache[q]
+            score_cache.append({'quantity': {'origin': res.quantity.origin,
+                                             'externalId': res.quantity.external_ref},
+                                'score': res.total()})
+        return score_cache
 
     def _deserialize_score_cache(self, fg, sc, scenario):
         self._score_cache = LciaResults(self._parent)
         for i in sc:
-            if 'origin' in i:
-                q = fg.catalog_ref(i['origin'], i['quantity'], entity_type='quantity')
-            else:
-                q = fg[i['quantity']]
+            q = fg.catalog_ref(i['quantity']['origin'], i['quantity']['externalId'], entity_type='quantity')
             res = LciaResult(q, scenario=scenario)
             res.add_summary(self._parent.uuid, self._parent, 1.0, i['score'])
             self._score_cache.add(res)

@@ -136,6 +136,9 @@ class LcArchive(ArchiveInterface):
         entity = self.retrieve_or_fetch_entity(key)
         if entity is None:
             return None
+        if entity.entity_type == 'process':
+            # need to get actual references with exchange values-- not the reference_entity
+            return [x for x in entity.references()]
         return entity.reference_entity
 
     def get_uuid(self, key):

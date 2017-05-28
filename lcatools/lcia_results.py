@@ -308,10 +308,15 @@ class LciaResult(object):
         returns a new LciaResult object in which the components of the original LciaResult object are aggregated
         according to a key.  The key is a lambda expression that is applied to each AggregateLciaScore component's
         entity property (components where the lambda fails will all be grouped together).
+
+        The special key '*' will aggregate all components together.
+
         :param key: default: lambda x: x.fragment['StageName'] -- assuming the payload is a FragmentFlow
         :return:
         """
         agg_result = LciaResult(self.quantity, scenario=self.scenario, private=self._private, scale=self._scale)
+        if key == '*':
+            key = lambda x: 'result'
         for v in self._LciaScores.values():
             keystring = 'other'
             try:

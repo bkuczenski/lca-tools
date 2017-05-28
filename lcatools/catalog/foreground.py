@@ -1,8 +1,4 @@
-from lcatools.catalog.basic import BasicInterface
-
-
-class PrivateArchive(Exception):
-    pass
+from lcatools.catalog.basic import BasicInterface, PrivateArchive
 
 
 class InventoryInterface(BasicInterface):

@@ -2,6 +2,10 @@ from lcatools.catalog.interfaces import QueryInterface
 from lcatools.catalog_ref import CatalogRef
 
 
+class PrivateArchive(Exception):
+    pass
+
+
 class BasicInterface(QueryInterface):
     def __init__(self, archive, privacy=None, **kwargs):
         """

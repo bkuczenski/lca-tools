@@ -75,11 +75,11 @@ class LcForeground(LcArchive):
             current = self[entity.get_uuid()]
             current.merge(entity)
 
-    def save(self):
+    def save(self, save_unit_scores=True):
         self.write_to_file(self._archive_file, gzip=False, exchanges=True, characterizations=True, values=True)
         if not os.path.isdir(self._fragment_dir):
             os.makedirs(self._fragment_dir)
-        self.save_fragments()
+        self.save_fragments(save_unit_scores=save_unit_scores)
 
     @property
     def _archive_file(self):
@@ -213,10 +213,10 @@ class LcForeground(LcArchive):
             frags.extend(self._recurse_frags(x))
         return frags
 
-    def save_fragments(self):
+    def save_fragments(self, save_unit_scores=True):
         current_files = os.listdir(self._fragment_dir)
         for r in self._fragments():
-            frags = [t.serialize() for t in self._recurse_frags(r)]
+            frags = [t.serialize(save_unit_scores=save_unit_scores) for t in self._recurse_frags(r)]
             fname = r.get_uuid() + '.json'
             if fname in current_files:
                 current_files.remove(fname)

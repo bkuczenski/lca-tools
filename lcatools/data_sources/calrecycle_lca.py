@@ -124,7 +124,7 @@ class CalRecycleImporter(object):
         self._root = data_root
         self._stages = dict_from_csv(os.path.join(self.fragment_dir, 'FragmentStage.csv'))
         self._f = read_csv(os.path.join(self.fragment_dir, 'Fragment.csv'))
-        self._ff = read_csv(os.path.join(self.fragment_dir, 'FragmentFlow.csv'))
+        self._ff = read_csv(os.path.join(self.fragment_dir, 'FragmentFlowI.csv'))
         self._fnp = read_csv(os.path.join(self.fragment_dir, 'FragmentNodeProcess.csv'))
         self._fnf = read_csv(os.path.join(self.fragment_dir, 'FragmentNodeFragment.csv'))
         self._bg = read_csv(os.path.join(self.fragment_dir, 'Background.csv'))
@@ -206,7 +206,8 @@ class CalRecycleImporter(object):
                 self.fragment_from_fragment_flow(qi, self.fragment_flow_by_index(ff['ParentFragmentFlowID']))
                 parent = self._frags[ff['ParentFragmentFlowID']]
 
-            frag = self._ed.create_fragment(flow, direction, Name=name, StageName=stage, parent=parent,
+            frag_uuid = ff['FragmentUUID']
+            frag = self._ed.create_fragment(flow, direction, uuid=frag_uuid, Name=name, StageName=stage, parent=parent,
                                             FragmentFlowID=ff['FragmentFlowID'])
 
         # save the fragment

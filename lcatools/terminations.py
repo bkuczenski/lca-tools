@@ -341,9 +341,10 @@ class FlowTermination(object):
                     try:
                         r_e = [r for r in self._term.exchange_values(term_flow, self.direction)]
                     except PrivateArchive:
+                        print('%s\nprivate... falling back to reference exchanges' % self._term)
                         r_e = [r for r in self._term.references()]
                 if len(r_e) > 1:
-                    raise AmbiguousReferenceError
+                    raise AmbiguousReferenceError('%s\n%s' % (self._term, r_e))
                 elif len(r_e) == 1:
                     term_flow = r_e[0].flow
                     self.direction = r_e[0].direction
@@ -478,7 +479,7 @@ class FlowTermination(object):
             res.add_summary(self._parent.uuid, self._parent, 1.0, i['score'])
             self._score_cache.add(res)
 
-    def serialize(self):
+    def serialize(self, save_unit_scores=False):
         if self._term is None:
             return {}
         source = self._term.origin
@@ -487,12 +488,12 @@ class FlowTermination(object):
             'externalId': self._term.external_ref
         }
         if self.term_flow != self._parent.flow:
-            j['termFlow'] = self.term_flow.get_uuid()
+            j['termFlow'] = self.term_flow.external_ref
         if self.direction != comp_dir(self._parent.direction):
             j['direction'] = self.direction
         if self._descend is False:
             j['descend'] = False
-        if self._parent.is_background:
+        if self._parent.is_background and save_unit_scores and len(self._score_cache) > 0:
             j['scoreCache'] = self._serialize_score_cache()
         return j
 
@@ -504,7 +505,8 @@ class FlowTermination(object):
         if self.is_null:
             if other.is_null:
                 return True
-        return (self.term_node.get_uuid() == other.term_node.get_uuid() and
+            return False
+        return (self.term_node.external_ref == other.term_node.external_ref and
                 self.term_flow == other.term_flow and
                 self.direction == other.direction)
 

@@ -12,9 +12,9 @@ TODO:
    = characterizations need to be scenario-aware
  - flow terminations: inbound_ev should not be cached; should be computed live at query
    = but flow conversion is *already* computed at query time; ev is not parameterizable
- - refactor LcFragment-- make it an entity
+ X refactor LcFragment-- make it an entity
    = it's already an entity; take out stuff that it doesn't need to own
-   = the big question being: can we avoid passing a child_flows lambda as an initialization parameter?
+   X! the big question being: can we avoid passing a child_flows lambda as an initialization parameter?
  X FlowTermination-- a top-level entry? I think so.
  - termination - flow conversions - move into LcFlow
  - exchanges: need tests
@@ -29,6 +29,77 @@ TODO:
      * except subsequent times would not occur because the product flows would be detected.
    = I think it would be possible to simply assign each non-acc
  - BackgroundManager; need to split into the matrix-handling part and the interface-providing part
+
+Lingering Catalog issues:
+ - Qdb needs a config switch to handle "biogenic carbon"
+ - further configuration for other special circumstances??
+ - CLookups should progress from being sets of attributed CFs to being single canonical CFs
+   = exceptions raised on add_cf instead of during conversion
+
+ - either exchanges, or LciaResult objects, or CFs, need to screen out / correct for "wrong" directions (INVERTED)
+ 
+Antelope refactor:
+ - Fragments need to use an interface as well: only place they are accessed is from FlowTerminations
+   This has far-reaching implications:
+   = CatalogRefs need to have a base class
+   = ProcessRef, QuantityRef, FragmentRef (FlowRefs should be discouraged)
+   = QueryInterface needs a subclass
+   = LcCatalog.query needs overloaded
+   = FragmentRef implements the Antelope interface
+ - Required properties of a FragmentRef:
+   - is_background
+   - traverse (returns a list of FFs)
+   - newly created unit_inventory is problematic since it returns a tuple.
+     (the cost of splitting it up would be to repeat the subfragment traversal-- but that seems to be cheap)
+     (could cache it in the foreground)
+   - origin, external_ref, entity_type == 'fragment'
+   - as process in Exchange:
+     = __str__
+     = flow, direction (for printing reference only, but important for completeness)
+     = reference_entity
+   - flow
+   - direction
+   - term ! (for detecting termination type.. currently broken)
+
+ - Antelope methods used by the js FrontEnd:
+   = dissipation-related (pending reform in dissipation.txt):
+    : compositionFlows
+    : processes/:processID/dissipation --> always return null [[ replace with dissipation fragments ]]
+   = fragment-related:
+    : fragments
+    : fragments/:fragmentID
+    : fragments/:fragmentID/fragmentstages
+    : scenariogroups/:scenarioGroupID  [ used to demonstrate authentication status ]
+    : scenarios
+    : scenarios/:scenarioID
+    : scenarios/:scenarioID/params
+    : scenarios/:scenarioID/params/:paramID
+    : [scenarios/:scenarioID/]fragments/:fragmentID/flows
+    : [scenarios/:scenarioID/]fragments/:fragmentID/flowproperties
+    : [scenarios/:scenarioID/]fragments/:fragmentID/fragmentflows
+    : [scenarios/:scenarioID/]fragments/:fragmentID/lciaresults
+    : [scenarios/:scenarioID/]fragments/:fragmentID/lciamethods/:lciaMethodID/lciaresults
+   = FG catalog-related:
+    : flowtypes/:flowTypeID/flows
+    : flowtypes/:flowTypeID/processes  [ used for selecting processes with elementary flows ]
+    : flows
+    : flows/:flowID
+    : flows/:flowID/flowpropertymagnitudes
+    : impactcategories
+    : impactcategories/:impactCategoryId/lciamethods
+    : lciamethods
+    : lciamethods/:lciaMethodID
+    : lciamethods/:lciaMethodID/flows
+    : lciamethods/:lciaMethodID/lciafactors
+    : processes
+    : processes/:processID
+    : processes/:processID/comment
+    : processes/:processID/flowproperties
+    : processes/:processID/processflows
+    : [scenarios/:scenarioID/]processes/:processID/lciaresults
+    : [scenarios/:scenarioID/]processes/:processID/lciamethods/:lciaMethodID/lciaresults
+ 
+   
 
 ==========
 Thu May 25 14:49:58 -0700 2017

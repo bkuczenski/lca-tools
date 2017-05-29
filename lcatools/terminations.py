@@ -8,7 +8,7 @@ either one from the other.
 
 from lcatools.lcia_results import LciaResult, LciaResults, traversal_to_lcia
 from lcatools.exchanges import comp_dir, ExchangeValue, MissingReference
-from lcatools.catalog.foreground import PrivateArchive
+from lcatools.catalog.inventory import PrivateArchive
 from lcatools.entities.processes import NoReferenceFound, AmbiguousReferenceError
 from lcatools.catalog_ref import CatalogRef
 from lcatools.interact import pick_one, parse_math
@@ -28,10 +28,11 @@ class FlowTermination(object):
 
     A fragment can have the following types of terminations:
      * None - the termination is null- the flow enters the foreground and becomes an i/o
-     * Self - the flow enters a foreground node. The node can have children but only has LCIA impacts based on
-       the terminating flow, which have to be looked up in the database. fg-terminated nodes don't have scenarios
-       (e.g. the scenarios are in the exchange values)
-       (created with the yet-unwritten add child flow function if the node is null)
+     * parent - the fragment's termination is the fragment itself.  The fragment flow  enters a foreground node.
+       The node can have children but only has LCIA impacts based on the terminating flow, which have to be looked up
+       in the database. fg-terminated nodes don't have scenarios (e.g. the scenarios are in the exchange values).
+       Note: term_flows can be different from parent flows, and unit conversions will occur normally (e.g. "sulfur
+       content" converted to "kg SO2")
      * Process - the flow enters a process referenced by CatalogRef.  The node's LCIA impacts are fg_lcia. The
        node's children are the process's non-term intermediate exchanges. The node can also have other children.
        (created with terminate or term_from_exch)
@@ -52,11 +53,12 @@ class FlowTermination(object):
         external_ref = j['externalId']
         term_flow = j.pop('termFlow', None)
         if origin == fg.ref:
-            term = fg[external_ref]
+            term_node = fg[external_ref]
             if term_flow is not None:
                 term_flow = fg[term_flow]
         else:
-            term = fg.catalog_ref(origin, external_ref, entity_type='process')
+            # TODO: handle fragments from non-self origins
+            term_node = fg.catalog_ref(origin, external_ref, entity_type='process')
             if term_flow is not None:
                 term_flow = fg.catalog_ref(origin, term_flow, entity_type='flow')
         if term_flow is None:
@@ -64,7 +66,7 @@ class FlowTermination(object):
 
         direction = j.pop('direction', None)
         descend = j.pop('descend', None)
-        term = cls(fragment, term, direction=direction, term_flow=term_flow, descend=descend)
+        term = cls(fragment, term_node, direction=direction, term_flow=term_flow, descend=descend)
         if 'scoreCache' in j.keys():
             term._deserialize_score_cache(fg, j['scoreCache'], scenario)
         return term
@@ -533,6 +535,7 @@ class FlowTermination(object):
                 term = '-*  '
         elif self.term_node.entity_type == 'fragment':
             if self.term_node.is_background:
+                # TODO: Broken! needs to be scenario-aware
                 if self.term_node.term.is_null:
                     term = '--C '
                 else:

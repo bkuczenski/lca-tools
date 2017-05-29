@@ -37,7 +37,7 @@ from shutil import copy2
 
 from .interfaces import QueryInterface, INTERFACE_TYPES
 from .entity import IndexInterface
-from .foreground import InventoryInterface
+from .inventory import InventoryInterface
 from .background import BackgroundInterface
 from .quantity import QuantityInterface
 from .lc_resolver import LcCatalogResolver
@@ -276,8 +276,9 @@ class LcCatalog(object):
     def lcia(self, p_ref, q_ref):
         """
         Perform LCIA of a process (p_ref) with respect to a given LCIA quantity (q_ref).  Returns an LciaResult.
-        :param p_ref:
-        :param q_ref: either a catalog_ref, or a quantity if the factors are already loaded.
+        :param p_ref: either a process, or a catalog_ref for a process
+        :param q_ref: either an LCIA method (quantity with 'Indicator'), or a catalog_ref for an LCIA method. Only
+         catalog refs have the capability to auto-load characterization factors.
         :return:
         """
         q_e = self._qdb.get_canonical_quantity(self.fetch(q_ref))

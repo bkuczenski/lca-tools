@@ -333,7 +333,10 @@ class Qdb(LcArchive):
             if cf_ref_q_ind != ref_q_ind:
                 if flow is not None:
                     ref_conversion = flow.cf(self.get_quantity(cf_ref_q_ind))
+                    if ref_conversion == 0:
+                        continue
                     factor *= ref_conversion
+
                 else:
                     # what the fuck do we do about this???
                     print('Wrong reference quantities; provided: %s; found in cf: %s' % (reference,

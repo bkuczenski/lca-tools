@@ -96,7 +96,7 @@ class DetailedLciaResult(object):
 
 class SummaryLciaResult(object):
     """
-    like a DetailedLciaResult except omitting the exchange and factor information
+    like a DetailedLciaResult except omitting the exchange and factor information.  This makes them totally static.
     """
     def __init__(self, lc_result, entity, node_weight, unit_score):
         """

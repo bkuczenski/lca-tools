@@ -21,6 +21,7 @@ Finally, the Qdb maintains a hierarchical collection of compartments
 """
 
 import os
+import re
 from collections import defaultdict
 
 from lcatools.from_json import from_json
@@ -35,6 +36,9 @@ from synlist import SynList, Flowables, InconsistentIndices, ConflictingCas
 REF_QTYS = os.path.join(os.path.dirname(__file__), 'data', 'elcd_reference_quantities.json')
 Q_SYNS = os.path.join(os.path.dirname(__file__), 'data', 'quantity_synlist.json')
 F_SYNS = os.path.join(os.path.dirname(__file__), 'data', 'flowable_synlist.json')
+
+
+biogenic = re.compile('(biotic|biogenic)', flags=re.IGNORECASE)
 
 
 class QuantityNotKnown(Exception):
@@ -133,7 +137,30 @@ class CLookup(object):
 
 class Qdb(LcArchive):
     def __init__(self, source=REF_QTYS, quantities=Q_SYNS, flowables=F_SYNS, compartments=None,
+                 quell_biogenic_CO2=False,
                  ref=None, **kwargs):
+        """
+
+        :param source: for LcArchive and core quantities (ELCD)
+        :param quantities: [Q_SYNS] synonym list for quantities
+        :param flowables: [F_SYNS] synonym list for flowables
+        :param compartments: either a compartment manager, or a compartment definition file
+        :param quell_biogenic_CO2: [False] if True, return '0' for all inputs of CO2 from air and all CO2 emissions
+         matching a 'biogenic' search criterion.  The CO2 flowable is distinguished by its CAS number, 124-38-9.
+         No other flowables are affected.
+
+         The criterion is not quantity-based, but depends on the flowable and compartment only.
+
+         The regex test is currently case-insensitive '(biogenic|biotic)'. It can be tested with Qdb.is_biogenic(term)
+
+         The quell_biogenic_CO2 parameter can be overridden at query-time as a keyword param.
+
+         Note that the Qdb's architecture does not permit it to distinguish between two different flows of the same
+         substance into the same compartment, without making a special exception.  Frankly, to make it do so is
+         somewhat distasteful.
+        :param ref:
+        :param kwargs:
+        """
         if ref is None:
             ref = 'local.qdb'
         super(Qdb, self).__init__(source, ref=ref, **kwargs)
@@ -152,6 +179,15 @@ class Qdb(LcArchive):
         self._q_dict = defaultdict(set)  # dict of quantity index to set of characterized flowables (by index)
         self._fq_dict = defaultdict(CLookup)  # dict of (flowable index, quantity index) to c_lookup
         self._f_dict = defaultdict(set)  # dict of flowable index to set of characterized quantities (by index)
+
+        self._quell_biogenic_co2 = quell_biogenic_CO2
+        self._co2_index = self._f.index('124-38-9')
+        self._comp_from_air = self.c_mgr.find_matching('Resources from air')
+        self._comp_emissions = self.c_mgr.find_matching('Emissions')
+
+    @property
+    def quell_biogenic_co2(self):
+        return self._quell_biogenic_co2
 
     def add_new_quantity(self, q):
         ind = self._q.add_set(self._q_terms(q), merge=True)
@@ -292,14 +328,18 @@ class Qdb(LcArchive):
         if isinstance(f_inds, int):
             f_inds = [f_inds]
         cfs = set()
-        comp = self.c_mgr.find_matching(compartment)
         for f_ind in f_inds:
-            for item in self._fq_dict[f_ind, q_ind].find(comp, dist=0):
+            for item in self._fq_dict[f_ind, q_ind].find(compartment, dist=0):
                 cfs.add(item)
         return cfs
 
+    @staticmethod
+    def is_biogenic(term):
+        return bool(biogenic.search(term))
+
     def convert(self, flow=None, flowable=None, compartment=None, reference=None, query=None, query_q_ind=None,
-                locale='GLO'):
+                locale='GLO',
+                quell_biogenic_co2=None):
         """
         EITHER flow OR (flowable AND compartment AND reference) must be non-None.
         :param flow:
@@ -309,6 +349,7 @@ class Qdb(LcArchive):
         :param query:
         :param query_q_ind: index of query quantity, to save time
         :param locale:
+        :param quell_biogenic_co2: [None] override the Qdb setting.
         :return: a floating point conversion
         """
         if query_q_ind is None:
@@ -316,14 +357,25 @@ class Qdb(LcArchive):
         if flow is None:
             ref_q_ind = self._get_q_ind(reference)
             f_inds = [self._f.index(flowable)]
+            _biogenics = (y for y in (flowable))
         else:
             if flowable or compartment or reference:
                 raise ValueError('Too many elements specified')
             ref_q_ind = self._get_q_ind(flow.reference_entity)
             compartment = flow['Compartment']
             f_inds = self.find_flowables(*self._flow_terms(flow))
+            _biogenics = (y for y in self._flow_terms(flow))
 
-        cfs = self._lookup_cfs(f_inds, compartment, query_q_ind)
+        comp = self.c_mgr.find_matching(compartment)
+
+        for f_ind in f_inds:
+            if f_ind == self._co2_index:
+                if quell_biogenic_co2 or (quell_biogenic_co2 is None and self.quell_biogenic_co2):
+                    if any([self.is_biogenic(term) for term in _biogenics]):
+                        if any([comp.is_subcompartment_of(x) for x in (self._comp_emissions, self._comp_from_air)]):
+                            return 0.0
+
+        cfs = self._lookup_cfs(f_inds, comp, query_q_ind)
 
         # now to check reference quantity
         vals = []

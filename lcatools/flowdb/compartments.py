@@ -384,6 +384,14 @@ class Compartment(object):
         for i in self._subcompartments:
             yield i
 
+    def is_subcompartment_of(self, comp):
+        k = self
+        while k is not None:
+            if k is comp:
+                return True
+            k = k.parent
+        return False
+
     def show(self):
         print('%s\nElementary: %s' % (self.name, self._elementary))
         for i in self.subcompartments():

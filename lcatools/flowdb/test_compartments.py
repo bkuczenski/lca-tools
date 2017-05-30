@@ -233,6 +233,15 @@ class CompartmentTestCase(unittest.TestCase):
             next(b1.subcompartments())
         self.assertSetEqual(b1.synonyms, {'Branch 1', 'Branch 1 redundant', 'also redundant'}, "collapse failed")
 
+    def test_is_subcompartment(self):
+        self.base_compartment.add_branch_from_json(json.loads(local_cm_json))
+        super1 = self.base_compartment['Intermediate Flows']['Utilities']
+        super2 = self.base_compartment['Elementary Flows']['Emissions']
+        super3 = self.base_compartment['Elementary Flows']['Emissions']['blorgle air']
+        self.assertTrue(super3.is_subcompartment_of(super2))
+        self.assertFalse(super1.is_subcompartment_of(super2))
+        self.assertFalse(super2.is_subcompartment_of(super3))
+
     def test_elementary(self):
         """
         setting a node to elementary should set all child nodes
@@ -261,8 +270,8 @@ class CompartmentManagerTestCase(unittest.TestCase):
 
     def test_read_reference(self):
         kn = self.cm.known_names
-        self.assertEqual(len(kn), 116, "Length does not match")
-        self.assertEqual(kn[42], 'Heavy metals to industrial soil')
+        self.assertEqual(len(kn), 117, "Length does not match")
+        self.assertEqual(kn[45], 'Heavy metals to industrial soil')
         self.assertEqual(kn[-1], 'Intermediate Flows')
 
     def test_idempotency(self):

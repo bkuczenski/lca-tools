@@ -22,7 +22,7 @@ class LcQuantity(LcEntity):
         super(LcQuantity, self).__init__('quantity', entity_uuid, **kwargs)
 
     def unit(self):
-        return self.reference_entity.unitstring()
+        return self.reference_entity.unitstring
 
     def is_lcia_method(self):
         return 'Indicator' in self.keys()
@@ -80,7 +80,7 @@ class LcQuantity(LcEntity):
         self.reference_entity.reset_unitstring(ustring)
 
     def _name(self):
-        return '%s [%s]' % (self._d['Name'], self.reference_entity.unitstring())
+        return '%s [%s]' % (self._d['Name'], self.reference_entity.unitstring)
 
     def __str__(self):
         if self.is_lcia_method():
@@ -109,6 +109,7 @@ class LcUnit(object):
     def get_external_ref(self):
         return '%s' % self._unitstring if self._external_ref is None else self._external_ref
 
+    @property
     def unitstring(self):
         return self._unitstring
 

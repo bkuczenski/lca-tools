@@ -374,7 +374,7 @@ class LciaResult(object):
         return self._LciaScores[key]
 
     def _header(self):
-        print('%s %s' % (self.quantity, self.quantity.reference_entity.unitstring()))
+        print('%s %s' % (self.quantity, self.quantity.reference_entity.unitstring))
         print('-' * 60)
         if self._scale != 1.0:
             print('%60s: %10.4g' % ('scale', self._scale))

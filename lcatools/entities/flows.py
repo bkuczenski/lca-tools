@@ -43,15 +43,15 @@ class LcFlow(LcEntity):
         :return:
         """
         trimmed = super(LcFlow, self).trim()
-        trimmed.add_characterization(self.reference_entity, reference=True, value=self._ref_quantity_factor)
+        trimmed.add_characterization(self.reference_entity, reference=True)
         return trimmed
 
-    def __init__(self, entity_uuid, **kwargs):
+    def __init__(self, entity_uuid, local_unit=None, **kwargs):
         super(LcFlow, self).__init__('flow', entity_uuid, **kwargs)
 
         self._characterizations = dict()
 
-        self._ref_quantity_factor = 1.0
+        self._local_unit = None
 
         for k in self._new_fields:
             if k not in self._d:
@@ -62,7 +62,10 @@ class LcFlow(LcEntity):
 
         if self.reference_entity is not None:
             if self.reference_entity.get_uuid() not in self._characterizations.keys():
-                self.add_characterization(self.reference_entity, reference=True, value=self._ref_quantity_factor)
+                self.add_characterization(self.reference_entity, reference=True)
+
+        if local_unit is not None:
+            self.set_local_unit(local_unit)
 
     def _set_reference(self, ref_entity):
         if self.reference_entity is not None:
@@ -81,10 +84,62 @@ class LcFlow(LcEntity):
         super(LcFlow, self)._set_reference(ref_entity)
 
     def unit(self):
+        if self._local_unit is not None:
+            print('NOT YET SUPPORTED')
+            return self._local_unit
         return self.reference_entity.unit()
 
-    def set_local_unit(self, factor):
-        self._ref_quantity_factor = factor
+    def set_local_unit(self, local_unit):
+        """
+        Controls the display of numeric data regarding the flow.
+
+        This functionality is NOT YET SUPPORTED.
+
+        Exchange values and CFs are all stored with respect to the reference quantity's reference unit, so the local
+        unit setting does not affect any computations: only display.
+
+        use self.mag(amount) to report the magnitudes of flows in the local unit
+        use self.imag(amount) to report the magnitudes of measures for which the flow appears in the denominator
+
+        Examples:
+        flow's reference entity is volume [m3]
+        flow's local unit is 'l'
+
+        For an exchange value of 0.001 m3 per reference flow: self.mag(0.001) = 1
+        For a characterization factor of 0.75 kg/m3, self.imag(0.75) = 7.5e-4
+
+        This functionality does not allow users to report indicators in different units (e.g. water depletion potential
+        in liters instead of m3).
+
+        :param local_unit: should be a string which is a valid argument to the reference quantity's "convert" function.
+        :return:
+        """
+        local_conv = self.reference_entity.convert(to=local_unit)
+        if local_conv is not None:
+            self._local_unit = local_unit
+
+    def mag(self, amount):
+        """
+        Report magnitudes of the flow in the local unit (or magnitudes where the flow is in the numerator)
+        :param amount:
+        :return:
+        """
+        if self._local_unit is None:
+            return amount
+        return amount * self.reference_entity.convert(to=self._local_unit)
+
+    def imag(self, amount):
+        """
+        Report magnitudes where the flow is in the denominator, converted in terms of the flow's local unit
+        :param amount:
+        :return:
+        """
+        if self._local_unit is None:
+            return amount
+        return amount * self.reference_entity.convert(fr=self._local_unit)
+
+    def unset_local_unit(self):
+        self._local_unit = None
 
     def match(self, other):
         return (self.get_uuid() == other.get_uuid() or
@@ -116,18 +171,19 @@ class LcFlow(LcEntity):
                                           value=quantity[l], location=l)
             return
         if reference:
-            if value is None:
-                value = 1.0
+            if value is not None:
+                raise ValueError('Reference quantity always has unit value')
+            value = 1.0
             self.set_local_unit(value)
             self._set_reference(quantity)
 
         q = quantity.get_uuid()
-        c = Characterization(self, quantity)
         if q in self._characterizations.keys():
             if value is None:
                 return
             c = self._characterizations[q]
         else:
+            c = Characterization(self, quantity)
             self._characterizations[q] = c
         if value is not None:
             if isinstance(value, dict):

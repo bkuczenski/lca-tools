@@ -65,7 +65,7 @@ class FlowEditor(EntityEditor):
         q = LcQuantity.new(name, unit, Comment=comment)
         return q
 
-    def new_flow(self, flow=None, name=None, cas=None, quantity=None, comment=None, compartment=None):
+    def new_flow(self, flow=None, name=None, cas=None, quantity=None, comment=None, compartment=None, local_unit=None):
         if flow is None:
             name = name or self.input('Enter flow name: ', 'New flow')
             cas = cas or self.ifinput('Enter CAS number (or none): ', '')
@@ -89,7 +89,14 @@ class FlowEditor(EntityEditor):
                     compartment = self._qdb.c_mgr.find_matching('Intermediate Flows').to_list()
             else:
                 compartment = self._qdb.c_mgr.find_matching(compartment).to_list()
-            flow = LcFlow.new(name, quantity, CasNumber=cas, Compartment=compartment, Comment=comment)
+            if local_unit is not None:
+                local_conv = quantity.convert(to=local_unit)
+                if local_conv is None:
+                    print('Falling back to default unit: %s' % quantity.unit())
+                    local_unit = None
+
+            flow = LcFlow.new(name, quantity, CasNumber=cas, Compartment=compartment, Comment=comment,
+                              local_unit=local_unit)
             # flow.add_characterization(q, reference=True)
         else:
             quantity = flow.reference_entity

@@ -81,6 +81,11 @@ class LcForeground(LcArchive):
             os.makedirs(self._fragment_dir)
         self.save_fragments(save_unit_scores=save_unit_scores)
 
+    def new_fragment(self, *args, **kwargs):
+        frag = self._catalog.ed.create_fragment(*args, **kwargs)
+        self.add_entity_and_children(frag)
+        return frag
+
     @property
     def _archive_file(self):
         return os.path.join(self.source, 'entities.json')

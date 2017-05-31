@@ -100,7 +100,7 @@ class CatalogRef(object):
 
     def unit(self):
         if self.entity_type == 'quantity':
-            return self.reference_entity.unitstring()
+            return self.reference_entity.unitstring
         print('CatalogRef unit burp')
         return None
 

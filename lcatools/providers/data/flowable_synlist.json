@@ -635,6 +635,7 @@
     {
       "name": "methane",
       "synonyms": [
+        "Methane, fossil",
         "74-82-8",
         "methane"
       ]
@@ -669,8 +670,10 @@
     {
       "name": "methylenechloride ",
       "synonyms": [
+        "Methane, dichloro-, HCC-30",
         "75-09-2",
-        "methylenechloride "
+        "methylenechloride ",
+        "dichloromethane"
       ]
     },
     {
@@ -15539,8 +15542,10 @@
     {
       "name": "2,3,7,8-tetracdd",
       "synonyms": [
+        "2,3,7,8-tetrachlorodibenzo-p-dioxin",
         "1746-01-6",
-        "2,3,7,8-tetracdd"
+        "2,3,7,8-tetracdd",
+        "Dioxins, measured as 2,3,7,8-tetrachlorodibenzo-p-dioxin"
       ]
     },
     {
@@ -24828,7 +24833,8 @@
     {
       "name": "beryllium(ii)",
       "synonyms": [
-        "beryllium(ii)"
+        "beryllium(ii)",
+        "Beryllium"
       ]
     },
     {
@@ -26244,6 +26250,7 @@
     {
       "name": "cadmium(ii)",
       "synonyms": [
+        "Cadmium",
         "cadmium(ii)"
       ]
     },
@@ -26430,6 +26437,7 @@
     {
       "name": "copper(ii)",
       "synonyms": [
+        "Copper, ion",
         "copper(ii)"
       ]
     },
@@ -26526,7 +26534,8 @@
     {
       "name": "lead(ii)",
       "synonyms": [
-        "lead(ii)"
+        "lead(ii)",
+        "Lead"
       ]
     },
     {
@@ -26580,7 +26589,8 @@
     {
       "name": "mercury(ii)",
       "synonyms": [
-        "mercury(ii)"
+        "mercury(ii)",
+        "Mercury"
       ]
     },
     {
@@ -26748,7 +26758,8 @@
     {
       "name": "pm10",
       "synonyms": [
-        "pm10"
+        "pm10",
+        "Particulates, < 10 um "
       ]
     },
     {

@@ -171,10 +171,9 @@ class LcFlow(LcEntity):
                                           value=quantity[l], location=l)
             return
         if reference:
-            if value is not None:
+            if value is not None and value != 1.0:
                 raise ValueError('Reference quantity always has unit value')
             value = 1.0
-            self.set_local_unit(value)
             self._set_reference(quantity)
 
         q = quantity.get_uuid()

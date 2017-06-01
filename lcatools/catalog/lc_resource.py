@@ -70,7 +70,7 @@ class LcResource(object):
         self._static = static
 
         if interfaces is None:
-            interfaces = ['foreground']
+            interfaces = ['inventory']
 
         if isinstance(interfaces, str):
             interfaces = [interfaces]

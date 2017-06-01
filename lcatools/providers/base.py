@@ -116,6 +116,8 @@ class LcArchive(ArchiveInterface):
                 self.add_entity_and_children(x.flow)
         elif entity.entity_type == 'fragment':
             self.add_entity_and_children(entity.flow)
+            for c in entity.child_flows:
+                self.add_entity_and_children(c)
 
     @staticmethod
     def _upstream_key(entity):
@@ -210,12 +212,12 @@ class LcArchive(ArchiveInterface):
                 v = None
                 q = self[c['quantity']]
                 if q is None:
-                    import json
-                    import sys
-                    print(ext_ref)
-                    json.dump(c, sys.stdout, indent=2)
-
-                    raise KeyError
+                    continue
+                    # import json
+                    # import sys
+                    # print(ext_ref)
+                    # json.dump(c, sys.stdout, indent=2)
+                    # raise KeyError
                 if 'value' in c:
                     v = c['value']
                 if 'isReference' in c:

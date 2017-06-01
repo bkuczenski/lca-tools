@@ -401,6 +401,9 @@ class LcFragment(LcEntity):
             ev = self._exchange_values[0]
         return ev
 
+    def observable(self, scenario=None):
+        return self._check_observability(scenario=scenario)
+
     def _check_observability(self, scenario=None):
         if self.reference_entity is None:
             return True
@@ -738,7 +741,7 @@ class LcFragment(LcEntity):
         return None
 
     def terminations(self):
-        return self._terminations.values()
+        return self._terminations.items()
 
     def set_child_exchanges(self, scenario=None, reset_cache=False):
         """

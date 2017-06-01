@@ -82,6 +82,12 @@ class LcForeground(LcArchive):
         self.save_fragments(save_unit_scores=save_unit_scores)
 
     def new_fragment(self, *args, **kwargs):
+        """
+
+        :param args: flow, direction
+        :param kwargs: uuid=None, parent=None, comment=None, value=None, balance=False; **kwargs passed to LcFragment
+        :return:
+        """
         frag = self._catalog.ed.create_fragment(*args, **kwargs)
         self.add_entity_and_children(frag)
         return frag
@@ -257,9 +263,9 @@ class LcForeground(LcArchive):
 
     def _find_links(self, frag):
         for i in self.fragments(show_all=True):
-            for t in i.terminations():
-                if i.termination(t).term_node is frag:
-                    yield i.termination(t)
+            for s, t in i.terminations():
+                if t.term_node is frag:
+                    yield t
 
     def linked_terms(self, frag):
         """

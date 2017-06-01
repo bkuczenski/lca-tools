@@ -172,8 +172,12 @@ class CatalogRef(object):
     def _require_quantity(self):
         if self.entity_type == 'quantity':
             if self._query.get_item(self.external_ref, 'Indicator') is not None:
-                return
+                return True
+            return False
         raise InvalidQuery('This query only applies to LCIA methods')
+
+    def is_lcia_method(self):
+        return self._require_quantity()
 
     def terminate(self, direction=None):
         self._require_flow()

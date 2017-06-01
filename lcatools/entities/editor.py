@@ -235,10 +235,10 @@ class FragmentEditor(FlowEditor):
 
     @staticmethod
     def transfer_evs(frag, new):
-        if frag.observed_ev != 0:
+        if frag.observed_ev != 0 and new.observable():
             new.observed_ev = frag.observed_ev
         for scen in frag.exchange_values():
-            if scen != 0 and scen != 1:
+            if scen != 0 and scen != 1 and new.observable(scen):
                 new.set_exchange_value(scen, frag.exchange_value(scen))
 
     def interpose(self, frag):
@@ -281,8 +281,7 @@ class FragmentEditor(FlowEditor):
 
         self.transfer_evs(frag, new)
 
-        for t_scen in frag.terminations():
-            term = frag.termination(t_scen)
+        for t_scen, term in frag.terminations():
             if term.term_node is frag:
                 new.to_foreground(scenario=t_scen)
             else:

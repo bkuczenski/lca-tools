@@ -49,6 +49,10 @@ class QuantityNotLoaded(Exception):
     pass
 
 
+class ConversionReferenceMismatch(Exception):
+    pass
+
+
 class CLookup(object):
     """
     A CLookup is a fuzzy mapping from compartment to characterization factor. It's basically a dict with
@@ -273,6 +277,8 @@ class Qdb(LcArchive):
         :param quantity:
         :return:
         """
+        if quantity is None:
+            return None
         if isinstance(quantity, int):
             if quantity < len(self._q):
                 return quantity
@@ -364,8 +370,11 @@ class Qdb(LcArchive):
                 raise ValueError('Too many elements specified')
             ref_q_ind = self._get_q_ind(flow.reference_entity)
             compartment = flow['Compartment']
-            f_inds = self.find_flowables(*self._flow_terms(flow))
+            f_inds = [fb for fb in self.find_flowables(*self._flow_terms(flow))]
             _biogenics = (y for y in self._flow_terms(flow))
+
+        if ref_q_ind is None:
+            return None
 
         comp = self.c_mgr.find_matching(compartment)
 
@@ -384,17 +393,16 @@ class Qdb(LcArchive):
             factor = cf[locale]
             cf_ref_q_ind = self._get_q_ind(cf.flow.reference_entity)
             if cf_ref_q_ind != ref_q_ind:
+                print('reference quantities don"t match')
                 if flow is not None:
                     ref_conversion = flow.cf(self.get_quantity(cf_ref_q_ind))
                     if ref_conversion == 0:
+                        print('bailing')
                         continue
                     factor *= ref_conversion
 
                 else:
-                    # what the fuck do we do about this???
-                    print('Wrong reference quantities; provided: %s; found in cf: %s' % (reference,
-                                                                                         cf.flow.reference_entity))
-                    continue
+                    raise ConversionReferenceMismatch('[%d] vs [%d]%s' % (ref_q_ind, cf_ref_q_ind, cf))
             vals.append(factor)
         if len(vals) == 0:
             return None

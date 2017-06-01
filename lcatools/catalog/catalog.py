@@ -99,11 +99,14 @@ class LcCatalog(object):
 
         self._lcia_methods = set()
 
+    def quantities(self, **kwargs):
+        return self._qdb.quantities(**kwargs)
+
     def new_resource(self, *args, **kwargs):
         """
         Create a new data resource by specifying its properties directly to the constructor
-        :param args:
-        :param kwargs:
+        :param args: source, ds_type
+        :param kwargs: interfaces=None, privacy=0, priority=0, static=False; **kwargs passed to archive constructor
         :return:
         """
         self._resolver.new_resource(*args, **kwargs)
@@ -145,6 +148,12 @@ class LcCatalog(object):
     def references(self):
         for ref, ints in self._resolver.references:
             yield ref
+
+    @property
+    def interfaces(self):
+        for ref, ints in self._resolver.references:
+            for i in ints:
+                yield ':'.join([ref, i])
 
     def show_interfaces(self):
         for ref, ints in self._resolver.references:
@@ -223,7 +232,7 @@ class LcCatalog(object):
             matches = itype.intersection(set(res.interfaces))
             if 'quantity' in matches:
                 yield QuantityInterface(self._archives[res.source], self._qdb, catalog=self, privacy=res.privacy)
-            if 'entity' in matches:
+            if 'index' in matches:
                 yield IndexInterface(self._archives[res.source], catalog=self, privacy=res.privacy)
             if 'inventory' in matches:
                 yield InventoryInterface(self._archives[res.source], catalog=self, privacy=res.privacy)

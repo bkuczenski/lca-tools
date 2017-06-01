@@ -32,8 +32,33 @@ class ForegroundCatalog(LcCatalog):
         super(ForegroundCatalog, self).__init__(catalog_dir, qdb=qdb)
         self._foregrounds = dict()  # _foregrounds := name --> path of LOADED foregrounds
         self._known_fgs = dict()  # := name --> path of KNOWN foregrounds
-        self._ed = FragmentEditor(qdb=self._qdb, interactive=False)
+        self.ed = FragmentEditor(qdb=self._qdb, interactive=False)
         self._load_known_foregrounds()
+
+    def __getitem__(self, item):
+        """
+        Retrieve foreground by name, or entity by catalog ref
+        :param item:
+        :return:
+        """
+        if isinstance(item, str):
+            ref = self._ensure_ref(item)
+            return self._archives[self._foregrounds[ref]]
+        else:
+            return self.fetch(item)
+
+    @staticmethod
+    def _ensure_ref(name):
+        """
+        Ensures that the reference begins with 'foreground', and prepends it if it does not
+        :param name:
+        :return:
+        """
+        if name.split('.')[0] != 'foreground':
+            ref = '.'.join(['foreground', name])
+        else:
+            ref = name
+        return ref
 
     def add_foreground(self, name, path=None):
         """
@@ -43,10 +68,7 @@ class ForegroundCatalog(LcCatalog):
         :param path: stores entities.json and the fragments directory
         :return: I suppose it could return a foreground interface.. we'll see
         """
-        if name.split('.')[0] != 'foreground':
-            ref = '.'.join(['foreground', name])
-        else:
-            ref = name
+        ref = self._ensure_ref(name)
         if path is None:
             path = self._known_fgs[ref]
         if path in self._foregrounds.values():
@@ -54,7 +76,7 @@ class ForegroundCatalog(LcCatalog):
             return
         if path in self._archives:
             raise KeyError('Source collision')
-        if name in self._foregrounds:
+        if ref in self._foregrounds:
             raise ValueError('Foreground name is already registered')
         return self._load_foreground(ref, path)
 

@@ -18,7 +18,7 @@ class Emission(object):
         self._flow = flow
         self._direction = direction
 
-        self._hash = (flow.uuid, direction)
+        self._hash = (flow.external_ref, direction)
 
     def __eq__(self, other):
         """

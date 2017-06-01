@@ -456,7 +456,7 @@ class LcFragment(LcEntity):
             else:
                 self.set_exchange_value(scenario, new_val)
 
-    def observe(self, scenario=None, accept_all=False, recurse=True):
+    def observe(self, scenario=None, accept_all=False, recurse=True, _traverse=True):
         """
         Interactively specify the fragment's observed exchange value-
         if fragment is a balance flow or if fragment is a child of a subfragment (for the specified scenario), then
@@ -465,6 +465,7 @@ class LcFragment(LcEntity):
         :param scenario:
         :param accept_all: whether to automatically apply the cached EV to the observation
         :param recurse: whether to observe child fragments
+        :param _traverse: internal param. used to only traverse the top-most fragment.
         :return:
         """
         if self._check_observability(scenario=scenario):
@@ -472,7 +473,10 @@ class LcFragment(LcEntity):
 
         if recurse:
             for c in self.child_flows:
-                c.observe(scenario=scenario, accept_all=accept_all, recurse=True)
+                c.observe(scenario=scenario, accept_all=accept_all, recurse=True, _traverse=False)
+
+        if _traverse:
+            self.traverse(1.0, scenario, observed=True)
 
     @property
     def is_background(self):
@@ -522,10 +526,7 @@ class LcFragment(LcEntity):
             if observed:
                 ev = self.observed_ev
             else:
-                if self.balance_flow:
-                    ev = self.observed_ev
-                else:
-                    ev = self.cached_ev
+                ev = self.cached_ev
         else:
             ev = self._exchange_values[match]
         if ev is None:
@@ -854,15 +855,19 @@ class LcFragment(LcEntity):
         ffs = self.traversal_entry(scenario, observed=observed)
         return [ff for ff in ffs if ff.term.is_null]
 
-    def inventory(self, scenario=None, scale=None, observed=False):
+    def inventory(self, scenario=None, scale=1.0, observed=False):
         """
-        Converts unit inventory into a set of exchanges, for
+        Converts unit inventory into a set of exchanges for easy display
         :param scenario:
         :param scale:
         :param observed:
         :return:
         """
-        pass
+        io, _ = self.unit_inventory(scenario=scenario, observed=observed)
+        frag_exchs = []
+        for f in io:
+            frag_exchs.append(ExchangeValue(self, f.fragment.flow, f.fragment.direction, value=f.magnitude * scale))
+        return sorted(frag_exchs, key=lambda x: x.direction)
 
     def unit_inventory(self, scenario=None, observed=False):
         """

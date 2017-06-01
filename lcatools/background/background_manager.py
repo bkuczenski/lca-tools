@@ -50,6 +50,34 @@ class BackgroundManager(object):
         :return:
         """
         product_flow = self._get_product_flow(process, ref_flow)
+        fg = self._be.foreground(product_flow)
+        _af, _ad, _bf = self._be.make_foreground(product_flow)
+
+        exchs = [ExchangeValue(product_flow.process, product_flow.flow, product_flow.direction, value=1.0)]
+
+        # first, foregrounds
+        rows, cols = _af.nonzero()
+        for i in range(len(rows)):
+            node = fg[cols[i]]
+            term = fg[rows[i]]
+            exchs.append(ExchangeValue(node.process, node.flow, node.direction, value=_af.data[i],
+                                       termination=term.process.external_ref))
+
+        # next, dependencies
+        rows, cols = _ad.nonzero()
+        for i in range(len(rows)):
+            node = fg[cols[i]]
+            term = self._be.tstack.bg_node(rows[i])
+            exchs.append(ExchangeValue(node.process, node.flow, node.direction, value=_ad.data[i],
+                                       termination=term.process.external_ref))
+
+        # last, fg emissions
+        rows, cols = _bf.nonzero()
+        for i in range(len(rows)):
+            node = fg[cols[i]]
+            exchs.append(ExchangeValue(node.process, node.flow, node.direction, value=_bf.data[i]))
+
+        return sorted(exchs, key=lambda x: (x.process is not process, x.termination is None))
 
     def inventory(self, process, ref_flow=None, show=None):
         """
@@ -63,7 +91,9 @@ class BackgroundManager(object):
         :return: a list of exchanges.
         """
         product_flow = self._get_product_flow(process, ref_flow)
-        interior = [ExchangeValue(product_flow.process, product_flow.flow, product_flow.direction, value=1.0)]
+        ref_ex = ExchangeValue(product_flow.process, product_flow.flow, product_flow.direction, value=1.0)
+        ref_ex.set_ref(product_flow.process)
+        interior = [ref_ex]
         exterior = []
         if self._be.is_background(product_flow):
             # need to index into background matrix

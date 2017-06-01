@@ -43,6 +43,7 @@ class ForegroundCatalog(LcCatalog):
         """
         if isinstance(item, str):
             ref = self._ensure_ref(item)
+            self.ensure_foreground(ref)
             return self._archives[self._foregrounds[ref]]
         else:
             return self.fetch(item)
@@ -115,6 +116,7 @@ class ForegroundCatalog(LcCatalog):
         return self._archives[path]
 
     def ensure_foreground(self, ref):
+        ref = self._ensure_ref(ref)
         self._ensure_foreground(ref, self._known_fgs[ref])
 
     def _retrieve(self, req, external_ref):

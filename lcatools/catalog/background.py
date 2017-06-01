@@ -34,7 +34,9 @@ class BackgroundInterface(BasicInterface):
         if self._bm is None:
             if self._archive.static:
                 # perform costly operations only when/if required
-                self._bm = BackgroundManager(self._archive)  # resources only accessible from a BackgroundInterface
+                if not hasattr(self._archive, 'bm'):
+                    self._archive.bm = BackgroundManager(self._archive)
+                self._bm = self._archive.bm
             else:
                 # non-static interfaces implement foreground-as-background
                 self._bm = BackgroundProxy(self._archive)
@@ -164,7 +166,8 @@ class BackgroundInterface(BasicInterface):
         if ref_flow is not None:
             ref_flow = self._archive.retrieve_or_fetch_entity(ref_flow)
         q = self._qdb.get_canonical_quantity(query_qty)  #
-        if self._archive.static:
+        if False:  # self._archive.static:
+            # just stick with what works. In future: if lci is not available bc private, then we will need it
             if not self.is_characterized(q):
                 self.characterize(self._qdb, q, **kwargs)
             res = self._bg.lcia(p, query_qty, ref_flow=ref_flow)

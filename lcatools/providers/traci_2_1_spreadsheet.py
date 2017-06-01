@@ -159,7 +159,7 @@ class Traci21Factors(NsUuidArchive):
     hours of dev time. Pays off only if I load TRACI factors >3600 times.
     """
 
-    def quantities(self, **kwargs):
+    def lcia_methods(self, **kwargs):
         qs = set()
         for col, val in q_info.items():
             q = self._check_methods(col)

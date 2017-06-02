@@ -688,8 +688,11 @@
     {
       "name": "methyl bromide",
       "synonyms": [
+        "Methane, bromo-, Halon 1001",
+        "74-83-9",
+        "Methane, bromo-",
         "methyl bromide",
-        "74-83-9"
+        "Bromomethane"
       ]
     },
     {
@@ -1979,6 +1982,7 @@
     {
       "name": "tribromomethane",
       "synonyms": [
+        "Bromoform",
         "75-25-2",
         "tribromomethane"
       ]
@@ -2316,7 +2320,8 @@
       "name": "dimethyl sulfate",
       "synonyms": [
         "77-78-1",
-        "dimethyl sulfate"
+        "dimethyl sulfate",
+        "Sulfuric acid, dimethyl ester"
       ]
     },
     {
@@ -5754,6 +5759,7 @@
     {
       "name": "ethylene dibromide",
       "synonyms": [
+        "Ethane, 1,2-dibromo-",
         "106-93-4",
         "ethylene dibromide"
       ]
@@ -5826,6 +5832,7 @@
       "name": "1,2-dichloroethane",
       "synonyms": [
         "1,2-dichloroethane",
+        "Ethane, 1,2-dichloro-",
         "107-06-2"
       ]
     },
@@ -6716,6 +6723,7 @@
       "name": "n-hexane",
       "synonyms": [
         "n-hexane",
+        "Hexane",
         "110-54-3"
       ]
     },
@@ -7620,7 +7628,8 @@
       "name": "di-(2-ethylhexyl)-phthalate (dehp)",
       "synonyms": [
         "117-81-7",
-        "di-(2-ethylhexyl)-phthalate (dehp)"
+        "di-(2-ethylhexyl)-phthalate (dehp)",
+        "Phthalate, dioctyl-"
       ]
     },
     {
@@ -18981,7 +18990,8 @@
       "name": "hydrofluoric acid",
       "synonyms": [
         "hydrofluoric acid",
-        "7664-39-3"
+        "7664-39-3",
+        "Hydrogen fluoride"
       ]
     },
     {
@@ -27139,6 +27149,13 @@
         "Benzo(ghi)perylene",
         "191-24-2",
         "1,12-benzoperylene"
+      ]
+    },
+    {
+      "name": "208-96-8",
+      "synonyms": [
+        "208-96-8",
+        "Acenaphthylene"
       ]
     }
   ]

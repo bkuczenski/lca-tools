@@ -62,7 +62,8 @@
       "name": "nitrogen dioxide",
       "synonyms": [
         "10102-44-0",
-        "nitrogen dioxide"
+        "nitrogen dioxide",
+        "Nitrogen oxide "
       ]
     },
     {
@@ -26490,6 +26491,7 @@
       "name": "copper(ii)",
       "synonyms": [
         "Copper",
+        "Copper, ions",
         "Copper, ion",
         "copper(ii)"
       ]
@@ -26820,6 +26822,7 @@
     {
       "name": "pm2.5",
       "synonyms": [
+        "Particulates, < 2.5 um ",
         "pm2.5"
       ]
     },
@@ -27217,6 +27220,13 @@
         "3-Hexanone",
         "589-38-8",
         "Pentanone, methyl-"
+      ]
+    },
+    {
+      "name": "pm2.5--10",
+      "synonyms": [
+        "pm2.5--10",
+        "Particulates, > 2.5 um, and < 10um"
       ]
     }
   ]

@@ -153,7 +153,10 @@
       "name": "cfc-12",
       "synonyms": [
         "75-71-8",
-        "cfc-12"
+        "Methane, dichlorodifluoro-",
+        "dichlorodifluoromethane",
+        "cfc-12",
+        "Methane, dichlorodifluoro-, CFC-12"
       ]
     },
     {
@@ -350,8 +353,11 @@
     {
       "name": "carbon tetrachloride",
       "synonyms": [
+        "carbon tetrachloride",
         "56-23-5",
-        "carbon tetrachloride"
+        "tetrachloromethane",
+        "Methane, tetrachloro-",
+        "Methane, tetrachloro-, CFC-10"
       ]
     },
     {
@@ -8513,6 +8519,7 @@
     {
       "name": "perchloroethylene",
       "synonyms": [
+        "Ethene, tetrachloro-",
         "127-18-4",
         "perchloroethylene"
       ]
@@ -18953,6 +18960,7 @@
     {
       "name": "hydrochloric acid",
       "synonyms": [
+        "Hydrogen Chloride",
         "7647-01-0",
         "hydrochloric acid"
       ]
@@ -26407,6 +26415,7 @@
     {
       "name": "chromium(vi)",
       "synonyms": [
+        "Chromium VI",
         "chromium(vi)"
       ]
     },
@@ -26425,7 +26434,8 @@
     {
       "name": "cobalt(ii)",
       "synonyms": [
-        "cobalt(ii)"
+        "cobalt(ii)",
+        "Cobalt"
       ]
     },
     {
@@ -26437,6 +26447,7 @@
     {
       "name": "copper(ii)",
       "synonyms": [
+        "Copper",
         "Copper, ion",
         "copper(ii)"
       ]
@@ -26620,7 +26631,8 @@
     {
       "name": "nickel(ii)",
       "synonyms": [
-        "nickel(ii)"
+        "nickel(ii)",
+        "Nickel"
       ]
     },
     {
@@ -26807,6 +26819,7 @@
     {
       "name": "selenium(iv)",
       "synonyms": [
+        "Selenium",
         "selenium(iv)"
       ]
     },
@@ -26922,6 +26935,7 @@
     {
       "name": "tsp",
       "synonyms": [
+        "Suspended solids, unspecified",
         "tsp"
       ]
     },
@@ -27078,6 +27092,7 @@
     {
       "name": "zinc(ii)",
       "synonyms": [
+        "Zinc",
         "zinc(ii)"
       ]
     }

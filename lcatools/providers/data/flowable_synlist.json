@@ -3567,7 +3567,8 @@
       "name": "2-methylnaphthalene",
       "synonyms": [
         "91-57-6",
-        "2-methylnaphthalene"
+        "2-methylnaphthalene",
+        "Naphthalene, 2-methyl-"
       ]
     },
     {
@@ -4751,6 +4752,7 @@
       "name": "p-cymene",
       "synonyms": [
         "99-87-6",
+        "Benzene, 1-methyl-4-(1-methylethyl)-",
         "p-cymene"
       ]
     },
@@ -5563,6 +5565,7 @@
     {
       "name": "2,4-dimethylphenol",
       "synonyms": [
+        "Phenol, 2,4-dimethyl-",
         "2,4-dimethylphenol",
         "105-67-9"
       ]
@@ -6112,8 +6115,10 @@
     {
       "name": "methyl isobutyl ketone",
       "synonyms": [
+        "4-Methyl-2-pentanone",
         "108-10-1",
-        "methyl isobutyl ketone"
+        "methyl isobutyl ketone",
+        "4-Methylpentan-2-one"
       ]
     },
     {
@@ -7298,6 +7303,7 @@
       "name": "n-dodecane",
       "synonyms": [
         "112-40-3",
+        "Dodecane",
         "n-dodecane"
       ]
     },
@@ -8372,6 +8378,7 @@
       "name": "n-decane",
       "synonyms": [
         "n-decane",
+        "Decane",
         "124-18-5"
       ]
     },
@@ -13491,7 +13498,8 @@
       "name": "pentamethyl benzene",
       "synonyms": [
         "700-12-9",
-        "pentamethyl benzene"
+        "pentamethyl benzene",
+        "Benzene, pentamethyl-"
       ]
     },
     {
@@ -24860,7 +24868,8 @@
     {
       "name": "barium(ii)",
       "synonyms": [
-        "barium(ii)"
+        "barium(ii)",
+        "Barium"
       ]
     },
     {
@@ -26289,6 +26298,7 @@
     {
       "name": "cadmium(ii)",
       "synonyms": [
+        "Cadmium, ion",
         "Cadmium",
         "cadmium(ii)"
       ]
@@ -26440,6 +26450,7 @@
     {
       "name": "chromium(iii)",
       "synonyms": [
+        "Chromium",
         "chromium(iii)"
       ]
     },
@@ -26656,6 +26667,7 @@
     {
       "name": "molybdenum(vi)",
       "synonyms": [
+        "Molybdenum",
         "molybdenum(vi)"
       ]
     },
@@ -26857,6 +26869,7 @@
     {
       "name": "silver(i)",
       "synonyms": [
+        "Silver",
         "silver(i)"
       ]
     },
@@ -26900,7 +26913,8 @@
     {
       "name": "thallium(i)",
       "synonyms": [
-        "thallium(i)"
+        "thallium(i)",
+        "Thallium"
       ]
     },
     {
@@ -26912,7 +26926,8 @@
     {
       "name": "tin(ii)",
       "synonyms": [
-        "tin(ii)"
+        "tin(ii)",
+        "Tin"
       ]
     },
     {
@@ -27105,7 +27120,8 @@
     {
       "name": "vanadium(v)",
       "synonyms": [
-        "vanadium(v)"
+        "vanadium(v)",
+        "Vanadium"
       ]
     },
     {
@@ -27185,6 +27201,22 @@
       "synonyms": [
         "12125-02-9",
         "Ammonium chloride"
+      ]
+    },
+    {
+      "name": "Fluorene, 1-methyl-",
+      "synonyms": [
+        "Fluorene, 1-methyl-",
+        "1730-37-6",
+        "1-Methyl-9H-fluorene"
+      ]
+    },
+    {
+      "name": "3-Hexanone",
+      "synonyms": [
+        "3-Hexanone",
+        "589-38-8",
+        "Pentanone, methyl-"
       ]
     }
   ]

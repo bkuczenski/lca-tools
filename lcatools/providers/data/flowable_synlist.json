@@ -781,7 +781,8 @@
       "name": "benzo[a]pyrene",
       "synonyms": [
         "benzo[a]pyrene",
-        "50-32-8"
+        "50-32-8",
+        "Benzo(a)pyrene"
       ]
     },
     {
@@ -1894,7 +1895,8 @@
       "name": "chloroethane",
       "synonyms": [
         "chloroethane",
-        "75-00-3"
+        "75-00-3",
+        "Ethane, chloro-"
       ]
     },
     {
@@ -2782,6 +2784,7 @@
     {
       "name": "methyl methacrylate",
       "synonyms": [
+        "Methacrylic acid, methyl ester",
         "methyl methacrylate",
         "80-62-6"
       ]
@@ -4861,6 +4864,7 @@
     {
       "name": "ethylbenzene",
       "synonyms": [
+        "Benzene, ethyl-",
         "100-41-4",
         "ethylbenzene"
       ]
@@ -6333,6 +6337,7 @@
       "name": "chlorobenzene",
       "synonyms": [
         "108-90-7",
+        "Benzene, chloro-",
         "chlorobenzene"
       ]
     },
@@ -15297,6 +15302,7 @@
       "name": "methyl t-butyl ether",
       "synonyms": [
         "1634-04-4",
+        "t-Butyl methyl ether",
         "methyl t-butyl ether"
       ]
     },
@@ -24811,6 +24817,7 @@
     {
       "name": "antimony(v)",
       "synonyms": [
+        "Antimony",
         "antimony(v)"
       ]
     },
@@ -27100,6 +27107,38 @@
       "synonyms": [
         "Zinc",
         "zinc(ii)"
+      ]
+    },
+    {
+      "name": "Indeno(1,2,3-cd)pyrene",
+      "synonyms": [
+        "Indeno(1,2,3-cd)pyrene",
+        "193-39-5"
+      ]
+    },
+    {
+      "name": "benzo(g,h,i)fluoranthene",
+      "synonyms": [
+        "benzo(ghi)fluoranthene",
+        "benzo(g,h,i)fluoranthene",
+        "203-12-3",
+        "Benzo(b,j,k)fluoranthene"
+      ]
+    },
+    {
+      "name": "3697-24-3",
+      "synonyms": [
+        "3697-24-3",
+        "Chrysene, 5-methyl-",
+        "5-Methylchrysene"
+      ]
+    },
+    {
+      "name": "Benzo(ghi)perylene",
+      "synonyms": [
+        "Benzo(ghi)perylene",
+        "191-24-2",
+        "1,12-benzoperylene"
       ]
     }
   ]

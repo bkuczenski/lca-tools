@@ -14,6 +14,10 @@ class AmbiguousReference(Exception):
     pass
 
 
+class FragmentNotFound(Exception):
+    pass
+
+
 class LcForeground(LcArchive):
     """
     An LcStudy is defined by its being anchored to a physical directory, which is used to serialize the non-fragment
@@ -62,6 +66,10 @@ class LcForeground(LcArchive):
             return self._catalog.fetch(ref)
         return ref
 
+    def foreground_ref(self, origin, external_ref):
+        ref = CatalogRef(origin, external_ref)
+        return self._catalog.fetch(ref)
+
     def add(self, entity):
         """
         Reimplement base add to merge instead of raising a key error.
@@ -91,6 +99,18 @@ class LcForeground(LcArchive):
         frag = self._catalog.ed.create_fragment(*args, **kwargs)
         self.add_entity_and_children(frag)
         return frag
+
+    def clone_fragment(self, frag, **kwargs):
+        """
+
+        :param frag: the fragment (and subfragments) to clone
+        :param kwargs: suffix (default: ' (copy)', applied to Name of top-level fragment only)
+                       comment (override existing Comment if present; applied to all)
+        :return:
+        """
+        clone = self._catalog.ed.clone_fragment(frag, **kwargs)
+        self.add_entity_and_children(clone)
+        return clone
 
     @property
     def _archive_file(self):
@@ -171,6 +191,8 @@ class LcForeground(LcArchive):
             super(LcForeground, self).check_counter(entity_type='fragment')
 
     def name_fragment(self, frag, name):
+        if self[frag.external_ref] is None:
+            raise FragmentNotFound(frag)
         k = self._key_to_id(name)
         if k is not None:
             raise ValueError('Name is already taken')

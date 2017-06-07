@@ -256,28 +256,27 @@ class FragmentEditor(FlowEditor):
         frag.reference_entity = interp
         return interp
 
-    def clone_fragment(self, frag, parent=None, suffix=' (copy)', comment=None):
+    def clone_fragment(self, frag, suffix=' (copy)', comment=None, _parent=None):
         """
         Creates duplicates of the fragment and its children. returns the reference fragment.
         :param frag:
-        :param parent: used internally
+        :param _parent: used internally
         :param suffix: attached to top level fragment
         :param comment: can be used in place of source fragment's comment
         :return:
         """
-        if parent is None:
-            parent = frag.reference_entity
-        if parent is None:
+        if _parent is None:
             direction = comp_dir(frag.direction)  # this gets re-reversed in create_fragment
         else:
             direction = frag.direction
         if suffix is None:
             suffix = ''
         the_comment = comment or frag['Comment']
-        new = self.create_fragment(parent=parent,
+        new = self.create_fragment(parent=_parent,
                                    Name=frag['Name'] + suffix, StageName=frag['StageName'],
                                    flow=frag.flow, direction=direction, comment=the_comment,
-                                   value=frag.cached_ev, balance=frag.balance_flow)
+                                   value=frag.cached_ev, balance=frag.balance_flow,
+                                   background=frag.is_background)
 
         self.transfer_evs(frag, new)
 
@@ -290,7 +289,7 @@ class FragmentEditor(FlowEditor):
                               scenario=t_scen)
 
         for c in frag.child_flows:
-            self.clone_fragment(c, parent=new, suffix='')
+            self.clone_fragment(c, _parent=new, suffix='')
         return new
 
     def split_subfragment(self, fragment):

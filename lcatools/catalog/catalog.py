@@ -178,8 +178,8 @@ class LcCatalog(object):
                 a.load_all()  # static json archives are by convention saved in complete form
             self._archives[res.source] = a
             for t in res.interfaces:
-                for k, v in a.get_names().items():
-                    self._names[':'.join([v, t])] = k
+                for k in a.catalog_names.keys():
+                    self._names[':'.join([k, t])] = res.source
         return True
 
     def _check_entity(self, source, external_ref):
@@ -195,11 +195,12 @@ class LcCatalog(object):
         :param origin:
         :param external_ref:
         :param interface:
-        :return:
+        :return: resource.reference, entity
         """
-        uname = '/'.join([origin, external_ref])
+        uname = '/'.join([origin, str(external_ref)])
+        found_ref = None
         if uname in self._entities:
-            return self._entities[uname]
+            return origin, self._entities[uname]
         if origin in self._nicknames:
             ent = self._check_entity(self._nicknames[origin], external_ref)
         else:
@@ -214,8 +215,9 @@ class LcCatalog(object):
                     continue
                 ent = self._check_entity(res.source, external_ref)
                 if ent is not None:
+                    found_ref = res.reference
                     break
-        return ent
+        return found_ref, ent
 
     def _get_interfaces(self, origin, itype):
         """
@@ -249,6 +251,7 @@ class LcCatalog(object):
     public functions -- should these operate directly on a catalog ref instead? I think so but let's see about usage
     """
     def query(self, origin):
+        next(self._resolver.resolve(origin))  # raises UnknownOrigin
         return QueryInterface(origin, catalog=self)
 
     def lookup(self, ref):
@@ -260,15 +263,16 @@ class LcCatalog(object):
 
         origins = set()
         for iface in INTERFACE_TYPES:
-            e = self._dereference(ref.origin, ref.external_ref, iface)
+            found_ref, e = self._dereference(ref.origin, ref.external_ref, iface)
             if e is not None:
-                origins.add(e.origin)
+                origins.add(found_ref)
         return sorted(list(origins))
 
     def fetch(self, ref):
         if ref.is_entity:
             return ref
-        return self._dereference(ref.origin, ref.external_ref, INTERFACE_TYPES)
+        _, e = self._dereference(ref.origin, ref.external_ref, INTERFACE_TYPES)
+        return e
 
     def entity_type(self, ref):
         return self.fetch(ref).entity_type

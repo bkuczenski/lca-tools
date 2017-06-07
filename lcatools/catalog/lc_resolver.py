@@ -5,6 +5,10 @@ import json
 from lcatools.catalog.lc_resource import LcResource
 
 
+class UnknownOrigin(Exception):
+    pass
+
+
 class LcCatalogResolver(object):
     """
     The resolver maintains a collection of resources, and translates semantic references into physical archives.
@@ -64,11 +68,15 @@ class LcCatalogResolver(object):
         :return:
         """
         terms = req.split('.')
+        origin_found = False
         for ref, res_list in self._resources.items():
             if ref.split('.')[:len(terms)] == terms:
+                origin_found = True
                 for res in res_list:
                     if res.satisfies(interfaces):
                         yield res
+        if not origin_found:
+            raise UnknownOrigin(req)
 
     def write_resource_files(self):
         for ref, resources in self._resources.items():

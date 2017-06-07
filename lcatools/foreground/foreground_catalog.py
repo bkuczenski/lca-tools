@@ -28,6 +28,10 @@ class ForegroundCatalog(LcCatalog):
     def _known_foregrounds(self):
         return os.path.join(self._rootdir, 'known_foregrounds.json')
 
+    @property
+    def known_foregrounds(self):
+        return self._known_fgs
+
     def __init__(self, catalog_dir, qdb=None):
         super(ForegroundCatalog, self).__init__(catalog_dir, qdb=qdb)
         self._foregrounds = dict()  # _foregrounds := name --> path of LOADED foregrounds

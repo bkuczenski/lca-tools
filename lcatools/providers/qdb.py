@@ -393,11 +393,12 @@ class Qdb(LcArchive):
             factor = cf[locale]
             cf_ref_q_ind = self._get_q_ind(cf.flow.reference_entity)
             if cf_ref_q_ind != ref_q_ind:
-                print('reference quantities don"t match')
+                print('reference quantities don\'t match: cf:%s, ref:%s' % (self._q.name(cf_ref_q_ind),
+                                                                            self._q.name(ref_q_ind)))
                 if flow is not None:
                     ref_conversion = flow.cf(self.get_quantity(cf_ref_q_ind))
                     if ref_conversion == 0:
-                        print('bailing')
+                        print('No conversion to %d.. bailing' % cf_ref_q_ind)
                         continue
                     factor *= ref_conversion
 

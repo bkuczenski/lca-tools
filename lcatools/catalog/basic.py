@@ -69,7 +69,7 @@ class BasicInterface(QueryInterface):
             return None
         if entity.entity_type == 'flow':
             return entity  # keep characterizations intact
-        return CatalogRef(entity.origin, entity.external_ref, catalog=self._catalog, entity_type=entity.entity_type)
+        return CatalogRef(self.origin, entity.external_ref, catalog=self._catalog, entity_type=entity.entity_type)
 
     def get_item(self, external_ref, item):
         return self._archive.get_item(external_ref, item)
@@ -79,3 +79,6 @@ class BasicInterface(QueryInterface):
 
     def get_uuid(self, external_ref):
         return self._archive.get_uuid(external_ref)
+
+    def get(self, external_ref):
+        return self.make_ref(self[external_ref])

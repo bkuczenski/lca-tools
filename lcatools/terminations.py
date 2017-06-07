@@ -56,6 +56,10 @@ class FlowTermination(object):
             term_node = fg[external_ref]
             if term_flow is not None:
                 term_flow = fg[term_flow]
+        elif origin.split('.')[0] == 'foreground':
+            term_node = fg.foreground_ref(origin, external_ref)
+            if term_flow is not None:
+                term_flow = fg.foreground_ref(origin, term_flow)
         else:
             # TODO: handle fragments from non-self origins
             term_node = fg.catalog_ref(origin, external_ref, entity_type='process')

@@ -1,5 +1,9 @@
 TODO:
 
+Fragments use:
+ - process-to-fragment !!
+
+General Issues:
  X entities: @property external_ref
  X entities: set origin, external_ref at init
  X interfaces: need both source and ref. source is argument to Archive(); ref is entity.origin

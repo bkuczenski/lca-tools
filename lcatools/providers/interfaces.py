@@ -371,7 +371,7 @@ class ArchiveInterface(object):
         :param entity:
         :return:
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     def retrieve_or_fetch_entity(self, key, **kwargs):
         """
@@ -431,7 +431,7 @@ class ArchiveInterface(object):
         Must be overridden in subclass
         :return:
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     def load_all(self, **kwargs):
         if self._loaded is False:

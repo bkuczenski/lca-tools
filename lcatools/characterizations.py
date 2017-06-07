@@ -28,6 +28,22 @@ class Characterization(object):
         self._locations = dict()
         if kwargs:
             self.add_value(**kwargs)
+        self._natural_dirn = None
+
+    @property
+    def natural_direction(self):
+        return self._natural_dirn
+
+    def set_natural_direction(self, c_mgr):
+        if self._natural_dirn is not None:
+            return
+        comp = c_mgr.find_matching(self.flow['Compartment'])
+        if comp.is_subcompartment_of(c_mgr.emissions):
+            self._natural_dirn = 'Output'
+        elif comp.is_subcompartment_of(c_mgr.resources):
+            self._natural_dirn = 'Input'
+        else:
+            self._natural_dirn = False
 
     @property
     def is_null(self):

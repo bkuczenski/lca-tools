@@ -46,11 +46,28 @@ class DetailedLciaResult(object):
     def __init__(self, lc_result, exchange, factor, location):
         self.exchange = exchange
         self.factor = factor
+        self._dirn_mod = None
         if location in factor.locations():
             self.location = location
         else:
             self.location = 'GLO'
         self._lc = lc_result
+
+    @property
+    def _dirn_adjust(self):
+        """
+        Memoized direction correction for "Outputs" "from ground" and "Inputs" "to environment"
+        :return:
+        """
+        if self._dirn_mod is None:
+            natural_direction = self.factor.natural_direction
+            if natural_direction is None or natural_direction is False:
+                self._dirn_mod = 1.0
+            elif self.exchange.direction == natural_direction:
+                self._dirn_mod = 1.0
+            else:
+                self._dirn_mod = -1.0
+        return self._dirn_mod
 
     @property
     def flow(self):
@@ -70,7 +87,7 @@ class DetailedLciaResult(object):
     def _value(self):
         if self.exchange.value is None:
             return 0.0
-        return self.exchange.value * self._lc.scale
+        return self.exchange.value * self._lc.scale * self._dirn_adjust
 
     @property
     def result(self):
@@ -88,10 +105,15 @@ class DetailedLciaResult(object):
                 self.factor.flow.get_uuid() == other.factor.flow.get_uuid())
 
     def __str__(self):
-        return '%s x %-s = %-s [%s] %s' % (number(self._value), number(self.factor[self.location]),
-                                           number(self.result),
-                                           self.location,
-                                           self.factor.flow)
+        if self._dirn_adjust == -1:
+            dirn_mod = '*'
+        else:
+            dirn_mod = ' '
+        return '%s%s x %-s  = %-s [%s] %s' % (dirn_mod,
+                                              number(self._value), number(self.factor[self.location]),
+                                              number(self.result),
+                                              self.location,
+                                              self.factor.flow)
 
 
 class SummaryLciaResult(object):
@@ -283,15 +305,16 @@ class LciaResult(object):
         :param item:
         :return:
         """
-        for k, v in self._LciaScores.items():
-            if item == k:
-                yield v
-            elif item == v.entity:
-                yield v
-            elif str(v.entity).startswith(str(item)):
-                yield v
-            elif str(k).startswith(str(item)):
-                yield v
+        if item in self._LciaScores:
+            yield self._LciaScores[item]
+        else:
+            for k, v in self._LciaScores.items():
+                if item == v.entity:
+                    yield v
+                elif str(v.entity).startswith(str(item)):
+                    yield v
+                elif str(k).startswith(str(item)):
+                    yield v
         yield AggregateLciaScore(None)
 
     def __getitem__(self, item):

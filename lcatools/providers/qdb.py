@@ -188,7 +188,6 @@ class Qdb(LcArchive):
         self._quell_biogenic_co2 = quell_biogenic_CO2
         self._co2_index = self._f.index('124-38-9')
         self._comp_from_air = self.c_mgr.find_matching('Resources from air')
-        self._comp_emissions = self.c_mgr.find_matching('Emissions')
 
     @property
     def quell_biogenic_co2(self):
@@ -382,7 +381,7 @@ class Qdb(LcArchive):
             if f_ind == self._co2_index:
                 if quell_biogenic_co2 or (quell_biogenic_co2 is None and self.quell_biogenic_co2):
                     if any([self.is_biogenic(term) for term in _biogenics]):
-                        if any([comp.is_subcompartment_of(x) for x in (self._comp_emissions, self._comp_from_air)]):
+                        if any([comp.is_subcompartment_of(x) for x in (self.c_mgr.emissions, self._comp_from_air)]):
                             return 0.0
 
         cfs = self._lookup_cfs(f_inds, comp, query_q_ind)
@@ -441,7 +440,9 @@ class Qdb(LcArchive):
                     x.flow.add_characterization(q)
             if x.flow.cf(q) is not None:
                 r.add_component(x.flow.external_ref, entity=x.flow)
-                r.add_score(x.flow.external_ref, x, x.flow.factor(q), locale)
+                fac = x.flow.factor(q)
+                fac.set_natural_direction(self.c_mgr)
+                r.add_score(x.flow.external_ref, x, fac, locale)
         return r
 
     '''

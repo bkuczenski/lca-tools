@@ -1,6 +1,6 @@
 import os
 
-# from lcatools.lcia_results import LciaResults
+from lcatools.lcia_results import LciaResults
 from lcatools.charts import scenario_compare_figure, save_plot
 from lcatools.old_foreground.report import save_stages, grab_stages
 
@@ -30,12 +30,7 @@ class ForegroundQuery(object):
         :return:
         """
         if isinstance(reference, str):
-            try:
-                frag = self._fm.frag(reference)
-            except StopIteration:
-                frag = self._fm.ref(0, reference)
-        elif isinstance(reference, tuple):
-            frag = self._fm.ref(*reference)
+            frag = self._fm.frag(reference)
         else:
             frag = reference
         assert frag.entity_type in ('process', 'fragment')
@@ -57,15 +52,19 @@ class ForegroundQuery(object):
         :param frag:
         :return:
         """
+        res = LciaResults(frag)
         if frag.entity_type == 'fragment':
-            res = self._fm.fragment_lcia(frag, **self._query_args)  # return LciaResults object
+            ffs = frag.traversal_entry(**self._query_args)
+            for k in self._qs:
+                res.add(self._fm.fragment_lcia(ffs, k))
         elif frag.entity_type == 'process':
-            res = self._fm.fg_lcia(frag)  # query_args currently not implemented-- since pf params and scales
+            for k in self._qs:
+                res.add(self._fm.lcia(frag, k))
         else:
             raise TypeError('unhandled  entity type %s' % frag.entity_type)
         res = self._do_weighting(res)
 
-        return [res[k] for k in self._qs]
+        return [res[k.uuid] for k in self._qs]
 
     @staticmethod
     def _do_stages(res):
@@ -90,16 +89,15 @@ class ForegroundQuery(object):
                  **kwargs):
         """
 
-        :param manager: a Foreground interface of some kind e.g. ForegroundManager
+        :param manager: a Foreground Manager
         :param frags: a list of tuples (object, nickname) to query in sequence.
           'object' can be one of:
           * a literal fragment
           * a catalog_ref for a process
           * a fragment abbreviation -- F.frag(abbreviation) must resolve to a fragment
-          * a UUID of a process in the foreground -- manager.ref(0, uuid) must resolve to a process)
-          * a 2-tuple (index, uuid) -- manager.ref(index, uuid) must resolve to a process
+          * a 2-tuple (origin, external_ref) -- must resolve to a process
           implementation in _ensure_frag
-        :param quantities: a list of uuids for quantities to query (the ones in foreground??)
+        :param quantities: a list of quantity refs or quantities to query
         :param weightings: a list of LciaWeighting objects (.weigh() and .q())
         :param savepath: defaults to 'figures' subdirectory in current directory
         :param kwargs: passed to manager.fragment_lcia:
@@ -125,7 +123,7 @@ class ForegroundQuery(object):
 
     @property
     def quantities(self):
-        return [self._fm[0][q] for q in self._qs]
+        return [q for q in self._qs]
 
     @property
     def scenario(self):

@@ -45,6 +45,16 @@ class CompartmentManager(object):
         if file is not None:
             self.set_local(file)
         self._c_dict = dict()  # dict of '; '.join(compartments) to Compartment -- to avoid repeated crawls
+        self._emissions = self.find_matching('Emissions')
+        self._resources = self.find_matching('Resources')
+
+    @property
+    def emissions(self):
+        return self._emissions
+
+    @property
+    def resources(self):
+        return self._resources
 
     @property
     def known_names(self):

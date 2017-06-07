@@ -1,8 +1,8 @@
 import os
 
-from lcatools.lcia_results import LciaResults
+# from lcatools.lcia_results import LciaResults
 from lcatools.charts import scenario_compare_figure, save_plot
-from lcatools.foreground.report import save_stages, grab_stages
+from lcatools.old_foreground.report import save_stages, grab_stages
 
 
 def _to_tuple(frag):
@@ -229,15 +229,12 @@ class ForegroundQuery(object):
         :param stages:
         :return:
         """
-        if self._res is None:
-            self._run_query()
-
         if stages is None:
             stages = self._all_stages
             # agg_sort = self._res[0][self._qs[0]].aggregate()
             # stages = sorted(agg_sort.components(), key=lambda x: agg_sort[x].cumulative_result)
 
-        scenario_compare_figure([self.aggregate(k) for k in self._res], stages, scenarios=self._frag_names)
+        scenario_compare_figure(self.agg_results, stages, scenarios=self._frag_names)
         return stages
 
     def save_figure(self, fname, stages=None):

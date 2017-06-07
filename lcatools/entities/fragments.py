@@ -302,8 +302,13 @@ class LcFragment(LcEntity):
                 re = ' ** ref'
         else:
             re = self.reference_entity.uuid[:7]
-        return '(%s) %s %.5s %s %s  [%s] %s' % (re, self.dirn, self.uuid, self.dirn, self.term,
-                                                self.unit, self['Name'])
+        if self.external_ref == self.uuid:
+            extname=''
+        else:
+            extname='{%s}' % self.external_ref
+
+        return '(%s) %s %.5s %s %s  [%s] %s %s' % (re, self.dirn, self.uuid, self.dirn, self.term,
+                                                   self.unit, self['Name'], extname)
 
     def show(self):
         print('%s' % self)
@@ -690,7 +695,7 @@ class LcFragment(LcEntity):
     def terminate(self, term_node, scenario=None, **kwargs):
         """
         specify a termination.  background=True: if the flow has a parent, will create a new
-        :param termination: a FlowTermination
+        :param term_node: The thing that terminates the flow
         :param scenario:
         :return:
         """

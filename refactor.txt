@@ -2,7 +2,20 @@ TODO:
 
 Fragments use:
  - process-to-fragment !!
+ == the unit of this is fg.terminate_child(term, flow, direction, new_term)
+ then just: for x in inventory (opt. include/exclude cutoffs / elementary)
+ this is just term.from_exchange
+ but what I really want to do is auto-terminate. bg does that; fg does not. simple as that.
+ index interface offers to terminate.- that's interactive
 
+ == want to be able to compute cutoffs even if not adding them to frag
+ -- but why not add just them to frag?
+
+todo for reporting:
+ - pretty-print frag.inventory (think Virent)
+ - list cutoffs w/o magnitudes
+ - results table
+ 
 General Issues:
  X entities: @property external_ref
  X entities: set origin, external_ref at init

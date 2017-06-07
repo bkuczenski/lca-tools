@@ -112,6 +112,11 @@ class LcForeground(LcArchive):
         self.add_entity_and_children(clone)
         return clone
 
+    def clear_score_caches(self):
+        for f in self._entities_by_type('fragment'):
+            for s, t in f.terminations():
+                t.clear_score_cache()
+
     @property
     def _archive_file(self):
         return os.path.join(self.source, 'entities.json')

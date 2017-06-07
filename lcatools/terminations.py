@@ -339,6 +339,12 @@ class FlowTermination(object):
                 # let's try relaxing this
                 # term flow must be sub-fragment's reference flow
                 term_flow = self.term_node.flow
+            # set direction of term to be direction of flow relative to term node
+            if self.is_subfrag:
+                if self.term_node.reference_entity is None:
+                    self.direction = comp_dir(self.term_node.direction)
+                else:
+                    self.direction = self.term_node.direction
         else:
             if inbound_ev is None or term_flow is None:
                 if term_flow is None:

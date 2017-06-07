@@ -93,6 +93,20 @@ class CatalogRef(object):
         """
         return self.uuid
 
+    def show(self):
+        print('%s CatalogRef (%s)' % (self._etype.title(), self.external_ref))
+        print('origin: %s' % self.origin)
+        if self._query is None:
+            print(' ** UNRESOLVED **')
+        else:
+            if self._etype == 'process':
+                for i in self.references():
+                    print('reference: %s' % i)
+            else:
+                print('reference: %s' % self.reference_entity)
+            for i in ('Name', 'Comment'):
+                print('%7s: %s' % (i, self[i]))
+
     def validate(self):
         if self._query is None:
             return False

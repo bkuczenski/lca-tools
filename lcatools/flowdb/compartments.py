@@ -157,6 +157,7 @@ class CompartmentManager(object):
                     try:
                         c = self._merge_compartment(compartment_name, force=force)
                         match = self._crawl(compartment_name)
+                        self.save()
                         if c is match and c is not None:
                             print('match: %s' % match.to_list())
                             self._c_dict[cs] = match

@@ -215,6 +215,7 @@ class TarjanStack(object):
         :param bg_index: row / column number of A* or column of B*
         :return: ProductFlow
         """
+        return self._bg_processes[bg_index]
 
     def bg_dict(self, pf_index):
         """

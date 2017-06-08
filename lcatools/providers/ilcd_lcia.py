@@ -1,14 +1,7 @@
 from lcatools.providers.ilcd import IlcdArchive, typeDirs, get_flow_ref, uuid_regex, \
     dtype_from_nsmap
 from lcatools.providers.xml_widgets import *
-from lcatools.entities import LcEntity, LcQuantity
-
-
-def get_reference_quantity(q, ns=None):
-    ref_to_ref = find_tag(q, 'referenceQuantity', ns=ns)
-    ug_uuid = ref_to_ref.attrib['refObjectId']
-    ug_uri = ref_to_ref.attrib['uri']
-    return ug_uuid, ug_uri
+from lcatools.entities import LcEntity, LcQuantity, LcUnit
 
 
 def get_cf_value(exch, ns=None):
@@ -24,6 +17,21 @@ class IlcdLcia(IlcdArchive):
     Slightly extends the IlcdArchive with a set of functions for loading LCIA factors and adding them as
     quantities + charaterizations
     """
+
+    def _make_reference_unit(self, o, ns=None):
+        """
+        This is a bit of a hack. ILCD has distinct LciaMethod objects and FlowProperty objects.  The LCIA Method lists
+        a FlowProperty as its reference quantity (like "mass C2H4 equivalents"), and then the flow property lists a
+        reference unit (like "mass").  This is a problem for us because we consider the LciaMethod to BE a quantity,
+        and so we want the FlowProperty to present as a unit.
+        :param o:
+        :param ns:
+        :return:
+        """
+        ref_to_ref = find_tag(o, 'referenceQuantity', ns=ns)
+        r_uuid = ref_to_ref.attrib['refObjectId']
+        r_uri = ref_to_ref.attrib['uri']
+        return self._check_or_retrieve_child(r_uuid, r_uri)
 
     def _create_lcia_quantity(self, o, ns):
 
@@ -43,14 +51,15 @@ class IlcdLcia(IlcdArchive):
             ry = str(find_tag(o, 'referenceYear', ns=ns))
             dur = str(find_tag(o, 'duration', ns=ns))
 
-            r_uuid, r_uri = get_reference_quantity(o, ns=ns)
-            rq = self._check_or_retrieve_child(r_uuid, r_uri)
+            rq = self._make_reference_unit(o, ns=ns)
 
-            lcia = LcQuantity(u, Name=n, Comment=c, Method=m, Category=ic, Indicator=ii, ReferenceYear=ry, Duration=dur)
+            lcia = LcQuantity(u, Name=n, Comment=c, Method=m, Category=ic, Indicator=ii, ReferenceYear=ry,
+                              Duration=dur, UnitConversion=rq['UnitConversion'])
             lcia.set_external_ref('%s/%s' % (typeDirs['LCIAMethod'], u))
-            lcia.reference_entity = rq.reference_entity
+            lcia.reference_entity = LcUnit('%s %s' % (rq.unit(), rq['Name']), unit_uuid=rq.uuid)
 
             self.add(lcia)
+
         return lcia
 
     def _fetch(self, term, dtype=None, version=None, **kwargs):

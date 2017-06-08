@@ -81,4 +81,4 @@ class BasicInterface(QueryInterface):
         return self._archive.get_uuid(external_ref)
 
     def get(self, external_ref):
-        return self.make_ref(self[external_ref])
+        return self.make_ref(self._archive.retrieve_or_fetch_entity(external_ref))

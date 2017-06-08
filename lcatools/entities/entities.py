@@ -233,6 +233,8 @@ class LcEntity(object):
                 j[k] = {"origin": v.origin,
                         "externalId": v.external_ref,
                         "entity_type": v.entity_type}
+            elif isinstance(v, dict):
+                j[k] = v
             else:
                 j[k] = str(v)
         return j

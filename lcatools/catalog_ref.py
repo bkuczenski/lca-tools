@@ -36,7 +36,7 @@ class CatalogRef(object):
             origin = 'foreground'
         return cls(origin, j['externalId'], catalog=catalog, entity_type=etype)
 
-    def __init__(self, origin, ref, catalog=None, entity_type=None):
+    def __init__(self, origin, ref, catalog=None, entity_type=None, **kwargs):
         """
         A catalog ref is defined by an entity's origin and external reference, which are all that is necessary to
         identify and/or recreate the entity.  A ref can be linked to a catalog, which may be able to resolve the
@@ -63,6 +63,8 @@ class CatalogRef(object):
         self._etype = entity_type
 
         self._query = None
+
+        self._d = kwargs
 
         self._known = False
 
@@ -105,7 +107,12 @@ class CatalogRef(object):
             else:
                 print('reference: %s' % self.reference_entity)
             for i in ('Name', 'Comment'):
-                print('%7s: %s' % (i, self[i]))
+                print('%7s: %s' % (i, self._query.get_item(self.external_ref, i)))
+        if len(self._d) > 0:
+            print('==Local Fields==')
+            ml = len(max(self._d.keys(), key=len))
+            for k, v in self._d.items():
+                print('%*s: %s' % (ml, k, v))
 
     def validate(self):
         if self._query is None:
@@ -159,9 +166,18 @@ class CatalogRef(object):
             self._etype = catalog.entity_type(self)
 
     def __getitem__(self, item):
+        if item in self._d:
+            return self._d[item]
+        if 'Local%s' % item in self._d:
+            return self._d['Local%s' % item]
         if self._query is None:
             raise NoCatalog
         return self._query.get_item(self.external_ref, item)
+
+    def __setitem__(self, key, value):
+        if key in ('Name', 'Comment'):
+            key = 'Local%s' % key
+        self._d[key] = value
 
     def serialize(self):
         j = {

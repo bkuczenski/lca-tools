@@ -1,8 +1,8 @@
 import os
 
-from lcatools.lcia_results import LciaResults
+from lcatools.foreground.report import save_stages, grab_stages
 from lcatools.charts import scenario_compare_figure, save_plot
-from lcatools.old_foreground.report import save_stages, grab_stages
+from lcatools.lcia_results import LciaResults
 
 
 def _to_tuple(frag):

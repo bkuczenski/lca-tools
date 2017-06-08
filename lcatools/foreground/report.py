@@ -19,6 +19,12 @@ default_frag_data = 'fragment-data.tex'
 default_model_doc = 'model-doc.tex'
 
 
+def tex_sanitize(tex):
+    tex = re.sub('%', '\\%', tex)
+    tex = re.sub('_', '\\\\textunderscore{}', tex)  # this doesn't work bc filenames have underscores
+    return tex
+
+
 def grab_stages(results):
     stages = set()
     for r in results:
@@ -34,7 +40,7 @@ drawing 'primitives'
 def stage_name_table(stages):
     out = '\\scriptsize\n\\begin{tabular}[b]{c@{ -- }l}\n'
     for i, k in enumerate(stages):
-        out += '%s & %s\\\\\n' % (chr(ord('A') + i), k)
+        out += '%s & %s\\\\\n' % (chr(ord('A') + i), tex_sanitize(k))
     out += '\\end{tabular}\n'
     return out
 
@@ -46,20 +52,22 @@ def save_stages(fname, stages):
 
 
 def fragment_header(frag, scenario=None):
-    return '{\\hypertarget{%.5s}{\\Large \\texttt{%.5s}}}\\subsection{%s}\n{\\large %s: %g %s %s}\\\\[8pt]\n%s\n' % (
+    s = '{\\hypertarget{%.5s}{\\Large \\texttt{%.5s}}}\\subsection{%s}\n{\\large %s: %g %s %s}\\\\[8pt]\n%s\n' % (
         frag.get_uuid(), frag.get_uuid(), frag['Name'], comp_dir(frag.direction), frag.exchange_value(scenario),
         frag.flow.unit(),
         frag.flow['Name'], frag['Comment']
     )
+    return tex_sanitize(s)
 
 
 def fragment_inventory(fragment, scenario=None):
-    exchs = [x for x in fragment.get_fragment_inventory(scenario=scenario)]
+    exchs = [x for x in fragment.inventory(scenario=scenario, observed=True)]
     inventory = ''
     if len(exchs) > 0:
         inventory += '\n{\\small\n\\begin{tabular}{rccl}\n'
         for x in exchs:
-            inventory += '%6s & %6.3g & %s & %s\\\\\n' % (x.direction, x.value, x.flow.unit(), x.flow['Name'])
+            inventory += tex_sanitize('%6s & %6.3g & %s & %s\\\\\n' % (x.direction,
+                                                                       x.value, x.flow.unit(), x.flow['Name']))
         inventory += '\\end{tabular}\n}\n'
 
     return inventory
@@ -140,7 +148,7 @@ class TeXAuthor(object):
             os.remove(fname)
 
         with open(fname, 'w') as fp:
-            fp.write('%% %s' % intro_text)
+            fp.write('%% %s\n' % intro_text)
 
     def _read_wrapper(self):
         with open(self._wrapper_fname) as fp:
@@ -156,12 +164,6 @@ class TeXAuthor(object):
         out = stage_name_table(stages)
         with open(self.stg_rel_path(frag), 'w') as fp:
             fp.write(out)
-
-    @staticmethod
-    def _tex_sanitize(tex):
-        tex = re.sub('%', '\\%', tex)
-        # tex = re.sub('_', '\\\\textunderscore', tex)  # this doesn't work bc filenames have underscores
-        return tex
 
     def __init__(self, folder=default_tex_folder, overwrite=True, comments=False,
                  frag_data=default_frag_data, model_doc=default_model_doc):
@@ -325,7 +327,8 @@ xs        """
                     frag_name += '~$\cdot$~{\\scriptsize %s}' % fragment['Comment']
 
         boxes += '\n\\rput[l]([angle=0,nodesep=6pt]nx%.5s){\parbox{%fcm}{\\raggedright %s}}' % (fragment.get_uuid(),
-                                                                                                parbox_width, frag_name)
+                                                                                                parbox_width,
+                                                                                                tex_sanitize(frag_name))
 
         if fragment.direction == 'Input':
             arrows = '\\ncline{->}{nx%.5s}{px%.5s}' % (fragment.get_uuid(), fragment.get_uuid())
@@ -377,17 +380,27 @@ xs        """
         self._write_stage_names(frag, stages)
         return fig
 
+    def frag_chart_narrow(self, frag):
+        return '''
+\\begin{minipage}{\\textwidth}
+{\\pnode(12,-1){pLegend}
+\\large Contribution Analysis}
+
+\\includegraphics[width=\\textwidth]{%s}
+\\rput[tl](pLegend){\\parbox{5cm}{\\raggedright Stages\\\\
+{\\scriptsize \\input{%s}}}}
+\\end{minipage}
+''' % (self.img_rel_path(frag), self.stg_rel_path(frag))
+
     def frag_chart(self, frag):
         return '''
 \\begin{minipage}{\\textwidth}
 {\\pnode(12,-1){pLegend}
 \\large Contribution Analysis}
 
-\\includegraphics[width=12cm]{%s}
-\\rput[tl](pLegend){\\parbox{5cm}{\\raggedright Stages\\\\
-{\\scriptsize \\input{%s}}}}
+\\includegraphics[width=\\textwidth]{%s}
 \\end{minipage}
-''' % (self.img_rel_path(frag), self.stg_rel_path(frag))
+    ''' % self.img_rel_path(frag)
 
     @staticmethod
     def contrib_table(results, stages=None):
@@ -485,7 +498,7 @@ xs        """
                 tex_dump += self.contrib_table(results, stages=stages)
 
         with open(filename, 'w') as fp:
-            fp.write(self._tex_sanitize(tex_dump))
+            fp.write(tex_dump)
 
         print('Written to %s' % filename)
         if frag.get_uuid() not in self._file_list:
@@ -538,12 +551,12 @@ xs        """
 
         return children
 
-    def recurse_report(self, fm, fragments, quantities, section_names=None, **kwargs):
+    def recurse_report(self, cat, fragments, quantities, section_names=None, **kwargs):
         """
         Recursively generate fragment drawings for supplied fragments plus all descendents.
         TODO: figure out a way to organize / group child fragments other than by tier.
         Current plans are to _manually edit_ fragment_data.tex to reorganize sections / hide private fragments
-        :param fm: ForegroundManager
+        :param cat: Foreground Catalog
         :param fragments: list of LcFragment objects at the top tier of the report [[ or uuids? ]]
         :param quantities: list of LcQuantity objects or quantity UUIDs
         :param section_names: [None] a list of names for successive tiers
@@ -575,7 +588,7 @@ xs        """
             if len(section_name) > 0:
                 self.new_section(section_name)
             seen.extend(fragments)
-            query = fm.query(fragments, qs, **kwargs)
+            query = cat.fg_query(fragments, qs, **kwargs)
             children = self.report(query)
             new_children = [ch for ch in children if ch not in seen]
             fragments = new_children

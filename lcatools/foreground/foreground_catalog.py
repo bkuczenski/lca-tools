@@ -142,6 +142,15 @@ class ForegroundCatalog(LcCatalog):
                     continue
         return ent
 
+    def frag(self, abbrv):
+        for x in self._foregrounds.values():
+            try:
+                ent = self._archives[x].frag(abbrv)
+            except StopIteration:
+                continue
+            if ent is not None:
+                return ent
+
     def lookup(self, ref):
         """
         Here I am making a dangerous decision to treat foregrounds differently - no interface, no abstraction
@@ -169,10 +178,9 @@ class ForegroundCatalog(LcCatalog):
         :param q_ref:
         :return:
         """
-        q = self.fetch(q_ref)
         if not self._qdb.is_loaded(q_ref):
             self.load_lcia_factors(q_ref)
-        result = LciaResult(q)
+        result = LciaResult(q_ref)
         for ff in fragmentflows:
             if ff.term.is_null:
                 continue
@@ -181,7 +189,7 @@ class ForegroundCatalog(LcCatalog):
                 continue
 
             try:
-                v = ff.term.score_cache(quantity=q, qdb=self._qdb)
+                v = ff.term.score_cache(quantity=q_ref, qdb=self._qdb)
             except SubFragmentAggregation:
                 v = self.fragment_lcia(ff.term.subfragments, q_ref)
             value = v.total()
@@ -198,6 +206,6 @@ class ForegroundCatalog(LcCatalog):
                 l = ff.term.term_node['SpatialScope']
             except KeyError:
                 l = None
-            f = Characterization(ff.term.term_flow, q, value=value, location=l)
+            f = Characterization(ff.term.term_flow, q_ref, value=value, location=l)
             result.add_score(ff.fragment.uuid, x, f, l)
         return result

@@ -189,6 +189,12 @@ class Qdb(LcArchive):
         self._co2_index = self._f.index('124-38-9')
         self._comp_from_air = self.c_mgr.find_matching('Resources from air')
 
+        # load CFs from reference flows
+        for f in self.flows():
+            for cf in f.characterizations():
+                if cf.quantity is not f.reference_entity:
+                    self.add_cf(cf)
+
     @property
     def quell_biogenic_co2(self):
         return self._quell_biogenic_co2
@@ -335,9 +341,42 @@ class Qdb(LcArchive):
             f_inds = [f_inds]
         cfs = set()
         for f_ind in f_inds:
-            for item in self._fq_dict[f_ind, q_ind].find(compartment, dist=0):
+            for item in self._fq_dict[f_ind, q_ind].find(compartment, dist=1):
                 cfs.add(item)
         return cfs
+
+    def _conversion_generator(self, f_inds, compartment, from_q, to_q):
+        for f_ind in f_inds:
+            for item in self._fq_dict[f_ind, from_q].find(compartment, dist=3):
+                if self._get_q_ind(item.flow.reference_entity) == to_q:
+                    yield item
+
+    def _lookfor_conversion(self, f_inds, compartment, from_q, to_q):
+        """
+        fq_dict stores CFs that have dimension query_q_ind / cf_ref_q_ind: query unit per CF's flows' ref unit
+        If CF ref_unit does not match the supplied ref_unit, we need to find and return a conversion.
+        The conversion should have dimension cf_ref_q_ind / ref_q_ind.
+
+        The conversion generator returns a CF with dimension from_q / to_q.  If the inverse CF is found, this needs
+        to be inverted.
+
+        :param f_inds:
+        :param compartment:
+        :param from_q:
+        :param to_q:
+        :return:
+        """
+        # first straight from-to
+        try:
+            cf = next(self._conversion_generator(f_inds, compartment, from_q, to_q))
+            value = cf.value
+        except StopIteration:
+            try:
+                cf = next(self._conversion_generator(f_inds, compartment, to_q, from_q))
+                value = 1.0 / cf.value
+            except StopIteration:
+                raise KeyError
+        return value
 
     @staticmethod
     def is_biogenic(term):
@@ -394,15 +433,20 @@ class Qdb(LcArchive):
             if cf_ref_q_ind != ref_q_ind:
                 print('reference quantities don\'t match: cf:%s, ref:%s' % (self._q.name(cf_ref_q_ind),
                                                                             self._q.name(ref_q_ind)))
-                if flow is not None:
-                    ref_conversion = flow.cf(self.get_quantity(cf_ref_q_ind))
-                    if ref_conversion == 0:
-                        print('No conversion to %d.. bailing' % cf_ref_q_ind)
-                        continue
+                try:
+                    # try to do a recursive conversion
+                    ref_conversion = self._lookfor_conversion(f_inds, comp, cf_ref_q_ind, ref_q_ind)
                     factor *= ref_conversion
+                except KeyError:
+                    if flow is not None:
+                        ref_conversion = flow.cf(self.get_quantity(cf_ref_q_ind))
+                        if ref_conversion == 0:
+                            print('No conversion to %d.. bailing' % cf_ref_q_ind)
+                            continue
+                        factor *= ref_conversion
 
-                else:
-                    raise ConversionReferenceMismatch('[%d] vs [%d]%s' % (ref_q_ind, cf_ref_q_ind, cf))
+                    else:
+                        raise ConversionReferenceMismatch('[%d] vs [%d]%s' % (ref_q_ind, cf_ref_q_ind, cf))
             vals.append(factor)
         if len(vals) == 0:
             return None

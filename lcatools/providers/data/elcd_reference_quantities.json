@@ -1,9 +1,153 @@
 {
   "@context": "https://bkuczenski.github.io/lca-tools-datafiles/context.jsonld",
-  "catalogNames": {},
-  "dataSourceReference": "",
-  "dataSourceType": "LcArchive",
-  "flows": [],
+  "catalogNames": {
+    "local.qdb": "/data/GitHub/lca-tools/lcatools/providers/data/elcd_reference_quantities.json"
+  },
+  "dataReference": "local.qdb",
+  "dataSource": "/data/GitHub/lca-tools/lcatools/providers/data/elcd_reference_quantities.json",
+  "dataSourceType": "Qdb",
+  "flows": [
+    {
+      "CasNumber": "",
+      "Comment": "Reference elementary flow of the International Reference Life Cycle Data System (ILCD).",
+      "Compartment": [
+        "Resources",
+        "Resources from ground",
+        "Non-renewable energy resources from ground"
+      ],
+      "Name": "peat;  8.4 MJ/kg",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "quantity": "93a60a56-a3c8-11da-a746-0800200b9a66",
+          "value": 0.11904761904761904
+        },
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "93a60a56-a3c8-11da-a746-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "e2fba107-6555-11dd-ad8b-0800200c9a66",
+      "entityType": "flow",
+      "externalId": "flows/e2fba107-6555-11dd-ad8b-0800200c9a66",
+      "origin": "local.elcd.3.2"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "synonyms were erroneous; removed Reference elementary flow of the International Reference Life Cycle Data System (ILCD).",
+      "Compartment": [
+        "Resources",
+        "Resources from ground",
+        "Non-renewable energy resources from ground"
+      ],
+      "Name": "crude oil; 42.3 MJ/kg",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "quantity": "93a60a56-a3c8-11da-a746-0800200b9a66",
+          "value": 0.023640661938534282
+        },
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "93a60a56-a3c8-11da-a746-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "fe0acd60-3ddc-11dd-a6f8-0050c2490048",
+      "entityType": "flow",
+      "externalId": "flows/fe0acd60-3ddc-11dd-a6f8-0050c2490048",
+      "origin": "local.elcd.3.2"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "Reference elementary flow of the International Reference Life Cycle Data System (ILCD).",
+      "Compartment": [
+        "Resources",
+        "Resources from ground",
+        "Non-renewable energy resources from ground"
+      ],
+      "Name": "brown coal;  11.9 MJ/kg",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "quantity": "93a60a56-a3c8-11da-a746-0800200b9a66",
+          "value": 0.08403361344537814
+        },
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "93a60a56-a3c8-11da-a746-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "fe0acd60-3ddc-11dd-a6f9-0050c2490048",
+      "entityType": "flow",
+      "externalId": "flows/fe0acd60-3ddc-11dd-a6f9-0050c2490048",
+      "origin": "local.elcd.3.2"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "synonyms were erroneous; removed Reference elementary flow of the International Reference Life Cycle Data System (ILCD).",
+      "Compartment": [
+        "Resources",
+        "Resources from ground",
+        "Non-renewable energy resources from ground"
+      ],
+      "Name": "natural gas;  44.1 MJ/kg",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "quantity": "93a60a56-a3c8-11da-a746-0800200b9a66",
+          "value": 0.022675736961451247
+        },
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "93a60a56-a3c8-11da-a746-0800200c9a66",
+          "value": 1.0
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "93a60a56-a3c8-22da-a746-0800200c9a66",
+          "value": 0.02702702702702703
+        }
+      ],
+      "entityId": "fe0acd60-3ddc-11dd-a6fa-0050c2490048",
+      "entityType": "flow",
+      "externalId": "flows/fe0acd60-3ddc-11dd-a6fa-0050c2490048",
+      "origin": "local.elcd.3.2"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "Reference elementary flow of the International Reference Life Cycle Data System (ILCD).",
+      "Compartment": [
+        "Resources",
+        "Resources from ground",
+        "Non-renewable energy resources from ground"
+      ],
+      "Name": "hard coal;  26.3 MJ/kg",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "quantity": "93a60a56-a3c8-11da-a746-0800200b9a66",
+          "value": 0.03802281368821293
+        },
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "93a60a56-a3c8-11da-a746-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "fe0acd60-3ddc-11dd-a6fc-0050c2490048",
+      "entityType": "flow",
+      "externalId": "flows/fe0acd60-3ddc-11dd-a6fc-0050c2490048",
+      "origin": "local.elcd.3.2"
+    }
+  ],
   "processes": [],
   "quantities": [
     {
@@ -35,6 +179,7 @@
     },
     {
       "Comment": "",
+      "Indicator": "Cumulative Energy Demand (MJ) (gross calorific value) (renewable and non renewable)",
       "Name": "Energy renewable and non renewable (gross calorific value)",
       "UnitConversion": {
         "GJ": 0.001,
@@ -47,7 +192,6 @@
         "kWh": 0.2777777777777778,
         "kcal": 238.85160149998808
       },
-      "Indicator": "Cumulative Energy Demand (MJ) (gross calorific value) (renewable and non renewable)",
       "entityId": "23911c86-d4d2-4e3e-a45e-8e392af1dc4e",
       "entityType": "quantity",
       "externalId": "flowproperties/23911c86-d4d2-4e3e-a45e-8e392af1dc4e",
@@ -238,6 +382,7 @@
     },
     {
       "Comment": "",
+      "Indicator": "Cumulative energy demand (MJ) (net calorific value) (renewable)",
       "Name": "Energy from renewable raw materials (net cal. value)",
       "UnitConversion": {
         "Btu": 0.0010550971744497668,
@@ -260,7 +405,6 @@
         "kWh": 3.5999712002303976,
         "kpm": 9.806805923310778e-06
       },
-      "Indicator": "Cumulative energy demand (MJ) (net calorific value) (renewable)",
       "entityId": "8695e049-7a18-4b83-b3bd-035747039652",
       "entityType": "quantity",
       "externalId": "flowproperties/8695e049-7a18-4b83-b3bd-035747039652",
@@ -436,6 +580,7 @@
     },
     {
       "Comment": "",
+      "Indicator": "Cumulative Energy Demand (MJ) (net calorific value) (renewable and non renewable)",
       "Name": "Energy renewable and non renewable (net calorific value)",
       "UnitConversion": {
         "GJ": 0.001,
@@ -448,7 +593,6 @@
         "kWh": 0.2777777777777778,
         "kcal": 238.85160149998808
       },
-      "Indicator": "Cumulative Energy Demand (MJ) (net calorific value) (renewable and non renewable)",
       "entityId": "a182c00f-c0e5-4b7a-b2a1-a735fbee7f9a",
       "entityType": "quantity",
       "externalId": "flowproperties/a182c00f-c0e5-4b7a-b2a1-a735fbee7f9a",

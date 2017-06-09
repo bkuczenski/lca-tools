@@ -430,7 +430,7 @@ xs        """
         chart += '%s \\hline\n' % tab_lf
 
         for i, s in enumerate(stages):
-            chart += '%s -- %s' % (chr(ord('A') + i), s)
+            chart += '%s -- %s' % (chr(ord('A') + i), tex_sanitize(s))
 
             for r in results:
                 d = sum([q for q in r.contrib_query([s])])

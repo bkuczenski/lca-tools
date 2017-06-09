@@ -311,10 +311,10 @@ class LciaResult(object):
             for k, v in self._LciaScores.items():
                 if item == v.entity:
                     yield v
-                elif str(v.entity).startswith(str(item)):
-                    yield v
-                elif str(k).startswith(str(item)):
-                    yield v
+                # elif str(v.entity).startswith(str(item)):
+                #     yield v
+                # elif str(k).startswith(str(item)):
+                #     yield v
         yield AggregateLciaScore(None)
 
     def __getitem__(self, item):

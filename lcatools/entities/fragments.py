@@ -829,6 +829,19 @@ class LcFragment(LcEntity):
 
     def _cache_balance_ev(self, _balance, scenario, observed):
         """
+        TL;DR: need to stop caching balance flows, including subfragment traversal results, and move towards using
+        live traversals (i.e. lists of FragmentFlows) for EVERYTHING from show_tree() to reports. For the time
+        being, the cached values will report whatever was the LAST cached value-- so if a fragment is un-traversed
+        in a certain scenario, particularly if the scenario affects a sub-fragment and not the local fragment,
+        it will retain a false cache value.
+
+        Still not totally clear on live traversals-- but maybe we simply SHOULDN'T cache if match is None.  But really
+        we should move away from querying cached exchange values.  And we definitely shouldn't serialize exchange values
+        for un-observable fragments.
+
+        I think we should actually raise an exception when exchange value is queried for non-None scenario on a non-
+        observable flow, requiring client code to use the FragmentFlow.
+
         BIG FAT BUG: evs can be modified by scenarios not defined locally in the current fragment.  Ergo, checking to
         see if the fragment's ev dict has the given scenario is not sufficient- we should not be setting the
         'observed ev' when any scenario is in effect. the whole scenario tuple needs to be used. this is a cheap dict,
@@ -839,18 +852,14 @@ class LcFragment(LcEntity):
         :param scenario:
         :return:
         """
-        # match = self._match_scenario_ev(scenario)  # !TODO:
-        # if match is None:
-        #     self._exchange_values[1] = _balance
-        # else:
-        #     self.set_exchange_value(match, _balance)
-        if scenario is None:
+        match = self._match_scenario_ev(scenario)
+        if match is None:
             if observed:
                 self._exchange_values[1] = _balance
             else:
                 self._exchange_values[0] = _balance
         else:
-            self._exchange_values[scenario] = _balance
+            self._exchange_values[match] = _balance
 
     def fragment_lcia(self, scenario=None, observed=False):
         ffs = self.traversal_entry(scenario, observed=observed)
@@ -948,6 +957,10 @@ class LcFragment(LcEntity):
                 in_wt = 1.0 / self.exchange_value(scenario, observed=observed)
         else:
             in_wt = 1.0
+
+        if scenario is not None:
+            # Controversial? The Cached EVs are basically meaningless. Scenarios should strictly be observed flows.
+            observed = True
 
         ffs, _ = self.traverse(in_wt, scenario, observed=observed)
         return ffs

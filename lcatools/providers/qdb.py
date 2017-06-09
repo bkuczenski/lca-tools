@@ -345,6 +345,19 @@ class Qdb(LcArchive):
                 cfs.add(item)
         return cfs
 
+    def _flow_cf_generator(self, flow, from_q):
+        for cf in flow.characterizations():
+            if self._get_q_ind(cf.quantity) == from_q:
+                yield cf
+
+    def _conversion_from_flow(self, flow, from_q):
+        try:
+            cf = next(self._flow_cf_generator(flow, from_q))
+            value = cf.value
+        except StopIteration:
+            value = None
+        return value
+
     def _conversion_generator(self, f_inds, compartment, from_q, to_q):
         for f_ind in f_inds:
             for item in self._fq_dict[f_ind, from_q].find(compartment, dist=3):
@@ -353,9 +366,11 @@ class Qdb(LcArchive):
 
     def _lookfor_conversion(self, f_inds, compartment, from_q, to_q):
         """
-        fq_dict stores CFs that have dimension query_q_ind / cf_ref_q_ind: query unit per CF's flows' ref unit
+        Convert is supposed to supply characterization factors in the dimension of query_q / ref_q
+
+        fq_dict stores CFs that have dimension query_q / cf_ref_q: query unit per CF's flows' ref unit
         If CF ref_unit does not match the supplied ref_unit, we need to find and return a conversion.
-        The conversion should have dimension cf_ref_q_ind / ref_q_ind.
+        The conversion should have dimension cf_ref_q / ref_q.
 
         The conversion generator returns a CF with dimension from_q / to_q.  If the inverse CF is found, this needs
         to be inverted.
@@ -375,24 +390,65 @@ class Qdb(LcArchive):
                 cf = next(self._conversion_generator(f_inds, compartment, to_q, from_q))
                 value = 1.0 / cf.value
             except StopIteration:
-                raise KeyError
+                value = None
         return value
 
     @staticmethod
     def is_biogenic(term):
         return bool(biogenic.search(term))
 
+    def _convert_values(self, f_inds, comp, ref_q_ind, query_q_ind, flow=None, locale='GLO'):
+        """
+        Produces a list of conversion factors with the dimension query_q / ref_q
+        :param f_inds: a list of matching flowables
+        :param comp: an actual compartment
+        :param ref_q_ind: index into _q for reference quantity
+        :param query_q_ind: index into _q for query quantity
+        :param flow: if present, checked first to resolve inconsistent reference quantities
+        :param locale: for conversion
+        :return:
+        """
+        cfs = self._lookup_cfs(f_inds, comp, query_q_ind)
+
+        # now to check reference quantity
+        vals = []
+        for cf in cfs:
+            factor = cf[locale]
+            cf_ref_q_ind = self._get_q_ind(cf.flow.reference_entity)
+            if cf_ref_q_ind != ref_q_ind:
+                print('reference quantities don\'t match: cf:%s, ref:%s' % (self._q.name(cf_ref_q_ind),
+                                                                            self._q.name(ref_q_ind)))
+                ref_conversion = None
+                if flow is not None:
+                    # first take a look at the flow's builtin CFs, use them if present
+                    ref_conversion = self._conversion_from_flow(flow, cf_ref_q_ind)
+
+                if ref_conversion is None:
+                    # next, try to consult fq_dict
+                    ref_conversion = self._lookfor_conversion(f_inds, comp, cf_ref_q_ind, ref_q_ind)
+
+                if ref_conversion is None:
+                    print('Unable to find conversion... bailing')
+                    continue
+
+                factor *= ref_conversion
+
+            vals.append(factor)
+        return vals
+
     def convert(self, flow=None, flowable=None, compartment=None, reference=None, query=None, query_q_ind=None,
                 locale='GLO',
                 quell_biogenic_co2=None):
         """
-        EITHER flow OR (flowable AND compartment AND reference) must be non-None.
-        :param flow:
+        Implement the flow-quantity relation.  The query must supply a flowable, compartment, reference quantity, and
+        query quantity, with optional locale.  The first three arguments can be supplied implicitly with an LcFlow.
+
+        :param flow: must supply EITHER flow LcFlow OR (flowable AND compartment AND reference)
         :param flowable:
         :param compartment:
         :param reference:
-        :param query:
-        :param query_q_ind: index of query quantity, to save time
+        :param query: must supply either query LcQuantity OR query_q_ind (to save time)
+        :param query_q_ind:
         :param locale:
         :param quell_biogenic_co2: [None] override the Qdb setting.
         :return: a floating point conversion
@@ -423,37 +479,14 @@ class Qdb(LcArchive):
                         if any([comp.is_subcompartment_of(x) for x in (self.c_mgr.emissions, self._comp_from_air)]):
                             return 0.0
 
-        cfs = self._lookup_cfs(f_inds, comp, query_q_ind)
+        vals = self._convert_values(f_inds, comp, ref_q_ind, query_q_ind, flow=flow, locale=locale)
 
-        # now to check reference quantity
-        vals = []
-        for cf in cfs:
-            factor = cf[locale]
-            cf_ref_q_ind = self._get_q_ind(cf.flow.reference_entity)
-            if cf_ref_q_ind != ref_q_ind:
-                print('reference quantities don\'t match: cf:%s, ref:%s' % (self._q.name(cf_ref_q_ind),
-                                                                            self._q.name(ref_q_ind)))
-                try:
-                    # try to do a recursive conversion
-                    ref_conversion = self._lookfor_conversion(f_inds, comp, cf_ref_q_ind, ref_q_ind)
-                    factor *= ref_conversion
-                except KeyError:
-                    if flow is not None:
-                        ref_conversion = flow.cf(self.get_quantity(cf_ref_q_ind))
-                        if ref_conversion == 0:
-                            print('No conversion to %d.. bailing' % cf_ref_q_ind)
-                            continue
-                        factor *= ref_conversion
-
-                    else:
-                        raise ConversionReferenceMismatch('[%d] vs [%d]%s' % (ref_q_ind, cf_ref_q_ind, cf))
-            vals.append(factor)
         if len(vals) == 0:
             return None
         if len(set(vals)) > 1:
             print('Multiple CFs found: %s' % vals)
             print('Flow: %s [%s]' % (flow, flow.unit()))
-            print('Quantity: %s' % query)
+            print('Quantity: %s' % self._q.entity(query_q_ind))
         return vals[0]
 
     def do_lcia(self, quantity, inventory, locale='GLO'):

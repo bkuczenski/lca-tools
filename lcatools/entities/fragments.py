@@ -881,7 +881,7 @@ class LcFragment(LcEntity):
         frag_exchs = []
         for f in io:
             frag_exchs.append(ExchangeValue(self, f.fragment.flow, f.fragment.direction, value=f.magnitude * scale))
-        return sorted(frag_exchs, key=lambda x: x.direction)
+        return sorted(frag_exchs, key=lambda x: (x.direction == 'Input', x.value), reverse=True)
 
     def unit_inventory(self, scenario=None, observed=False):
         """

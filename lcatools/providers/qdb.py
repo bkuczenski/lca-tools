@@ -423,15 +423,22 @@ class Qdb(LcArchive):
                     # first take a look at the flow's builtin CFs, use them if present
                     ref_conversion = self._conversion_from_flow(flow, cf_ref_q_ind)
 
-                if ref_conversion is None:
+                if ref_conversion is not None:
+                    # found it in the flow; move on
+                    factor *= ref_conversion
+
+                else:
                     # next, try to consult fq_dict
                     ref_conversion = self._lookfor_conversion(f_inds, comp, cf_ref_q_ind, ref_q_ind)
 
-                if ref_conversion is None:
-                    print('Unable to find conversion... bailing')
-                    continue
+                    if ref_conversion is None:
+                        print('Unable to find conversion... bailing')
+                        continue
 
-                factor *= ref_conversion
+                    factor *= ref_conversion
+                    if flow is not None:
+                        # if we have the flow, we should document the characterization used
+                        flow.add_characterization(cf.flow.reference_entity, value=ref_conversion)
 
             vals.append(factor)
         return vals

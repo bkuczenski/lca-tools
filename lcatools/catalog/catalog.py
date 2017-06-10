@@ -280,6 +280,9 @@ class LcCatalog(object):
     """
     Qdb interaction
     """
+    def is_elementary(self, flow):
+        return self._qdb.c_mgr.is_elementary(flow)
+
     def load_lcia_factors(self, ref):
         lcia = self._qdb.get_canonical_quantity(self.fetch(ref))
         for cf in ref.factors():

@@ -62,6 +62,18 @@ class QueryInterface(object):
         self._catalog = catalog
         self._debug = debug
 
+    def is_elementary(self, obj):
+        """
+        accesses the catalog's qdb to detect elementary compartment. Should work on flows or exchanges.
+        :param obj:
+        :return:
+        """
+        if obj.entity_type == 'flow':
+            return self._catalog.is_elementary(obj)
+        elif hasattr(obj, 'flow'):
+            return self._catalog.is_elementary(obj.flow)
+        raise TypeError('Don\'t know how to check elementarity of this: %s' % type(obj))
+
     @property
     def origin(self):
         return self._origin

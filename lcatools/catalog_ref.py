@@ -71,6 +71,34 @@ class CatalogRef(object):
         if catalog is not None:
             self.lookup(catalog)
 
+    def _check_query(self, message=''):
+        if self._query is None:
+            raise NoCatalog(message)
+
+    def elementary(self, iterable):
+        """
+        yields flows from iterable that are elementary, using the query's access to qdb
+        :param iterable:
+        :return:
+        """
+        self._check_query('elementary')
+
+        for i in iterable:
+            if self._query.is_elementary(i):
+                yield i
+
+    def intermediate(self, iterable):
+        """
+        yields flows from iterable that are non-elementary, using the query's access to qdb
+        :param iterable:
+        :return:
+        """
+        self._check_query('intermediate')
+
+        for i in iterable:
+            if not self._query.is_elementary(i):
+                yield i
+
     @property
     def origin(self):
         return self._origin
@@ -82,10 +110,8 @@ class CatalogRef(object):
     @property
     def uuid(self):
         if self._uuid is None:
-            if self._query is not None:
-                self._uuid = self._query.get_uuid(self.external_ref)
-            else:
-                raise NoCatalog('Unable to lookup UUID')
+            self._check_query('uuid')
+            self._uuid = self._query.get_uuid(self.external_ref)
         return self._uuid
 
     def get_uuid(self):
@@ -170,8 +196,7 @@ class CatalogRef(object):
             return self._d[item]
         if 'Local%s' % item in self._d:
             return self._d['Local%s' % item]
-        if self._query is None:
-            raise NoCatalog
+        self._check_query('getitem %s' % item)
         return self._query.get_item(self.external_ref, item)
 
     def __setitem__(self, key, value):

@@ -948,6 +948,39 @@ class LcFragment(LcEntity):
         '''
         return ios, internal
 
+    def cutoffs(self, scenario=None, observed=False, aggregate=True):
+        """
+        Return a comprehensive list of cut-offs from a traversal result. Include implicit cutoffs from background
+         computations.
+        :param scenario:
+        :param observed:
+        :param aggregate: [True] if True, group cutoffs from different nodes together by flow.  If False, report each
+        cutoff from a distinct node distinctly.
+        :return:
+        """
+        ffs = self.traversal_entry(scenario, observed=observed)
+        cos = []
+        for ff in ffs:
+            if ff.term.is_null:
+                cos.append(ff)
+            else:
+                if ff.fragment.is_background:
+                    '''extend ff with background node cut-off flows.
+                    Need to think about this for a minute because self.is_background could be terminated to either
+                    a process or a fragment.  If it's a process, then for fragment LCIA we will be computing bg_lcia,
+                    so assuming a CatalogRef with background access.
+                    '''
+                    ref = ff.term.term_node
+                    cos.extend([FragmentFlow.cutoff(ff.fragment, i.flow, i.direction, i.value * ff.node_weight)
+                                for i in ref.intermediate(ref.lci(ref_flow=ff.term.term_flow.external_ref))])
+
+        if aggregate:
+            cos, _ = _group_ios(self, cos)
+
+        return sorted([ExchangeValue(f.fragment, f.fragment.flow, f.fragment.direction, value=f.magnitude)
+                       for f in cos], key=lambda x: (x.direction == 'Input', x.flow['Compartment'],
+                                                     x.flow['Name'], x.value), reverse=True)
+
     def traversal_entry(self, scenario, observed=False):
         if False:
             # this has been reformed
@@ -1299,7 +1332,7 @@ class FragmentFlow(object):
 def _group_ios(parent, ios):
     """
     Creates a list of cutoff flows from the inputs and outputs from a fragment traversal.
-    ios is a list of null FragmentFlows
+    ios is a list of FragmentFlows
     :param parent: the node generating the cutoffs
     :param ios: a list of fragment flows whose termination is Null (non-nulls ignored)
     :return: {set of grouped IO flows}, [list of internal non-null flows]
@@ -1316,12 +1349,12 @@ def _group_ios(parent, ios):
             out[ff.fragment.flow] += magnitude
         else:
             internal.append(ff)
-    for key, value in out.items():
+    for flow, value in out.items():
         if value < 0:
             direction = 'Output'
         else:
             direction = 'Input'
-        external.add(FragmentFlow.cutoff(parent, key, direction, abs(value)))
+        external.add(FragmentFlow.cutoff(parent, flow, direction, abs(value)))
     return external, internal
 
 
@@ -1361,4 +1394,4 @@ class GhostFragment(object):
     def __str__(self):
         re = self.reference_entity.uuid[:7]
         return '(%s) %s %.5s %s --:   [%s] %s' % (re, self.dirn, self.uuid, self.dirn,
-                                                  self.flow.unit, self.flow['Name'])
+                                                  self.flow.unit(), self.flow['Name'])

@@ -126,7 +126,7 @@ class CompartmentManager(object):
         return _crawl_compartments(self.compartments, my_clist, check_elem=check_elem)
 
     def is_elementary(self, flow):
-        comp = self.find_matching(flow['Compartment'], check_elem=True, interact=False)
+        comp = self.find_matching(flow['Compartment'][0], check_elem=True, interact=False)
         if comp is None:
             return False
             # raise MissingCompartment('Cannot check if unknown compartment %s is_elementary' % flow['Compartment'])
@@ -161,8 +161,8 @@ class CompartmentManager(object):
             return self._c_dict[cs]
 
         match = self._crawl(compartment_name, check_elem=check_elem)
-        if check_elem is False:
-            if match is None:
+        if match is None:
+            if check_elem is False:
                 if interact:
                     try:
                         c = self._merge_compartment(compartment_name, force=force)
@@ -178,7 +178,9 @@ class CompartmentManager(object):
                         pass
                 return None
                 # raise MissingCompartment('%s' % compartment_name)
-            self._c_dict[cs] = match  # cache for later discovery
+            else:
+                return None
+        self._c_dict[cs] = match  # cache for later discovery
         return match
 
     def add_compartment(self, compartment_name, parent='Intermediate Flows', force=False):

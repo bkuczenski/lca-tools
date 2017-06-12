@@ -10,6 +10,9 @@ from lcatools.exchanges import comp_dir
 from lcatools.charts import scenario_compare_figure, save_plot
 
 
+uuid_regex = re.compile('([0-9a-f]{8}.?([0-9a-f]{4}.?){3}[0-9a-f]{12})')
+
+
 class TraversalError(Exception):
     pass
 
@@ -23,6 +26,13 @@ def tex_sanitize(tex):
     tex = re.sub('%', '\\%', tex)
     tex = re.sub('_', '\\\\textunderscore{}', tex)  # this doesn't work bc filenames have underscores
     return tex
+
+
+def frag_link_label(name):
+    if bool(uuid_regex.match(name)):
+        return name[:5]
+    else:
+        return tex_sanitize(name[:5])
 
 
 def grab_stages(results):
@@ -53,8 +63,8 @@ def save_stages(fname, stages):
 
 
 def fragment_header(frag):
-    s = '{\\hypertarget{%.5s}{\\Large \\texttt{%.5s}}}\\subsection{%s}\n' % (
-        frag.get_uuid(), frag.get_uuid(), frag['Name']
+    s = '{\\hypertarget{%.5s}{\\Large \\texttt{%s}}}\\subsection{%s}\n' % (
+        frag.get_uuid(), frag_link_label(frag.external_ref), frag['Name']
     )
     return tex_sanitize(s)
 
@@ -108,7 +118,8 @@ def bg_box(uid):
 
 def subfrag_box(uid, tgt_top):
     return ('\\rput(px%.5s){\\rput(1.25,0){\\nodebox{nx%.5s}{style=process,style=dashed}'
-            '{1.15cm}{0.6cm}{\\hyperlink{%.5s}{\\texttt{%.5s}}}}}' % (uid, uid, tgt_top, tgt_top))
+            '{1.15cm}{0.6cm}{\\hyperlink{%.5s}{\\texttt{%s}}}}}' % (uid, uid, tgt_top.uuid,
+                                                                    frag_link_label(tgt_top.external_ref)))
 
 
 def fg_box(uid):
@@ -318,7 +329,7 @@ xs        """
                 # subfragment
                 top_frag = term.term_node.top()
                 subfrags.append(top_frag)
-                boxes = subfrag_box(fragment.get_uuid(), top_frag.get_uuid())
+                boxes = subfrag_box(fragment.get_uuid(), top_frag)
                 if term.term_node is top_frag:
                     subfrag_scale = 1.0 / top_frag.exchange_value(scenario, observed=True)
                 else:
@@ -426,7 +437,13 @@ xs        """
 
     @staticmethod
     def _results_start(title='Contribution Analysis'):
-        return '''
+        if title is None:
+            return '''
+\\begin{minipage}{\\textwidth}
+{\\pnode(12,-1){pLegend}}
+'''
+        else:
+            return '''
 \\begin{minipage}{\\textwidth}
 {\\pnode(12,-1){pLegend}
 \\large %s}
@@ -554,7 +571,7 @@ xs        """
 
         return tex_dump, subfrags
 
-    def results_tex(self, f_base, results, stages=None, table=False, scenarios=None, **kwargs):
+    def results_tex(self, f_base, results, stages=None, table=False, scenarios=None, full=True, **kwargs):
         """
         Generates a chart and table from a set of results, and returns the TeX content
         :param f_base:
@@ -562,6 +579,7 @@ xs        """
         :param stages:
         :param table:
         :param scenarios: if results is a double-array, indicate scenario names
+        :param full: [True] if false, suppress heading
         :param kwargs:
         :return:
         """
@@ -572,13 +590,17 @@ xs        """
 
         skip = False
         if scenarios is None:
-            tex_dump = self._results_start()
+            title = 'Contribution Analysis'
             if all(r.total() == 0 for r in results):
                 skip = True
         else:
-            tex_dump = self._results_start(title='Scenario Analysis')
+            title = 'Scenario Analysis'
             if all(r.total() == 0 for k in results for r in k):
                 skip = True
+        if not full:
+            title = None
+
+        tex_dump = self._results_start(title=title)
 
         if skip:
             tex_dump += '\n\nNo Impacts.\n'
@@ -609,6 +631,17 @@ xs        """
         :return:
         """
         self._write_output(f_base, self.results_tex(f_base, results, **kwargs), add_to_index='doc')
+
+    def results_float(self, f_base, results, **kwargs):
+        """
+        Just like results_report, but suppress the large heading
+
+        :param f_base:
+        :param results:
+        :param kwargs: stages, table, other args to scenario_compare_figure
+        :return:
+        """
+        self._write_output(f_base, self.results_tex(f_base, results, full=False, **kwargs), add_to_index='doc')
 
     def fragment_diagram(self, f_base, frag, scenario=None):
         """

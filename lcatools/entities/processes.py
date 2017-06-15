@@ -20,6 +20,10 @@ class MultipleReferencesFound(Exception):
     pass
 
 
+class ReferenceSettingFailed(Exception):
+    pass
+
+
 class LcProcess(LcEntity):
 
     _ref_field = 'referenceExchange'
@@ -122,8 +126,10 @@ class LcProcess(LcEntity):
         self._validate_reference({ref_entity})
 
         if ref_entity.key in self._exchanges:
-            self._exchanges[ref_entity.key].set_ref(self)
-            self.reference_entity.add(ref_entity)
+            if self._exchanges[ref_entity.key].set_ref(self):
+                self.reference_entity.add(ref_entity)
+            else:
+                raise ReferenceSettingFailed('%s\n%s' % (self, ref_entity))
 
     def _find_reference_by_string(self, term, strict=False):
         """
@@ -254,7 +260,7 @@ class LcProcess(LcEntity):
     def add_reference(self, flow, dirn):
         rx = Exchange(self, flow, dirn)
         self._set_reference(rx)
-        return rx
+        return self._exchanges[rx.key]
 
     def remove_reference(self, reference):
         self._exchanges[reference].unset_ref(self)
@@ -372,7 +378,11 @@ class LcProcess(LcEntity):
                 return None
             e = self._exchanges[_x]
             if not isinstance(e, ExchangeValue):
-                e = ExchangeValue(self, flow, dirn, termination=termination)
+                # upgrade to ExchangeValue
+                new = ExchangeValue(self, flow, dirn, termination=termination)
+                if e.is_reference:
+                    new.set_ref(self)
+                e = new
                 assert _x == e.key
                 self._exchanges[e.key] = e
                 # assert self._exchanges[_x] is self._exchanges[e]  # silly me, always skeptical of hashing

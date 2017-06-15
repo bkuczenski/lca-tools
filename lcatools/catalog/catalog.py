@@ -90,6 +90,10 @@ class LcCatalog(object):
         return os.path.join(self._cache_dir, self._source_hash_file(source))
 
     @property
+    def _archive_dir(self):
+        return os.path.join(self._rootdir, 'archives')
+
+    @property
     def _entity_cache(self):
         return os.path.join(self._rootdir, 'entity_cache.json')
 
@@ -102,7 +106,7 @@ class LcCatalog(object):
         return self._rootdir
 
     def _make_rootdir(self):
-        for x in (self._cache_dir, self._index_dir, self._resource_dir):
+        for x in (self._cache_dir, self._index_dir, self._resource_dir, self._archive_dir):
             os.makedirs(x, exist_ok=True)
 
     def __init__(self, rootdir, qdb=None):
@@ -196,7 +200,7 @@ class LcCatalog(object):
         for ref, ints in self._resolver.references:
             print('%s [%s]' % (ref, ', '.join(ints)))
 
-    def index_resource(self, origin, interface=None, priority=10, force=False):
+    def index_resource(self, origin, interface=None, source=None, priority=10, force=False):
         """
         Creates an index for the identified resource.  'origin' and 'interface' must resolve to one or more LcResources
         that all have the same source specification.  That source archive gets indexed, and index resources are created
@@ -211,25 +215,21 @@ class LcCatalog(object):
         :param force: [False] if True, create an index even if an interface already exists (will overwrite existing)
         :return:
         """
-        ress = [r for r in self._resolver.resolve(origin, interfaces=interface)]
-        sources = set(r.source for r in ress)
-        if len(sources) > 1:
-            raise KeyError('Ambiguous resource specification %s:%s' % (origin, interface))
-        if len(sources) == 0:
-            raise KeyError('No source found.')
-        source = sources.pop()
+        source = self._find_single_source(origin, interface, source=source)
+        self._index_source(source, force=force, priority=priority)
+
+    def _index_source(self, source, force=False, priority=10):
         inx_file = self._index_file(source)
         if os.path.exists(inx_file):
             if not force:
                 print('Not overwriting existing index. force=True to override.')
                 return
             print('Re-indexing %s' % source)
-        for r in ress:
-            self._ensure_resource(r)
+        self._ensure_resource(next(r for r in self._resolver.resources_with_source(source)))
         archive = self._archives[source]
         archive.load_all()
         archive.write_to_file(inx_file, gzip=True, exchanges=False, characterizations=False, values=False)
-        for r in ress:
+        for r in self._resolver.resources_with_source(source):
             self.new_resource(r.reference, inx_file, 'json', interfaces='index', priority=priority, static=True)
 
     def create_source_cache(self, source, static=False):
@@ -255,6 +255,54 @@ class LcCatalog(object):
         archive.write_to_file(cache_file, gzip=True, exchanges=True, characterizations=True, values=True)
         print('Created archive of %s containing:' % archive)
         archive.check_counter()
+
+    def _find_single_source(self, origin, interface, source=None):
+        ress = [r for r in self._resolver.resolve(origin, interfaces=interface)]
+        sources = set(r.source for r in ress)
+        if len(sources) > 1:
+            if source in sources:
+                return source
+            raise ValueError('Ambiguous resource specification %s:%s' % (origin, interface))
+        if len(sources) == 0:
+            raise KeyError('No source found.')
+        found_source = sources.pop()
+        if source is not None:
+            if found_source == source:
+                return source
+            raise ValueError('Sources do not match:\n%s (provided)\n%s (found)' % (source, found_source))
+        return found_source
+
+    def create_static_archive(self, archive_file, origin, interface=None, source=None, background=True, priority=90):
+        """
+        Creates a local replica of a static archive, usually for purposes of improving load time in computing
+        background results.  Uses create_source_cache to generate a cache and then renames it to the target
+        archive file (which should end in .json.gz) in the catalog's archive directory. Creates resources mapping
+        the newly created archive file to the origin with the specified priority.
+
+        The source file can be specified in one of two ways:
+         * origin + interface (with interface defaulting to None), as long as it unambiguously identifies one source
+         * origin + explicit source, which must correspond
+
+        :param archive_file:
+        :param origin:
+        :param interface:
+        :param source:
+        :param background: [True] whether to include the background interface on the created resource
+        :param priority: priority of the created resource
+        :return:
+        """
+        source = self._find_single_source(origin, interface, source=source)
+        self._index_source(source, force=True)
+        if not os.path.isabs(archive_file):
+            archive_file = os.path.join(self._archive_dir, archive_file)
+        self.create_source_cache(source, static=True)
+        os.rename(self._cache_file(source), archive_file)
+        for res in self._resolver.resources_with_source(source):
+            ifaces = set(i for i in res.interfaces)
+            if background:
+                ifaces.add('background')
+            self.new_resource(res.reference, archive_file, 'JSON', interfaces=ifaces, priority=priority,
+                              static=True)
 
     def add_nickname(self, source, nickname):
         """
@@ -357,15 +405,10 @@ class LcCatalog(object):
         """
         Attempts to secure an entity
         :param ref: a CatalogRef
-        :return: a list of origins that contain the reference.
+        :return: The lowest-priority origin to contain the entity
         """
-
-        origins = set()
-        for iface in INTERFACE_TYPES:
-            found_ref, e = self._dereference(ref.origin, ref.external_ref, iface)
-            if e is not None:
-                origins.add(found_ref)
-        return sorted(list(origins))
+        found_ref, e = self._dereference(ref.origin, ref.external_ref, INTERFACE_TYPES)
+        return found_ref
 
     def fetch(self, ref):
         if ref.is_entity:

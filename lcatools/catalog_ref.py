@@ -184,11 +184,9 @@ class CatalogRef(object):
     def lookup(self, catalog):
         org = catalog.lookup(self)
 
-        if len(org) > 0:
-            if len(org) > 1:
-                raise MultipleOrigins('%s found in:\n%s' % (self.external_ref, '\n'.join(org)))
+        if org is not None:
             self._known = True
-            self._origin = org[0]
+            self._origin = org
             self._query = catalog.query(self._origin)
             self._etype = catalog.entity_type(self)
 

@@ -75,10 +75,15 @@ class Exchange(object):
     def set_ref(self, setter):
         if setter is self._process:
             self._is_reference = True
+            return True
+        return False
 
     def unset_ref(self, setter):
         if setter is self._process:
             self._is_reference = False
+            return True
+        return False
+
     """
     These all need to be immutable because they form the exchange's hash
     """

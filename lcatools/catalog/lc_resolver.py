@@ -58,6 +58,12 @@ class LcCatalogResolver(object):
         self.add_resource(new_res)
         return new_res
 
+    def resources_with_source(self, source):
+        for ref, ress in self._resources.items():
+            for r in ress:
+                if r.source == source:
+                    yield r
+
     def resolve(self, req, interfaces=None):
         """
         Fuzzy resolver returns all references that match the request and have equal or greater specificity.

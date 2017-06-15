@@ -84,7 +84,7 @@ class ArchiveInterface(object):
         """
         return to_uuid(key)
 
-    def __init__(self, source, ref=None, quiet=True, upstream=None):
+    def __init__(self, source, ref=None, quiet=True, upstream=None, static=False):
         """
         An archive is a provenance structure for a collection of entities.  Ostensibly, an archive has a single
         source from which entities are collected.  However, archives can also collect entities from multiple sources,
@@ -136,6 +136,7 @@ class ArchiveInterface(object):
         :param ref: optional semantic reference for the data source. gets added to catalog_names.
         :param quiet:
         :param upstream:
+        :param static: [False] whether archive is expected to be unchanging.
         """
 
         self._source = source
@@ -150,7 +151,7 @@ class ArchiveInterface(object):
         self._upstream_hash = dict()  # for lookup use later
 
         self._loaded = False
-        self._static = False
+        self._static = static
 
         if upstream is not None:
             self.set_upstream(upstream)

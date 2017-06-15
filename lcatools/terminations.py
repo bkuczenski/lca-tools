@@ -10,7 +10,7 @@ from lcatools.lcia_results import LciaResult, LciaResults, traversal_to_lcia
 from lcatools.exchanges import comp_dir, ExchangeValue, MissingReference
 from lcatools.catalog.inventory import PrivateArchive
 from lcatools.entities.processes import NoReferenceFound, AmbiguousReferenceError
-from lcatools.catalog_ref import CatalogRef
+from lcatools.catalog_ref import NoCatalog
 from lcatools.interact import pick_one, parse_math
 
 
@@ -352,6 +352,9 @@ class FlowTermination(object):
                 else:
                     try:
                         r_e = [r for r in self._term.exchange_values(term_flow, self.direction)]
+                    except NoCatalog:
+                        print('%s %s\n%s' % (self, self._term, self._parent))
+                        raise
                     except PrivateArchive:
                         print('%s\nprivate... falling back to reference exchanges' % self._term)
                         r_e = [r for r in self._term.references()]

@@ -37,7 +37,10 @@ def spold_reference_flow(filename):
     :param filename:
     :return:
     """
-    return uuid_regex.findall(filename)[1][0]
+    try:
+        return uuid_regex.findall(filename)[1][0]
+    except IndexError:
+        return None
 
 
 class EcospoldV2Error(Exception):
@@ -329,7 +332,10 @@ class EcospoldV2Archive(LcArchive):
         :param filename:
         :return:
         """
-        o = self.objectify(filename)
+        try:
+            o = self.objectify(filename)
+        except KeyError:
+            raise FileNotFoundError
 
         p = self._create_process_entity(o)
         if self._linked:
@@ -367,8 +373,10 @@ class EcospoldV2Archive(LcArchive):
                     # use exch.is_ref to identify references; store unallocated values (rx already None)
                     if exch.is_ref:
                         if exch.termination is not None:
-                            raise EcospoldV2Error('Terminated Reference flow encountered in %s\nFlow %s Term %s' % (
-                                p.get_uuid(), exch.flow.get_uuid(), exch.termination))
+                            if self._linked:
+                                raise EcospoldV2Error('Terminated Reference flow encountered in %s\nFlow %s Term %s' % (
+                                    p.get_uuid(), exch.flow.get_uuid(), exch.termination))
+                            # pass on this for unlinked database because of wonky conditional exchanges
                     self._print('## Exch %s [%s] (%g)' % (exch.flow, exch.direction, exch.value))
                     p.add_exchange(exch.flow, exch.direction, reference=rx, value=exch.value,
                                    termination=exch.termination)
@@ -393,12 +401,31 @@ class EcospoldV2Archive(LcArchive):
         return self._create_process(files[0])
     '''
 
-    def retrieve_or_fetch_entity(self, filename, **kwargs):
-        entity = self._get_entity(filename)  # this checks upstream if it exists
+    def retrieve_or_fetch_entity(self, ext_ref, **kwargs):
+        """
+        We want to handle two different kinds of external references: spold filenames (uuid_uuid.spold) and simple
+        entity uuids.
+        :param ext_ref:
+        :param kwargs:
+        :return:
+        """
+
+        entity = self._get_entity(ext_ref)  # this checks upstream if it exists
         if entity is not None:
-            if spold_reference_flow(filename) in [x.flow.get_uuid() for x in entity.reference_entity]:
+            rx = spold_reference_flow(ext_ref)
+            if rx is not None:
+                if rx in [x.flow.get_uuid() for x in entity.reference_entity]:
+                    # if we found a reference spec and the reference spec is already loaded, great!
+                    return entity
+            else:
+                # the regex didn't give us a reference flow- so presume the user didn't ask for one
                 return entity
-        return self._create_process(filename, **kwargs)
+        try:
+            return self._create_process(ext_ref, **kwargs)
+        except FileNotFoundError:
+            for f in self.list_datasets(ext_ref):
+                self._create_process(f, **kwargs)
+            return self[ext_ref]
 
     def retrieve_lcia_scores(self, filename, quantities=None):
         """

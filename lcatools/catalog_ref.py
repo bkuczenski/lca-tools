@@ -73,6 +73,7 @@ class CatalogRef(object):
 
     def _check_query(self, message=''):
         if self._query is None:
+            print(self)
             raise NoCatalog(message)
 
     def elementary(self, iterable):
@@ -221,6 +222,7 @@ class CatalogRef(object):
             raise InvalidQuery('This query only applies to flows')
 
     def _require_process(self):
+        self._check_query()
         if self.entity_type != 'process':
             raise InvalidQuery('This query only applies to processes')
 

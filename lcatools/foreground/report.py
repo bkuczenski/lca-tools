@@ -362,7 +362,7 @@ xs        """
             subfrag_scale = term.node_weight_multiplier
         mag_mod = ''
         if fragment.balance_flow:
-            mag_mod += '(=)'
+            mag_mod += '{\\sffamily (=)}'
         if node_weight < 0:
             frag_name = '(AVOIDED) ' + frag_name
             mag_mod += '\\darkred'

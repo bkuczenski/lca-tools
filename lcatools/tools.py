@@ -45,6 +45,10 @@ def create_archive(source, ds_type, **kwargs):
     return a
 
 
+def update_archive(archive, json_file):
+    archive.load_json(from_json(json_file))
+
+
 def archive_factory(source, ds_type, **kwargs):
     """
     creates an archive
@@ -76,13 +80,15 @@ def archive_factory(source, ds_type, **kwargs):
 #        'foreground': ForegroundArchive.load
 
 
-def archive_from_json(fname, **archive_kwargs):
+def archive_from_json(fname, static=True, **archive_kwargs):
     """
     :param fname: JSON filename
+    :param static: [True]
     :return: an ArchiveInterface
     """
     j = from_json(fname)
     archive_kwargs['quiet'] = True
+    archive_kwargs['static'] = static
 
     if 'prefix' in j.keys():
         archive_kwargs['prefix'] = j['prefix']

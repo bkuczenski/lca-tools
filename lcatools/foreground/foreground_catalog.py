@@ -32,6 +32,17 @@ class ForegroundCatalog(LcCatalog):
     def known_foregrounds(self):
         return self._known_fgs
 
+    @property
+    def sources(self):
+        """
+        override sources to exclude foregrounds
+        :return:
+        """
+        for k in self._archives.keys():
+            if k in self._foregrounds.values():
+                continue
+            yield k
+
     def __init__(self, catalog_dir, qdb=None):
         super(ForegroundCatalog, self).__init__(catalog_dir, qdb=qdb)
         self._foregrounds = dict()  # _foregrounds := name --> path of LOADED foregrounds

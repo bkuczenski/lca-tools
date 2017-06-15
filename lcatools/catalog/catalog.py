@@ -34,6 +34,7 @@ entity is available.
 import re
 import os
 from shutil import copy2
+import hashlib
 
 from .interfaces import QueryInterface, INTERFACE_TYPES
 from .entity import IndexInterface
@@ -41,9 +42,9 @@ from .inventory import InventoryInterface
 from .background import BackgroundInterface
 from .quantity import QuantityInterface
 from .lc_resolver import LcCatalogResolver
-from lcatools.tools import create_archive  # archive_from_json, archive_factory
+from lcatools.tools import create_archive, update_archive  # archive_from_json, archive_factory
 from lcatools.providers.qdb import Qdb
-from lcatools.flowdb.compartments import REFERENCE_INT
+from lcatools.flowdb.compartments import REFERENCE_INT  # reference intermediate flows
 
 
 _protocol = re.compile('^(\w+)://')
@@ -62,6 +63,32 @@ class LcCatalog(object):
     def _download_dir(self):
         return os.path.join(self._rootdir, 'downloads')
 
+    @staticmethod
+    def _source_hash_file(source):
+        """
+        Creates a stable filename from a source argument.  The source is the key found in the _archive dict, and
+        corresponds to a single physical data source.  The filename is a sha1 hex-digest, .json.gz
+        :param source:
+        :return:
+        """
+        h = hashlib.sha1()
+        h.update(source.encode('utf-8'))
+        return '%s.json.gz' % h.hexdigest()
+
+    @property
+    def _index_dir(self):
+        return os.path.join(self._rootdir, 'index')
+
+    def _index_file(self, source):
+        return os.path.join(self._index_dir, self._source_hash_file(source))
+
+    @property
+    def _cache_dir(self):
+        return os.path.join(self._rootdir, 'cache')
+
+    def _cache_file(self, source):
+        return os.path.join(self._cache_dir, self._source_hash_file(source))
+
     @property
     def _entity_cache(self):
         return os.path.join(self._rootdir, 'entity_cache.json')
@@ -74,6 +101,10 @@ class LcCatalog(object):
     def root(self):
         return self._rootdir
 
+    def _make_rootdir(self):
+        for x in (self._cache_dir, self._index_dir, self._resource_dir):
+            os.makedirs(x, exist_ok=True)
+
     def __init__(self, rootdir, qdb=None):
         """
         Instantiates a catalog based on the resources provided in resource_dir
@@ -81,6 +112,7 @@ class LcCatalog(object):
         :param qdb: quantity database (default is the old FlowDB)
         """
         self._rootdir = rootdir
+        self._make_rootdir()
         self._resolver = LcCatalogResolver(self._resource_dir)
         if not os.path.exists(self._compartments):
             copy2(REFERENCE_INT, self._compartments)
@@ -105,7 +137,7 @@ class LcCatalog(object):
     def new_resource(self, *args, **kwargs):
         """
         Create a new data resource by specifying its properties directly to the constructor
-        :param args: source, ds_type
+        :param args: reference, source, ds_type
         :param kwargs: interfaces=None, privacy=0, priority=0, static=False; **kwargs passed to archive constructor
         :return:
         """
@@ -125,6 +157,8 @@ class LcCatalog(object):
         :param name: takes the form of ref:interface
         :return: an LcArchive subclass
         """
+        if name in self._nicknames:
+            return self._archives[self._nicknames[name]]
         return self._archives[self._names[name]]
 
     def privacy(self, ref):
@@ -137,7 +171,10 @@ class LcCatalog(object):
         List loaded references.
         :return:
         """
-        return list(self._names.keys())
+        for k in self._names.keys():
+            yield k
+        for k in self._nicknames.keys():
+            yield k
 
     @property
     def sources(self):
@@ -159,6 +196,66 @@ class LcCatalog(object):
         for ref, ints in self._resolver.references:
             print('%s [%s]' % (ref, ', '.join(ints)))
 
+    def index_resource(self, origin, interface=None, priority=10, force=False):
+        """
+        Creates an index for the identified resource.  'origin' and 'interface' must resolve to one or more LcResources
+        that all have the same source specification.  That source archive gets indexed, and index resources are created
+        for all the LcResources that were returned.
+
+        Performs load_all() on the source archive, writes the archive to a compressed json file in the local index
+        directory, and creates a new LcResource pointing to the JSON file.   Aborts if the index file already exists
+        (override with force=True).
+        :param origin:
+        :param interface: [None]
+        :param priority: [10] priority setting for the new index
+        :param force: [False] if True, create an index even if an interface already exists (will overwrite existing)
+        :return:
+        """
+        ress = [r for r in self._resolver.resolve(origin, interfaces=interface)]
+        sources = set(r.source for r in ress)
+        if len(sources) > 1:
+            raise KeyError('Ambiguous resource specification %s:%s' % (origin, interface))
+        if len(sources) == 0:
+            raise KeyError('No source found.')
+        source = sources.pop()
+        inx_file = self._index_file(source)
+        if os.path.exists(inx_file):
+            if not force:
+                print('Not overwriting existing index. force=True to override.')
+                return
+            print('Re-indexing %s' % source)
+        for r in ress:
+            self._ensure_resource(r)
+        archive = self._archives[source]
+        archive.load_all()
+        archive.write_to_file(inx_file, gzip=True, exchanges=False, characterizations=False, values=False)
+        for r in ress:
+            self.new_resource(r.reference, inx_file, 'json', interfaces='index', priority=priority, static=True)
+
+    def create_source_cache(self, source, static=False):
+        """
+        Creates a cache of the named source's current contents, to speed up access to commonly used entities.
+        source must be either a key present in self.sources, or a name or nickname found in self.names
+        :param source:
+        :param static: [False] create archives of a static archive (use to force archival of a complete database)
+        :return:
+        """
+        if source not in self._archives:
+            if source in self._nicknames:
+                source = self._nicknames[source]
+            else:
+                source = self._names[source]
+        archive = self._archives[source]
+        if archive.static:
+            if not static:
+                print('Not archiving static resource %s' % archive)
+                return
+            print('Archiving static resource %s' % archive)
+        cache_file = self._cache_file(source)
+        archive.write_to_file(cache_file, gzip=True, exchanges=True, characterizations=True, values=True)
+        print('Created archive of %s containing:' % archive)
+        archive.check_counter()
+
     def add_nickname(self, source, nickname):
         """
         quickly refer to a specific data source already present in the archive
@@ -174,6 +271,8 @@ class LcCatalog(object):
     def _ensure_resource(self, res):
         if res.source not in self._archives:
             a = create_archive(res.source, res.ds_type, ref=res.reference, **res.init_args)
+            if os.path.exists(self._cache_file(res.source)):
+                update_archive(a, self._cache_file(res.source))
             if res.static and res.ds_type.lower() != 'json':
                 a.load_all()  # static json archives are by convention saved in complete form
             self._archives[res.source] = a
@@ -212,7 +311,7 @@ class LcCatalog(object):
                     print('Archive Instantiation for %s failed with %s' % (origin, e))
                     # TODO: try to get more specific with exceptions.  p.s.: no idea what happens to this logging info
                     # logging.info('Static archive for %s failed with %s' % (origin, e))
-                    continue
+                    raise
                 ent = self._check_entity(res.source, external_ref)
                 if ent is not None:
                     found_ref = res.reference
@@ -271,7 +370,7 @@ class LcCatalog(object):
     def fetch(self, ref):
         if ref.is_entity:
             return ref
-        _, e = self._dereference(ref.origin, ref.external_ref, INTERFACE_TYPES)
+        _, e = self._dereference(ref.origin, ref.external_ref, ('inventory', 'background', 'quantity'))
         return e
 
     def entity_type(self, ref):

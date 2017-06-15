@@ -7,7 +7,7 @@ import re
 
 from lcatools.providers.base import LcArchive, to_uuid
 from lcatools.entities import LcFragment
-from lcatools.catalog_ref import CatalogRef
+from lcatools.catalog_ref import CatalogRef, NoCatalog
 
 
 class AmbiguousReference(Exception):
@@ -213,7 +213,11 @@ class LcForeground(LcArchive):
 
         for f in fragments:
             frag = self[f['entityId']]
-            frag.finish_json_load(self, f)
+            try:
+                frag.finish_json_load(self, f)
+            except NoCatalog:
+                print(f)
+                raise
 
     def _load_fragments(self):
         """

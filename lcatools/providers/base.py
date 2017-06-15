@@ -172,7 +172,6 @@ class LcArchive(ArchiveInterface):
         :param j:
         :return:
         """
-        self._static = True
         for e in j['quantities']:
             self.entity_from_json(e)
         for e in j['flows']:
@@ -181,7 +180,87 @@ class LcArchive(ArchiveInterface):
             self.entity_from_json(e)
         self.check_counter()
         self._index_terminations()
-        self._loaded = True
+
+    def _quantity_from_json(self, entity_j, uid):
+        # can't move this to entity because we need _create_unit- so we wouldn't gain anything
+        unit, _ = self._create_unit(entity_j.pop('referenceUnit'))
+        entity_j['referenceUnit'] = unit
+        quantity = LcQuantity(uid, **entity_j)
+        return quantity
+
+    def _flow_from_json(self, entity_j, uid):
+        if 'referenceQuantity' in entity_j:
+            entity_j.pop('referenceQuantity')
+        chars = entity_j.pop('characterizations', [])
+        flow = LcFlow(uid, **entity_j)
+        for c in chars:
+            v = None
+            q = self[c['quantity']]
+            if q is None:
+                continue
+                # import json
+                # import sys
+                # print(ext_ref)
+                # json.dump(c, sys.stdout, indent=2)
+                # raise KeyError
+            if 'value' in c:
+                v = c['value']
+            if 'isReference' in c:
+                is_ref = c['isReference']
+            else:
+                is_ref = False
+            flow.add_characterization(q, reference=is_ref, value=v)
+
+        return flow
+
+    def _process_from_json(self, entity_j, uid):
+        # note-- we are officially abandoning referenceExchange notation
+        if 'referenceExchange' in entity_j:
+            entity_j.pop('referenceExchange')
+        exchs = entity_j.pop('exchanges', [])
+        process = LcProcess(uid, **entity_j)
+        refs, nonrefs = [], []
+        ref_x = dict()
+        for x in exchs:
+            if 'isReference' in x and x['isReference'] is True:
+                refs.append(x)
+            else:
+                nonrefs.append(x)
+        # first add reference exchanges
+        for x in refs:
+            # eventually move this to an exchange classmethod - which is why I'm repeating myself for now
+            v = None
+            f = self[x['flow']]
+            d = x['direction']
+            if 'value' in x:
+                v = x['value']
+            ref_x[x['flow']] = process.add_exchange(f, d, value=v)
+            process.add_reference(f, d)
+        # then add ordinary [allocated] exchanges
+        for x in nonrefs:
+            t = None
+            # is_ref = False
+            f = self[x['flow']]
+            d = x['direction']
+            if 'termination' in x:
+                t = x['termination']
+            if 'value' in x:
+                process.add_exchange(f, d, value=x['value'], termination=t)
+
+            if 'valueDict' in x:
+                for k, val in x['valueDict'].items():
+                    drr, fuu = k.split(':')
+                    try:
+                        rx = ref_x[fuu]
+                    except KeyError:
+                        process.show()
+                        print('key: %s' % k)
+                        print('flow: %s' % self[fuu])
+                        raise
+                    assert rx.direction == drr
+                    process.add_exchange(f, d, reference=rx, value=val, termination=t)
+
+        return process
 
     def entity_from_json(self, e):
         """
@@ -199,78 +278,11 @@ class LcArchive(ArchiveInterface):
         etype = e.pop('entityType')
         origin = e.pop('origin')
         if etype == 'quantity':
-            # can't move this to entity because we need _create_unit- so we wouldn't gain anything
-            unit, _ = self._create_unit(e.pop('referenceUnit'))
-            e['referenceUnit'] = unit
-            entity = LcQuantity(uid, **e)
+            entity = self._quantity_from_json(e, uid)
         elif etype == 'flow':
-            if 'referenceQuantity' in e:
-                e.pop('referenceQuantity')
-            chars = e.pop('characterizations', [])
-            entity = LcFlow(uid, **e)
-            for c in chars:
-                v = None
-                q = self[c['quantity']]
-                if q is None:
-                    continue
-                    # import json
-                    # import sys
-                    # print(ext_ref)
-                    # json.dump(c, sys.stdout, indent=2)
-                    # raise KeyError
-                if 'value' in c:
-                    v = c['value']
-                if 'isReference' in c:
-                    is_ref = c['isReference']
-                else:
-                    is_ref = False
-                entity.add_characterization(q, reference=is_ref, value=v)
+            entity = self._flow_from_json(e, uid)
         elif etype == 'process':
-            # note-- we are officially abandoning referenceExchange notation
-            if 'referenceExchange' in e:
-                e.pop('referenceExchange')
-            exchs = e.pop('exchanges', [])
-            entity = LcProcess(uid, **e)
-            refs, nonrefs = [], []
-            ref_x = dict()
-            for x in exchs:
-                if 'isReference' in x and x['isReference'] is True:
-                    refs.append(x)
-                else:
-                    nonrefs.append(x)
-            # first add reference exchanges
-            for x in refs:
-                # eventually move this to an exchange classmethod - which is why I'm repeating myself for now
-                v = None
-                f = self[x['flow']]
-                d = x['direction']
-                if 'value' in x:
-                    v = x['value']
-                ref_x[x['flow']] = entity.add_exchange(f, d, value=v)
-                entity.add_reference(f, d)
-            # then add ordinary [allocated] exchanges
-            for x in nonrefs:
-                t = None
-                # is_ref = False
-                f = self[x['flow']]
-                d = x['direction']
-                if 'termination' in x:
-                    t = x['termination']
-                if 'value' in x:
-                    entity.add_exchange(f, d, value=x['value'], termination=t)
-
-                if 'valueDict' in x:
-                    for k, val in x['valueDict'].items():
-                        drr, fuu = k.split(':')
-                        try:
-                            rx = ref_x[fuu]
-                        except KeyError:
-                            entity.show()
-                            print('key: %s' % k)
-                            print('flow: %s' % self[fuu])
-                            raise
-                        assert rx.direction == drr
-                        entity.add_exchange(f, d, reference=rx, value=val, termination=t)
+            entity = self._process_from_json(e, uid)
         else:
             raise TypeError('Unknown entity type %s' % e['entityType'])
 

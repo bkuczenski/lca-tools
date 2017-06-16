@@ -28,6 +28,9 @@ from lcatools.providers.traci_2_1_spreadsheet import Traci21Factors
 
 catalog_dir = '/data/GitHub/lca-tools-datafiles/catalogs'
 
+class ArchiveError(Exception):
+    pass
+
 
 def gz_files(path):
     return [os.path.join(path, f) for f in filter(lambda x: re.search('\.json\.gz$', x), os.listdir(path))]
@@ -75,9 +78,12 @@ def archive_factory(source, ds_type, **kwargs):
         'traci21': Traci21Factors,
         'traci21factors': Traci21Factors
     }[ds_type.lower()]
-    return init_fcn(source, **kwargs)
+    try:
+        return init_fcn(source, **kwargs)
 #        'foregroundarchive': ForegroundArchive.load,
 #        'foreground': ForegroundArchive.load
+    except KeyError as e:
+        raise ArchiveError('%s' % e)
 
 
 def archive_from_json(fname, static=True, **archive_kwargs):

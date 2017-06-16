@@ -65,7 +65,7 @@ class Exchange(object):
         self._termination = None
         if termination is not None:
             self._termination = str(termination)
-        self._hash = (process.uuid, flow.uuid, direction, self._termination)
+        self._hash = (process.external_ref, flow.external_ref, direction, self._termination)
         self._is_reference = False
 
     @property

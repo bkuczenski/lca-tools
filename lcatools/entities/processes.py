@@ -372,7 +372,7 @@ class LcProcess(LcEntity):
         :param add_dups: (False) set to true to handle "duplicate exchange" errors by cumulating their values
         :return:
         """
-        _x = (self.uuid, flow.uuid, dirn, termination)
+        _x = (self.external_ref, flow.external_ref, dirn, termination)
         if _x in self._exchanges:
             if value is None or value == 0:
                 return None
@@ -411,7 +411,7 @@ class LcProcess(LcEntity):
                         raise
                 except ValueError:
                     print('Error adding [%s] = %10.3g for exchange\n%s\nto process\n%s' % (
-                        reference.flow.get_uuid(), value, e, self.get_external_ref()))
+                        reference.flow.external_ref, value, e, self.external_ref))
                     raise
 
                 return e

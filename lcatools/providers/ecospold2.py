@@ -98,7 +98,10 @@ class EcospoldV2Archive(LcArchive):
             return re.sub('^' + os.path.join(self.internal_prefix, ''), '', string)
 
     def _fetch_filename(self, filename):
-        return self._archive.readfile(self._prefix(filename))
+        st = self._archive.readfile(self._prefix(filename))
+        if st is None:
+            raise FileNotFoundError
+        return st
 
     def list_datasets(self, startswith=None):
         assert self._archive.remote is False, "Cannot list objects for remote archives"
@@ -107,6 +110,8 @@ class EcospoldV2Archive(LcArchive):
     def _get_objectified_entity(self, filename):
         try:
             o = objectify.fromstring(self._fetch_filename(filename))
+        except FileNotFoundError:
+            raise
         except ValueError:
             print('failed on :%s:' % filename)
             return None
@@ -310,6 +315,8 @@ class EcospoldV2Archive(LcArchive):
         self._print('\nObjectifying %s' % filename)
         try:
             o = self._get_objectified_entity(filename)
+        except FileNotFoundError:
+            raise
         except XMLSyntaxError:
             print('  !!XMLSyntaxError-- trying to escape < and > signs')
             try:

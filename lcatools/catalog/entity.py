@@ -26,13 +26,13 @@ class IndexInterface(BasicInterface):
     def get(self, eid):
         return self.make_ref(self._archive.retrieve_or_fetch_entity(eid))
 
-    def terminate(self, flow, direction=None):
-        for p in self._archive.terminate(flow, direction=direction):
+    def terminate(self, flow, direction=None, **kwargs):
+        for p in self._archive.terminate(flow, direction=direction, **kwargs):
             yield self.make_ref(p)
 
-    def originate(self, flow, direction=None):
-        for p in self._archive.originate(flow, direction=direction):
+    def originate(self, flow, direction=None, **kwargs):
+        for p in self._archive.originate(flow, direction=direction, **kwargs):
             yield self.make_ref(p)
 
-    def mix(self, flow, direction):
-        return self._archive.mix(flow, direction)
+    def mix(self, flow, direction, **kwargs):
+        return self._archive.mix(flow, direction, **kwargs)

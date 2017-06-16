@@ -38,7 +38,7 @@ class QuantityInterface(BasicInterface):
         self._compartments[string] = c
         return c
 
-    def get_quantity(self, quantity):
+    def get_quantity(self, quantity, **kwargs):
         """
         Retrieve a canonical quantity from a qdb
         :param quantity: external_id of quantity
@@ -48,7 +48,7 @@ class QuantityInterface(BasicInterface):
             return self.make_ref(self._archive.get_quantity(quantity))
         return self.make_ref(self._archive[quantity])
 
-    def synonyms(self, item):
+    def synonyms(self, item, **kwargs):
         """
         Return a list of synonyms for the object -- quantity, flowable, or compartment
         :param item:
@@ -58,7 +58,7 @@ class QuantityInterface(BasicInterface):
             return self._archive.synonyms(item)
         raise NotImplemented
 
-    def flowables(self, quantity=None, compartment=None):
+    def flowables(self, quantity=None, compartment=None, **kwargs):
         """
         Return a list of flowable strings. Use quantity and compartment parameters to narrow the result
         set to those characterized by a specific quantity, those exchanged with a specific compartment, or both
@@ -85,7 +85,7 @@ class QuantityInterface(BasicInterface):
             for n in sorted(list(fb), key=lambda x: x[1]):
                 yield n
 
-    def compartments(self, quantity=None, flowable=None):
+    def compartments(self, quantity=None, flowable=None, **kwargs):
         """
         Return a list of compartment strings. Use quantity and flowable parameters to narrow the result
         set to those characterized for a specific quantity, those with a specific flowable, or both
@@ -103,7 +103,7 @@ class QuantityInterface(BasicInterface):
             for n in comps:
                 yield str(n)
 
-    def factors(self, quantity, flowable=None, compartment=None):
+    def factors(self, quantity, flowable=None, compartment=None, **kwargs):
         """
         Return characterization factors for the given quantity, subject to optional flowable and compartment
         filter constraints. This is ill-defined because the reference unit is not explicitly reported in current
@@ -130,7 +130,7 @@ class QuantityInterface(BasicInterface):
                         continue
                 yield f.factor(quantity)
 
-    def quantity_relation(self, ref_quantity, flowable, compartment, query_quantity, locale='GLO'):
+    def quantity_relation(self, ref_quantity, flowable, compartment, query_quantity, locale='GLO', **kwargs):
         """
         Return a single number that converts the a unit of the reference quantity into the query quantity for the
         given flowable, compartment, and locale (default 'GLO').  If no locale is found, this would be a great place

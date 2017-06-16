@@ -49,7 +49,7 @@ class BackgroundInterface(BasicInterface):
     def get(self, eid):
         return self.make_ref(self._archive.retrieve_or_fetch_entity(eid))
 
-    def exchange_values(self, process, flow, direction, termination=None):
+    def exchange_values(self, process, flow, direction, termination=None, **kwargs):
         """
         Just yield reference exchanges through the foreground interface. TODO: also yield LCI results
         Some design compromises here because thinkstep ILCD datasets (a) are private and (b) don't specify their
@@ -83,14 +83,14 @@ class BackgroundInterface(BasicInterface):
     '''
     background managed methods
     '''
-    def foreground(self, process, ref_flow=None):
+    def foreground(self, process, ref_flow=None, **kwargs):
         # TODO: make this privacy-sensitive
         p = self._archive.retrieve_or_fetch_entity(process)
         if ref_flow is not None:
             ref_flow = self._archive.retrieve_or_fetch_entity(ref_flow)
         return self._bg.foreground(p, ref_flow=ref_flow)
 
-    def foreground_flows(self, search=None):
+    def foreground_flows(self, search=None, **kwargs):
         for k in self._bg.foreground_flows:
             if search is None:
                 yield self._make_pf_ref(k)
@@ -98,7 +98,7 @@ class BackgroundInterface(BasicInterface):
                 if bool(re.search(search, str(k), flags=re.IGNORECASE)):
                     yield self._make_pf_ref(k)
 
-    def background_flows(self, search=None):
+    def background_flows(self, search=None, **kwargs):
         for k in self._bg.background_flows:
             if search is None:
                 yield self._make_pf_ref(k)
@@ -106,7 +106,7 @@ class BackgroundInterface(BasicInterface):
                 if bool(re.search(search, str(k), flags=re.IGNORECASE)):
                     yield self._make_pf_ref(k)
 
-    def exterior_flows(self, direction=None, search=None):
+    def exterior_flows(self, direction=None, search=None, **kwargs):
         for k in self._bg.exterior_flows:
             if direction is not None:
                 if k.direction != direction:
@@ -116,7 +116,7 @@ class BackgroundInterface(BasicInterface):
                     continue
             yield k
 
-    def cutoffs(self, direction=None, search=None):
+    def cutoffs(self, direction=None, search=None, **kwargs):
         for k in self._bg.exterior_flows:
             if self._qdb.is_elementary(k):
                 continue
@@ -128,7 +128,7 @@ class BackgroundInterface(BasicInterface):
                     continue
             yield k
 
-    def emissions(self, direction=None, search=None):
+    def emissions(self, direction=None, search=None, **kwargs):
         for k in self._bg.exterior_flows:
             if not self._qdb.is_elementary(k):
                 continue
@@ -140,26 +140,26 @@ class BackgroundInterface(BasicInterface):
                     continue
             yield k
 
-    def lci(self, process, ref_flow=None):
+    def lci(self, process, ref_flow=None, **kwargs):
         # TODO: make this privacy-sensitive: private only returns cutoffs
         p = self._archive.retrieve_or_fetch_entity(process)
         if ref_flow is not None:
             ref_flow = self._archive.retrieve_or_fetch_entity(ref_flow)
-        return self._bg.lci(p, ref_flow=ref_flow)
+        return self._bg.lci(p, ref_flow=ref_flow, **kwargs)
 
-    def ad(self, process, ref_flow=None):
+    def ad(self, process, ref_flow=None, **kwargs):
         if self.privacy > 0:
             raise PrivateArchive('Dependency data is protected')
         if ref_flow is not None:
             ref_flow = self._archive.retrieve_or_fetch_entity(ref_flow)
-        return self._bg.ad_tilde(process, ref_flow=ref_flow)
+        return self._bg.ad_tilde(process, ref_flow=ref_flow, **kwargs)
 
-    def bf(self, process, ref_flow=None):
+    def bf(self, process, ref_flow=None, **kwargs):
         if self.privacy > 0:
             raise PrivateArchive('Foreground data is protected')
         if ref_flow is not None:
             ref_flow = self._archive.retrieve_or_fetch_entity(ref_flow)
-        return self._bg.bf_tilde(process, ref_flow=ref_flow)
+        return self._bg.bf_tilde(process, ref_flow=ref_flow, **kwargs)
 
     def bg_lcia(self, process, query_qty, ref_flow=None, **kwargs):
         p = self._archive.retrieve_or_fetch_entity(process)

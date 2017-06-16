@@ -375,7 +375,8 @@ class LcCatalog(object):
         if isinstance(itype, str):
             itype = [itype]
         itype = set(itype)
-        for res in sorted(self._resolver.resolve(origin, interfaces=itype), key=lambda x: x.priority):
+        for res in sorted(self._resolver.resolve(origin, interfaces=itype),
+                          key=lambda x: (x.reference != origin, x.priority)):
             if not self._ensure_resource(res):
                 continue
             matches = itype.intersection(set(res.interfaces))

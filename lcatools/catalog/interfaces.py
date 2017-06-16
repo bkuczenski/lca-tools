@@ -176,20 +176,20 @@ class QueryInterface(object):
             return self._perform_query('quantity', 'quantities', CatalogRequired('Catalog or Quantity access required'),
                                        **kwargs)
 
-    def get(self, eid):
+    def get(self, eid, **kwargs):
         """
         Retrieve entity by external Id. This will take any interface and should keep trying until it finds a match.
         If the full quantitative dataset is required, use the catalog 'fetch' method.
         :param eid: an external Id
         :return:
         """
-        return self._perform_query(INTERFACE_TYPES, 'get', CatalogRequired('Catalog access required'), eid)
+        return self._perform_query(INTERFACE_TYPES, 'get', CatalogRequired('Catalog access required'), eid, **kwargs)
 
     """
     API functions- entity-specific -- get accessed by catalog ref
     index interface
     """
-    def terminate(self, flow, direction=None):
+    def terminate(self, flow, direction=None, **kwargs):
         """
         Find processes that match the given flow and have a complementary direction
         :param flow:
@@ -197,9 +197,9 @@ class QueryInterface(object):
         :return:
         """
         return self._perform_query('index', 'terminate', CatalogRequired('Catalog access required'),
-                                   flow, direction=direction)
+                                   flow, direction=direction, **kwargs)
 
-    def originate(self, flow, direction=None):
+    def originate(self, flow, direction=None, **kwargs):
         """
         Find processes that match the given flow and have the same direction
         :param flow:
@@ -207,9 +207,9 @@ class QueryInterface(object):
         :return:
         """
         return self._perform_query('index', 'originate', CatalogRequired('Catalog access required'),
-                                   flow, direction=direction)
+                                   flow, direction=direction, **kwargs)
 
-    def mix(self, flow, direction):
+    def mix(self, flow, direction, **kwargs):
         """
         Create a mixer process whose inputs are all processes that terminate the given flow and direction
         :param flow:
@@ -217,21 +217,21 @@ class QueryInterface(object):
         :return:
         """
         return self._perform_query('index', 'mix', CatalogRequired('Catalog access required'),
-                                   flow, direction)
+                                   flow, direction, **kwargs)
 
     """
     InventoryInterface core methods: individual processes, quantitative data.
     """
-    def exchanges(self, process):
+    def exchanges(self, process, **kwargs):
         """
         Retrieve process's full exchange list, without values
         :param process:
         :return:
         """
         return self._perform_query('inventory', 'exchanges',
-                                   InventoryRequired('No access to exchange data'), process)
+                                   InventoryRequired('No access to exchange data'), process, **kwargs)
 
-    def exchange_values(self, process, flow, direction, termination=None):
+    def exchange_values(self, process, flow, direction, termination=None, **kwargs):
         """
         Return a list of exchanges with values matching the specification
         :param process:
@@ -242,9 +242,9 @@ class QueryInterface(object):
         """
         return self._perform_query(['inventory', 'background'], 'exchange_values',
                                    InventoryRequired('No access to exchange data'),
-                                   process, flow, direction, termination=termination)
+                                   process, flow, direction, termination=termination, **kwargs)
 
-    def inventory(self, process, ref_flow=None):
+    def inventory(self, process, ref_flow=None, **kwargs):
         """
         Return a list of exchanges with values. If no reference is supplied, return all unallocated exchanges, including
         reference exchanges. If a reference is supplied, return allocated (but not normalized) exchanges, excluding
@@ -254,9 +254,9 @@ class QueryInterface(object):
         :return:
         """
         return self._perform_query('inventory', 'inventory', InventoryRequired('No access to exchange data'),
-                                   process, ref_flow=ref_flow)
+                                   process, ref_flow=ref_flow, **kwargs)
 
-    def exchange_relation(self, process, ref_flow, exch_flow, direction, termination=None):
+    def exchange_relation(self, process, ref_flow, exch_flow, direction, termination=None, **kwargs):
         """
         Always returns a single float.
 
@@ -268,12 +268,12 @@ class QueryInterface(object):
         :return:
         """
         return self._perform_query('inventory', 'exchange_relation', InventoryRequired('No access to exchange data'),
-                                   process, ref_flow, exch_flow, direction, termination=termination)
+                                   process, ref_flow, exch_flow, direction, termination=termination, **kwargs)
 
     """
     BackgroundInterface core methods: disabled at this level; provided by use of a BackgroundManager
     """
-    def foreground_flows(self, search=None):
+    def foreground_flows(self, search=None, **kwargs):
         """
         Yield a list of ProductFlows, which serialize to: origin, process external ref, reference flow external ref,
           direction.
@@ -282,9 +282,9 @@ class QueryInterface(object):
         :return: ProductFlows
         """
         return self._perform_query('background', 'foreground_flows', BackgroundRequired('No knowledge of background'),
-                                   search=search)
+                                   search=search, **kwargs)
 
-    def background_flows(self, search=None):
+    def background_flows(self, search=None, **kwargs):
         """
         Yield a list of ProductFlows, which serialize to: origin, process external ref, reference flow external ref,
           direction.
@@ -293,9 +293,9 @@ class QueryInterface(object):
         :return: ProductFlows
         """
         return self._perform_query('background', 'background_flows', BackgroundRequired('No knowledge of background'),
-                                   search=search)
+                                   search=search, **kwargs)
 
-    def exterior_flows(self, direction=None, search=None):
+    def exterior_flows(self, direction=None, search=None, **kwargs):
         """
         Yield a list of ExteriorFlows or cutoff flows, which serialize to flow, direction
 
@@ -304,9 +304,9 @@ class QueryInterface(object):
         :return: ExteriorFlows
         """
         return self._perform_query('background', 'exterior_flows', BackgroundRequired('No knowledge of background'),
-                                   search=search)
+                                   search=search, **kwargs)
 
-    def cutoffs(self, direction=None, search=None):
+    def cutoffs(self, direction=None, search=None, **kwargs):
         """
         Exterior Intermediate Flows
 
@@ -315,9 +315,9 @@ class QueryInterface(object):
         :return:
         """
         return self._perform_query('background', 'cutoffs', BackgroundRequired('No knowledge of background'),
-                                   search=search)
+                                   search=search, **kwargs)
 
-    def emissions(self, direction=None, search=None):
+    def emissions(self, direction=None, search=None, **kwargs):
         """
         Exterior Elementary Flows
 
@@ -326,9 +326,9 @@ class QueryInterface(object):
         :return:
         """
         return self._perform_query('background', 'emissions', BackgroundRequired('No knowledge of background'),
-                                   search=search)
+                                   search=search, **kwargs)
 
-    def foreground(self, process, ref_flow=None):
+    def foreground(self, process, ref_flow=None, **kwargs):
         """
         Returns an ordered list of exchanges- the first being the named process + reference flow, and every successive
         one having a named termination, so that the exchanges could be linked into a fragment tree.
@@ -337,9 +337,9 @@ class QueryInterface(object):
         :return:
         """
         return self._perform_query('background', 'foreground', BackgroundRequired('No knowledge of background'),
-                                   process, ref_flow=ref_flow)
+                                   process, ref_flow=ref_flow, **kwargs)
 
-    def ad(self, process, ref_flow=None):
+    def ad(self, process, ref_flow=None, **kwargs):
         """
         returns background dependencies as a list of exchanges
         :param process:
@@ -347,9 +347,9 @@ class QueryInterface(object):
         :return:
         """
         return self._perform_query('background', 'ad', BackgroundRequired('No knowledge of background'),
-                                   process, ref_flow=ref_flow)
+                                   process, ref_flow=ref_flow, **kwargs)
 
-    def bf(self, process, ref_flow=None):
+    def bf(self, process, ref_flow=None, **kwargs):
         """
         returns foreground emissions as a list of exchanges
         :param process:
@@ -357,9 +357,9 @@ class QueryInterface(object):
         :return:
         """
         return self._perform_query('background', 'bf', BackgroundRequired('No knowledge of background'),
-                                   process, ref_flow=ref_flow)
+                                   process, ref_flow=ref_flow, **kwargs)
 
-    def lci(self, process, ref_flow=None):
+    def lci(self, process, ref_flow=None, **kwargs):
         """
         returns aggregated LCI as a list of exchanges (privacy permitting)
         :param process:
@@ -367,7 +367,7 @@ class QueryInterface(object):
         :return:
         """
         return self._perform_query('background', 'lci', BackgroundRequired('No knowledge of background'),
-                                   process, ref_flow=ref_flow)
+                                   process, ref_flow=ref_flow, **kwargs)
 
     def bg_lcia(self, process, query_qty, ref_flow=None, **kwargs):
         """
@@ -380,7 +380,7 @@ class QueryInterface(object):
         :return:
         """
         return self._perform_query('background', 'bg_lcia', BackgroundRequired('No knowledge of background'),
-                                   process, query_qty, ref_flow=ref_flow)
+                                   process, query_qty, ref_flow=ref_flow, **kwargs)
 
     """
     QuantityInterface
@@ -393,24 +393,25 @@ class QueryInterface(object):
         return self._perform_query('quantity', 'lcia_methods', QuantityRequired('Must have quantity interface'),
                                    **kwargs)
 
-    def get_quantity(self, quantity):
+    def get_quantity(self, quantity, **kwargs):
         """
         Retrieve a canonical quantity from a qdb
         :param quantity: external_id of quantity
         :return: quantity entity
         """
         return self._perform_query('quantity', 'get_quantity', QuantityRequired('Quantity interface required'),
-                                   quantity)
+                                   quantity, **kwargs)
 
-    def synonyms(self, item):
+    def synonyms(self, item, **kwargs):
         """
         Return a list of synonyms for the object -- quantity, flowable, or compartment
         :param item:
         :return: list of strings
         """
-        return self._perform_query('quantity', 'synonyms', QuantityRequired('Quantity interface required'), item)
+        return self._perform_query('quantity', 'synonyms', QuantityRequired('Quantity interface required'), item,
+                                   ** kwargs)
 
-    def flowables(self, quantity=None, compartment=None):
+    def flowables(self, quantity=None, compartment=None, **kwargs):
         """
         Return a list of flowable strings. Use quantity and compartment parameters to narrow the result
         set to those characterized by a specific quantity, those exchanged with a specific compartment, or both
@@ -419,9 +420,9 @@ class QueryInterface(object):
         :return: list of pairs: CAS number, name
         """
         return self._perform_query('quantity', 'flowables', QuantityRequired('Quantity interface required'),
-                                   quantity=quantity, compartment=compartment)
+                                   quantity=quantity, compartment=compartment, **kwargs)
 
-    def compartments(self, quantity=None, flowable=None):
+    def compartments(self, quantity=None, flowable=None, **kwargs):
         """
         Return a list of compartment strings. Use quantity and flowable parameters to narrow the result
         set to those characterized for a specific quantity, those with a specific flowable, or both
@@ -430,9 +431,9 @@ class QueryInterface(object):
         :return: list of strings
         """
         return self._perform_query('quantity', 'compartments', QuantityRequired('Quantity interface required'),
-                                   quantity=quantity, flowable=flowable)
+                                   quantity=quantity, flowable=flowable, **kwargs)
 
-    def factors(self, quantity, flowable=None, compartment=None):
+    def factors(self, quantity, flowable=None, compartment=None, **kwargs):
         """
         Return characterization factors for the given quantity, subject to optional flowable and compartment
         filter constraints. This is ill-defined because the reference unit is not explicitly reported in current
@@ -443,9 +444,9 @@ class QueryInterface(object):
         :return:
         """
         return self._perform_query('quantity', 'factors', QuantityRequired('Quantity interface required'),
-                                   quantity, flowable=flowable, compartment=compartment)
+                                   quantity, flowable=flowable, compartment=compartment, **kwargs)
 
-    def quantity_relation(self, ref_quantity, flowable, compartment, query_quantity, locale='GLO'):
+    def quantity_relation(self, ref_quantity, flowable, compartment, query_quantity, locale='GLO', **kwargs):
         """
         Return a single number that converts the a unit of the reference quantity into the query quantity for the
         given flowable, compartment, and locale (default 'GLO').  If no locale is found, this would be a great place
@@ -458,6 +459,4 @@ class QueryInterface(object):
         :return:
         """
         return self._perform_query('quantity', 'quantity_relation', QuantityRequired('Quantity interface required'),
-                                   ref_quantity, flowable, compartment, query_quantity, locale=locale)
-
-
+                                   ref_quantity, flowable, compartment, query_quantity, locale=locale, **kwargs)

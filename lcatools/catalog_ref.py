@@ -247,69 +247,70 @@ class CatalogRef(object):
     def is_lcia_method(self):
         return self._require_quantity()
 
-    def terminate(self, direction=None):
+    def terminate(self, direction=None, **kwargs):
         self._require_flow()
-        return self._query.terminate(self.external_ref, direction)
+        return self._query.terminate(self.external_ref, direction, **kwargs)
 
-    def originate(self, direction=None):
+    def originate(self, direction=None, **kwargs):
         self._require_flow()
-        return self._query.originate(self.external_ref, direction)
+        return self._query.originate(self.external_ref, direction, **kwargs)
 
-    def references(self, flow=None):
+    def references(self, flow=None, **kwargs):
         self._require_process()
-        for x in self._query.get_reference(self.external_ref):
+        for x in self._query.get_reference(self.external_ref, **kwargs):
             if flow is None:
                 yield x
             else:
                 if x.flow == flow:
                     yield x
 
-    def reference(self, flow=None):
+    def reference(self, flow=None, **kwargs):
         self._require_process()
-        return next(x for x in self.references(flow=flow))
+        return next(x for x in self.references(flow=flow, **kwargs))
 
     @property
     def reference_entity(self):
         return self._query.get_reference(self.external_ref)
 
-    def mix(self, direction):
+    def mix(self, direction, **kwargs):
         self._require_flow()
-        return self._query.mix(self.external_ref, direction)
+        return self._query.mix(self.external_ref, direction, **kwargs)
 
-    def exchanges(self):
+    def exchanges(self, **kwargs):
         self._require_process()
-        return self._query.exchanges(self.external_ref)
+        return self._query.exchanges(self.external_ref, **kwargs)
 
-    def exchange_values(self, flow, direction, termination=None):
+    def exchange_values(self, flow, direction, termination=None, **kwargs):
         self._require_process()
-        return self._query.exchange_values(self.external_ref, flow.external_ref, direction, termination=termination)
+        return self._query.exchange_values(self.external_ref, flow.external_ref, direction,
+                                           termination=termination, **kwargs)
 
-    def inventory(self, ref_flow=None):
+    def inventory(self, ref_flow=None, **kwargs):
         self._require_process()
-        return self._query.inventory(self.external_ref, ref_flow=ref_flow)
+        return self._query.inventory(self.external_ref, ref_flow=ref_flow, **kwargs)
 
-    def exchange_relation(self, ref_flow, exch_flow, direction, termination=None):
+    def exchange_relation(self, ref_flow, exch_flow, direction, termination=None, **kwargs):
         self._require_process()
         return self._query.exchange_relation(self.origin, self.external_ref, ref_flow.external_ref,
                                              exch_flow.external_ref, direction,
-                                             termination=termination)
+                                             termination=termination, **kwargs)
 
-    def factors(self):
+    def factors(self, **kwargs):
         self._require_quantity()
-        return self._query.factors(self.external_ref)
+        return self._query.factors(self.external_ref, **kwargs)
 
-    def ad(self, ref_flow=None):
+    def ad(self, ref_flow=None, **kwargs):
         self._require_process()
-        return self._query.ad(self.external_ref, ref_flow)
+        return self._query.ad(self.external_ref, ref_flow, **kwargs)
 
-    def bf(self, ref_flow=None):
+    def bf(self, ref_flow=None, **kwargs):
         self._require_process()
-        return self._query.bf(self.external_ref, ref_flow)
+        return self._query.bf(self.external_ref, ref_flow, **kwargs)
 
-    def lci(self, ref_flow=None):
+    def lci(self, ref_flow=None, **kwargs):
         self._require_process()
-        return self._query.lci(self.external_ref, ref_flow)
+        return self._query.lci(self.external_ref, ref_flow, **kwargs)
 
-    def bg_lcia(self, lcia_qty, ref_flow=None):
+    def bg_lcia(self, lcia_qty, ref_flow=None, **kwargs):
         self._require_process()
-        return self._query.bg_lcia(self.external_ref, lcia_qty, ref_flow=ref_flow)
+        return self._query.bg_lcia(self.external_ref, lcia_qty, ref_flow=ref_flow, **kwargs)

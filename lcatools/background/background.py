@@ -467,7 +467,7 @@ class BackgroundEngine(object):
 
         # self.make_foreground()
 
-    def add_all_ref_products(self, multi_term='first', default_allocation=None, net_coproducts=True):
+    def add_all_ref_products(self, multi_term='first', default_allocation=None, net_coproducts=False):
         for p in self.fg.processes():
             for x in p.references():
                 j = self.check_product_flow(x.flow, p)
@@ -475,7 +475,7 @@ class BackgroundEngine(object):
                     self._add_ref_product(x.flow, p, multi_term, default_allocation, net_coproducts)
         self._update_component_graph()
 
-    def add_ref_product(self, flow, term, multi_term='first', default_allocation=None, net_coproducts=True):
+    def add_ref_product(self, flow, term, multi_term='first', default_allocation=None, net_coproducts=False):
         """
         Here we are adding a reference product - column of the A + B matrix.  The termination must be supplied.
         :param flow: a product flow
@@ -487,8 +487,8 @@ class BackgroundEngine(object):
          'last' - take the last match (alphabetically by process name)
          Not currently implemented.
         :param default_allocation: an LcQuantity to use for allocation if unallocated processes are encountered
-        :param net_coproducts: [True] for unallocated multi-output processes, compute net demand of coproducts instead
-         of allocating.
+        :param net_coproducts: [False] for unallocated multi-output processes, compute net demand of coproducts instead
+         of allocating. (Works for USLCI; still buggy for ecoinvent)
         :return:
         """
         j = self.check_product_flow(flow, term)
@@ -558,6 +558,7 @@ class BackgroundEngine(object):
                         # don't add ourself as a coproduct
                         continue
                     if i is None:
+                        # TODO: need to figure out why this causes SCC recursion errors
                         i = self._create_product_flow(exch.flow, parent.process)
                         net = self._add_emission(exch.flow, exch.direction)
                         # TODO: This should be 1.0 instead of val, but entries get auto-normalized in adjust_val()

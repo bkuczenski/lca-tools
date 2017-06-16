@@ -14,6 +14,10 @@ class InvalidQuery(Exception):
     pass
 
 
+class MisuseOfQuery(Exception):
+    pass
+
+
 class CatalogRef(object):
     """
     A catalog ref is a resolveable reference to a semantic entity. When paired with an LcCatalog, the reference
@@ -36,7 +40,7 @@ class CatalogRef(object):
             origin = 'foreground'
         return cls(origin, j['externalId'], catalog=catalog, entity_type=etype)
 
-    def __init__(self, origin, ref, catalog=None, entity_type=None, **kwargs):
+    def __init__(self, origin, ref, catalog=None, _query=None, entity_type=None, **kwargs):
         """
         A catalog ref is defined by an entity's origin and external reference, which are all that is necessary to
         identify and/or recreate the entity.  A ref can be linked to a catalog, which may be able to resolve the
@@ -53,6 +57,7 @@ class CatalogRef(object):
 
         :param origin: semantic reference to data source (catalog must resolve to a physical data source)
         :param ref: external reference of entity in semantic data source
+        :param _query: if a query is already on hand, set it and skip the catalog lookup
         :param catalog: semantic resolver. Must provide the interfaces that can be used to answer queries
         :param entity_type: optional- can be placeholder to enable type validation without retrieving entity
         """
@@ -67,6 +72,14 @@ class CatalogRef(object):
         self._d = kwargs
 
         self._known = False
+
+        if _query is not None:
+            if self._etype is None:
+                raise MisuseOfQuery('Must specify entity_type when query is provided')
+            if self.origin != _query.origin:
+                raise MisuseOfQuery('Origin %s should match query origin %s' % (self.origin, _query.origin))
+            self._query = _query
+            self._known = True
 
         if catalog is not None:
             self.lookup(catalog)
@@ -251,7 +264,7 @@ class CatalogRef(object):
                 if x.flow == flow:
                     yield x
 
-    def reference(self, flow):
+    def reference(self, flow=None):
         self._require_process()
         return next(x for x in self.references(flow=flow))
 

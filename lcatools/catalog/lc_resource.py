@@ -64,10 +64,14 @@ class LcResource(object):
         :param static: [False] if True, load_all() after initializing
         :param kwargs: additional keyword arguments to constructor
         """
+        if not os.path.exists(source):
+            raise EnvironmentError('%s not found' % source)
         self._ref = reference
         self._source = source
         self._type = ds_type
         self._static = static
+
+        self._issaved = False
 
         if interfaces is None:
             interfaces = ['inventory']
@@ -83,6 +87,13 @@ class LcResource(object):
         self._privacy = int(privacy)
         self._priority = int(priority)
         self._args = kwargs
+
+    def exists(self, path):
+        return os.path.exists(os.path.join(path, self.reference))
+
+    @property
+    def is_saved(self):
+        return self._issaved
 
     @property
     def reference(self):
@@ -162,3 +173,4 @@ class LcResource(object):
             resources = [self.serialize()]
         with open(os.path.join(path, self.reference), 'w') as fp:
             json.dump({self.reference: resources}, fp, indent=2)
+        self._issaved = True

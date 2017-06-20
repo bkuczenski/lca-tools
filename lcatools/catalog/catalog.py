@@ -42,6 +42,7 @@ from .inventory import InventoryInterface
 from .background import BackgroundInterface
 from .quantity import QuantityInterface
 from .lc_resolver import LcCatalogResolver
+from .lc_resource import LcResource
 from lcatools.tools import create_archive, update_archive  # archive_from_json, archive_factory
 from lcatools.providers.qdb import Qdb
 from lcatools.flowdb.compartments import REFERENCE_INT  # reference intermediate flows
@@ -98,6 +99,10 @@ class LcCatalog(object):
         return os.path.join(self._rootdir, 'entity_cache.json')
 
     @property
+    def _reference_qtys(self):
+        return os.path.join(self._rootdir, 'reference-quantities.json')
+
+    @property
     def _compartments(self):
         return os.path.join(self._rootdir, 'local-compartments.json')
 
@@ -121,7 +126,7 @@ class LcCatalog(object):
         if not os.path.exists(self._compartments):
             copy2(REFERENCE_INT, self._compartments)
         if qdb is None:
-            qdb = Qdb(compartments=self._compartments)
+            qdb = Qdb(source=self._reference_qtys, compartments=self._compartments)
         self._entities = dict()  # maps '/'.join(origin, external_ref) to entity
         self._qdb = qdb
         """
@@ -142,18 +147,30 @@ class LcCatalog(object):
         """
         Create a new data resource by specifying its properties directly to the constructor
         :param args: reference, source, ds_type
+        :param store: [True] permanently store this resource
         :param kwargs: interfaces=None, privacy=0, priority=0, static=False; **kwargs passed to archive constructor
         :return:
         """
-        self._resolver.new_resource(*args, **kwargs)
+        res = self._resolver.new_resource(*args, **kwargs)
+        self._ensure_resource(res)
 
-    def add_resource(self, resource):
+    def add_resource(self, resource, store=True):
         """
         Add an existing LcResource to the catalog.
         :param resource:
+        :param store: [True] permanently store this resource
         :return:
         """
-        self._resolver.add_resource(resource)
+        self._resolver.add_resource(resource, store=store)
+        self._ensure_resource(resource)
+
+    def add_archive(self, archive, interfaces=None, store=True, **kwargs):
+        res = LcResource.from_archive(archive, interfaces, **kwargs)
+        self._resolver.add_resource(res, store=store)
+        self._archives[res.source] = archive
+        for t in res.interfaces:
+            for k in archive.catalog_names.keys():
+                self._names[':'.join([k, t])] = res.source
 
     def get_archive(self, name):
         """
@@ -200,6 +217,10 @@ class LcCatalog(object):
         for ref, ints in self._resolver.references:
             print('%s [%s]' % (ref, ', '.join(ints)))
 
+    def load_all(self, origin, interface=None, source=None):
+        source = self._find_single_source(origin, interface, source=source)
+        self._archives[source].load_all()
+
     def index_resource(self, origin, interface=None, source=None, priority=10, force=False):
         """
         Creates an index for the identified resource.  'origin' and 'interface' must resolve to one or more LcResources
@@ -230,7 +251,10 @@ class LcCatalog(object):
         archive.load_all()
         archive.write_to_file(inx_file, gzip=True, exchanges=False, characterizations=False, values=False)
         for r in self._resolver.resources_with_source(source):
-            self.new_resource(r.reference, inx_file, 'json', interfaces='index', priority=priority, static=True)
+            store = self._resolver.is_permanent(r)
+            self.new_resource(r.reference, inx_file, 'json', interfaces='index', priority=priority,
+                              store=store,
+                              static=True)
 
     def create_source_cache(self, source, static=False):
         """
@@ -301,7 +325,9 @@ class LcCatalog(object):
             ifaces = set(i for i in res.interfaces)
             if background:
                 ifaces.add('background')
+            store = self._resolver.is_permanent(res)
             self.new_resource(res.reference, archive_file, 'JSON', interfaces=ifaces, priority=priority,
+                              store=store,
                               static=True)
 
     def add_nickname(self, source, nickname):
@@ -432,15 +458,16 @@ class LcCatalog(object):
             self._qdb.add_cf(cf)
         self._lcia_methods.add(lcia)
 
-    def lcia(self, p_ref, q_ref):
+    def lcia(self, p_ref, q_ref, ref_flow=None):
         """
         Perform LCIA of a process (p_ref) with respect to a given LCIA quantity (q_ref).  Returns an LciaResult.
         :param p_ref: either a process, or a catalog_ref for a process
         :param q_ref: either an LCIA method (quantity with 'Indicator'), or a catalog_ref for an LCIA method. Only
          catalog refs have the capability to auto-load characterization factors.
+        :param ref_flow: [None] if applicable, reference flow to be considered for the process
         :return:
         """
         q_e = self._qdb.get_canonical_quantity(self.fetch(q_ref))
         if not self._qdb.is_loaded(q_e):
             self.load_lcia_factors(q_ref)
-        return self._qdb.do_lcia(q_e, p_ref.inventory(), locale=p_ref['SpatialScope'])
+        return self._qdb.do_lcia(q_e, p_ref.inventory(ref_flow=ref_flow), locale=p_ref['SpatialScope'])

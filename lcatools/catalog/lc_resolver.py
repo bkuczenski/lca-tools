@@ -49,13 +49,22 @@ class LcCatalogResolver(object):
         for res in os.listdir(self._resource_dir):
             self._update_semantic_ref(res)
 
-    def add_resource(self, resource):
-        resource.write_to_file(self._resource_dir)
-        self._update_semantic_ref(resource.reference)
+    def add_resource(self, resource, store=True):
+        """
+        Add a resource to the resolver's list.  By default, save the resource permanently as a file in resources dir.
+        :param resource:
+        :param store: [True] if False, add the resource to memory only
+        :return:
+        """
+        if store:
+            resource.write_to_file(self._resource_dir)
+            self._update_semantic_ref(resource.reference)
+        else:
+            self._resources[resource.reference].append(resource)
 
-    def new_resource(self, ref, source, ds_type, **kwargs):
+    def new_resource(self, ref, source, ds_type, store=True, **kwargs):
         new_res = LcResource(ref, source, ds_type, **kwargs)
-        self.add_resource(new_res)
+        self.add_resource(new_res, store=store)
         return new_res
 
     def resources_with_source(self, source):
@@ -63,6 +72,9 @@ class LcCatalogResolver(object):
             for r in ress:
                 if r.source == source:
                     yield r
+
+    def is_permanent(self, resource):
+        return resource.exists(self._resource_dir)
 
     def resolve(self, req, interfaces=None):
         """

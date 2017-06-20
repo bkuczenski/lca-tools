@@ -319,5 +319,19 @@ class CompartmentManagerTestCase(unittest.TestCase):
         products = self.cm.add_compartment(f2['Compartment'])
         self.assertIs(self.cm.find_matching(f2['Compartment']), products)
 
+    def test_merge_unspecified(self):
+        """
+        compartment specifiers that read "unspecified" should be ignored. Also, intermediate hierarchies should
+        be created automatically
+        :return:
+        """
+        with open(self._test_file, 'w') as fp:
+            fp.write(local_cm_json)
+        self.cm.set_local(self._test_file)
+
+        c = self.cm.find_matching(['Utilities', 'Electricity', 'unspecified'])
+        self.assertIs(c, self.cm.find_matching('Electricity'))
+
+
 if __name__ == '__main__':
     unittest.main()

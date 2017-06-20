@@ -15,6 +15,7 @@ import re
 import os
 
 from lxml import objectify
+from lxml.etree import tostring
 
 from lcatools.providers.base import NsUuidArchive
 from lcatools.providers.archive import Archive
@@ -190,10 +191,18 @@ class EcospoldV1Archive(NsUuidArchive):
                 d = 'Output'
                 if exch.outputGroup == 0 or exch.outputGroup == 2:
                     rf.add(f)
+            elif hasattr(exch, 'OutputGroup'):
+                d = 'Output'
+                if exch.OutputGroup == 0 or exch.OutputGroup == 2:
+                    rf.add(f)
             elif hasattr(exch, 'inputGroup'):
                 d = 'Input'
+            elif hasattr(exch, 'InputGroup'):
+                d = 'Input'
             else:
-                raise DirectionlessExchangeError
+                print('Abandoning directionless exchange for flow %s' % f)
+                continue
+                # raise DirectionlessExchangeError(tostring(exch))
             local_q = self._create_quantity(exch.get("unit"))
             v = float(exch.get('meanValue'))  # returns none if missing
             if local_q is not f.reference_entity:

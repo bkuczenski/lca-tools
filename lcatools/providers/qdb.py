@@ -242,7 +242,10 @@ class Qdb(LcArchive):
             print(self._f[ind])
         return ind
 
-    def find_flowables(self, *terms):
+    def find_flowables(self, flow):
+        return [k for k in self._find_flowables(*self._flow_terms(flow))]
+
+    def _find_flowables(self, *terms):
         """
 
         :param terms: each term provided as a separate argument
@@ -325,7 +328,7 @@ class Qdb(LcArchive):
         q_ind = self._get_q_ind(factor.quantity)
         f_terms = self._flow_terms(factor.flow)
         self.add_new_flowable(*f_terms)
-        f_inds = self.find_flowables(*f_terms)
+        f_inds = self._find_flowables(*f_terms)
 
         self.add_new_quantity(factor.flow.reference_entity)
 
@@ -471,7 +474,7 @@ class Qdb(LcArchive):
                 raise ValueError('Too many elements specified')
             ref_q_ind = self._get_q_ind(flow.reference_entity)
             compartment = flow['Compartment']
-            f_inds = [fb for fb in self.find_flowables(*self._flow_terms(flow))]
+            f_inds = [fb for fb in self._find_flowables(*self._flow_terms(flow))]
             _biogenics = (y for y in self._flow_terms(flow))
 
         if ref_q_ind is None:

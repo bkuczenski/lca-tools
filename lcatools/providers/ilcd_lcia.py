@@ -84,7 +84,7 @@ class IlcdLcia(IlcdArchive):
         if loc == '':
             loc = None
         flow = self._check_or_retrieve_child(f_uuid, f_uri)
-        if not flow.has_characterization(lcia):
+        if not flow.has_characterization(lcia, location=loc):
             # TODO: adjust CF for different reference units!!! do this when a live one is found
             flow.add_characterization(lcia, value=cf, location=loc)
         return flow.factor(lcia)

@@ -192,7 +192,7 @@ class LcFlow(LcEntity):
 
     def has_characterization(self, quantity, location='GLO'):
         if quantity.get_uuid() in self._characterizations.keys():
-            if location == 'GLO':
+            if location == 'GLO' or location is None:
                 return True
             if location in self._characterizations[quantity.get_uuid()].locations():
                 return True

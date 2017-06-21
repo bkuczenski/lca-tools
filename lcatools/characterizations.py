@@ -18,6 +18,7 @@ class Characterization(object):
         :param quantity:
         :param value: passed to add_value if present
         :param location: 'GLO' passed to add_value if present
+        :param origin: of data, if applicable
         :return:
         """
         assert flow.entity_type == 'flow', "'flow' must be an LcFlow"
@@ -26,9 +27,17 @@ class Characterization(object):
         self.flow = flow
         self.quantity = quantity
         self._locations = dict()
+        self._origins = dict()
+
         if kwargs:
             self.add_value(**kwargs)
         self._natural_dirn = None
+
+    def origin(self, location='GLO'):
+        org = self._origins[location]
+        if org is None:
+            return self.flow.origin
+        return org
 
     @property
     def natural_direction(self):
@@ -82,11 +91,14 @@ class Characterization(object):
     def update_values(self, **kwargs):
         self._locations.update(kwargs)
 
-    def add_value(self, value=None, location=None):
+    def add_value(self, value=None, location=None, origin=None, overwrite=False):
         if location is None:
-            self['GLO'] = value
-        else:
-            self[location] = value
+            location = 'GLO'
+        if overwrite:
+            if location in self._locations:
+                self._locations.pop(location)
+        self[location] = value
+        self._origins[location] = origin
 
     def scale(self, factor):
         for k, v in self._locations.items():
@@ -111,7 +123,7 @@ class Characterization(object):
         if self.is_null:
             return '%s has %s %s' % (self.flow, self.quantity, self.quantity.reference_entity)
         return '%s [%s / %s] %s' % ('\n'.join(['%10.3g [%s]' % (v, k) for k, v in self._locations.items()]),
-                             self.quantity.unit(), self.flow.unit(), self.flow)
+                                    self.quantity.unit(), self.flow.unit(), self.flow)
 
     def q_view(self):
         if self.quantity is self.flow.reference_entity:

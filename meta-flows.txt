@@ -1,0 +1,72 @@
+==========
+Mon Jun 19 23:56:36 -0700 2017
+
+Need to do some thinking on this.
+
+First of all: 11104-93-1 is NOT A CAS NUMBER.  STOP USING IT.
+
+But both ecoinvent and plastics europe use it. it shows up in general search results.
+
+Problem:
+
+ - LCIA method does not report 'Nitrogen oxides'
+ - flow is a composite of other flows- sometimes known
+
+what would be the desired outcome?
+
+ the intelligent interpretation is that the higher of the two is the more abundant (NO2) but that is some serious reasoning.
+
+ in an automated capacity, they should be summed and allocated to one or a mix in a configurable way.  Where would that configuration happen?
+
+could be modeled as a fragment
+
+that means there needs to be a serious background lookup.
+
+how do I want to configure it? you can't call them synonyms because of the CAS conflict.
+
+The *correct* solution would be to assign the LCIA factors to the flow
+in convert. so if no cf is found, perform a fallback.
+
+and that is a second set of synonyms? or a second set of compartments / CLookups?
+
+how can the conversion fail?
+
+ - no flowables
+ - compartment doesn't match / dist too long
+   = difference between find() and cfs()
+
+There is a "handle flowables" that is already happening with the biogenic CO2 switch-- if at that point there are no flowables, then perform an early fallback, and there--
+
+The solution is to *characterize* the flow- locally- in the Qdb- and use self as an upstream.
+
+Brilliant.
+
+ how? LciaResult stores results
+ the archives all have the qdb as upstream
+
+So here's the unit test:
+
+ - load a non-stored local ref- PA66- check it against lcias[ext_ref].
+ - first time through- no cf so the LCIA Result is thus. use isclose
+ - add flow to qdb, add cf of lcias[ext_ref] to that flow
+ - save qdb- where-
+
+the reference_quantities should not be in git- it should be in cat-food
+which has got to be a git repo. ffs I should be tracking this.
+
+
+
+ - flowable has
+
+Tue 2017-06-20 01:07:45 -0700
+
+This is also the solution to the USLCI ecospold import [maybe it is an 'ecospold solver'?]
+
+but meant in general.
+
+now the test-- add the nox flow and see if it comes up
+
+Tue 2017-06-20 02:17:03 -0700
+
+Can't do that- there's a recursion error somewhere between catalog refs get_item and upstream... but that's ok. just 2hours of my life.
+anyway, other stuff works.

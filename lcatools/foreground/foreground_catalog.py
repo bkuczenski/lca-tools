@@ -182,14 +182,15 @@ class ForegroundCatalog(LcCatalog):
             ent = super(ForegroundCatalog, self).fetch(ref)
         return ent
 
-    def fragment_lcia(self, fragmentflows, q_ref):
+    def fragment_lcia(self, fragmentflows, q_ref, refresh=False):
         """
         Takes a stack of FragmentFlow objects and performs LCIA for the given quantity.
         :param fragmentflows:
         :param q_ref:
+        :param refresh: [False] whether to re-perform qdb lookups
         :return:
         """
-        if not self._qdb.is_loaded(q_ref):
+        if not self.is_loaded(q_ref):
             self.load_lcia_factors(q_ref)
         result = LciaResult(q_ref)
         for ff in fragmentflows:
@@ -200,7 +201,7 @@ class ForegroundCatalog(LcCatalog):
                 continue
 
             try:
-                v = ff.term.score_cache(quantity=q_ref, qdb=self._qdb)
+                v = ff.term.score_cache(quantity=q_ref, qdb=self._qdb, refresh=refresh)
             except SubFragmentAggregation:
                 v = self.fragment_lcia(ff.term.subfragments, q_ref)
             value = v.total()

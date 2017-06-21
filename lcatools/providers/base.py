@@ -92,6 +92,8 @@ class LcArchive(ArchiveInterface):
         super(LcArchive, self).set_upstream(upstream)
         # create a dict of upstream flows
         for i in self._upstream.flows() + self._upstream.quantities():
+            if not i.is_entity:
+                continue
             up_key = self._upstream_key(i)
             if up_key in self._upstream_hash:
                 print('!!multiple upstream matches for %s!!' % up_key)

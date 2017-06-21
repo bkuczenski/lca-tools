@@ -29,8 +29,8 @@ from lcatools.lcia_results import LciaResult
 from lcatools.providers.base import LcArchive
 from lcatools.flowdb.compartments import Compartment, CompartmentManager  # load_compartments, save_compartments, traverse_compartments, REFERENCE_EFLOWS
 from lcatools.characterizations import Characterization
-from lcatools.interact import pick_one
-from synlist import SynList, Flowables, InconsistentIndices, ConflictingCas
+# from lcatools.interact import pick_one
+from synlist import SynList, Flowables, InconsistentIndices, ConflictingCas, EntityFound
 
 
 REF_QTYS = os.path.join(os.path.dirname(__file__), 'data', 'elcd_reference_quantities.json')
@@ -195,15 +195,23 @@ class Qdb(LcArchive):
                 if cf.quantity is not f.reference_entity:
                     self.add_cf(cf)
 
+    def save(self):
+        self.write_to_file(self.source, characterizations=True, values=True)  # leave out exchanges
+
     @property
     def quell_biogenic_co2(self):
         return self._quell_biogenic_co2
 
     def add_new_quantity(self, q):
+        if not q.is_entity:
+            q = q.fetch()
         ind = self._q.add_set(self._q_terms(q), merge=True)
         if self._q.entity(ind) is None:
             self._q.set_entity(ind, q)
-            self.add(q)
+            try:
+                self.add(q)
+            except KeyError:
+                pass
         return ind
 
     def get_canonical_quantity(self, q):
@@ -215,7 +223,7 @@ class Qdb(LcArchive):
         ind = self._get_q_ind(q)
         return self._q.entity(ind)
 
-    def is_loaded(self, q):
+    def is_known(self, q):
         """
         Checks whether the given quantity has been indexed by checking for a list of flowables
         :param q:
@@ -226,10 +234,19 @@ class Qdb(LcArchive):
             return True
         return False
 
+    def quantify(self, flowable, quantity, compartment=None):
+        f_idx = self._f.index(flowable)
+        q_idx = self._get_q_ind(quantity)
+        if compartment is None:
+            return self._fq_dict[f_idx, q_idx].cfs()
+        return self._fq_dict[f_idx, q_idx].find(compartment)
+
     def _index_quantities(self):
         for q in self.quantities():
             try:
                 self._q.set_entity(q['Name'], q)
+            except EntityFound:
+                pass
             except KeyError:
                 self.add_new_quantity(q)
 
@@ -315,7 +332,7 @@ class Qdb(LcArchive):
     def _q_terms(q):
         return q.external_ref, q.link, q['Name'], str(q)
 
-    def add_cf(self, factor):
+    def add_cf(self, factor, flow=None):
         """
         factor should be a Characterization, with the behavior:
           * flow[x] for x in {'Name', 'CasNumber', 'Compartment'} operable
@@ -323,10 +340,13 @@ class Qdb(LcArchive):
           * quantity or quantity CatalogRef
           * __getitem__ operable
         :param factor:
+        :param flow: [None] source for flowables
         :return:
         """
         q_ind = self._get_q_ind(factor.quantity)
-        f_terms = self._flow_terms(factor.flow)
+        if flow is None:
+            flow = factor.flow
+        f_terms = self._flow_terms(flow)
         self.add_new_flowable(*f_terms)
         f_inds = self._find_flowables(*f_terms)
 
@@ -344,7 +364,7 @@ class Qdb(LcArchive):
             f_inds = [f_inds]
         cfs = set()
         for f_ind in f_inds:
-            for item in self._fq_dict[f_ind, q_ind].find(compartment, dist=1):
+            for item in self._fq_dict[f_ind, q_ind].find(compartment, dist=2, return_first=True):
                 cfs.add(item)
         return cfs
 
@@ -353,10 +373,10 @@ class Qdb(LcArchive):
             if self._get_q_ind(cf.quantity) == from_q:
                 yield cf
 
-    def _conversion_from_flow(self, flow, from_q):
+    def _conversion_from_flow(self, flow, from_q, locale='GLO'):
         try:
             cf = next(self._flow_cf_generator(flow, from_q))
-            value = cf.value
+            value = cf[locale]
         except StopIteration:
             value = None
         return value
@@ -367,7 +387,32 @@ class Qdb(LcArchive):
                 if self._get_q_ind(item.flow.reference_entity) == to_q:
                     yield item
 
-    def _lookfor_conversion(self, f_inds, compartment, from_q, to_q):
+    def convert_reference(self, flow, from_q, locale='GLO'):
+        """
+        Return a conversion factor for expressing a flow's quantities with respect to a different reference quantity.
+
+        Flow Characterizations are given in units of query_q / ref_q where ref_q is the flow's reference quantity.
+        This function returns a factor with the dimension from_q / ref_q.  This allows a foreign reference with the
+        dimension of query_q / from_q to be converted by multiplication into the dimension query_q / ref_q.
+        :param flow:
+        :param from_q:
+        :param locale: optional location spec
+        :return: from_q / ref_q for the given flow, or None if no conversion was found
+        """
+        from_q_ind = self._get_q_ind(from_q)
+        ref_q_ind = self._get_q_ind(flow.reference_entity)
+        if from_q_ind == ref_q_ind:
+            return 1.0
+        conv = self._conversion_from_flow(flow, from_q_ind)
+        if conv is None:
+            f_inds = [fb for fb in self._find_flowables(*self._flow_terms(flow))]
+            compartment = self.c_mgr.find_matching(flow['Compartment'])
+            conv, origin = self._lookfor_conversion(f_inds, compartment, from_q_ind, ref_q_ind)
+            if conv is not None:
+                flow.add_characterization(self._q.entity(from_q), location=locale, value=conv, origin=origin)
+            return conv
+
+    def _lookfor_conversion(self, f_inds, compartment, from_q, to_q, locale='GLO'):
         """
         Convert is supposed to supply characterization factors in the dimension of query_q / ref_q
 
@@ -385,16 +430,18 @@ class Qdb(LcArchive):
         :return:
         """
         # first straight from-to
+        origin = None
         try:
             cf = next(self._conversion_generator(f_inds, compartment, from_q, to_q))
-            value = cf.value
+            value = cf[locale]
         except StopIteration:
             try:
                 cf = next(self._conversion_generator(f_inds, compartment, to_q, from_q))
-                value = 1.0 / cf.value
+                value = 1.0 / cf[locale]
+                origin = cf.origin(locale)
             except StopIteration:
                 value = None
-        return value
+        return value, origin
 
     @staticmethod
     def is_biogenic(term):
@@ -432,7 +479,8 @@ class Qdb(LcArchive):
 
                 else:
                     # next, try to consult fq_dict
-                    ref_conversion = self._lookfor_conversion(f_inds, comp, cf_ref_q_ind, ref_q_ind)
+                    ref_conversion, origin = self._lookfor_conversion(f_inds, comp, cf_ref_q_ind, ref_q_ind,
+                                                                      locale=locale)
 
                     if ref_conversion is None:
                         print('Unable to find conversion... bailing')
@@ -441,7 +489,8 @@ class Qdb(LcArchive):
                     factor *= ref_conversion
                     if flow is not None:
                         # if we have the flow, we should document the characterization used
-                        flow.add_characterization(cf.flow.reference_entity, value=ref_conversion)
+                        flow.add_characterization(cf.flow.reference_entity, value=ref_conversion, location=locale,
+                                                  origin=origin)
 
             vals.append(factor)
         return vals
@@ -468,7 +517,7 @@ class Qdb(LcArchive):
         if flow is None:
             ref_q_ind = self._get_q_ind(reference)
             f_inds = [self._f.index(flowable)]
-            _biogenics = (y for y in (flowable))
+            _biogenics = (y for y in [flowable])
         else:
             if flowable or compartment or reference:
                 raise ValueError('Too many elements specified')
@@ -499,17 +548,18 @@ class Qdb(LcArchive):
             print('Quantity: %s' % self._q.entity(query_q_ind))
         return vals[0]
 
-    def do_lcia(self, quantity, inventory, locale='GLO'):
+    def do_lcia(self, quantity, inventory, locale='GLO', refresh=False):
         """
         takes a quantity and an exchanges generator; returns an LciaResult for the given quantity
         :param quantity:
         :param inventory: generates exchanges
         :param locale: ['GLO']
+        :param refresh: [False] whether to rewrite characterization factors from the database
         :return: an LciaResult whose components are the flows of the exchanges
         """
         if isinstance(quantity, str):
             quantity = self.get_canonical_quantity(quantity)
-        if not self.is_loaded(quantity):
+        if not self.is_known(quantity):
             if quantity.is_entity:
                 raise QuantityNotLoaded('%s is not a catalogRef' % quantity)
             else:
@@ -519,10 +569,10 @@ class Qdb(LcArchive):
         q_ind = self._get_q_ind(q)
         r = LciaResult(q)
         for x in inventory:
-            if not x.flow.has_characterization(q):
+            if refresh or not x.flow.has_characterization(q):
                 factor = self.convert(flow=x.flow, query_q_ind=q_ind, locale=locale)
                 if factor is not None:
-                    x.flow.add_characterization(q, value=factor)
+                    x.flow.add_characterization(q, value=factor, overwrite=refresh)
                 else:
                     x.flow.add_characterization(q)
             if x.flow.cf(q) is not None:

@@ -80,15 +80,25 @@ class BackgroundInterface(BasicInterface):
                 sent.add(x)
                 yield x
 
+    def _ensure_ref_flow(self, ref_flow):
+        if ref_flow is not None:
+            if isinstance(ref_flow, str):
+                ref_flow = self._archive.retrieve_or_fetch_entity(ref_flow)
+        return ref_flow
+
     '''
     background managed methods
     '''
     def foreground(self, process, ref_flow=None, **kwargs):
         # TODO: make this privacy-sensitive
         p = self._archive.retrieve_or_fetch_entity(process)
-        if ref_flow is not None:
-            ref_flow = self._archive.retrieve_or_fetch_entity(ref_flow)
+        ref_flow = self._ensure_ref_flow(ref_flow)
         return self._bg.foreground(p, ref_flow=ref_flow)
+
+    def is_background(self, process, ref_flow=None, **kwargs):
+        p = self._archive.retrieve_or_fetch_entity(process)
+        ref_flow = self._ensure_ref_flow(ref_flow)
+        return self._bg.is_background(p, ref_flow=ref_flow)
 
     def foreground_flows(self, search=None, **kwargs):
         for k in self._bg.foreground_flows:
@@ -143,38 +153,33 @@ class BackgroundInterface(BasicInterface):
     def lci(self, process, ref_flow=None, **kwargs):
         # TODO: make this privacy-sensitive: private only returns cutoffs
         p = self._archive.retrieve_or_fetch_entity(process)
-        if ref_flow is not None:
-            ref_flow = self._archive.retrieve_or_fetch_entity(ref_flow)
+        ref_flow = self._ensure_ref_flow(ref_flow)
         return self._bg.lci(p, ref_flow=ref_flow, **kwargs)
 
     def ad(self, process, ref_flow=None, **kwargs):
         if self.privacy > 0:
             raise PrivateArchive('Dependency data is protected')
-        if ref_flow is not None:
-            ref_flow = self._archive.retrieve_or_fetch_entity(ref_flow)
+        ref_flow = self._ensure_ref_flow(ref_flow)
         return self._bg.ad_tilde(process, ref_flow=ref_flow, **kwargs)
 
     def bf(self, process, ref_flow=None, **kwargs):
         if self.privacy > 0:
             raise PrivateArchive('Foreground data is protected')
-        if ref_flow is not None:
-            ref_flow = self._archive.retrieve_or_fetch_entity(ref_flow)
+        ref_flow = self._ensure_ref_flow(ref_flow)
         return self._bg.bf_tilde(process, ref_flow=ref_flow, **kwargs)
 
     def bg_lcia(self, process, query_qty, ref_flow=None, **kwargs):
         p = self._archive.retrieve_or_fetch_entity(process)
-        if ref_flow is not None:
-            ref_flow = self._archive.retrieve_or_fetch_entity(ref_flow)
+        ref_flow = self._ensure_ref_flow(ref_flow)
         q = self._qdb.get_canonical_quantity(query_qty)  #
         if False:  # self._archive.static:
             # just stick with what works. In future: if lci is not available bc private, then we will need it
             if not self.is_characterized(q):
-                self.characterize(self._qdb, q, **kwargs)
-            res = self._bg.lcia(p, query_qty, ref_flow=ref_flow)
+                self.characterize(self._qdb, q)
+            res = self._bg.lcia(p, query_qty, ref_flow=ref_flow, **kwargs)
         else:
             lci = self._bg.lci(p, ref_flow=ref_flow)
-            res = self._qdb.do_lcia(q, lci, locale=p['SpatialScope'])
+            res = self._qdb.do_lcia(q, lci, locale=p['SpatialScope'], **kwargs)
         if self.privacy > 0:
             return res.aggregate('*')
         return res
-

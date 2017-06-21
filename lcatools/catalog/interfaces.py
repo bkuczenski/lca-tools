@@ -75,6 +75,14 @@ class QueryInterface(object):
         raise TypeError('Don\'t know how to check elementarity of this: %s' % type(obj))
 
     @property
+    def fetch(self):
+        """
+        returns the catalog's fetch method. this is wonky a bit.
+        :return:
+        """
+        return self._catalog.fetch
+
+    @property
     def origin(self):
         return self._origin
 
@@ -136,7 +144,7 @@ class QueryInterface(object):
         :param item:
         :return:
         """
-        return self._perform_query(INTERFACE_TYPES, 'get_item', EntityNotFound('%s' % item), external_ref, item)
+        return self._perform_query(INTERFACE_TYPES, 'get_item', EntityNotFound('%s' % external_ref), external_ref, item)
 
     def get_reference(self, external_ref):
         return self._perform_query(INTERFACE_TYPES, 'get_reference', EntityNotFound('%s' % external_ref), external_ref)
@@ -337,6 +345,17 @@ class QueryInterface(object):
         :return:
         """
         return self._perform_query('background', 'foreground', BackgroundRequired('No knowledge of background'),
+                                   process, ref_flow=ref_flow, **kwargs)
+
+    def is_background(self, process, ref_flow=None, **kwargs):
+        """
+
+        :param process:
+        :param ref_flow:
+        :param kwargs:
+        :return:
+        """
+        return self._perform_query('background', 'is_background', BackgroundRequired('No knowledge of background'),
                                    process, ref_flow=ref_flow, **kwargs)
 
     def ad(self, process, ref_flow=None, **kwargs):

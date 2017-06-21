@@ -89,6 +89,12 @@ class CatalogRef(object):
             print(self)
             raise NoCatalog(message)
 
+    def fetch(self):
+        return self._query.fetch(self)
+
+    def make_termination(self, term):
+        return CatalogRef(self.origin, term, _query=self._query, entity_type='process')
+
     def elementary(self, iterable):
         """
         yields flows from iterable that are elementary, using the query's access to qdb
@@ -203,13 +209,25 @@ class CatalogRef(object):
             self._query = catalog.query(self._origin)
             self._etype = catalog.entity_type(self)
 
-    def __getitem__(self, item):
+    def _localitem(self, item):
         if item in self._d:
             return self._d[item]
         if 'Local%s' % item in self._d:
             return self._d['Local%s' % item]
+        return None
+
+    def __getitem__(self, item):
+        loc = self._localitem(item)
+        if loc is not None:
+            return loc
         self._check_query('getitem %s' % item)
-        return self._query.get_item(self.external_ref, item)
+        val = self._query.get_item(self.external_ref, item)
+        if item in ('Name', 'Comment'):
+            self._d['Local%s' % item] = val
+        return val
+
+    def has_property(self, item):
+        return self._localitem(item) is not None
 
     def __setitem__(self, key, value):
         if key in ('Name', 'Comment'):
@@ -223,6 +241,7 @@ class CatalogRef(object):
         }
         if self._etype is not None:
             j['entityType'] = self._etype
+        j.update(self._d)
         return j
 
     """
@@ -294,6 +313,15 @@ class CatalogRef(object):
         return self._query.exchange_relation(self.origin, self.external_ref, ref_flow.external_ref,
                                              exch_flow.external_ref, direction,
                                              termination=termination, **kwargs)
+
+    def foreground(self, ref_flow=None, **kwargs):
+        self._require_process()
+        return self._query.foreground(self.external_ref, ref_flow=ref_flow, **kwargs)
+
+    def is_background(self, termination=None, ref_flow=None, **kwargs):
+        if termination is None:
+            termination = self.external_ref
+        return self._query.is_background(termination, ref_flow=ref_flow, **kwargs)
 
     def factors(self, **kwargs):
         self._require_quantity()

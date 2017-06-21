@@ -430,7 +430,7 @@ class FlowTermination(object):
                 if (x.flow, x.direction) not in children:
                     yield x
 
-    def compute_unit_score(self, quantity, qdb):
+    def compute_unit_score(self, quantity, qdb, **kwargs):
         """
         four different ways to do this.
         1- we are fg flow: give qdb self as exchange
@@ -444,23 +444,23 @@ class FlowTermination(object):
             raise SubFragmentAggregation  # to be caught
 
         if self._parent.is_background:
-            res = self.term_node.bg_lcia(lcia_qty=quantity, ref_flow=self.term_flow.external_ref)
+            res = self.term_node.bg_lcia(lcia_qty=quantity, ref_flow=self.term_flow.external_ref, **kwargs)
         else:
             try:
                 locale = self.term_node['SpatialScope']
             except KeyError:
                 locale = 'GLO'
-            res = qdb.do_lcia(quantity, self._unobserved_exchanges(), locale=locale)
+            res = qdb.do_lcia(quantity, self._unobserved_exchanges(), locale=locale, **kwargs)
         self._score_cache[quantity.uuid] = res
         return res
 
-    def score_cache(self, quantity=None, qdb=None):
+    def score_cache(self, quantity=None, qdb=None, **kwargs):
         if quantity is None:
             return self._score_cache
         if quantity.uuid in self._score_cache:
             return self._score_cache[quantity.uuid]
         else:
-            return self.compute_unit_score(quantity, qdb)
+            return self.compute_unit_score(quantity, qdb, **kwargs)
 
     def score_cache_items(self):
         return self._score_cache.items()

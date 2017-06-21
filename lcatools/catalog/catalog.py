@@ -343,6 +343,11 @@ class LcCatalog(object):
             raise KeyError('Source %s not found' % source)
 
     def _ensure_resource(self, res):
+        """
+        create the archive requested. install qdb as upstream.
+        :param res:
+        :return:
+        """
         if res.source not in self._archives:
             a = create_archive(res.source, res.ds_type, ref=res.reference, **res.init_args)
             if os.path.exists(self._cache_file(res.source)):
@@ -452,22 +457,60 @@ class LcCatalog(object):
     def is_elementary(self, flow):
         return self._qdb.c_mgr.is_elementary(flow)
 
+    def is_loaded(self, lcia):
+        return lcia in self._lcia_methods
+
     def load_lcia_factors(self, ref):
         lcia = self._qdb.get_canonical_quantity(self.fetch(ref))
         for cf in ref.factors():
             self._qdb.add_cf(cf)
         self._lcia_methods.add(lcia)
 
-    def lcia(self, p_ref, q_ref, ref_flow=None):
+    def lcia(self, p_ref, q_ref, ref_flow=None, refresh=False):
         """
         Perform LCIA of a process (p_ref) with respect to a given LCIA quantity (q_ref).  Returns an LciaResult.
         :param p_ref: either a process, or a catalog_ref for a process
         :param q_ref: either an LCIA method (quantity with 'Indicator'), or a catalog_ref for an LCIA method. Only
          catalog refs have the capability to auto-load characterization factors.
         :param ref_flow: [None] if applicable, reference flow to be considered for the process
+        :param refresh: [False] whether to re-calculate CFs
         :return:
         """
         q_e = self._qdb.get_canonical_quantity(self.fetch(q_ref))
-        if not self._qdb.is_loaded(q_e):
+        if not self.is_loaded(q_e):
             self.load_lcia_factors(q_ref)
-        return self._qdb.do_lcia(q_e, p_ref.inventory(ref_flow=ref_flow), locale=p_ref['SpatialScope'])
+        return self._qdb.do_lcia(q_e, p_ref.inventory(ref_flow=ref_flow), locale=p_ref['SpatialScope'], refresh=refresh)
+
+    def annotate(self, flow, quantity=None, factor=None, value=None, locale=None):
+        """
+        Adds a flow annotation to the Qdb.
+        Two steps:
+         - adds a characterization to the flow using the given data. Provide either a
+         factor=Characterization, or qty + value + location.
+         If locale is provided with factor, it only applies the factor applying to the given locale. (otherwise, all
+         locations in the CF are applied to the flow)
+         - adds the flow to the local qdb and saves to disk.
+        """
+        if factor is None:
+            if locale is None:
+                locale = 'GLO'
+            if value is None:
+                value = self._qdb.convert(flow, query=quantity, locale=locale)
+            flow.add_characterization(quantity, value=value, origin=self._qdb.ref, location=locale)
+        else:
+            ref_conversion = self._qdb.convert_reference(flow, factor.flow.reference_entity, locale=locale)
+            if locale is None:
+                for l in factor.locations():
+                    flow.add_characterization(factor.quantity, location=l, value=factor[l] * ref_conversion,
+                                              origin=factor.origin(l))
+            else:
+                flow.add_characterization(factor.quantity, location=locale, value=factor[locale] * ref_conversion,
+                                          origin=factor.origin(locale))
+
+        self._qdb.add_entity_and_children(flow)
+        for cf in flow.characterizations():
+            self._qdb.add_cf(cf)
+        self._qdb.save()
+
+    def quantify(self, flowable, quantity, compartment=None):
+        return [c for c in self._qdb.quantify(flowable, quantity, compartment=compartment)]

@@ -92,9 +92,6 @@ class CatalogRef(object):
     def fetch(self):
         return self._query.fetch(self)
 
-    def make_termination(self, term):
-        return CatalogRef(self.origin, term, _query=self._query, entity_type='process')
-
     def elementary(self, iterable):
         """
         yields flows from iterable that are elementary, using the query's access to qdb

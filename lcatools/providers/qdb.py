@@ -38,7 +38,7 @@ Q_SYNS = os.path.join(os.path.dirname(__file__), 'data', 'quantity_synlist.json'
 F_SYNS = os.path.join(os.path.dirname(__file__), 'data', 'flowable_synlist.json')
 
 
-biogenic = re.compile('(biotic|biogenic)', flags=re.IGNORECASE)
+biogenic = re.compile('(biotic|biogenic|non-fossil)', flags=re.IGNORECASE)
 
 
 class QuantityNotKnown(Exception):
@@ -155,7 +155,8 @@ class Qdb(LcArchive):
 
          The criterion is not quantity-based, but depends on the flowable and compartment only.
 
-         The regex test is currently case-insensitive '(biogenic|biotic)'. It can be tested with Qdb.is_biogenic(term)
+         The regex test is currently case-insensitive '(biogenic|biotic|non-fossil)'. It can be tested with
+         Qdb.is_biogenic(term)
 
          The quell_biogenic_CO2 parameter can be overridden at query-time as a keyword param.
 
@@ -466,8 +467,8 @@ class Qdb(LcArchive):
             factor = cf[locale]
             cf_ref_q_ind = self._get_q_ind(cf.flow.reference_entity)
             if cf_ref_q_ind != ref_q_ind:
-                print('reference quantities don\'t match: cf:%s, ref:%s' % (self._q.name(cf_ref_q_ind),
-                                                                            self._q.name(ref_q_ind)))
+                self._print('reference quantities don\'t match: cf:%s, ref:%s' % (self._q.name(cf_ref_q_ind),
+                                                                                  self._q.name(ref_q_ind)))
                 ref_conversion = None
                 if flow is not None:
                     # first take a look at the flow's builtin CFs, use them if present
@@ -483,7 +484,7 @@ class Qdb(LcArchive):
                                                                       locale=locale)
 
                     if ref_conversion is None:
-                        print('Unable to find conversion... bailing')
+                        self._print('Unable to find conversion... bailing')
                         continue
 
                     factor *= ref_conversion
@@ -534,9 +535,15 @@ class Qdb(LcArchive):
         for f_ind in f_inds:
             if f_ind == self._co2_index:
                 if quell_biogenic_co2 or (quell_biogenic_co2 is None and self.quell_biogenic_co2):
-                    if any([self.is_biogenic(term) for term in _biogenics]):
-                        if any([comp.is_subcompartment_of(x) for x in (self.c_mgr.emissions, self._comp_from_air)]):
+                    self._print('#detected CO2 flow and quell is on')
+                    if comp.is_subcompartment_of(self.c_mgr.emissions):
+                        self._print('  is an emission')
+                        if any([self.is_biogenic(term) for term in _biogenics]):
+                            self._print('   is biogenic - quelling')
                             return 0.0
+                    elif comp.is_subcompartment_of(self._comp_from_air):
+                        self._print('   is from air - quelling')
+                        return 0.0
 
         vals = self._convert_values(f_inds, comp, ref_q_ind, query_q_ind, flow=flow, locale=locale)
 
@@ -548,13 +555,14 @@ class Qdb(LcArchive):
             print('Quantity: %s' % self._q.entity(query_q_ind))
         return vals[0]
 
-    def do_lcia(self, quantity, inventory, locale='GLO', refresh=False):
+    def do_lcia(self, quantity, inventory, locale='GLO', refresh=False, **kwargs):
         """
         takes a quantity and an exchanges generator; returns an LciaResult for the given quantity
         :param quantity:
         :param inventory: generates exchanges
         :param locale: ['GLO']
         :param refresh: [False] whether to rewrite characterization factors from the database
+        :param kwargs: just quell_biogenic_co2 for the moment
         :return: an LciaResult whose components are the flows of the exchanges
         """
         if isinstance(quantity, str):
@@ -570,7 +578,7 @@ class Qdb(LcArchive):
         r = LciaResult(q)
         for x in inventory:
             if refresh or not x.flow.has_characterization(q):
-                factor = self.convert(flow=x.flow, query_q_ind=q_ind, locale=locale)
+                factor = self.convert(flow=x.flow, query_q_ind=q_ind, locale=locale, **kwargs)
                 if factor is not None:
                     x.flow.add_characterization(q, value=factor, overwrite=refresh)
                 else:

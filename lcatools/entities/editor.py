@@ -197,6 +197,46 @@ class FragmentEditor(FlowEditor):
             frag.terminate(frag.flow)
         return frag
 
+    def create_fragment_from_node(self, process, ref_flow=None, include_elementary=False):
+        fg_exchs = process.foreground(ref_flow=ref_flow)
+        rx = fg_exchs[0]
+        comment = 'Created from foreground query to %s' % process.origin
+        top_frag = self.create_fragment(rx.flow, rx.direction,
+                                        comment='Reference fragment; %s ' % comment)
+        top_frag.terminate(process)
+        frags = [top_frag]
+
+        if include_elementary:
+            for x in process.elementary(fg_exchs[1:]):
+                frags.append(self.create_fragment(x.flow, x.direction, parent=top_frag, value=x.value,
+                                                  comment='FG Emission; %s' % comment))
+
+        for x in process.intermediate(fg_exchs[1:]):
+            if x.termination is None:
+                frags.append(self.create_fragment(x.flow, x.direction, parent=top_frag, value=x.value,
+                                                  comment='Cut-off; %s' % comment))
+
+            else:
+                child_frag = self.create_fragment(x.flow, x.direction, parent=top_frag, value=x.value,
+                                                  comment='Subfragment; %s' % comment)
+                if process.is_background(termination=x.termination, ref_flow=x.flow):
+                    try:
+                        bg = next(f for f in frags if f.is_background and f.term.terminates(x))
+                    except StopIteration:
+                        bg = self.create_fragment(x.flow, comp_dir(x.direction), comment='Background; %s' % comment,
+                                                  background=True)
+                        bg.terminate(process.make_termination(x.termination))
+                        frags.append(bg)
+                    child_frag.terminate(bg)
+                    frags.append(child_frag)
+                else:
+                    subfrags = self.create_fragment_from_node(x.termination, ref_flow=x.flow,
+                                                              include_elementary=include_elementary)
+                    frags.extend(subfrags)
+                    child_frag.terminate(subfrags[0])
+                    frags.append(child_frag)
+        return frags
+
     @staticmethod
     def _update_ev(frag, scenario):
         val = frag.exchange_value(scenario)

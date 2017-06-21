@@ -164,11 +164,28 @@ class LcFlow(LcEntity):
             out.append(cf)
         return out
 
-    def add_characterization(self, quantity, reference=False, value=None, **kwargs):
+    def add_characterization(self, quantity, reference=False, value=None, overwrite=False, **kwargs):
+        """
+
+        :param quantity: entity or catalog ref
+        :param reference: [False] should this be made the flow's reference quantity
+        :param value:
+        :param kwargs: location, origin
+        value + location + optional origin make a data tuple
+        :param overwrite: [False] if True, allow values to replace existing characterizations
+        :return:
+        """
         if isinstance(quantity, Characterization):
+            if quantity.flow.reference_entity != self.reference_entity:
+                adj = self.cf(quantity.flow.reference_entity)
+                if adj == 0:
+                    raise MissingFactor('%s' % quantity.flow.reference_entity)
+            else:
+                adj = 1.0
+
             for l in quantity.locations():
                 self.add_characterization(quantity.quantity, reference=reference,
-                                          value=quantity[l], location=l)
+                                          value=quantity[l] / adj, location=l, origin=quantity.origin[l])
             return
         if reference:
             if value is not None and value != 1.0:
@@ -188,7 +205,8 @@ class LcFlow(LcEntity):
             if isinstance(value, dict):
                 c.update_values(**value)
             else:
-                c.add_value(value=value, **kwargs)
+                c.add_value(value=value, overwrite=overwrite, **kwargs)
+        return c
 
     def has_characterization(self, quantity, location='GLO'):
         if quantity.get_uuid() in self._characterizations.keys():

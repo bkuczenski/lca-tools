@@ -1,5 +1,5 @@
 from lcatools.background.background import BackgroundEngine
-from lcatools.exchanges import ExchangeValue
+from lcatools.exchanges import ExchangeValue, comp_dir
 
 
 class TerminationNotFound(Exception):
@@ -42,9 +42,13 @@ class BackgroundManager(object):
         for k in self._be.emissions:
             yield k
 
+    def is_background(self, process, ref_flow=None):
+        product_flow = self._get_product_flow(process, ref_flow=ref_flow)
+        return self._be.is_background(product_flow)
+
     def foreground(self, process, ref_flow=None):
         """
-
+        Returns a list of terminated exchanges corresponding to the named process's child exchanges.
         :param process:
         :param ref_flow:
         :return:
@@ -55,29 +59,34 @@ class BackgroundManager(object):
 
         exchs = [ExchangeValue(product_flow.process, product_flow.flow, product_flow.direction, value=1.0)]
 
+        node = product_flow
         # first, foregrounds
         rows, cols = _af.nonzero()
         for i in range(len(rows)):
-            node = fg[cols[i]]
+            if cols[i] != 0:
+                continue
             term = fg[rows[i]]
-            exchs.append(ExchangeValue(node.process, node.flow, node.direction, value=_af.data[i],
+            exchs.append(ExchangeValue(node.process, term.flow, comp_dir(term.direction), value=_af.data[i],
                                        termination=term.process.external_ref))
 
         # next, dependencies
         rows, cols = _ad.nonzero()
         for i in range(len(rows)):
-            node = fg[cols[i]]
+            if cols[i] != 0:
+                continue
             term = self._be.tstack.bg_node(rows[i])
-            exchs.append(ExchangeValue(node.process, node.flow, node.direction, value=_ad.data[i],
+            exchs.append(ExchangeValue(node.process, term.flow, comp_dir(term.direction), value=_ad.data[i],
                                        termination=term.process.external_ref))
 
         # last, fg emissions
         rows, cols = _bf.nonzero()
         for i in range(len(rows)):
-            node = fg[cols[i]]
-            exchs.append(ExchangeValue(node.process, node.flow, node.direction, value=_bf.data[i]))
+            if cols[i] != 0:
+                continue
+            emis = self._be.emissions[rows[i]]
+            exchs.append(ExchangeValue(node.process, emis.flow, emis.direction, value=_bf.data[i]))
 
-        return sorted(exchs, key=lambda x: (x.process is not process, x.termination is None))
+        return exchs
 
     def inventory(self, process, ref_flow=None, show=None):
         """

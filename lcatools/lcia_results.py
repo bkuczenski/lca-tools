@@ -4,6 +4,7 @@ This object replaces the LciaResult types spelled out in Antelope-- instead, it 
 """
 from lcatools.exchanges import ExchangeValue, DissipationExchange
 from lcatools.characterizations import Characterization
+from numbers import Number
 # from lcatools.interfaces import to_uuid
 
 
@@ -129,13 +130,34 @@ class SummaryLciaResult(object):
         :param unit_score: stand-in for factor value
         """
         self.entity = entity
-        self.node_weight = node_weight
-        self.unit_score = unit_score
-        self._scale = lc_result.scale  # property
+        self._node_weight = node_weight
+        if isinstance(unit_score, Number):
+            self._static_value = unit_score
+            self._internal_result = None
+        else:
+            self._static_value = None
+            self._internal_result = unit_score
+
+        self._lc = lc_result
 
     @property
-    def result(self):
-        return self.node_weight * self.unit_score * self._scale
+    def static(self):
+        return self._static_value is not None
+
+    @property
+    def node_weight(self):
+        return self._node_weight * self._lc.scale
+
+    @property
+    def unit_score(self):
+        if self.static:
+            return self._static_value
+        else:
+            return self._internal_result.total()
+
+    @property
+    def cumulative_result(self):
+        return self.node_weight * self.unit_score
 
     def __hash__(self):
         try:
@@ -150,9 +172,27 @@ class SummaryLciaResult(object):
         return self.entity == other.entity
 
     def __str__(self):
-        return '%s x %-s = %-s %s' % (number(self.node_weight), number(self.unit_score),
-                                      number(self.result),
+        return '%s = %-s x %-s %s' % (number(self.cumulative_result), number(self.node_weight), number(self.unit_score),
                                       self.entity)
+
+    def show(self):
+        if self.static:
+            print('%s' % self)
+        else:
+            self._internal_result.show()
+
+    def details(self):
+        if self.static:
+            yield self
+        else:
+            for k in self._internal_result.keys():
+                yield self._internal_result[k]
+
+    def show_detailed_result(self):
+        if self.static:
+            self.show()
+        else:
+            self._internal_result.show_components()
 
 
 class AggregateLciaScore(object):
@@ -161,9 +201,13 @@ class AggregateLciaScore(object):
     The Aggregate score is constructed either from individual LCIA Details (exchange value x characterization factor)
     or from summary results
     """
-    def __init__(self, entity):
+    def __init__(self, lc_result, entity):
         self.entity = entity
+        self._lc = lc_result
         self.LciaDetails = set()
+
+    def update_parent(self, lc_result):
+        self._lc = lc_result
 
     @property
     def cumulative_result(self):
@@ -178,34 +222,15 @@ class AggregateLciaScore(object):
         """
         self.entity = self.entity + other
 
-    def add_detailed_result(self, lc_result, exchange, factor, location):
-        d = DetailedLciaResult(lc_result, exchange, factor, location)
+    def add_detailed_result(self, exchange, factor, location):
+        d = DetailedLciaResult(self._lc, exchange, factor, location)
         if d in self.LciaDetails:
             if factor[location] != 0:
                 other = next(k for k in self.LciaDetails if k == d)
-                if other.factor[location] != factor[location]:
-                    raise DuplicateResult('exchange: %s\n  factor: %s\nlocation: %s\nconflicts with %s' %
-                                          (exchange, factor, location, other.factor))
-                else:
-                    self.LciaDetails.remove(other)
-                    self.add_summary_result(lc_result, other.exchange.process,
-                                            other.exchange.value + exchange.value, factor[location])
-                    self._augment_entity_contents(d)
-                    return
+                raise DuplicateResult('exchange: %s\n  factor: %s\nlocation: %s\nconflicts with %s' %
+                                      (exchange, factor, location, other.factor))
             else:
                 # do nothing
-                return
-        self.LciaDetails.add(d)
-
-    def add_summary_result(self, lc_result, entity, node_weight, unit_score):
-        d = SummaryLciaResult(lc_result, entity, node_weight, unit_score)
-        if d in self.LciaDetails:
-            other = next(k for k in self.LciaDetails if k == d)
-            if other.unit_score != d.unit_score:
-                raise DuplicateResult()
-            else:
-                other.node_weight += node_weight
-                self._augment_entity_contents(other)
                 return
         self.LciaDetails.add(d)
 
@@ -225,8 +250,8 @@ class AggregateLciaScore(object):
         for d in sorted(self.LciaDetails, key=key, reverse=True):
             if d.result != 0 or show_all:
                 print('%s' % d)
-        print('=' * 60)
-        print('             Total score: %g ' % self.cumulative_result)
+        # print('=' * 60)
+        # print('             Total score: %g ' % self.cumulative_result)
 
     def __str__(self):
         return '%s  %s' % (number(self.cumulative_result), self.entity)
@@ -313,12 +338,14 @@ class LciaResult(object):
                     yield v
                 # elif str(v.entity).startswith(str(item)):
                 #     yield v
-                # elif str(k).startswith(str(item)):
-                #     yield v
-        yield AggregateLciaScore(None)
+                elif str(k).startswith(str(item)):
+                    yield v
 
     def __getitem__(self, item):
-        return next(self._match_key(item))
+        try:
+            return next(self._match_key(item))
+        except StopIteration:
+            raise KeyError('%s' % item)
 
     '''
     def __getitem__(self, item):
@@ -365,7 +392,7 @@ class LciaResult(object):
         if entity is None:
             entity = key
         if key not in self._LciaScores.keys():
-            self._LciaScores[key] = AggregateLciaScore(entity)
+            self._LciaScores[key] = AggregateLciaScore(self, entity)
 
     def add_score(self, key, exchange, factor, location):
         if factor.quantity.get_uuid() != self.quantity.get_uuid():
@@ -374,12 +401,12 @@ class LciaResult(object):
                                                                                        self.quantity.get_uuid()))
         if key not in self._LciaScores.keys():
             self.add_component(key)
-        self._LciaScores[key].add_detailed_result(self, exchange, factor, location)
+        self._LciaScores[key].add_detailed_result(exchange, factor, location)
 
     def add_summary(self, key, entity, node_weight, unit_score):
-        if key not in self._LciaScores.keys():
-            self.add_component(key)
-        self._LciaScores[key].add_summary_result(self, entity, node_weight, unit_score)
+        if key in self._LciaScores.keys():
+            raise DuplicateResult('Key %s is already present' % key)
+        self._LciaScores[key] = SummaryLciaResult(self, entity, node_weight, unit_score)
 
     def keys(self):
         if self._private:
@@ -400,7 +427,7 @@ class LciaResult(object):
         print('%s %s' % (self.quantity, self.quantity.reference_entity.unitstring))
         print('-' * 60)
         if self._scale != 1.0:
-            print('%60s: %10.4g' % ('scale', self._scale))
+            print('%10.4gx %s' % (self._scale, 'scale'))
 
     def show(self):
         self._header()
@@ -432,8 +459,15 @@ class LciaResult(object):
         s = LciaResult(self.quantity, self.scenario)
         for k, v in self._LciaScores.items():
             s._LciaScores[k] = v
+            v.update_parent(s)
         for k, v in other._LciaScores.items():
-            s._LciaScores[k] = v
+            if k in s._LciaScores:
+                if v.entity is s._LciaScores[k].entity:
+                    s._LciaScores[k] += v  # this is not implemented yet
+                else:
+                    s._LciaScores['_%s' % k] = v
+            else:
+                s._LciaScores[k] = v
         return s
 
     def __str__(self):
@@ -456,9 +490,11 @@ class LciaResult(object):
         data = []
         for c in stages:
             try:
-                data.append(self[c].cumulative_result)
-            except (KeyError, StopIteration):
+                data.append(self._LciaScores[c].cumulative_result)
+            except KeyError:
                 data.append(0)
+        if sum(data) != self.total():
+            print('Contributions do not equal total [%g vs total %g]' % (sum(data), self.total()))
         return data
 
 
@@ -607,25 +643,18 @@ def traversal_to_lcia(ffs):
     for i in ffs:
         if not i.term.is_null:
             for q, v in i.term.score_cache_items():
+                node_weight = i.node_weight
                 quantity = v.quantity
 
                 if q not in results.keys():
                     results[q] = LciaResult(quantity, scenario=v.scenario)
 
-                value = v.total()
-                if value * i.node_weight == 0:
+                if v.total() * node_weight == 0:
                     continue
 
                 if i.term.direction == i.fragment.direction:
                     # if the directions collide (rather than complement), the term is getting run in reverse
-                    value *= -1
+                    node_weight *= -1
 
-                results[q].add_component(i.fragment.get_uuid(), entity=i)
-                x = ExchangeValue(i.fragment, i.term.term_flow, i.term.direction, value=i.node_weight)
-                try:
-                    l = i.term.term_node.entity()['SpatialScope']
-                except KeyError:
-                    l = None
-                f = Characterization(i.term.term_flow, quantity, value=value, location=l)
-                results[q].add_score(i.fragment.get_uuid(), x, f, l)
+                results[q].add_summary(i.fragment.uuid, i, node_weight, v)
     return results

@@ -6,12 +6,12 @@ as a ProductFlow in lca-matrix, although the FlowTermination is more powerful.  
 either one from the other.
 """
 
-from lcatools.lcia_results import LciaResult, LciaResults, traversal_to_lcia
-from lcatools.exchanges import comp_dir, ExchangeValue, MissingReference
+from lcatools.lcia_results import LciaResult, LciaResults
+from lcatools.exchanges import comp_dir, ExchangeValue
 from lcatools.catalog.inventory import PrivateArchive
-from lcatools.entities.processes import NoReferenceFound, AmbiguousReferenceError
+from lcatools.entities.processes import AmbiguousReferenceError
 from lcatools.catalog_ref import NoCatalog
-from lcatools.interact import pick_one, parse_math
+from lcatools.interact import parse_math
 
 
 class FlowConversionError(Exception):

@@ -197,27 +197,20 @@ class ForegroundCatalog(LcCatalog):
             if ff.term.is_null:
                 continue
 
-            if ff.node_weight == 0:
+            node_weight = ff.node_weight
+            if node_weight == 0:
                 continue
 
             try:
                 v = ff.term.score_cache(quantity=q_ref, qdb=self._qdb, refresh=refresh)
             except SubFragmentAggregation:
                 v = self.fragment_lcia(ff.term.subfragments, q_ref)
-            value = v.total()
-            if value == 0:
+            if v.total() == 0:
                 continue
 
             if ff.term.direction == ff.fragment.direction:
                 # if the directions collide (rather than complement), the term is getting run in reverse
-                value *= -1
+                node_weight *= -1
 
-            result.add_component(ff.fragment.uuid, entity=ff)
-            x = ExchangeValue(ff.fragment, ff.term.term_flow, ff.term.direction, value=ff.node_weight)
-            try:
-                l = ff.term.term_node['SpatialScope']
-            except KeyError:
-                l = None
-            f = Characterization(ff.term.term_flow, q_ref, value=value, location=l)
-            result.add_score(ff.fragment.uuid, x, f, l)
+            result.add_summary(ff.fragment.uuid, ff, node_weight, v)
         return result

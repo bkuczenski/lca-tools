@@ -1,4 +1,5 @@
 from lcatools.catalog.basic import BasicInterface
+from synlist import Flowables, InconsistentIndices
 
 
 class QuantityInterface(BasicInterface):
@@ -15,7 +16,33 @@ class QuantityInterface(BasicInterface):
         super(QuantityInterface, self).__init__(archive, **kwargs)
         self._qdb = qdb
         self._cm = qdb.c_mgr
+        self._flowables = None
         self._compartments = dict()
+
+    def _init_flowables(self):
+        fb = Flowables()
+        for f in self._archive.flows():
+            c = f['CasNumber']
+            n = f['Name']
+            try:
+                fb.add_synonyms(c, n)
+                fb.set_name(n)
+            except InconsistentIndices:
+                fb.merge(c, n)
+            fb.add_synonyms(n, f.link)
+        return fb
+
+    @property
+    def _fb(self):
+        if self._flowables is None:
+            if self._archive.static:
+                if not hasattr(self._archive, 'fb'):
+                    self._archive.fb = self._init_flowables()
+                self._flowables = self._archive.fb
+            else:
+                print('Non-static archive. need to override flowables.')
+                self._flowables = self._init_flowables()  # this will not really work.
+        return self._flowables
 
     def quantities(self, **kwargs):
         for q_e in self._archive.quantities(**kwargs):
@@ -81,9 +108,9 @@ class QuantityInterface(BasicInterface):
                 if quantity is not None:
                     if not f.has_characterization(quantity):
                         continue
-                fb.add((f['CasNumber'], f['Name']))
-            for n in sorted(list(fb), key=lambda x: x[1]):
-                yield n
+                fb.add(self._fb.index(f['Name']))
+            for n in sorted(list(fb), key=lambda x: self._fb.name(x)):
+                yield self._fb.cas(n), self._fb.name(n)
 
     def compartments(self, quantity=None, flowable=None, **kwargs):
         """
@@ -117,13 +144,16 @@ class QuantityInterface(BasicInterface):
             for n in self._archive.factors(quantity, flowable=flowable, compartment=compartment):
                 yield n
         else:
-            flowable = flowable.lower()
+            if isinstance(quantity, str):
+                quantity = self.get_quantity(quantity)
+            if flowable is not None:
+                flowable = self._fb.index(flowable)
             compartment = self._cm.find_matching(compartment)
             for f in self._archive.flows():
                 if not f.has_characterization(quantity):
                     continue
                 if flowable is not None:
-                    if f['Name'].lower() != flowable:
+                    if self._fb.index(f.link) != flowable:
                         continue
                 if compartment is not None:
                     if self._cm.find_matching(f['Compartment']) != compartment:

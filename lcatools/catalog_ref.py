@@ -320,6 +320,10 @@ class CatalogRef(object):
             termination = self.external_ref
         return self._query.is_background(termination, ref_flow=ref_flow, **kwargs)
 
+    def flowables(self, **kwargs):
+        self._require_quantity()
+        return self._query.flowables(quantity=self.external_ref, **kwargs)
+
     def factors(self, **kwargs):
         self._require_quantity()
         return self._query.factors(self.external_ref, **kwargs)

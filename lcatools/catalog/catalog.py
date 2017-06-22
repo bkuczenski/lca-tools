@@ -462,6 +462,8 @@ class LcCatalog(object):
 
     def load_lcia_factors(self, ref):
         lcia = self._qdb.get_canonical_quantity(self.fetch(ref))
+        for fb in ref.flowables():
+            self._qdb.add_new_flowable(*filter(None, fb))
         for cf in ref.factors():
             self._qdb.add_cf(cf)
         self._lcia_methods.add(lcia)

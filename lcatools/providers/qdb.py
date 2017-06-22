@@ -251,13 +251,29 @@ class Qdb(LcArchive):
             except KeyError:
                 self.add_new_quantity(q)
 
+    def add_flowable_from_flow(self, flow):
+        return self.add_new_flowable(*self._flow_terms(flow))
+
     def add_new_flowable(self, *terms):
         try:
             ind = self._f.add_set(terms, merge=True)
-        except (InconsistentIndices, ConflictingCas):
-            print('Inconsistent indices found for: %s' % '; '.join(list(terms)))
+        except ConflictingCas:
+            # print('Conflicting CAS numbers found for: %s' % '; '.join(list(terms)))  # Flowables already warns us
             ind = self._f.add_set(terms, merge=False)
-            print(self._f[ind])
+            print('New flowable: %s' % self._f[ind])
+        except InconsistentIndices:
+            k = self._f.find_indices(terms)
+            unmatched = k.pop(None, set())
+            if len(unmatched) == 0:
+                ind = None
+            else:
+                print('Inconsistent Indices; adding to highest index:')
+                print('None %.100s' % '; '.join(unmatched))
+                inds = sorted(k.keys())
+                for i in inds:
+                    print('%4d %.100s' % (i, '; '.join(k[i])))
+                ind = inds[-1]
+                self._f.add_synonyms(ind, *unmatched)
         return ind
 
     def find_flowables(self, flow):

@@ -72,7 +72,7 @@ class DetailedLciaResult(object):
 
     @property
     def flow(self):
-        return self.exchange.flow.get_uuid()
+        return self.exchange.flow
 
     @property
     def direction(self):
@@ -85,7 +85,7 @@ class DetailedLciaResult(object):
         return None
 
     @property
-    def _value(self):
+    def value(self):
         if self.exchange.value is None:
             return 0.0
         return self.exchange.value * self._lc.scale * self._dirn_adjust
@@ -94,16 +94,17 @@ class DetailedLciaResult(object):
     def result(self):
         if self.factor.is_null:
             return 0.0
-        return self._value * (self.factor[self.location] or 0.0)
+        return self.value * (self.factor[self.location] or 0.0)
 
     def __hash__(self):
-        return hash((self.exchange.process.get_uuid(), self.exchange.direction, self.factor.flow.get_uuid()))
+        return hash((self.exchange.process.uuid, self.exchange.direction, self.factor.flow.uuid))
 
     def __eq__(self, other):
         if not isinstance(other, DetailedLciaResult):
             return False
-        return (self.exchange.process.get_uuid() == other.exchange.process.get_uuid() and
-                self.factor.flow.get_uuid() == other.factor.flow.get_uuid())
+        return (self.exchange.process.uuid == other.exchange.process.uuid and
+                self.factor.flow.uuid == other.factor.flow.uuid and
+                self.direction[0] == other.direction[0])
 
     def __str__(self):
         if self._dirn_adjust == -1:
@@ -111,7 +112,7 @@ class DetailedLciaResult(object):
         else:
             dirn_mod = ' '
         return '%s%s x %-s  = %-s [%s] %s' % (dirn_mod,
-                                              number(self._value), number(self.factor[self.location]),
+                                              number(self.value), number(self.factor[self.location]),
                                               number(self.result),
                                               self.location,
                                               self.factor.flow)
@@ -193,6 +194,11 @@ class SummaryLciaResult(object):
             self.show()
         else:
             self._internal_result.show_components()
+
+    def flatten(self):
+        if self.static:
+            return self
+        return self._internal_result.flatten(_apply_scale=self.node_weight)
 
 
 class AggregateLciaScore(object):
@@ -377,6 +383,36 @@ class LciaResult(object):
 
     def show_agg(self, **kwargs):
         self.aggregate(**kwargs).show_components()  # deliberately don't return anything- or should return grouped?
+
+    def flatten(self, _apply_scale=1.0):
+        """
+        Return a new LciaResult in which all groupings have been replaced by a set of AggregatedLciaScores, one
+         per elementary flow.
+        :param: _apply_scale: [1.0] apply a node weighting to the components
+        :return:
+        """
+        flat = LciaResult(self.quantity, scenario=self.scenario, private=self._private, scale=1.0)
+        recurse = []  # store flattened summary scores to handle later
+        for k, c in self._LciaScores.items():
+            if isinstance(c, SummaryLciaResult):
+                if c.static:
+                    flat.add_summary(k, c.entity, c.node_weight * _apply_scale, c.unit_score)
+                else:
+                    recurse.append(c.flatten())
+            else:
+                for d in c.details():
+                    flat.add_component(d.flow.uuid, d.flow)
+                    # create a new exchange that has already had scaling applied
+                    exch = ExchangeValue(d.exchange.process, d.flow, d.exchange.direction, value=d.value * _apply_scale)
+                    flat.add_score(d.flow.uuid, exch, d.factor, d.location)
+        for r in recurse:
+            for k in r.keys():
+                c = r[k]
+                flat.add_component(k, c.entity)
+                for d in c.details():
+                    exch = ExchangeValue(d.exchange.process, d.flow, d.exchange.direction, value=d.value * _apply_scale)
+                    flat.add_score(k, exch, d.factor, d.location)
+        return flat
 
     @property
     def is_private(self):

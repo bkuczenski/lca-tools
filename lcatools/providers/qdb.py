@@ -29,6 +29,7 @@ from lcatools.lcia_results import LciaResult
 from lcatools.providers.base import LcArchive
 from lcatools.flowdb.compartments import Compartment, CompartmentManager  # load_compartments, save_compartments, traverse_compartments, REFERENCE_EFLOWS
 from lcatools.characterizations import Characterization
+from lcatools.dynamic_grid import dynamic_grid
 # from lcatools.interact import pick_one
 from synlist import SynList, Flowables, InconsistentIndices, ConflictingCas, EntityFound
 
@@ -253,6 +254,52 @@ class Qdb(LcArchive):
 
     def add_flowable_from_flow(self, flow):
         return self.add_new_flowable(*self._flow_terms(flow))
+
+    def compartments_for(self, q_ref, flowables=None):
+        """
+        Return a sorted list of compartments that appear in a given quantity. Optionally filter for a set of flowables.
+        :param q_ref:
+        :param flowables: optional iterable of flowables to look for (defaults to full list of flowables for quantity)
+        :return:
+        """
+        q_ind = self._get_q_ind(q_ref)
+        if flowables is None:
+            flowables = self._q_dict[q_ind]
+        comps = set()
+        for i in flowables:
+            for k in self._fq_dict[i, q_ind].compartments():
+                comps.add(k)
+        return sorted(comps, key=lambda x: x.to_list())
+
+    def cf_table(self, q_ref):
+        """
+        Draws a retro-style dynamic table of CFs for a quantity-- rows are flowables, columns are compartments.
+        Doesn't return anything.
+        :param q_ref:
+        :return:
+        """
+        q_ind = self._get_q_ind(q_ref)
+
+        rows = sorted(self._q_dict[q_ind], key=lambda x: self._f.name(x))
+        cols = self.compartments_for(q_ref)
+
+        print('%s' % q_ref)
+        print('Characterization Factors\n ')
+        dynamic_grid(cols, rows, lambda x, y: self._fq_dict[x, q_ind][y],
+                     ('CAS Number ', lambda x: self._f.cas(x)),
+                     ('Flowable', lambda x: self._f.name(x)),
+                     returns_sets=True)
+
+    def cfs_for_quantity(self, q_ref):
+        """
+        generator. Yields CFs associated with a quantity, ordered by flowable index.
+        :param q_ref:
+        :return:
+        """
+        q_ind = self._get_q_ind(q_ref)
+        for f in sorted(self._q_dict[q_ind]):
+            for k in self._fq_dict[f, q_ind].cfs():
+                yield k
 
     def add_new_flowable(self, *terms):
         try:

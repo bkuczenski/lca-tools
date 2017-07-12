@@ -89,7 +89,7 @@ def _label_vbar(patch, value, valueformat='%6.3g', sep=0):
 
 
 def _has_nonzero(res):
-    data = sum([abs(i) for i in res.contrib_query(res.components())])
+    data = sum([abs(i) for i in res.contrib_query()])
     return data != 0
 
 
@@ -99,7 +99,7 @@ def _has_pos_neg(res):
     :param res:
     :return:
     """
-    data = res.contrib_query(res.components())
+    data = res.contrib_query()
     try:
         poss = next(k for k in data if k > 0)
         negs = next(k for k in data if k < 0)

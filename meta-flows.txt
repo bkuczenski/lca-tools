@@ -1,4 +1,43 @@
 ==========
+Fri Jul 07 12:39:23 -0700 2017
+
+Progress on this:
+
+ * assigning self as upstream had to be abandoned because it was causing recursion errors.  They were coming into play when indexing the upstream entries for _upstream_hash.  This is already a legacy of a now-abandoned minor strategy for LCIA (getting inventory systems to use existing flow entities for characterization purposes) but now that we're doing LCIA via the Qdb maybe that whole thing can be carved out.
+
+What is _upstream_hash being used for?  _check_upstream is used in all the major providers, as expected, before creating a new flow or quantity.  We should do that, I suppose. __getitem__ checks upstream, but only by UUID / external ref.  the upstream hash garbage was being used to detect matches by name, for the universe of ecoinvent flows that are distinguished by a canonical name.
+
+I mean, the whole thing stinks, and I can't think of a specific instance in which it is required, ASSUMING we are committed to using the Qdb for characterizations.  So maybe we should pull it all out.
+
+OK, RESOLVED.
+
+We are still cagey about recursively setting Qdb as the upstream to EVERYTHING. Not even clear it is required either.
+
+But for now we don't need to do that.
+
+revisit this later.
+
+Fri 2017-07-07 23:46:33 -0700
+
+FlowABLES-- should have been objects (but entities? no)
+write header
+write row
+
+
+
+Mon 2017-07-10 13:13:05 -0700
+
+Current challenge relates to the abstracting of the FlowablesGrid into the generic grid.
+
+My current thinking is that the flowables grid should have two left-hand header columns, for indicating the substance and compartment, then n data columns, then 1 right-hand header column for indicating I suppose the CAS number.  THe problem is: how to encode that?
+
+the generic grid wants the user to specify columns sequentially, but before the columns can be parsed there needs to be a way to extract the row index. _pull_row_from_item provides that- and gets overridden in subclasses.  So _pull_row_from_item returns a tuple, and the tuple is the index.  Is it ALWAYS a tuple?  (ans: apparently, yes)
+
+Now- SINCE pull_row_from_item is a method, and since it always returns a tuple, it makes sense for the class to also provide header names.  and header widths.
+
+
+
+==========
 Mon Jun 19 23:56:36 -0700 2017
 
 Need to do some thinking on this.

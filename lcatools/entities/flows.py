@@ -209,6 +209,12 @@ class LcFlow(LcEntity):
         return c
 
     def has_characterization(self, quantity, location='GLO'):
+        """
+        A flow keeps track of characterizations by uuid, because these are essentially guaranteed not to collide.
+        :param quantity:
+        :param location:
+        :return:
+        """
         if quantity.get_uuid() in self._characterizations.keys():
             if location == 'GLO' or location is None:
                 return True

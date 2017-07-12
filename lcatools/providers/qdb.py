@@ -324,7 +324,59 @@ class Qdb(LcArchive):
         return ind
 
     def find_flowables(self, flow):
-        return [k for k in self._find_flowables(*self._flow_terms(flow))]
+        return list(set([k for k in self._find_flowables(*self._flow_terms(flow))]))
+
+    def parse_flow(self, flow):
+        """
+        Return a valid flowable name and a compartment object as a 2-tuple.
+
+        To find the flowable: Start with the flow's link, then the flow's name, then the flow's cas.
+        To return: preferentially return CAS number, then name if CAS is none.
+        :param flow:
+        :return:
+        """
+        fb = None
+        for k in self._flow_terms(flow):
+            fb = self.f_index(k)
+            if fb is not None:
+                break
+        if fb is None:
+            fn = flow['Name']
+        else:
+            if self._f.cas(fb) is None:
+                fn = self._f.name(fb)
+            else:
+                fn = self._f.cas(fb)
+        comp = self.c_mgr.find_matching(flow['Compartment'])
+        return fn, comp
+
+    def f_index(self, term):
+        """
+        Wrapper to expose flowable index
+        :param term:
+        :return:
+        """
+        return self._f.index(term)
+
+    def f_cas(self, term):
+        """
+        Wrapper to expose CAS number
+        :param term:
+        :return:
+        """
+        return self._f.cas(term)
+
+    def f_name(self, term):
+        """
+        Wrapper to expose canonical name
+        :param term:
+        :return:
+        """
+        try:
+            fn = self._f.name(term)
+        except KeyError:
+            fn = term
+        return fn
 
     def _find_flowables(self, *terms):
         """
@@ -389,8 +441,8 @@ class Qdb(LcArchive):
     @staticmethod
     def _flow_terms(flow):
         if flow['CasNumber'] is None or len(flow['CasNumber']) < 5:
-            return flow['Name'], flow.link
-        return flow['Name'], flow['CasNumber'], flow.link
+            return flow.link, flow['Name']
+        return flow.link, flow['Name'], flow['CasNumber']
 
     @staticmethod
     def _q_terms(q):
@@ -722,7 +774,7 @@ class Qdb(LcArchive):
             flowable = self._f.index(flowable)
         if compartment is not None:
             compartment = self.c_mgr.find_matching(compartment)
-        q_ind = self._q.index(quantity)
+        q_ind = self._get_q_ind(quantity)
         for f_ind in self._q_dict[q_ind]:
             if flowable is not None and flowable != f_ind:
                 continue

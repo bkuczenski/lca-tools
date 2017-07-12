@@ -38,7 +38,7 @@ def frag_link_label(name):
 def grab_stages(results):
     stages = set()
     for r in results:
-        stages = stages.union(r.components())
+        stages = stages.union(r.component_entities())
     return list(stages)
 
 

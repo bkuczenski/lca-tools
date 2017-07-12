@@ -46,6 +46,7 @@ from .lc_resource import LcResource
 from lcatools.tools import create_archive, update_archive  # archive_from_json, archive_factory
 from lcatools.providers.qdb import Qdb
 from lcatools.flowdb.compartments import REFERENCE_INT  # reference intermediate flows
+from lcatools.tables import FlowablesGrid
 
 
 _protocol = re.compile('^(\w+)://')
@@ -185,6 +186,15 @@ class LcCatalog(object):
     def privacy(self, ref):
         res = next(r for r in self._resolver.resolve(ref))
         return res.privacy
+
+    def flows_table(self, *args, **kwargs):
+        """
+        Creates a new flowables grid using the local Qdb and gives it to the user.
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        return FlowablesGrid(self._qdb, *args, **kwargs)
 
     @property
     def names(self):

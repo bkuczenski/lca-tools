@@ -5,6 +5,7 @@ This object replaces the LciaResult types spelled out in Antelope-- instead, it 
 from lcatools.exchanges import ExchangeValue, DissipationExchange
 from lcatools.characterizations import Characterization
 from numbers import Number
+from math import isclose
 # from lcatools.interfaces import to_uuid
 
 
@@ -405,6 +406,7 @@ class LciaResult(object):
                     # create a new exchange that has already had scaling applied
                     exch = ExchangeValue(d.exchange.process, d.flow, d.exchange.direction, value=d.value * _apply_scale)
                     flat.add_score(d.flow.uuid, exch, d.factor, d.location)
+
         for r in recurse:
             for k in r.keys():
                 c = r[k]
@@ -412,6 +414,13 @@ class LciaResult(object):
                 for d in c.details():
                     exch = ExchangeValue(d.exchange.process, d.flow, d.exchange.direction, value=d.value * _apply_scale)
                     flat.add_score(k, exch, d.factor, d.location)
+
+        scaled_total = self.total() * _apply_scale
+        if not isclose(scaled_total, flat.total(), rel_tol=1e-10):
+            print(' LciaResult: %10.4g' % scaled_total)
+            print('Flat result: %10.4g' % flat.total())
+            if not isclose(scaled_total, flat.total(), rel_tol=1e-6):
+                raise ValueError('Total differs by greater than 1e-6! (applied scaling=%10.4g)' % _apply_scale)
         return flat
 
     @property
@@ -450,14 +459,14 @@ class LciaResult(object):
         return self._LciaScores.keys()
 
     def components(self):
+        if not self._private:
+            for v in self._LciaScores.values():
+                yield v
+
+    def component_entities(self):
         if self._private:
             return [None]
         return [k.entity for k in self._LciaScores.values()]
-
-    def component(self, key):
-        if self._private:
-            return self
-        return self._LciaScores[key]
 
     def _header(self):
         print('%s %s' % (self.quantity, self.quantity.reference_entity.unitstring))
@@ -521,7 +530,7 @@ class LciaResult(object):
         if stages == '*':
             return [self.total()]
         elif stages is None:
-            stages = self.components()
+            stages = self.component_entities()
 
         data = []
         for c in stages:

@@ -135,6 +135,9 @@ class QuantityInterface(BasicInterface):
         Return characterization factors for the given quantity, subject to optional flowable and compartment
         filter constraints. This is ill-defined because the reference unit is not explicitly reported in current
         serialization for characterizations (it is implicit in the flow)-- but it can be added to a web service layer.
+
+        This uses flow.has_characterization() so the argument needs to be converted to the strictly internal quantity
+        entity from the local _archive.
         :param quantity:
         :param flowable:
         :param compartment:
@@ -146,11 +149,12 @@ class QuantityInterface(BasicInterface):
         else:
             if isinstance(quantity, str):
                 quantity = self.get_quantity(quantity)
+            int_q = self._archive[quantity.external_ref]  # the truly local quantity
             if flowable is not None:
                 flowable = self._fb.index(flowable)
             compartment = self._cm.find_matching(compartment)
             for f in self._archive.flows():
-                if not f.has_characterization(quantity):
+                if not f.has_characterization(int_q):
                     continue
                 if flowable is not None:
                     if self._fb.index(f.link) != flowable:
@@ -158,7 +162,7 @@ class QuantityInterface(BasicInterface):
                 if compartment is not None:
                     if self._cm.find_matching(f['Compartment']) != compartment:
                         continue
-                yield f.factor(quantity)
+                yield f.factor(int_q)
 
     def quantity_relation(self, ref_quantity, flowable, compartment, query_quantity, locale='GLO', **kwargs):
         """

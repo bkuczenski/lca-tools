@@ -530,6 +530,7 @@ class Qdb(LcArchive):
 
     def _lookfor_conversion(self, f_inds, compartment, from_q, to_q, locale='GLO'):
         """
+
         Convert is supposed to supply characterization factors in the dimension of query_q / ref_q
 
         fq_dict stores CFs that have dimension query_q / cf_ref_q: query unit per CF's flows' ref unit
@@ -545,6 +546,7 @@ class Qdb(LcArchive):
         :param to_q:
         :return:
         """
+        # TODO: This should be replaced with a DFS, at least until we re-implement the whole kit+kaboodle as a graph db
         # first straight from-to
         origin = None
         try:
@@ -575,6 +577,7 @@ class Qdb(LcArchive):
         :return:
         """
         cfs = self._lookup_cfs(f_inds, comp, query_q_ind)
+        _conv_error = False
 
         # now to check reference quantity
         vals = []
@@ -582,8 +585,9 @@ class Qdb(LcArchive):
             factor = cf[locale]
             cf_ref_q_ind = self._get_q_ind(cf.flow.reference_entity)
             if cf_ref_q_ind != ref_q_ind:
-                self._print('reference quantities don\'t match: cf:%s, ref:%s' % (self._q.name(cf_ref_q_ind),
-                                                                                  self._q.name(ref_q_ind)))
+                self._print('Flow: %s\nreference quantities don\'t match: cf:%s, ref:%s' % (f_inds,
+                                                                                            self._q.name(cf_ref_q_ind),
+                                                                                            self._q.name(ref_q_ind)))
                 ref_conversion = None
                 if flow is not None:
                     # first take a look at the flow's builtin CFs, use them if present
@@ -600,6 +604,7 @@ class Qdb(LcArchive):
 
                     if ref_conversion is None:
                         self._print('Unable to find conversion... bailing')
+                        _conv_error = True
                         continue
 
                     factor *= ref_conversion
@@ -609,6 +614,10 @@ class Qdb(LcArchive):
                                                   origin=origin)
 
             vals.append(factor)
+
+        if _conv_error and len(vals) == 0:
+            raise ConversionReferenceMismatch
+
         return vals
 
     def convert(self, flow=None, flowable=None, compartment=None, reference=None, query=None, query_q_ind=None,
@@ -668,6 +677,7 @@ class Qdb(LcArchive):
             print('Multiple CFs found: %s' % vals)
             print('Flow: %s [%s]' % (flow, flow.unit()))
             print('Quantity: %s' % self._q.entity(query_q_ind))
+            # TODO: implement semantic disambiguator to pick best CF
         return vals[0]
 
     def do_lcia(self, quantity, inventory, locale='GLO', refresh=False, **kwargs):
@@ -693,7 +703,11 @@ class Qdb(LcArchive):
         r = LciaResult(q)
         for x in inventory:
             if refresh or not x.flow.has_characterization(q):
-                factor = self.convert(flow=x.flow, query_q_ind=q_ind, locale=locale, **kwargs)
+                try:
+                    factor = self.convert(flow=x.flow, query_q_ind=q_ind, locale=locale, **kwargs)
+                except ConversionReferenceMismatch:
+                    print('%s' % x)
+                    factor = None
                 if factor is not None:
                     x.flow.add_characterization(q, value=factor, overwrite=refresh)
                 else:

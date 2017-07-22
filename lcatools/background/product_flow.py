@@ -1,3 +1,7 @@
+class NoMatchingReference(Exception):
+    pass
+
+
 class ProductFlow(object):
     """
     Class for storing foreground-relevant information about a single matched row-and-column in the interior matrix.
@@ -34,6 +38,7 @@ class ProductFlow(object):
         if len([x for x in process.reference_entity if x.flow == flow]) == 0:
             # still a cutoff- raise a flag but not an error
             print('NoMatchingReference: Flow: %s, Termination: %s' % (flow.external_ref, process.external_ref))
+            raise NoMatchingReference
         else:
             self._hash = (flow.external_ref, process.external_ref)
             ref_exch = process.reference(flow)

@@ -14,7 +14,7 @@ import scipy as sp
 from scipy.sparse import csc_matrix, csr_matrix
 
 from lcatools.background.tarjan_stack import TarjanStack
-from lcatools.background.product_flow import ProductFlow
+from lcatools.background.product_flow import ProductFlow, NoMatchingReference
 from lcatools.background.emission import Emission
 
 
@@ -75,10 +75,6 @@ class CutoffEntry(MatrixProto):
     @property
     def emission(self):
         return self._term
-
-
-class NoMatchingReference(Exception):
-    pass
 
 
 class NoAllocation(Exception):
@@ -204,7 +200,11 @@ class BackgroundEngine(object):
 
     def _create_product_flow(self, flow, termination):
         index = len(self._pf_index)
-        pf = ProductFlow(index, flow, termination)
+        try:
+            pf = ProductFlow(index, flow, termination)
+        except NoMatchingReference:
+            print('### !!! NO MATCHING REFERENCE !!! ###')  # fix this if it comes up again
+            return None
         self._add_product_flow(pf)
         return pf
 
@@ -581,6 +581,9 @@ class BackgroundEngine(object):
             if i is None:
                 # not visited -- need to visit
                 i = self._create_product_flow(exch.flow, term)
+                if i is None:
+                    print('Cutting off at Parent process: %s\n%s\n' % (parent.process.uuid, parent))
+                    continue
                 self._traverse_term_exchanges(i, multi_term, default_allocation, net_coproducts)
                 # carry back lowlink, if lower
                 self._set_lowlink(parent, self._lowlink(i))

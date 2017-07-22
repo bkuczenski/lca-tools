@@ -208,7 +208,7 @@ class BaseTableOutput(object):
             self._d[row, col_idx] = k
         self._columns.append(arg)
 
-    def text(self, width=10, hdr_width=24, max_width=112):
+    def text(self, width=10, hdr_width=24, max_width=112, expanded=True):
         """
         Outputs the table in text format
         :return: nothing.
@@ -250,12 +250,11 @@ class BaseTableOutput(object):
         print(fmt % header)
         print('-' * max_width)
 
-        if self._returns_sets:
-            for row in body:
+        for row in body:
+            if self._returns_sets:
                 for subrow in row:
                     print(fmt % printable(subrow, width=width))
-        else:
-            for row in body:
+            else:
                 print(fmt % printable(row, width=width))
 
         print(fmt % header)
@@ -322,9 +321,15 @@ class FlowablesGrid(BaseTableOutput):
                 if self._criterion(x.flow):
                     yield x
 
-    def _canonical(self, string):
-        name, _ = self._qdb.parse_flow(string)
-        return self._qdb.f_name(name)
+    def _canonical(self, flow):
+        """
+        TODO: this is not quite right because parse_flow is too 'fuzzy'-- matches "correction flows" to the actual
+        flowables because of CAS number.  still thinking.
+        :param flow:
+        :return:
+        """
+        name, _ = self._qdb.parse_flow(flow)
+        return '[%s] %s' % (flow.unit(), self._qdb.f_name(name))
 
     def _extract_data_from_item(self, item):
         """
@@ -361,12 +366,13 @@ class FlowablesGrid(BaseTableOutput):
             raise TypeError('Unsure what to do with item %s' % item)
         return d
 
-    def __init__(self, qdb, *args, include_flows=None):
+    def __init__(self, qdb, *args, include_flows=None, quell_locations=False):
         """
 
         :param qdb: Mandatory Qdb for resolving flowables and compartments
         :param args: supply process ref (exchanges), quantity ref (cfs), or lcia result (flows)
         :param include_flows: either None (include all flows) or an iterable of flowables to include
+        :param quell_locations:  for characterizations, suppress reporting of locations other than GLO. [not yet impl.]
         """
         self._qdb = qdb
         if include_flows is not None:

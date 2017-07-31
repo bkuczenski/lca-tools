@@ -73,15 +73,19 @@ class CatalogRef(object):
 
         self._known = False
 
+        self._default_rx = None
+
         if _query is not None:
+            if catalog is not None:
+                raise MisuseOfQuery('Do not specify both catalog and query')
             if self._etype is None:
                 raise MisuseOfQuery('Must specify entity_type when query is provided')
             if self.origin != _query.origin:
                 raise MisuseOfQuery('Origin %s should match query origin %s' % (self.origin, _query.origin))
             self._query = _query
-            self._known = True
+            self._ground_reference()
 
-        if catalog is not None:
+        elif catalog is not None:
             self.lookup(catalog)
 
     def _check_query(self, message=''):
@@ -131,6 +135,28 @@ class CatalogRef(object):
             self._uuid = self._query.get_uuid(self.external_ref)
         return self._uuid
 
+    @property
+    def default_rx(self):
+        """
+        The 'primary' reference exchange of a process CatalogRef.
+        :return:
+        """
+        return self._default_rx
+
+    @default_rx.setter
+    def default_rx(self, value):
+        self._require_process()
+        if not isinstance(value, str):
+            if hasattr(value, 'external_ref'):
+                value = value.external_ref
+            elif hasattr(value, 'entity_type'):
+                if value.entity_type == 'exchange':
+                    value = value.flow.external_ref
+        if value in [rx.flow.external_ref for rx in self.references()]:
+            self._default_rx = value
+        else:
+            print('Not a valid reference exchange specification')
+
     def get_uuid(self):
         """
         DEPRECATED
@@ -175,9 +201,16 @@ class CatalogRef(object):
     def __str__(self):
         if self._known:
             name = ' ' + self['Name']
+            if self._etype == 'process':
+                addl = self.__getitem__('SpatialScope')
+            elif self._etype == 'flow' or self._etype == 'quantity':
+                addl = self.unit()
+            else:
+                addl = self._etype
         else:
             name = ''
-        return '%s/%s%s' % (self.origin, self.external_ref, name)
+            addl = ''
+        return '%s/%s%s [%s]' % (self.origin, self.external_ref, name, addl)
 
     @property
     def link(self):
@@ -197,14 +230,26 @@ class CatalogRef(object):
     def known(self):
         return self._known
 
+    def _ground_reference(self):
+        """
+        Identifies the CatalogRef as referring to a valid object. If that object is a process and the process has
+        only one reference, sets that as the default reference.
+        :return:
+        """
+        self._known = True
+        if self._etype == 'process':
+            rxs = [rx for rx in self.references()]
+            if len(rxs) == 1:
+                self._default_rx = rxs[0].flow.external_ref
+
     def lookup(self, catalog):
         org = catalog.lookup(self)
 
         if org is not None:
-            self._known = True
             self._origin = org
             self._query = catalog.query(self._origin)
             self._etype = catalog.entity_type(self)
+            self._ground_reference()
 
     def _localitem(self, item):
         if item in self._d:
@@ -258,7 +303,7 @@ class CatalogRef(object):
             if self._query.get_item(self.external_ref, 'Indicator') is not None:
                 return True
             return False
-        raise InvalidQuery('This query only applies to LCIA methods')
+        raise InvalidQuery('This query only applies to quantities')
 
     def is_lcia_method(self):
         return self._require_quantity()
@@ -281,7 +326,10 @@ class CatalogRef(object):
                     yield x
 
     def reference(self, flow=None, **kwargs):
-        self._require_process()
+        try:
+            self._require_process()
+        except InvalidQuery:
+            return self.reference_entity
         return next(x for x in self.references(flow=flow, **kwargs))
 
     @property
@@ -301,23 +349,32 @@ class CatalogRef(object):
         return self._query.exchange_values(self.external_ref, flow.external_ref, direction,
                                            termination=termination, **kwargs)
 
+    def _use_ref_exch(self, ref_flow):
+        if ref_flow is None and self._default_rx is not None:
+            ref_flow = self._default_rx
+        return ref_flow
+
     def inventory(self, ref_flow=None, **kwargs):
         self._require_process()
+        ref_flow = self._use_ref_exch(ref_flow)
         return self._query.inventory(self.external_ref, ref_flow=ref_flow, **kwargs)
 
     def exchange_relation(self, ref_flow, exch_flow, direction, termination=None, **kwargs):
         self._require_process()
+        ref_flow = self._use_ref_exch(ref_flow)
         return self._query.exchange_relation(self.origin, self.external_ref, ref_flow.external_ref,
                                              exch_flow.external_ref, direction,
                                              termination=termination, **kwargs)
 
     def foreground(self, ref_flow=None, **kwargs):
         self._require_process()
+        ref_flow = self._use_ref_exch(ref_flow)
         return self._query.foreground(self.external_ref, ref_flow=ref_flow, **kwargs)
 
     def is_background(self, termination=None, ref_flow=None, **kwargs):
         if termination is None:
             termination = self.external_ref
+        ref_flow = self._use_ref_exch(ref_flow)
         return self._query.is_background(termination, ref_flow=ref_flow, **kwargs)
 
     def flowables(self, **kwargs):
@@ -330,16 +387,20 @@ class CatalogRef(object):
 
     def ad(self, ref_flow=None, **kwargs):
         self._require_process()
+        ref_flow = self._use_ref_exch(ref_flow)
         return self._query.ad(self.external_ref, ref_flow, **kwargs)
 
     def bf(self, ref_flow=None, **kwargs):
         self._require_process()
+        ref_flow = self._use_ref_exch(ref_flow)
         return self._query.bf(self.external_ref, ref_flow, **kwargs)
 
     def lci(self, ref_flow=None, **kwargs):
         self._require_process()
+        ref_flow = self._use_ref_exch(ref_flow)
         return self._query.lci(self.external_ref, ref_flow, **kwargs)
 
     def bg_lcia(self, lcia_qty, ref_flow=None, **kwargs):
         self._require_process()
+        ref_flow = self._use_ref_exch(ref_flow)
         return self._query.bg_lcia(self.external_ref, lcia_qty, ref_flow=ref_flow, **kwargs)

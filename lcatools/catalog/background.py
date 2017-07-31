@@ -171,15 +171,15 @@ class BackgroundInterface(BasicInterface):
     def bg_lcia(self, process, query_qty, ref_flow=None, **kwargs):
         p = self._archive.retrieve_or_fetch_entity(process)
         ref_flow = self._ensure_ref_flow(ref_flow)
-        q = self._qdb.get_canonical_quantity(query_qty)  #
         if False:  # self._archive.static:
+            q = self._qdb.get_canonical_quantity(query_qty)  #
             # just stick with what works. In future: if lci is not available bc private, then we will need it
             if not self.is_characterized(q):
                 self.characterize(self._qdb, q)
             res = self._bg.lcia(p, query_qty, ref_flow=ref_flow, **kwargs)
         else:
             lci = self._bg.lci(p, ref_flow=ref_flow)
-            res = self._qdb.do_lcia(q, lci, locale=p['SpatialScope'], **kwargs)
+            res = self._qdb.do_lcia(query_qty, lci, locale=p['SpatialScope'], **kwargs)
         if self.privacy > 0:
             return res.aggregate('*')
         return res

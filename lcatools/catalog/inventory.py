@@ -6,6 +6,8 @@ class InventoryInterface(BasicInterface):
     This provides access to detailed exchange values and computes the exchange relation
     """
     def get(self, eid):
+        if eid is None:
+            return None
         return self.make_ref(self._archive.retrieve_or_fetch_entity(eid))
 
     def exchanges(self, process, **kwargs):

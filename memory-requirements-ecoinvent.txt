@@ -1,0 +1,35 @@
+==========
+Fri Jul 21 16:13:35 -0700 2017
+
+We're looking at RES, which is physical memory occupied by the process.
+
+import ForegroundCatalog
+[PID  user      pri  nice virt  *RES*   cpu  %mem  time+   S command]
+15386 b         20   0  840.9m  62.9m   0.0  0.8   0:01.22 S python
+cat = ForegroundCatalog('/data/LCI/cat-food')
+15386 b         20   0  846.6m  68.4m   0.0  0.9   0:01.43 S python
+co = [n for n in cat.query('local.ecoinvent.3.2.cutoff').processes(Name='nylon')]
+enum(co)
+15386 b         20   0  915.6m 137.5m   0.0  1.8   0:02.87 S                  `- python
+q_ilcd = [_i for _i in cat.query('local.elcd').lcia_methods()]
+enum(q_ilcd)
+15386 b         20   0  968.3m 186.7m   0.0  2.4   0:04.01 S                  `- python
+res = cat.lcia(co[1], q_ilcd[1])
+15386 b         20   0  978.6m 197.0m   0.0  2.6   0:04.74 S                  `- python
+res1 = co[1].bg_lcia(q_ilcd[1])
+15386 b         20   0 1272.4m 494.9m 100.0  6.4   0:13.44 R                  `- python (loaded json)
+15386 b         20   0 1374.5m 597.3m   0.0  7.8   0:21.65 S                  `- python (tarjan)
+cq = [_i for _i in cat.query('local.ecoinvent.3.2.consequential').processes(Name='nylon')]
+enum(cq)
+15386 b         20   0 1447.3m 670.1m   0.0  8.7   0:23.34 S                  `- python
+%time res_cq_1 = cq[11].bg_lcia(q_ilcd[1])
+CPU times: user 14.6 s, sys: 246 ms, total: 14.9 s
+Wall time: 14.8 s
+15386 b         20   0 1769.9m 992.9m   0.0 12.9   0:38.20 S                  `- python
+... loading APOS as well ...
+15386 b         20   0 2368.8m 1.539g   0.0 20.5   1:05.29 S                  `- python
+
+
+FWIW, the results are largely the same (up to about 3 decimal places)
+
+heuristic results: 0.5 GB RAM per ecoinvent system model loaded, slightly more for APOS.

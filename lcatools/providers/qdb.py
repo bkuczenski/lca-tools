@@ -169,6 +169,9 @@ class Qdb(LcArchive):
         """
         if ref is None:
             ref = 'local.qdb'
+        if not os.path.exists(source):
+            print('Using default reference quantities')
+            source = REF_QTYS
         super(Qdb, self).__init__(source, ref=ref, **kwargs)
         self.load_json(from_json(source))
 

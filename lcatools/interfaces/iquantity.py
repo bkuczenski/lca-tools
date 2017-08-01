@@ -5,8 +5,10 @@ class QuantityRequired(Exception):
     pass
 
 
+_interface = 'quantity'
+
+
 class QuantityInterface(AbstractQuery):
-    _interface = 'quantity'
     """
     QuantityInterface
     """
@@ -15,7 +17,7 @@ class QuantityInterface(AbstractQuery):
         Retrieve a list of known LCIA methods.  This is going to be implementation-dependent
         :return:
         """
-        return self._perform_query(self.interface, 'lcia_methods', QuantityRequired('Must have quantity interface'),
+        return self._perform_query(_interface, 'lcia_methods', QuantityRequired('Must have quantity interface'),
                                    **kwargs)
 
     def get_quantity(self, quantity, **kwargs):
@@ -24,7 +26,7 @@ class QuantityInterface(AbstractQuery):
         :param quantity: external_id of quantity
         :return: quantity entity
         """
-        return self._perform_query(self.interface, 'get_quantity', QuantityRequired('Quantity interface required'),
+        return self._perform_query(_interface, 'get_quantity', QuantityRequired('Quantity interface required'),
                                    quantity, **kwargs)
 
     def synonyms(self, item, **kwargs):
@@ -33,7 +35,7 @@ class QuantityInterface(AbstractQuery):
         :param item:
         :return: list of strings
         """
-        return self._perform_query(self.interface, 'synonyms', QuantityRequired('Quantity interface required'), item,
+        return self._perform_query(_interface, 'synonyms', QuantityRequired('Quantity interface required'), item,
                                    ** kwargs)
 
     def flowables(self, quantity=None, compartment=None, **kwargs):
@@ -44,7 +46,7 @@ class QuantityInterface(AbstractQuery):
         :param compartment:
         :return: list of pairs: CAS number, name
         """
-        return self._perform_query(self.interface, 'flowables', QuantityRequired('Quantity interface required'),
+        return self._perform_query(_interface, 'flowables', QuantityRequired('Quantity interface required'),
                                    quantity=quantity, compartment=compartment, **kwargs)
 
     def compartments(self, quantity=None, flowable=None, **kwargs):
@@ -55,7 +57,7 @@ class QuantityInterface(AbstractQuery):
         :param flowable:
         :return: list of strings
         """
-        return self._perform_query(self.interface, 'compartments', QuantityRequired('Quantity interface required'),
+        return self._perform_query(_interface, 'compartments', QuantityRequired('Quantity interface required'),
                                    quantity=quantity, flowable=flowable, **kwargs)
 
     def factors(self, quantity, flowable=None, compartment=None, **kwargs):
@@ -68,7 +70,7 @@ class QuantityInterface(AbstractQuery):
         :param compartment:
         :return:
         """
-        return self._perform_query(self.interface, 'factors', QuantityRequired('Quantity interface required'),
+        return self._perform_query(_interface, 'factors', QuantityRequired('Quantity interface required'),
                                    quantity, flowable=flowable, compartment=compartment, **kwargs)
 
     def quantity_relation(self, ref_quantity, flowable, compartment, query_quantity, locale='GLO', **kwargs):
@@ -83,5 +85,5 @@ class QuantityInterface(AbstractQuery):
         :param locale:
         :return:
         """
-        return self._perform_query(self.interface, 'quantity_relation', QuantityRequired('Quantity interface required'),
+        return self._perform_query(_interface, 'quantity_relation', QuantityRequired('Quantity interface required'),
                                    ref_quantity, flowable, compartment, query_quantity, locale=locale, **kwargs)

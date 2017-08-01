@@ -5,6 +5,8 @@ class ForegroundRequired(Exception):
     pass
 
 
+_interface = 'foreground'
+
+
 class ForegroundInterface(AbstractQuery):
-    _interface = 'foreground'
     pass

@@ -10,7 +10,7 @@ from shutil import rmtree
 
 
 uslci_fg = LcResource('test.uslci', '/data/LCI/USLCI/USLCI_Processes_ecospold1.zip', 'ecospold',
-                      interfaces='foreground',
+                      interfaces='inventory',
                       priority=40,
                       static=False,
                       prefix='USLCI_Processes_ecospold1/USLCI_Processes_ecospold1')
@@ -45,6 +45,12 @@ class LcCatalogTest(unittest.TestCase):
         q = CatalogQuery('test.uslci', catalog=self._cat)
         p = q.get('Acetic acid, at plant')
         self.assertEqual(p.origin, 'test.uslci')
+
+    def test_inventory(self):
+        q = self._cat.query('test.uslci')
+        q.on_debug()
+        p = q.inventory('Acetic acid, at plant')
+        self.assertEqual(len([x for x in p]), 21)
 
 
 if __name__ == '__main__':

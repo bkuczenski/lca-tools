@@ -5,8 +5,10 @@ class InventoryRequired(Exception):
     pass
 
 
+_interface = 'inventory'
+
+
 class InventoryInterface(AbstractQuery):
-    _interface = 'inventory'
     """
     InventoryInterface core methods: individual processes, quantitative data.
     """
@@ -16,7 +18,7 @@ class InventoryInterface(AbstractQuery):
         :param process:
         :return:
         """
-        return self._perform_query(self.interface, 'exchanges',
+        return self._perform_query(_interface, 'exchanges',
                                    InventoryRequired('No access to exchange data'), process, **kwargs)
 
     def exchange_values(self, process, flow, direction, termination=None, **kwargs):
@@ -28,7 +30,7 @@ class InventoryInterface(AbstractQuery):
         :param termination: [None] if none, return all terminations
         :return:
         """
-        return self._perform_query([self.interface, 'background'], 'exchange_values',
+        return self._perform_query([_interface, 'background'], 'exchange_values',
                                    InventoryRequired('No access to exchange data'),
                                    process, flow, direction, termination=termination, **kwargs)
 
@@ -41,7 +43,8 @@ class InventoryInterface(AbstractQuery):
         :param ref_flow:
         :return:
         """
-        return self._perform_query(self.interface, 'inventory', InventoryRequired('No access to exchange data'),
+        print(_interface)
+        return self._perform_query(_interface, 'inventory', InventoryRequired('No access to exchange data'),
                                    process, ref_flow=ref_flow, **kwargs)
 
     def exchange_relation(self, process, ref_flow, exch_flow, direction, termination=None, **kwargs):
@@ -55,5 +58,5 @@ class InventoryInterface(AbstractQuery):
         :param termination:
         :return:
         """
-        return self._perform_query(self.interface, 'exchange_relation', InventoryRequired('No access to exchange data'),
+        return self._perform_query(_interface, 'exchange_relation', InventoryRequired('No access to exchange data'),
                                    process, ref_flow, exch_flow, direction, termination=termination, **kwargs)

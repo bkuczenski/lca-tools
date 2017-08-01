@@ -7,12 +7,7 @@ class AbstractQuery(object):
     """
     Abstract base class for executing queries
     """
-    _interface = None  # this gets overridden by subclasses
     _debug = False
-
-    @property
-    def interface(self):
-        return self._interface
 
     def on_debug(self):
         self._debug = True

@@ -2,21 +2,22 @@ import re
 from lcatools.background.background_manager import BackgroundManager
 from lcatools.background.proxy import BackgroundProxy
 from lcatools.background.product_flow import ProductFlow
-from lcatools.background.emission import Emission
-from lcatools.catalog.basic import BasicInterface, PrivateArchive
+# from lcatools.background.emission import Emission
+from lcatools.catalog.basic import BasicImplementation, PrivateArchive
+from lcatools.interfaces.ibackground import BackgroundInterface
 
 
 class NonStaticBackground(Exception):
     pass
 
 
-class BackgroundInterface(BasicInterface):
+class BackgroundImplementation(BasicImplementation, BackgroundInterface):
     """
     The BackgroundInterface exposes LCI computation with matrix ordering and inversion, and LCIA computation with
     enclosed private access to a quantity db.
     """
     def __init__(self, archive, qdb, **kwargs):
-        super(BackgroundInterface, self).__init__(archive, **kwargs)
+        super(BackgroundImplementation, self).__init__(archive, **kwargs)
         self._qdb = qdb
 
         self._bm = None
@@ -46,8 +47,8 @@ class BackgroundInterface(BasicInterface):
     foreground compat methods
     '''
 
-    def get(self, eid):
-        return self.make_ref(self._archive.retrieve_or_fetch_entity(eid))
+    def get(self, eid, **kwargs):
+        return self.make_ref(self._archive.retrieve_or_fetch_entity(eid, **kwargs))
 
     def exchange_values(self, process, flow, direction, termination=None, **kwargs):
         """

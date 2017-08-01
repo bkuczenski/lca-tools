@@ -1,8 +1,9 @@
-from lcatools.catalog.basic import BasicInterface
+from lcatools.catalog.basic import BasicImplementation
+from lcatools.interfaces.iquantity import QuantityInterface
 from synlist import Flowables, InconsistentIndices
 
 
-class QuantityInterface(BasicInterface):
+class QuantityImplementation(BasicImplementation, QuantityInterface):
     """
     Unlike entity, foreground, and background interfaces, a quantity interface does not require a static archive
     (since there are no terminations to index) or a background manager (since there are no processes)
@@ -13,7 +14,7 @@ class QuantityInterface(BasicInterface):
     implementations (which require load_all)
     """
     def __init__(self, archive, qdb, **kwargs):
-        super(QuantityInterface, self).__init__(archive, **kwargs)
+        super(QuantityImplementation, self).__init__(archive, **kwargs)
         self._qdb = qdb
         self._cm = qdb.c_mgr
         self._flowables = None

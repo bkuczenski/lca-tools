@@ -1,7 +1,8 @@
-from lcatools.catalog.basic import BasicInterface
+from lcatools.catalog.basic import BasicImplementation
+from lcatools.interfaces.iindex import IndexInterface
 
 
-class IndexInterface(BasicInterface):
+class IndexImplementation(BasicImplementation, IndexInterface):
     """
     A CatalogInterface provides basic-level semantic data about entities
     """
@@ -23,8 +24,8 @@ class IndexInterface(BasicInterface):
         for q in self._archive.quantities(**kwargs):
             yield self.make_ref(q)
 
-    def get(self, eid):
-        return self.make_ref(self._archive.retrieve_or_fetch_entity(eid))
+    def get(self, eid, **kwargs):
+        return self.make_ref(self._archive.retrieve_or_fetch_entity(eid, **kwargs))
 
     def terminate(self, flow, direction=None, **kwargs):
         for p in self._archive.terminate(flow, direction=direction, **kwargs):

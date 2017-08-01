@@ -1,7 +1,7 @@
 
 from lcatools.catalog.catalog import LcCatalog
 from lcatools.catalog.lc_resource import LcResource
-from lcatools.catalog.interfaces import QueryInterface, INTERFACE_TYPES
+from lcatools.interfaces.iquery import CatalogQuery, INTERFACE_TYPES
 
 
 import os
@@ -42,7 +42,7 @@ class LcCatalogTest(unittest.TestCase):
         self.assertSetEqual({r for r in self._cat.references}, {'test.uslci', 'test.uslci.allocated'})
 
     def test_priority(self):
-        q = QueryInterface('test.uslci', catalog=self._cat)
+        q = CatalogQuery('test.uslci', catalog=self._cat)
         p = q.get('Acetic acid, at plant')
         self.assertEqual(p.origin, 'test.uslci')
 

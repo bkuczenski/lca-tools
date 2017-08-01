@@ -7,7 +7,7 @@ from collections import namedtuple
 import xlrd
 from lcatools.providers.base import NsUuidArchive, XlDict
 from lcatools.entities import LcQuantity, LcFlow
-from lcatools.catalog.quantity import QuantityInterface
+# from lcatools.catalog.quantity import QuantityInterface
 from lcatools.characterizations import Characterization, DuplicateCharacterizationError
 
 

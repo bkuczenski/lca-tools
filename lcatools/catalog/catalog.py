@@ -36,11 +36,11 @@ import os
 from shutil import copy2
 import hashlib
 
-from .interfaces import QueryInterface, INTERFACE_TYPES
-from .entity import IndexInterface
-from .inventory import InventoryInterface
-from .background import BackgroundInterface
-from .quantity import QuantityInterface
+from lcatools.interfaces.iquery import CatalogQuery, INTERFACE_TYPES
+from .index import IndexImplementation
+from .inventory import InventoryImplementation
+from .background import BackgroundImplementation
+from .quantity import QuantityImplementation
 from .lc_resolver import LcCatalogResolver
 from .lc_resource import LcResource
 from lcatools.tools import create_archive, update_archive  # archive_from_json, archive_factory
@@ -422,13 +422,13 @@ class LcCatalog(object):
                 continue
             matches = itype.intersection(set(res.interfaces))
             if 'quantity' in matches:
-                yield QuantityInterface(self._archives[res.source], self._qdb, catalog=self, privacy=res.privacy)
+                yield QuantityImplementation(self._archives[res.source], self._qdb, catalog=self, privacy=res.privacy)
             if 'index' in matches:
-                yield IndexInterface(self._archives[res.source], catalog=self, privacy=res.privacy)
+                yield IndexImplementation(self._archives[res.source], catalog=self, privacy=res.privacy)
             if 'inventory' in matches:
-                yield InventoryInterface(self._archives[res.source], catalog=self, privacy=res.privacy)
+                yield InventoryImplementation(self._archives[res.source], catalog=self, privacy=res.privacy)
             if 'background' in matches:
-                yield BackgroundInterface(self._archives[res.source], self._qdb, catalog=self, privacy=res.privacy)
+                yield BackgroundImplementation(self._archives[res.source], self._qdb, catalog=self, privacy=res.privacy)
         if 'quantity' in itype:
             yield self._qdb  # fallback to our own quantity db for Quantity Interface requests
 
@@ -441,7 +441,7 @@ class LcCatalog(object):
     """
     def query(self, origin):
         next(self._resolver.resolve(origin))  # raises UnknownOrigin
-        return QueryInterface(origin, catalog=self)
+        return CatalogQuery(origin, catalog=self)
 
     def lookup(self, ref):
         """

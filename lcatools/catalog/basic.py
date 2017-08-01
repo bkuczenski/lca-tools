@@ -1,4 +1,3 @@
-from lcatools.catalog.interfaces import QueryInterface
 from lcatools.catalog_ref import CatalogRef
 
 
@@ -6,23 +5,27 @@ class PrivateArchive(Exception):
     pass
 
 
-class BasicInterface(QueryInterface):
+class BasicImplementation(object):
     def __init__(self, archive, privacy=None, **kwargs):
         """
-        Creates a semantic catalog from the specified archive.  Uses archive.get_names() to map data sources to
-        semantic references.
-        :param archive: a StaticArchive.  Foreground and background information
+        Provides common features for an interface implementation: namely, an archive and a privacy setting. Also
+        provides access to certain common methods of the archive.  This should be the base class for interface-specific
+        implementations.
+        :param archive: an LcArchive
         :param privacy: [None] Numeric scale indicating the level of privacy protection.  This is TBD... for now the
         scale has the following meaning:
          0 - no restrictions, fully public
          1 - exchange lists are public, but exchange values are private
          2 - exchange lists and exchange values are private
         """
-        super(BasicInterface, self).__init__(archive.ref, **kwargs)
         self._archive = archive
         self._privacy = privacy or 0
 
         self._quantities = set()  # quantities for which archive has been characterized
+
+    @property
+    def origin(self):
+        return self._archive.ref
 
     @property
     def privacy(self):
@@ -80,5 +83,5 @@ class BasicInterface(QueryInterface):
     def get_uuid(self, external_ref):
         return self._archive.get_uuid(external_ref)
 
-    def get(self, external_ref):
-        return self.make_ref(self._archive.retrieve_or_fetch_entity(external_ref))
+    def get(self, external_ref, **kwargs):
+        return self.make_ref(self._archive.retrieve_or_fetch_entity(external_ref, **kwargs))

@@ -1,14 +1,15 @@
-from lcatools.catalog.basic import BasicInterface, PrivateArchive
+from lcatools.catalog.basic import BasicImplementation, PrivateArchive
+from lcatools.interfaces.iinventory import InventoryInterface
 
 
-class InventoryInterface(BasicInterface):
+class InventoryImplementation(BasicImplementation, InventoryInterface):
     """
     This provides access to detailed exchange values and computes the exchange relation
     """
-    def get(self, eid):
+    def get(self, eid, **kwargs):
         if eid is None:
             return None
-        return self.make_ref(self._archive.retrieve_or_fetch_entity(eid))
+        return self.make_ref(self._archive.retrieve_or_fetch_entity(eid, **kwargs))
 
     def exchanges(self, process, **kwargs):
         if self.privacy > 1:

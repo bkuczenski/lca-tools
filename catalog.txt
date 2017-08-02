@@ -67,6 +67,40 @@ line 236-244: flowables grid
 
 All seem fair.
 
+(commit)
+
+Now, turning to foreground_catalog...
+
+WHY, exactly, are we creating an entire separate (and ad hoc) infrastructure for handling "foregrounds", which in fact correspond to physical sources in the EXACT same way that LcResources do, and we ALREADY HAVE a catalog for handling LcResources?
+
+That is a very good question. I think basically all that stuff can COME OUT, modulo some light details regarding search order / preference / priority.
+
+line 18-26: class ForegroundCatalog(LcCatalog): and docstring
+lines 27-34: a list of foregrounds known outside the LcResolver context
+lines 35-45: we want sources to exclude foregrounds for some reason? so we ARE storing foregrounds in the same dict as other sources, BUT monkeying with the machinery to except them?
+
+line 46: __init__
+     _foregrounds -> only loaded ones (so, unlike _archives how?)
+     _known_fgs -> redundant to resolver
+**     ed -> Hi, I'm ed.
+
+** lines 53-65: __getitem__ this is maybe appealing
+lines 66-78: this terrible name-canonicalizing. Why am I forcing names to start with 'foreground' and have no specified interface, when the existing machinery already provides ref:foreground?
+ans: because I want to be able to specify a scope of all foregrounds? well, just make the resolver work with '' input
+
+lines 79-109: load / add foregrounds
+lines 110-118: known foregrounds management. again, this is a matter that LcResources already solve
+lines 119-127: listing + showing foregrounds
+
+Then we have 128-155: re-implement _dereference as _retrieve for no good reason
+** lines 156-164: the first foreground-specific feature, other than __getitem__ but that is also good: get fragment by reference or leading portion of uuid
+
+lines 165-184: Re-implemented lookup() and fetch()
+
+** lines 185-217 fragment_lcia(fragmentflows, q_ref)
+
+OK. so about 32 + 8 + 12 + 1 = 25% of the class is worth keeping.  The rest should be wrapped up in LcCatalog.
+
 
 
 

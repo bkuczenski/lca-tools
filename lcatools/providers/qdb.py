@@ -240,6 +240,13 @@ class Qdb(LcArchive):
         return False
 
     def quantify(self, flowable, quantity, compartment=None):
+        """
+        Perform flow-quantity lookup. not likely to work very well until the CLookup gets sorted.
+        :param flowable:
+        :param quantity:
+        :param compartment:
+        :return:
+        """
         f_idx = self._f.index(flowable)
         q_idx = self._get_q_ind(quantity)
         if compartment is None:

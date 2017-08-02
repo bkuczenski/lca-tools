@@ -144,7 +144,41 @@ class LcCatalog(object):
     def quantities(self, **kwargs):
         return self._qdb.quantities(**kwargs)
 
-    def new_resource(self, *args, **kwargs):
+    def _ensure_resource(self, res):
+        """
+        create the archive requested. install qdb as upstream.
+        :param res:
+        :return:
+        """
+        if res.source not in self._archives:
+            a = create_archive(res.source, res.ds_type, ref=res.reference, **res.init_args)
+            if os.path.exists(self._cache_file(res.source)):
+                update_archive(a, self._cache_file(res.source))
+            if res.static and res.ds_type.lower() != 'json':
+                a.load_all()  # static json archives are by convention saved in complete form
+            self._archives[res.source] = a
+            for t in res.interfaces:
+                for k in a.catalog_names.keys():
+                    self._names[':'.join([k, t])] = res.source
+        return True
+
+    def _find_single_source(self, origin, interface, source=None):
+        ress = [r for r in self._resolver.resolve(origin, interfaces=interface)]
+        sources = set(r.source for r in ress)
+        if len(sources) > 1:
+            if source in sources:
+                return source
+            raise ValueError('Ambiguous resource specification %s:%s' % (origin, interface))
+        if len(sources) == 0:
+            raise KeyError('No source found.')
+        found_source = sources.pop()
+        if source is not None:
+            if found_source == source:
+                return source
+            raise ValueError('Sources do not match:\n%s (provided)\n%s (found)' % (source, found_source))
+        return found_source
+
+    def new_resource(self, *args, store=True, **kwargs):
         """
         Create a new data resource by specifying its properties directly to the constructor
         :param args: reference, source, ds_type
@@ -152,8 +186,12 @@ class LcCatalog(object):
         :param kwargs: interfaces=None, privacy=0, priority=0, static=False; **kwargs passed to archive constructor
         :return:
         """
-        res = self._resolver.new_resource(*args, **kwargs)
+        res = self._resolver.new_resource(*args, store=store, **kwargs)  # explicit store= for doc purposes
         self._ensure_resource(res)
+
+    def load_all(self, origin, interface=None, source=None):
+        source = self._find_single_source(origin, interface, source=source)
+        self._archives[source].load_all()
 
     def add_resource(self, resource, store=True):
         """
@@ -165,7 +203,15 @@ class LcCatalog(object):
         self._resolver.add_resource(resource, store=store)
         self._ensure_resource(resource)
 
-    def add_archive(self, archive, interfaces=None, store=True, **kwargs):
+    def add_existing_archive(self, archive, interfaces=None, store=True, **kwargs):
+        """
+        Makes a resource record out of an existing archive.  by default, saves it in the catalog's resource dir
+        :param archive:
+        :param interfaces:
+        :param store: [True] if False, don't save the record - use it for this session only
+        :param kwargs:
+        :return:
+        """
         res = LcResource.from_archive(archive, interfaces, **kwargs)
         self._resolver.add_resource(res, store=store)
         self._archives[res.source] = archive
@@ -207,6 +253,18 @@ class LcCatalog(object):
         for k in self._nicknames.keys():
             yield k
 
+    def add_nickname(self, source, nickname):
+        """
+        quickly refer to a specific data source already present in the archive
+        :param source:
+        :param nickname:
+        :return:
+        """
+        if source in self._archives:
+            self._nicknames[nickname] = source
+        else:
+            raise KeyError('Source %s not found' % source)
+
     @property
     def sources(self):
         for k in self._archives.keys():
@@ -227,28 +285,6 @@ class LcCatalog(object):
         for ref, ints in self._resolver.references:
             print('%s [%s]' % (ref, ', '.join(ints)))
 
-    def load_all(self, origin, interface=None, source=None):
-        source = self._find_single_source(origin, interface, source=source)
-        self._archives[source].load_all()
-
-    def index_resource(self, origin, interface=None, source=None, priority=10, force=False):
-        """
-        Creates an index for the identified resource.  'origin' and 'interface' must resolve to one or more LcResources
-        that all have the same source specification.  That source archive gets indexed, and index resources are created
-        for all the LcResources that were returned.
-
-        Performs load_all() on the source archive, writes the archive to a compressed json file in the local index
-        directory, and creates a new LcResource pointing to the JSON file.   Aborts if the index file already exists
-        (override with force=True).
-        :param origin:
-        :param interface: [None]
-        :param priority: [10] priority setting for the new index
-        :param force: [False] if True, create an index even if an interface already exists (will overwrite existing)
-        :return:
-        """
-        source = self._find_single_source(origin, interface, source=source)
-        self._index_source(source, force=force, priority=priority)
-
     def _index_source(self, source, force=False, priority=10):
         inx_file = self._index_file(source)
         if os.path.exists(inx_file):
@@ -265,6 +301,25 @@ class LcCatalog(object):
             self.new_resource(r.reference, inx_file, 'json', interfaces='index', priority=priority,
                               store=store,
                               static=True)
+
+    def index_resource(self, origin, interface=None, source=None, priority=10, force=False):
+        """
+        Creates an index for the identified resource.  'origin' and 'interface' must resolve to one or more LcResources
+        that all have the same source specification.  That source archive gets indexed, and index resources are created
+        for all the LcResources that were returned.
+
+        Performs load_all() on the source archive, writes the archive to a compressed json file in the local index
+        directory, and creates a new LcResource pointing to the JSON file.   Aborts if the index file already exists
+        (override with force=True).
+        :param origin:
+        :param interface: [None]
+        :param source: find_single_source input
+        :param priority: [10] priority setting for the new index
+        :param force: [False] if True, create an index even if an interface already exists (will overwrite existing)
+        :return:
+        """
+        source = self._find_single_source(origin, interface, source=source)
+        self._index_source(source, force=force, priority=priority)
 
     def create_source_cache(self, source, static=False):
         """
@@ -289,22 +344,6 @@ class LcCatalog(object):
         archive.write_to_file(cache_file, gzip=True, exchanges=True, characterizations=True, values=True)
         print('Created archive of %s containing:' % archive)
         archive.check_counter()
-
-    def _find_single_source(self, origin, interface, source=None):
-        ress = [r for r in self._resolver.resolve(origin, interfaces=interface)]
-        sources = set(r.source for r in ress)
-        if len(sources) > 1:
-            if source in sources:
-                return source
-            raise ValueError('Ambiguous resource specification %s:%s' % (origin, interface))
-        if len(sources) == 0:
-            raise KeyError('No source found.')
-        found_source = sources.pop()
-        if source is not None:
-            if found_source == source:
-                return source
-            raise ValueError('Sources do not match:\n%s (provided)\n%s (found)' % (source, found_source))
-        return found_source
 
     def create_static_archive(self, archive_file, origin, interface=None, source=None, background=True, priority=90):
         """
@@ -339,36 +378,6 @@ class LcCatalog(object):
             self.new_resource(res.reference, archive_file, 'JSON', interfaces=ifaces, priority=priority,
                               store=store,
                               static=True)
-
-    def add_nickname(self, source, nickname):
-        """
-        quickly refer to a specific data source already present in the archive
-        :param source:
-        :param nickname:
-        :return:
-        """
-        if source in self._archives:
-            self._nicknames[nickname] = source
-        else:
-            raise KeyError('Source %s not found' % source)
-
-    def _ensure_resource(self, res):
-        """
-        create the archive requested. install qdb as upstream.
-        :param res:
-        :return:
-        """
-        if res.source not in self._archives:
-            a = create_archive(res.source, res.ds_type, ref=res.reference, **res.init_args)
-            if os.path.exists(self._cache_file(res.source)):
-                update_archive(a, self._cache_file(res.source))
-            if res.static and res.ds_type.lower() != 'json':
-                a.load_all()  # static json archives are by convention saved in complete form
-            self._archives[res.source] = a
-            for t in res.interfaces:
-                for k in a.catalog_names.keys():
-                    self._names[':'.join([k, t])] = res.source
-        return True
 
     def _check_entity(self, source, external_ref):
         ent = self._archives[source].retrieve_or_fetch_entity(external_ref)

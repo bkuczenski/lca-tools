@@ -13,6 +13,61 @@ NOTHING is tested or even compiled yet.  but it already feels better.
 
 Next tasks: get stuff out of catalog.py, and then get more stuff out of foreground_catalog.py
 
+Tue 2017-08-01 22:59:37 -0700
+
+OK- LcCatalog actually looks pretty good. We have:
+ - a whole list of imports, many of them local
+
+Line 55: class LcCatalog(object):
+then we have 60 lines of root-path-dependent constants
+
+line 118: __init__
+     _rootdir
+     _resolver
+     _entities ** DO WE REALLY WANT THIS? I THINK WE SHOULD GET RID OF THIS **
+     _qdb
+
+The actual catalog:
+
+     _archives: source to LcArchive
+     _names: ref:interface to source
+     _nicknames: shorthand -> source
+
+     _lcia_methods: ** WHERE SHOULD I KEEP TRACK OF THIS? **  (already 2+ places: in catalog, in qdb, in basic)
+
+Lines 147-230: make, get, retrieve archives and resources
+
+Lines 245-287: names, sources, and interfaces
+
+lines 288-381: index, cache, and archive resources
+
+lines 382-418: dereference and retrieve entities
+
+lines 419-447: get interfaces
+
+lines 448-472: Utilities
+	query(origin) - returns a CatalogQuery
+	lookup(ref) - ref = CatalogRef - returns "the lowest-priority origin to contain the entity". sounds like it could have greater utility.
+	fetch(ref) - this should also permit greater specification
+	entity_type(ref) - could probably be done more efficiently
+
+lines 473-eof (538): Qdb Interaction
+	is_elementary(flow)
+	is_loaded(lcia) ** THIS AGAIN **
+	load_lcia_factors(ref)
+	lcia(p_ref, q_ref) -- the core function of the catalog
+	annotate(flow, quantity, ...) -- gets stored in local Qdb
+	quantify(xxx) - not helpful
+	   
+
+Glue / misc:
+line 144-146: quantities()
+line 232-235: privacy(ref)
+line 236-244: flowables grid
+
+All seem fair.
+
+
 
 
 ==========

@@ -131,6 +131,32 @@ The Catalog (and especially the ForegroundCatalog) are complete messes.
 
 go to catalog.txt for notes on this.
 
+Wed 2017-08-02 16:16:19 -0700
+
+More open questions:
+ * What's with upstreaming? Do we still want to be able to do that? It seems like kind of a lot of trouble.
+
+The idea of upstreaming is that if a given entity already exists, we can reference it rather than creating a new one. This is mainly to address the situation where flows get characterized in one archive and referred to in another.
+
+ON THE ONE HAND, this is useful and even vital for stand-alone LCIA computations inside of archives.
+
+ON THE OTHER HAND, it causes a lot of problems. First- the flows have to match by UUID, but since flows aren't necessarily known by uuid (at least in ecoinvent from the spreadsheets, they are known by name + compartment) that introduces the need for an upstream dictionary.
+
+Second, it means that when archives are deserialized, their upstream references need to be populated.
+
+Third, it means that when archives are created, the upstream archives need to already be in place, which means this process needs to be very tightly managed. which is not desirable.
+
+Fourth- the Qdb's whole reason for being was to eliminate the requirements that flows be individually characterized, because they can simply consult the Qdb when LCIA results are needed.  So why am I even bothering?
+
+Now, the upstreaming feature is starting to seem more useful to explicitly take advantage of the Qdb, i.e. for quantities instead of for flows.  If we can put a Qdb upstream of an archive, then we no longer need the archive to possess all the core quantities (and in fact, it gives us a way to resolve compartment queries too! but only if we can count on there being a Qdb at the top of the stream)
+
+Foregrounds, too, need to be able to be upstream of one another... or do they?
+
+
+Related issue:
+
+ * Do we want the ability to override external refs to be a general feature of all entities in all LcArchives, or only a feature of fragments and thereby only in Foreground archives?
+
 ==========
 Thu May 25 14:49:58 -0700 2017
 

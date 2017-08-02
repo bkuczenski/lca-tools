@@ -101,6 +101,57 @@ lines 165-184: Re-implemented lookup() and fetch()
 
 OK. so about 32 + 8 + 12 + 1 = 25% of the class is worth keeping.  The rest should be wrapped up in LcCatalog.
 
+Wed 2017-08-02 15:44:19 -0700
+
+So how do we go about this?
+
+ * Do we want 'foreground' to be included in INTERFACE_TYPES?
+   - are there any characteristics of the foreground interface that are not shared by any of the others?
+   - are there compelling circumstances when I would NOT want to look in foreground resources?
+   = does the order of inquiry matter, or is that handled with resource priorities?
+
+ * What other changes need to be made in order to have the LcResolver handle foregrounds?
+
+ * What queries need to be supported in the foreground query interface?
+   Foreground interface is the same as inventory interface, except that it allows for the archive to contain fragments.
+   = is there an affirmative characteristic of LcArchive that PREVENTS it from storing fragments? ANS: NO
+
+Foreground audit!! Now this was recently rewritten, so I imagine it is generally useful, but let's take a look:
+
+line 22-26: class LcForeground(LcArchive): + docstring
+line 27-30: load_json_file-- this could be part of the base LcArchive; I don't see why not
+line 31-46: external references mapping-- this could be part of the base LcArchive
+line 47-63: __init__(path, catalog)
+     Requires a catalog to deserialize fragments
+     Requires that it be a foreground catalog i.e. that has an entity editor
+line 64-67: editor property
+line 68-77: create resolved catalog refs; also actual entities from foregrounds (DEPRECATED)
+line 78-90: override add to merge instead of skipping
+line 91-96: save-- write entity file, serialize fragments
+line 97-167: create fragments
+line 168-172: clear score caches
+line 173-180: path-specific constants
+line 181-240: access / retrieve fragments
+line 241-245: draw tree
+line 246-250: override check_counter
+line 251-259: assign external references
+line 260-293: load fragments
+line 294-304: outmoded child_flows fn
+line 305-325: save fragments
+line 326-360: find linked terms and orphans.
+
+Things to fix:
+ - old child flows
+ - reorganize
+ - remove fragment handling from LcArchive.add(), put it into Foreground.add(). This prevents LcArchives from adding fragments.  raise (and catch?) TypeError.
+ - Terminations to fragments shjould always reference the parent fragment, with the termflow used to indicate if the fragment is not being run directly.
+
+ - figure out the upstreaming issue.  Is this just a foreground feature now? should it always and only use the catalog's native Qdb?
+
+We need to think this over more.
+
+
+
 
 
 

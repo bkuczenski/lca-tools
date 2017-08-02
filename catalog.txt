@@ -1,4 +1,21 @@
 ==========
+Tue Aug 01 13:25:08 -0700 2017
+
+This is still stalled out.
+
+We're having a breakdown of design discipline.
+
+Tue 2017-08-01 15:14:48 -0700
+
+Big improvement (not yet tested though): re-designed QueryInterface to inherit from a whole bunch of abstract base classes that each only specifies how different resource types should behave. Then instead of re-inheriting from the QueryInterface, I now have a separate set of implementation classes that actually implement the endpoints.
+
+NOTHING is tested or even compiled yet.  but it already feels better.
+
+Next tasks: get stuff out of catalog.py, and then get more stuff out of foreground_catalog.py
+
+
+
+==========
 Tue May 02 14:53:31 -0700 2017
 
 This is STALLED OUT.

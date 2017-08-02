@@ -2,7 +2,7 @@ LciaResults:
 
  * need __add__ method for AggregateLciaScore and SummaryLciaResult
  * aggregate method should preserve content
- * need a "deep aggregation" that would combine components and generate fragment LCI
+ X need a "deep aggregation" that would combine components and generate fragment LCI - flatten()
 
 Fragments use:
  X process-to-fragment !! (done??)
@@ -31,7 +31,8 @@ General Issues:
  - lca-data-files; update with semantic origins
  - flows: factor, cf, convert need to be scenario-aware
    = characterizations need to be scenario-aware
- - flow terminations: inbound_ev should not be cached; should be computed live at query
+ 0 flow terminations: inbound_ev should not be cached; should be computed live at query
+   WRONG - inbound_ev SHOULD be cached to enable offline use and reduce startup time. no need to query the same resource more than once.
    = but flow conversion is *already* computed at query time; ev is not parameterizable
  X refactor LcFragment-- make it an entity
    = it's already an entity; take out stuff that it doesn't need to own
@@ -120,7 +121,15 @@ Antelope refactor:
     : [scenarios/:scenarioID/]processes/:processID/lciaresults
     : [scenarios/:scenarioID/]processes/:processID/lciamethods/:lciaMethodID/lciaresults
  
-   
+
+==========
+Tue Aug 01 13:19:40 -0700 2017
+
+OK, what am I doing now?
+
+The Catalog (and especially the ForegroundCatalog) are complete messes.
+
+go to catalog.txt for notes on this.
 
 ==========
 Thu May 25 14:49:58 -0700 2017

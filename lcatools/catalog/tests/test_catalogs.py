@@ -49,8 +49,8 @@ class LcCatalogTest(unittest.TestCase):
     def test_inventory(self):
         q = self._cat.query('test.uslci')
         q.on_debug()
-        p = q.inventory('Acetic acid, at plant')
-        self.assertEqual(len([x for x in p]), 21)
+        inv = [x for x in q.inventory('Acetic acid, at plant')]
+        self.assertEqual(len(inv), 21)
 
 
 if __name__ == '__main__':

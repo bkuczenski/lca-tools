@@ -13,8 +13,8 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
     The interface works normally on normally-constituted archives, but also allows the archives to override the default
     implementations (which require load_all)
     """
-    def __init__(self, archive, qdb, **kwargs):
-        super(QuantityImplementation, self).__init__(archive, **kwargs)
+    def __init__(self, catalog, archive, qdb, **kwargs):
+        super(QuantityImplementation, self).__init__(catalog, archive, **kwargs)
         self._qdb = qdb
         self._cm = qdb.c_mgr
         self._flowables = None

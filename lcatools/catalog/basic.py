@@ -6,7 +6,7 @@ class PrivateArchive(Exception):
 
 
 class BasicImplementation(object):
-    def __init__(self, archive, privacy=None, **kwargs):
+    def __init__(self, catalog, archive, privacy=None, **kwargs):
         """
         Provides common features for an interface implementation: namely, an archive and a privacy setting. Also
         provides access to certain common methods of the archive.  This should be the base class for interface-specific
@@ -18,6 +18,7 @@ class BasicImplementation(object):
          1 - exchange lists are public, but exchange values are private
          2 - exchange lists and exchange values are private
         """
+        self._catalog = catalog
         self._archive = archive
         self._privacy = privacy or 0
 
@@ -72,7 +73,8 @@ class BasicImplementation(object):
             return None
         if entity.entity_type == 'flow':
             return entity  # keep characterizations intact
-        return CatalogRef(self.origin, entity.external_ref, _query=self, entity_type=entity.entity_type)
+        return CatalogRef(self.origin, entity.external_ref, _query=self._catalog.query(self.origin),
+                          entity_type=entity.entity_type)
 
     def get_item(self, external_ref, item):
         return self._archive.get_item(external_ref, item)
@@ -85,3 +87,6 @@ class BasicImplementation(object):
 
     def get(self, external_ref, **kwargs):
         return self.make_ref(self._archive.retrieve_or_fetch_entity(external_ref, **kwargs))
+
+    def fetch(self, external_ref, **kwargs):
+        return self._archive.retrieve_or_fetch_entity(external_ref, **kwargs)

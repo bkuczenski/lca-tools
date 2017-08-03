@@ -35,6 +35,7 @@ import re
 import os
 from shutil import copy2
 import hashlib
+from collections import defaultdict
 
 from lcatools.interfaces.iquery import CatalogQuery, READONLY_INTERFACE_TYPES
 from .index import IndexImplementation
@@ -139,10 +140,20 @@ class LcCatalog(object):
         self._names = dict()  # maps reference to source
         self._nicknames = dict()  # keep a collection of shorthands for sources
 
+        self.add_existing_archive(qdb, interfaces=('index', 'quantity'), store=False)
+
         self._lcia_methods = set()
 
     def quantities(self, **kwargs):
         return self._qdb.quantities(**kwargs)
+
+    def _register_archive(self, archive, res):
+        self._archives[res.source] = archive
+        for t in res.interfaces:
+            for k in archive.catalog_names.keys():
+                self._names[':'.join([k, t])] = res.source
+        if not self._resolver.is_permanent(res):
+            self._register_index(res.source, 10)  # register indices if they exist and are not stored
 
     def _ensure_resource(self, res):
         """
@@ -150,17 +161,18 @@ class LcCatalog(object):
         :param res:
         :return:
         """
-        if res.source not in self._archives:
-            a = create_archive(res.source, res.ds_type, ref=res.reference, **res.init_args)
+        if not self._is_loaded(res):
+            a = create_archive(res.source, res.ds_type, catalog=self, ref=res.reference, upstream=self._qdb,
+                               **res.init_args)
             if os.path.exists(self._cache_file(res.source)):
                 update_archive(a, self._cache_file(res.source))
             if res.static and res.ds_type.lower() != 'json':
                 a.load_all()  # static json archives are by convention saved in complete form
-            self._archives[res.source] = a
-            for t in res.interfaces:
-                for k in a.catalog_names.keys():
-                    self._names[':'.join([k, t])] = res.source
+            self._register_archive(a, res)
         return True
+
+    def _is_loaded(self, res):
+        return res.source in self._archives
 
     def _find_single_source(self, origin, interface, source=None):
         ress = [r for r in self._resolver.resolve(origin, interfaces=interface)]
@@ -187,7 +199,7 @@ class LcCatalog(object):
         :return:
         """
         res = self._resolver.new_resource(*args, store=store, **kwargs)  # explicit store= for doc purposes
-        self._ensure_resource(res)
+        # self._ensure_resource(res)
 
     def load_all(self, origin, interface=None, source=None):
         source = self._find_single_source(origin, interface, source=source)
@@ -201,7 +213,7 @@ class LcCatalog(object):
         :return:
         """
         self._resolver.add_resource(resource, store=store)
-        self._ensure_resource(resource)
+        # self._ensure_resource(resource)
 
     def add_existing_archive(self, archive, interfaces=None, store=True, **kwargs):
         """
@@ -222,12 +234,28 @@ class LcCatalog(object):
     def get_archive(self, name):
         """
         Retrieve a physical archive by namespace and interface
-        :param name: takes the form of ref:interface
+        :param name: takes the form of ref:interface.  If the exact name is not specified, the catalog will find a
+        source whose ref and interface start with name.
         :return: an LcArchive subclass
         """
         if name in self._nicknames:
             return self._archives[self._nicknames[name]]
-        return self._archives[self._names[name]]
+        elif name in self._names:
+            return self._archives[self._names[name]]
+        else:
+            # need to hunt for it.  Make a list of sources that match the name
+            sources = defaultdict(list)
+            for k, v in self._names.items():
+                if k.startswith(name):
+                    sources[v].append(k)
+            if len(sources) == 1:
+                return self._archives[next(s for s in sources.keys())]
+            elif len(sources) > 1:
+                for k in sources.keys():
+                    print(k)
+                raise ValueError('Ambiguous reference %s refers to multiple sources' % name)
+            elif len(sources) == 0:
+                raise KeyError('%s not found.' % name)
 
     def privacy(self, ref):
         res = next(r for r in self._resolver.resolve(ref))
@@ -285,7 +313,7 @@ class LcCatalog(object):
         for ref, ints in self._resolver.references:
             print('%s [%s]' % (ref, ', '.join(ints)))
 
-    def _index_source(self, source, force=False, priority=10):
+    def _index_source(self, source, force=False):
         inx_file = self._index_file(source)
         if os.path.exists(inx_file):
             if not force:
@@ -296,11 +324,16 @@ class LcCatalog(object):
         archive = self._archives[source]
         archive.load_all()
         archive.write_to_file(inx_file, gzip=True, exchanges=False, characterizations=False, values=False)
-        for r in self._resolver.resources_with_source(source):
-            store = self._resolver.is_permanent(r)
-            self.new_resource(r.reference, inx_file, 'json', interfaces='index', priority=priority,
-                              store=store,
-                              static=True)
+
+    def _register_index(self, source, priority):
+        inx_file = self._index_file(source)
+        if os.path.exists(inx_file):
+            print('Registering index for %s' % source)
+            for r in self._resolver.resources_with_source(source):
+                store = self._resolver.is_permanent(r)
+                self.new_resource(r.reference, inx_file, 'json', interfaces='index', priority=priority,
+                                  store=store,
+                                  static=True)
 
     def index_resource(self, origin, interface=None, source=None, priority=10, force=False):
         """
@@ -319,7 +352,8 @@ class LcCatalog(object):
         :return:
         """
         source = self._find_single_source(origin, interface, source=source)
-        self._index_source(source, force=force, priority=priority)
+        self._index_source(source, force=force)
+        self._register_index(source, priority)
 
     def create_source_cache(self, source, static=False):
         """
@@ -426,20 +460,23 @@ class LcCatalog(object):
             itype = [itype]
         itype = set(itype)
         for res in sorted(self._resolver.resolve(origin, interfaces=itype),
-                          key=lambda x: (x.reference != origin, x.priority)):
+                          key=lambda x: (not self._is_loaded(x), x.reference != origin, x.priority)):
             if not self._ensure_resource(res):
                 continue
             matches = itype.intersection(set(res.interfaces))
             if 'quantity' in matches:
-                yield QuantityImplementation(self._archives[res.source], self._qdb, catalog=self, privacy=res.privacy)
+                yield QuantityImplementation(self, self._archives[res.source], self._qdb, privacy=res.privacy)
             if 'index' in matches:
-                yield IndexImplementation(self._archives[res.source], catalog=self, privacy=res.privacy)
+                yield IndexImplementation(self, self._archives[res.source], privacy=res.privacy)
             if 'inventory' in matches:
-                yield InventoryImplementation(self._archives[res.source], catalog=self, privacy=res.privacy)
+                yield InventoryImplementation(self, self._archives[res.source], privacy=res.privacy)
             if 'background' in matches:
-                yield BackgroundImplementation(self._archives[res.source], self._qdb, catalog=self, privacy=res.privacy)
+                yield BackgroundImplementation(self, self._archives[res.source], self._qdb, privacy=res.privacy)
+        '''
+        # no need for this because qdb is (a) listed in the resolver and (b) upstream of everything
         if 'quantity' in itype:
             yield self._qdb  # fallback to our own quantity db for Quantity Interface requests
+            '''
 
     def get_interface(self, origin, itype):
         for arch in self._get_interfaces(origin, itype):
@@ -448,9 +485,9 @@ class LcCatalog(object):
     """
     public functions -- should these operate directly on a catalog ref instead? I think so but let's see about usage
     """
-    def query(self, origin):
+    def query(self, origin, **kwargs):
         next(self._resolver.resolve(origin))  # raises UnknownOrigin
-        return CatalogQuery(origin, catalog=self)
+        return CatalogQuery(origin, catalog=self, **kwargs)
 
     def lookup(self, ref):
         """

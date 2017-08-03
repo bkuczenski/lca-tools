@@ -172,6 +172,9 @@ class Qdb(LcArchive):
         if not os.path.exists(source):
             print('Using default reference quantities')
             source = REF_QTYS
+        self._f = Flowables.from_json(from_json(flowables))
+        self._q = SynList.from_json(from_json(quantities))
+
         super(Qdb, self).__init__(source, ref=ref, **kwargs)
         self.load_json(from_json(source))
 
@@ -179,9 +182,6 @@ class Qdb(LcArchive):
             self.c_mgr = compartments
         else:
             self.c_mgr = CompartmentManager(compartments)
-
-        self._f = Flowables.from_json(from_json(flowables))
-        self._q = SynList.from_json(from_json(quantities))
 
         self._index_quantities()
 
@@ -200,6 +200,14 @@ class Qdb(LcArchive):
                 if cf.quantity is not f.reference_entity:
                     self.add_cf(cf)
 
+    def __getitem__(self, item):
+        try:
+            i = self._get_q_ind(item)
+            if i is not None:
+                return self._q.entity(i)
+        except QuantityNotKnown:
+            return super(Qdb, self).__getitem__(item)
+
     def save(self):
         self.write_to_file(self.source, characterizations=True, values=True)  # leave out exchanges
 
@@ -208,6 +216,8 @@ class Qdb(LcArchive):
         return self._quell_biogenic_co2
 
     def add_new_quantity(self, q):
+        if q.entity_type != 'quantity':
+            raise TypeError('Not adding non-quantity to Qdb: %s' % q)
         if not q.is_entity:
             q = q.fetch()
         ind = self._q.add_set(self._q_terms(q), merge=True)

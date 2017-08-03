@@ -16,8 +16,8 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
     The BackgroundInterface exposes LCI computation with matrix ordering and inversion, and LCIA computation with
     enclosed private access to a quantity db.
     """
-    def __init__(self, archive, qdb, **kwargs):
-        super(BackgroundImplementation, self).__init__(archive, **kwargs)
+    def __init__(self, catalog, archive, qdb, **kwargs):
+        super(BackgroundImplementation, self).__init__(catalog, archive, **kwargs)
         self._qdb = qdb
 
         self._bm = None

@@ -39,7 +39,7 @@ class LcCatalogTest(unittest.TestCase):
         rmtree(work_dir)
 
     def test_resolver_index(self):
-        self.assertSetEqual({r for r in self._cat.references}, {'test.uslci', 'test.uslci.allocated'})
+        self.assertSetEqual({r for r in self._cat.references}, {'local.qdb', 'test.uslci', 'test.uslci.allocated'})
 
     def test_priority(self):
         q = CatalogQuery('test.uslci', catalog=self._cat)
@@ -48,7 +48,6 @@ class LcCatalogTest(unittest.TestCase):
 
     def test_inventory(self):
         q = self._cat.query('test.uslci')
-        q.on_debug()
         inv = [x for x in q.inventory('Acetic acid, at plant')]
         self.assertEqual(len(inv), 21)
 

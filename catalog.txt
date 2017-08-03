@@ -110,6 +110,41 @@ So how do we go about this?
    - are there compelling circumstances when I would NOT want to look in foreground resources?
    = does the order of inquiry matter, or is that handled with resource priorities?
 
+INTERFACE_TYPES uses (8):
+ iquery:
+  (as arguments to _perform_query)
+  - get_item
+  - get
+  - get_reference
+  - get_uuid
+  (as default interfaces to resolve)
+  - resolve
+
+ test_catalog:
+  - initialize uslci_bg resource
+
+ catalog:
+  - lookup(), as argument to _dereference
+
+ lc_resource:
+  - to validate interfaces argument
+
+So add_foreground should create a resource that has 'foreground', 'index', 'inventory', and 'foreground' should be in INTERFACE_TYPES.
+
+the only thing foregrounds can do that others can't is be WRITEABLE.  So foreground interface is all POST routines.  everything else either belongs to the catalog (fragment_lcia) or .. is traverse() and can go in inventory.  there aren't any others.
+
+also need a scenarios interface.
+
+(the interfaces lark is quite a gas, isn't it?)
+
+so foreground is all about creating a foreground, creating flows, setting properties, creating fragments and specifying exchange values, and terminating. and setting balance
+that's it.
+scenarios-> those are just query args for exch val and termination
+
+Thus we add 'foreground' to INTERFACE_TYPES, and we create READONLY_INTERFACE_TYPES which excludes it.
+
+Then almost all of the above cases (6 of 8) should in fact use READONLY; and only resolve() and lc_resource validation should use the full list.
+
  * What other changes need to be made in order to have the LcResolver handle foregrounds?
 
  * What queries need to be supported in the foreground query interface?

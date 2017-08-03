@@ -36,7 +36,7 @@ import os
 from shutil import copy2
 import hashlib
 
-from lcatools.interfaces.iquery import CatalogQuery, INTERFACE_TYPES
+from lcatools.interfaces.iquery import CatalogQuery, READONLY_INTERFACE_TYPES
 from .index import IndexImplementation
 from .inventory import InventoryImplementation
 from .background import BackgroundImplementation
@@ -458,7 +458,7 @@ class LcCatalog(object):
         :param ref: a CatalogRef
         :return: The lowest-priority origin to contain the entity
         """
-        found_ref, e = self._dereference(ref.origin, ref.external_ref, INTERFACE_TYPES)
+        found_ref, e = self._dereference(ref.origin, ref.external_ref, READONLY_INTERFACE_TYPES)
         return found_ref
 
     def fetch(self, ref):

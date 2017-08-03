@@ -8,7 +8,8 @@ from .iforeground import ForegroundInterface
 from .iinventory import InventoryInterface
 from .iquantity import QuantityInterface
 
-INTERFACE_TYPES = {'index', 'inventory', 'background', 'quantity'}
+INTERFACE_TYPES = {'index', 'inventory', 'background', 'quantity', 'foreground'}
+READONLY_INTERFACE_TYPES = {'index', 'inventory', 'background', 'quantity'}
 
 
 class NoCatalog(Exception):
@@ -105,13 +106,16 @@ class CatalogQuery(IndexInterface, BackgroundInterface, ForegroundInterface, Inv
         :param item:
         :return:
         """
-        return self._perform_query(INTERFACE_TYPES, 'get_item', EntityNotFound('%s' % external_ref), external_ref, item)
+        return self._perform_query(READONLY_INTERFACE_TYPES, 'get_item', EntityNotFound('%s' % external_ref),
+                                   external_ref, item)
 
     def get_reference(self, external_ref):
-        return self._perform_query(INTERFACE_TYPES, 'get_reference', EntityNotFound('%s' % external_ref), external_ref)
+        return self._perform_query(READONLY_INTERFACE_TYPES, 'get_reference', EntityNotFound('%s' % external_ref),
+                                   external_ref)
 
     def get_uuid(self, external_ref):
-        return self._perform_query(INTERFACE_TYPES, 'get_uuid', EntityNotFound('%s' % external_ref), external_ref)
+        return self._perform_query(READONLY_INTERFACE_TYPES, 'get_uuid', EntityNotFound('%s' % external_ref),
+                                   external_ref)
 
     def get(self, eid, **kwargs):
         """
@@ -120,4 +124,4 @@ class CatalogQuery(IndexInterface, BackgroundInterface, ForegroundInterface, Inv
         :param eid: an external Id
         :return:
         """
-        return self._perform_query(INTERFACE_TYPES, 'get', EntityNotFound('%s' % eid), eid, **kwargs)
+        return self._perform_query(READONLY_INTERFACE_TYPES, 'get', EntityNotFound('%s' % eid), eid, **kwargs)

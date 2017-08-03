@@ -1,7 +1,7 @@
 
 from lcatools.catalog.catalog import LcCatalog
 from lcatools.catalog.lc_resource import LcResource
-from lcatools.interfaces.iquery import CatalogQuery, INTERFACE_TYPES
+from lcatools.interfaces.iquery import CatalogQuery, READONLY_INTERFACE_TYPES
 
 
 import os
@@ -18,7 +18,7 @@ uslci_fg = LcResource('test.uslci', '/data/LCI/USLCI/USLCI_Processes_ecospold1.z
 
 uslci_bg = LcResource('test.uslci.allocated', '/data/GitHub/lca-tools-datafiles/catalogs/uslci_clean_allocated.json.gz',
                       'json',
-                      interfaces=INTERFACE_TYPES,
+                      interfaces=READONLY_INTERFACE_TYPES,
                       priority=90,
                       static=True)
 

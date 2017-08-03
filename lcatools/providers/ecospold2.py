@@ -204,13 +204,9 @@ class EcospoldV2Archive(LcArchive):
         c = 'EcoSpold02 Flow'
 
         f = LcFlow(uid, Name=n, CasNumber=cas, Comment=c, Compartment=cat)
-        try_f = self._check_upstream(self._upstream_key(f))
-        if try_f is None:
-            f.add_characterization(quantity=q, reference=True)
+        f.add_characterization(quantity=q, reference=True)
 
-            self.add(f)
-        else:
-            f = try_f
+        self.add(f)
 
         return f
 

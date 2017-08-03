@@ -72,8 +72,7 @@ class OldJson(Exception):
 class LcArchive(ArchiveInterface):
     """
     A class meant for building life cycle models. This takes the archive machinery and adds functions
-    specific to processes, flows, and quantities. Also adds upstreaming capabilities, including (possibly
-    in the future) upstream flow lookups by standardized key reference, as currently implemented in Ecoinvent lcia.
+    specific to processes, flows, and quantities. Creates an upstream lookup for quantities but no other entity types.
 
     Note: in lieu of having a @classmethod from_json, we have an archive factory that produces archives using the
     appropriate constructor given the data type.  This is found in lcatools.tools and calls the base entity_from_json
@@ -81,6 +80,7 @@ class LcArchive(ArchiveInterface):
 
     """
     def __init__(self, source, ref=None, **kwargs):
+        self._upstream_hash = dict()  # for lookup use later
         super(LcArchive, self).__init__(source, ref=ref, **kwargs)
         self._terminations = defaultdict(set)
 
@@ -90,13 +90,16 @@ class LcArchive(ArchiveInterface):
 
     def set_upstream(self, upstream):
         super(LcArchive, self).set_upstream(upstream)
-        # create a dict of upstream flows
-        for i in self._upstream.flows() + self._upstream.quantities():
+        # create a dict of upstream quantities
+        self._upstream_hash = dict()  # clobber old dict
+        for i in self._upstream.quantities():
             if not i.is_entity:
                 continue
             up_key = self._upstream_key(i)
             if up_key in self._upstream_hash:
                 print('!!multiple upstream matches for %s!!' % up_key)
+            elif up_key is None:
+                continue
             else:
                 self._upstream_hash[up_key] = i
 
@@ -126,10 +129,8 @@ class LcArchive(ArchiveInterface):
 
     @staticmethod
     def _upstream_key(entity):
-        if entity.entity_type == 'flow':
-            return ', '.join(filter(None, [entity['Name']] + entity['Compartment']))
-        elif entity.entity_type == 'quantity':
-            return str(entity)
+        if entity.entity_type == 'quantity':
+            return str(entity)  # needs to be something indexed by the Qdb
         else:
             return None
 

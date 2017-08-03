@@ -21,7 +21,7 @@ class FragmentNotFound(Exception):
 
 class LcForeground(LcArchive):
     """
-    An LcStudy is defined by its being anchored to a physical directory, which is used to serialize the non-fragment
+    An LcForeground is defined by its being anchored to a physical directory, which is used to serialize the non-fragment
     entities.  Also within this directory is a subdirectory called fragments, which is used to store fragments.
     """
     def _load_json_file(self, filename):
@@ -32,7 +32,9 @@ class LcForeground(LcArchive):
         """
         Fragments should be permitted to have any desired external_ref -- which means key_to_id needs to store a
         mapping of non-standard external refs to uuids.  This is only because (at the moment) every entity is stored
-        in the archive using a uuid as its internal key
+        in the archive using a uuid as its internal key.
+
+        Open question: should this be a general feature?  currently only NsUuidArchives allow arbitrary external_refs.
         :param key:
         :return:
         """
@@ -333,7 +335,7 @@ class LcForeground(LcArchive):
     '''
     def _del_f(self, f):
         print('Deleting %s' % f)
-        del self._entities[f._uuid]
+        del self._entities[f.uuid]
 
     def del_orphans(self, for_real=False):
         """
@@ -363,4 +365,3 @@ class LcForeground(LcArchive):
         :return:
         """
         return [f for f in self._find_links(frag)]
-

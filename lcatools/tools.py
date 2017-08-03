@@ -40,9 +40,17 @@ def split_nick(fname):
     return re.sub('\.json\.gz$', '', os.path.basename(fname))
 
 
-def create_archive(source, ds_type, **kwargs):
+def create_archive(source, ds_type, catalog=None, **kwargs):
+    """
+    Create an archive from a source and type specification.
+    :param source:
+    :param ds_type:
+    :param catalog: required to identify upstream archives, if specified
+    :param kwargs:
+    :return:
+    """
     if ds_type.lower() == 'json':
-        a = archive_from_json(source, **kwargs)
+        a = archive_from_json(source, catalog=catalog, **kwargs)
     else:
         a = archive_factory(source, ds_type, **kwargs)
     return a
@@ -86,9 +94,10 @@ def archive_factory(source, ds_type, **kwargs):
         raise ArchiveError('%s' % e)
 
 
-def archive_from_json(fname, static=True, **archive_kwargs):
+def archive_from_json(fname, static=True, catalog=None, **archive_kwargs):
     """
     :param fname: JSON filename
+    :param catalog: [None] necessary to retrieve upstream archives, if specified
     :param static: [True]
     :return: an ArchiveInterface
     """
@@ -129,7 +138,18 @@ def archive_from_json(fname, static=True, **archive_kwargs):
 
     if 'upstreamReference' in j:
         print('**Upstream reference encountered: %s\n' % j['upstreamReference'])
-        a._serialize_dict['upstreamReference'] = j['upstreamReference']
+        if catalog is not None:
+            try:
+                upstream = catalog.get_archive(j['upstreamReference'])
+                a.set_upstream(upstream)
+            except KeyError:
+                print('Upstream reference not found in catalog!')
+                a._serialize_dict['upstreamReference'] = j['upstreamReference']
+            except ValueError:
+                print('Upstream reference is ambiguous!')
+                a._serialize_dict['upstreamReference'] = j['upstreamReference']
+        else:
+            a._serialize_dict['upstreamReference'] = j['upstreamReference']
 
     a.load_json(j)
     return a

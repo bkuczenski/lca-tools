@@ -148,7 +148,6 @@ class ArchiveInterface(object):
 
         self._counter = defaultdict(int)
         self._upstream = None
-        self._upstream_hash = dict()  # for lookup use later
 
         self._loaded = False
         self._static = static
@@ -192,13 +191,8 @@ class ArchiveInterface(object):
     def set_upstream(self, upstream):
         assert isinstance(upstream, ArchiveInterface)
         if upstream.source != self.source:
-            self._serialize_dict['upstreamSource'] = upstream.source
+            self._serialize_dict['upstreamReference'] = upstream.ref
         self._upstream = upstream
-
-    def query_upstream_ref(self):
-        if 'upstreamSource' in self._serialize_dict:
-            return self._serialize_dict['upstreamSource']
-        return None
 
     def get_names(self):
         """
@@ -219,6 +213,7 @@ class ArchiveInterface(object):
             names[v] = k
         return names
 
+    '''
     def truncate_upstream(self):
         """
         BROKEN!
@@ -232,6 +227,7 @@ class ArchiveInterface(object):
         self._upstream = None
         if 'upstreamReference' in self._serialize_dict:
             self._serialize_dict.pop('upstreamReference')
+    '''
 
     def _print(self, *args):
         if self._quiet is False:

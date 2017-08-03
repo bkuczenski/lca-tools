@@ -379,9 +379,6 @@ class IlcdArchive(LcArchive):
         cat = [str(i) for i in cat]
 
         f = LcFlow(u, Name=n, CasNumber=cas, Comment=c, Compartment=cat)
-        try_f = self._check_upstream(self._upstream_key(f))
-        if try_f is not None:
-            return try_f
 
         f.set_external_ref('%s/%s' % (typeDirs['Flow'], u))
 

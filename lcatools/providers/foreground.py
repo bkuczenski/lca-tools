@@ -5,7 +5,7 @@ import json
 import os
 import re
 
-from lcatools.providers.base import LcArchive, to_uuid
+from lcatools.providers.base import LcArchive, to_uuid, entity_types
 from lcatools.entities import LcFragment
 from lcatools.exchanges import comp_dir
 from lcatools.catalog_ref import CatalogRef, NoCatalog
@@ -44,6 +44,14 @@ class LcForeground(LcArchive):
                 i = None
         return i
 
+    @property
+    def _archive_file(self):
+        return os.path.join(self.source, 'entities.json')
+
+    @property
+    def _fragment_dir(self):
+        return os.path.join(self.source, 'fragments')
+
     def __init__(self, fg_path, catalog=None, **kwargs):
         """
 
@@ -71,22 +79,101 @@ class LcForeground(LcArchive):
             return self._catalog.fetch(ref)
         return ref
 
-    def foreground_ref(self, origin, external_ref):
-        ref = CatalogRef(origin, external_ref)
-        return self._catalog.fetch(ref)
-
     def add(self, entity):
         """
-        Reimplement base add to merge instead of raising a key error.
+        Reimplement base add to (1) allow fragments, (2) merge instead of raising a key error.
         :param entity:
         :return:
         """
+        if entity.entity_type not in entity_types:
+            raise ValueError('%s is not a valid entity type' % entity.entity_type)
         try:
-            super(LcForeground, self).add(entity)
+            self._add(entity)
         except KeyError:
             # merge incoming entity's properties with existing entity
             current = self[entity.get_uuid()]
             current.merge(entity)
+
+    def add_entity_and_children(self, entity):
+        if entity.entity_type == 'fragment':
+            self.add(entity)
+            self.add_entity_and_children(entity.flow)
+            for c in entity.child_flows:
+                self.add_entity_and_children(c)
+        else:
+            super(LcForeground, self).add_entity_and_children(entity)
+
+    def check_counter(self, entity_type=None):
+        super(LcForeground, self).check_counter(entity_type=entity_type)
+        if entity_type is None:
+            super(LcForeground, self).check_counter(entity_type='fragment')
+
+    def name_fragment(self, frag, name):
+        if self[frag.external_ref] is None:
+            raise FragmentNotFound(frag)
+        k = self._key_to_id(name)
+        if k is not None:
+            raise ValueError('Name is already taken')
+        frag.external_ref = name  # will raise PropertyExists if already set
+        self._ext_ref_mapping[name] = frag.uuid
+
+    '''
+    Save and load the archive
+    '''
+    def _do_load(self, fragments):
+        for f in fragments:
+            frag = LcFragment.from_json(self, f)
+            if frag.external_ref != frag.uuid:
+                self._ext_ref_mapping[frag.external_ref] = frag.uuid
+            self.add(frag)
+
+        for f in fragments:
+            frag = self[f['entityId']]
+            try:
+                frag.finish_json_load(self, f)
+            except NoCatalog:
+                print(f)
+                raise
+
+    def _load_fragments(self):
+        """
+        This must be done in two steps, since fragments refer to other fragments in their definition.
+        First step: create all fragments.
+        Second step: set reference entities and terminations
+        :return:
+        """
+        fragments = []
+        if not os.path.exists(self._fragment_dir):
+            os.makedirs(self._fragment_dir)
+        for file in os.listdir(self._fragment_dir):
+            if os.path.isdir(os.path.join(self._fragment_dir, file)):
+                continue
+            with open(os.path.join(self._fragment_dir, file), 'r') as fp:
+                j = json.load(fp)
+
+            fragments.extend(j['fragments'])
+        self._do_load(fragments)
+
+    def _recurse_frags(self, frag):
+        frags = [frag]
+        for x in sorted(frag.child_flows, key=lambda z: z.get_uuid()):
+            frags.extend(self._recurse_frags(x))
+        return frags
+
+    def save_fragments(self, save_unit_scores=True):
+        current_files = os.listdir(self._fragment_dir)
+        for r in self._fragments():
+            frags = [t.serialize(save_unit_scores=save_unit_scores) for t in self._recurse_frags(r)]
+            fname = r.get_uuid() + '.json'
+            if fname in current_files:
+                current_files.remove(fname)
+            tgt_file = os.path.join(self._fragment_dir, fname)
+            with open(tgt_file, 'w') as fp:
+                json.dump({'fragments': frags}, fp, indent=2, sort_keys=True)
+        for leftover in current_files:
+            if not os.path.isdir(os.path.join(self._fragment_dir, leftover)):
+                print('deleting %s' % leftover)
+                os.remove(os.path.join(self._fragment_dir, leftover))
 
     def save(self, save_unit_scores=True):
         self.write_to_file(self._archive_file, gzip=False, exchanges=True, characterizations=True, values=True)
@@ -94,6 +181,9 @@ class LcForeground(LcArchive):
             os.makedirs(self._fragment_dir)
         self.save_fragments(save_unit_scores=save_unit_scores)
 
+    '''
+    Create and modify fragments
+    '''
     def new_fragment(self, *args, **kwargs):
         """
 
@@ -107,7 +197,7 @@ class LcForeground(LcArchive):
 
     def find_or_create_term(self, exchange, background=None):
         """
-        Finds a fragment that terminates the given e
+        Finds a fragment that terminates the given exchange
         :param exchange:
         :param background: [None] - any frag; [True] - background frag; [False] - foreground frag
         :return:
@@ -170,14 +260,9 @@ class LcForeground(LcArchive):
             for s, t in f.terminations():
                 t.clear_score_cache()
 
-    @property
-    def _archive_file(self):
-        return os.path.join(self.source, 'entities.json')
-
-    @property
-    def _fragment_dir(self):
-        return os.path.join(self.source, 'fragments')
-
+    '''
+    Retrieve + display fragments
+    '''
     def _fragments(self, background=None):
         for f in self._entities_by_type('fragment'):
             if f.reference_entity is None:
@@ -242,86 +327,6 @@ class LcForeground(LcArchive):
         if not isinstance(string, LcFragment):
             string = self.frag(string)
         string.show_tree(**kwargs)
-
-    def check_counter(self, entity_type=None):
-        super(LcForeground, self).check_counter(entity_type=entity_type)
-        if entity_type is None:
-            super(LcForeground, self).check_counter(entity_type='fragment')
-
-    def name_fragment(self, frag, name):
-        if self[frag.external_ref] is None:
-            raise FragmentNotFound(frag)
-        k = self._key_to_id(name)
-        if k is not None:
-            raise ValueError('Name is already taken')
-        frag.external_ref = name  # will raise PropertyExists if already set
-        self._ext_ref_mapping[name] = frag.uuid
-
-    def _do_load(self, fragments):
-        for f in fragments:
-            frag = LcFragment.from_json(self, f)
-            if frag.external_ref != frag.uuid:
-                self._ext_ref_mapping[frag.external_ref] = frag.uuid
-            self.add(frag)
-
-        for f in fragments:
-            frag = self[f['entityId']]
-            try:
-                frag.finish_json_load(self, f)
-            except NoCatalog:
-                print(f)
-                raise
-
-    def _load_fragments(self):
-        """
-        This must be done in two steps, since fragments refer to other fragments in their definition.
-        First step: create all fragments.
-        Second step: set reference entities and terminations
-        :return:
-        """
-        fragments = []
-        if not os.path.exists(self._fragment_dir):
-            os.makedirs(self._fragment_dir)
-        for file in os.listdir(self._fragment_dir):
-            if os.path.isdir(os.path.join(self._fragment_dir, file)):
-                continue
-            with open(os.path.join(self._fragment_dir, file), 'r') as fp:
-                j = json.load(fp)
-
-            fragments.extend(j['fragments'])
-        self._do_load(fragments)
-
-    def child_flows(self, fragment):
-        """
-        This is a lambda method used during traversal in order to generate the child fragment flows from
-        a given fragment.
-        :param fragment:
-        :return: fragments listing fragment as parent
-        """
-        for x in self._entities_by_type('fragment'):
-            if fragment is x.reference_entity:
-                yield x
-
-    def _recurse_frags(self, frag):
-        frags = [frag]
-        for x in sorted(self.child_flows(frag), key=lambda z: z.get_uuid()):
-            frags.extend(self._recurse_frags(x))
-        return frags
-
-    def save_fragments(self, save_unit_scores=True):
-        current_files = os.listdir(self._fragment_dir)
-        for r in self._fragments():
-            frags = [t.serialize(save_unit_scores=save_unit_scores) for t in self._recurse_frags(r)]
-            fname = r.get_uuid() + '.json'
-            if fname in current_files:
-                current_files.remove(fname)
-            tgt_file = os.path.join(self._fragment_dir, fname)
-            with open(tgt_file, 'w') as fp:
-                json.dump({'fragments': frags}, fp, indent=2, sort_keys=True)
-        for leftover in current_files:
-            if not os.path.isdir(os.path.join(self._fragment_dir, leftover)):
-                print('deleting %s' % leftover)
-                os.remove(os.path.join(self._fragment_dir, leftover))
 
     '''
     Utilities for finding terminated fragments and deleting fragments

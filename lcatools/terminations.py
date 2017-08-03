@@ -11,7 +11,7 @@ from lcatools.exchanges import comp_dir, ExchangeValue
 from lcatools.catalog.inventory import PrivateArchive
 from lcatools.entities.processes import AmbiguousReferenceError
 from lcatools.catalog_ref import NoCatalog
-from lcatools.interact import parse_math
+# from lcatools.interact import parse_math
 
 
 class FlowConversionError(Exception):
@@ -56,10 +56,10 @@ class FlowTermination(object):
             term_node = fg[external_ref]
             if term_flow is not None:
                 term_flow = fg[term_flow]
-        elif origin.split('.')[0] == 'foreground':
-            term_node = fg.foreground_ref(origin, external_ref)
-            if term_flow is not None:
-                term_flow = fg.foreground_ref(origin, term_flow)
+        # elif origin.split('.')[0] == 'foreground':
+        #     term_node = fg.foreground_ref(origin, external_ref)
+        #     if term_flow is not None:
+        #         term_flow = fg.foreground_ref(origin, term_flow)
         else:
             # TODO: handle fragments from non-self origins
             term_node = fg.catalog_ref(origin, external_ref, entity_type='process')
@@ -267,6 +267,7 @@ class FlowTermination(object):
 
     def validate_flow_conversion(self):
         # TODO: this should belong to the flow
+        '''
         try:
             a = self.flow_conversion
             if a == 42:
@@ -285,6 +286,8 @@ class FlowTermination(object):
                 # if it's a fragment, then its flow's quantities are already in catalog[0]
                 self._term.catalog[0].add(self.term_flow.reference_entity)
             # funny, it doesn't look like that bad of a hack.
+        '''
+        return self.flow_conversion  # deal with it when an error comes up
 
     @property
     def id(self):

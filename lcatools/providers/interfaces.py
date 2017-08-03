@@ -271,7 +271,7 @@ class ArchiveInterface(object):
     def __getitem__(self, item):
         return self._get_entity(item)
 
-    def add(self, entity):
+    def _add(self, entity):
         u = to_uuid(entity.uuid)
         if u is None:
             raise ValueError('Key must be a valid UUID')

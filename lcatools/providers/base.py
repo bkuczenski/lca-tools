@@ -100,6 +100,13 @@ class LcArchive(ArchiveInterface):
             else:
                 self._upstream_hash[up_key] = i
 
+    def add(self, entity):
+        if entity.entity_type not in entity_types:
+            raise ValueError('%s is not a valid entity type' % entity.entity_type)
+        if entity.entity_type == 'fragment':
+            raise TypeError('fragments not supported in base archives')
+        self._add(entity)
+
     def add_entity_and_children(self, entity):
         try:
             self.add(entity)
@@ -116,10 +123,6 @@ class LcArchive(ArchiveInterface):
             # need to import all the process's flows
             for x in entity.exchanges():
                 self.add_entity_and_children(x.flow)
-        elif entity.entity_type == 'fragment':
-            self.add_entity_and_children(entity.flow)
-            for c in entity.child_flows:
-                self.add_entity_and_children(c)
 
     @staticmethod
     def _upstream_key(entity):
@@ -442,3 +445,4 @@ class XlsArchive(NsUuidArchive):
     """
     A specialization of NsUUID archive that has some nifty spreadsheet tools.
     """
+    pass

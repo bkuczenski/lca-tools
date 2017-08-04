@@ -206,7 +206,8 @@ class Qdb(LcArchive):
             if i is not None:
                 return self._q.entity(i)
         except QuantityNotKnown:
-            return super(Qdb, self).__getitem__(item)
+            pass
+        return super(Qdb, self).__getitem__(item)
 
     def save(self):
         self.write_to_file(self.source, characterizations=True, values=True)  # leave out exchanges

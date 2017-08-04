@@ -103,7 +103,8 @@ class BaseTableOutput(object):
 
     def _extract_data_from_item(self, item):
         """
-        Determines how to get the data point from the item. Meant to be overridden.
+        note: dict item is a list of components
+        Determines how to get the data point from the item/list. Meant to be overridden.
         If self._returns_sets is true, should return a dict. Else should return an immutable.
         :param item:
         :return: a string
@@ -180,7 +181,7 @@ class BaseTableOutput(object):
         :param args: sequential data columns
         :param criterion: A callable expression that returns true if a given
         """
-        self._d = defaultdict(lambda: None)
+        self._d = defaultdict(list)
 
         if callable(criterion):
             self._criterion = criterion
@@ -205,7 +206,7 @@ class BaseTableOutput(object):
         for k in self._generate_items(arg):
             row = self._pull_row_from_item(k)
             self._rows.add(row)
-            self._d[row, col_idx] = k
+            self._d[row, col_idx].append(k)
         self._columns.append(arg)
 
     def text(self, width=10, hdr_width=24, max_width=112, expanded=True):
@@ -323,15 +324,24 @@ class FlowablesGrid(BaseTableOutput):
 
     def _canonical(self, flow):
         """
-        TODO: this is not quite right because parse_flow is too 'fuzzy'-- matches "correction flows" to the actual
-        flowables because of CAS number.  still thinking.
+
+        use name: this is not quite right because parse_flow is too 'fuzzy'--
+        add units to distinguish flows that get bypassed in convert()
+        flowables because of CAS number; matches lots of different things that are all mapped to the same flowable (e.g.
+        difference between fossil and biogenic CO2 is lost).  This is no longer WRONG because it adds instead of
+        replacing.
+
+        maybe that is the desirable course- but then I lose the ability to distinguish CO2 from peat, CO2 from gas, and
+        co2 from land use change.  But maybe that is part of the meaning of a "flowables grid".
+
+        still thinking.
         :param flow:
         :return:
         """
         name, _ = self._qdb.parse_flow(flow)
         return '[%s] %s' % (flow.unit(), self._qdb.f_name(name))
 
-    def _extract_data_from_item(self, item):
+    def _extract_data_from_item(self, objects):
         """
         We need to return dicts because we have _returns_sets = True.
         Items are either exchanges, factors, or flattened LciaResult components.
@@ -339,31 +349,41 @@ class FlowablesGrid(BaseTableOutput):
         Second one is _locations (also no existing public method to access)
         Third one has no dict, it's just cumulative_result
 
-        :param item:
+        :param objects: dict item. list of objects
         :return:
         """
-        d = dict()
-        if item is None:
+        d = defaultdict(float)
+        if objects is None:
             return d
-        if hasattr(item, 'entity_type'):
-            if item.entity_type == 'exchange':
-                if hasattr(item, '_value_dict'):
-                    for rx, v in item._value_dict.items():
-                        key = '%s: %s' % (rx.direction, rx.flow['Name'])
-                        d[key] = v
-                d[self._canonical(item.flow)] = item.value
-            elif item.entity_type == 'characterization':
-                for loc, v in item._locations.items():
-                    if loc == 'GLO':
-                        d[self._canonical(item.flow)] = v
-                    else:
-                        d[loc] = v
+        for item in objects:
+            if hasattr(item, 'entity_type'):
+                if item.entity_type == 'exchange':
+                    if hasattr(item, '_value_dict'):
+                        for rx, v in item._value_dict.items():
+                            key = '%s: %s' % (rx.direction, rx.flow['Name'])
+                            d[key] += v
+                    d[self._canonical(item.flow)] += item.value
+                elif item.entity_type == 'characterization':
+                    for loc, v in item._locations.items():
+                        if loc == 'GLO':
+                            key = self._canonical(item.flow)
+                        else:
+                            # there 'should not be' different cf values for the same flowable- but we know it happens
+                            key = loc
+                        if d[key] == 0:
+                            d[key] = v
+                        elif d[key] != v:
+                            new_key = '[%s] %s' % (loc, item.flow['Name'])
+                            while d[new_key] != 0:
+                                new_key += '.'
+                            d[new_key] = v
+                else:
+                    raise TypeError('Unsure what to do with item %s' % item)
+            elif hasattr(item, 'cumulative_result'):
+                # print('%10.3g %s' % (item.cumulative_result, self._canonical(item.entity)))
+                d[self._canonical(item.entity)] += item.cumulative_result
             else:
                 raise TypeError('Unsure what to do with item %s' % item)
-        elif hasattr(item, 'cumulative_result'):
-            d[self._canonical(item.entity)] = item.cumulative_result
-        else:
-            raise TypeError('Unsure what to do with item %s' % item)
         return d
 
     def __init__(self, qdb, *args, include_flows=None, quell_locations=False):
@@ -379,7 +399,7 @@ class FlowablesGrid(BaseTableOutput):
             include_fbs = set([qdb.f_index(qdb.parse_flow(x)[0]) for x in include_flows])
 
             def criterion(x):
-                return qdb.f_index(x) in include_fbs
+                return qdb.f_index(qdb.parse_flow(x)[0]) in include_fbs
         else:
             criterion = None
 

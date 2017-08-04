@@ -152,8 +152,6 @@ class LcCatalog(object):
         for t in res.interfaces:
             for k in archive.catalog_names.keys():
                 self._names[':'.join([k, t])] = res.source
-        if not self._resolver.is_permanent(res):
-            self._register_index(res.source, 10)  # register indices if they exist and are not stored
 
     def _ensure_resource(self, res):
         """
@@ -162,7 +160,7 @@ class LcCatalog(object):
         :return:
         """
         if not self._is_loaded(res):
-            a = create_archive(res.source, res.ds_type, catalog=self, ref=res.reference, upstream=self._qdb,
+            a = create_archive(res.source, res.ds_type, catalog=self, ref=res.reference,  upstream=self._qdb,
                                **res.init_args)
             if os.path.exists(self._cache_file(res.source)):
                 update_archive(a, self._cache_file(res.source))
@@ -199,7 +197,12 @@ class LcCatalog(object):
         :return:
         """
         res = self._resolver.new_resource(*args, store=store, **kwargs)  # explicit store= for doc purposes
-        # self._ensure_resource(res)
+
+        if not store:
+            if len([i for i in self._resolver.resolve(res.reference, 'index')]) == 0:  # if no index is resolvable
+                self._register_index(res.source, 10)  # register indices if they exist and are not stored
+
+            # self._ensure_resource(res)
 
     def load_all(self, origin, interface=None, source=None):
         source = self._find_single_source(origin, interface, source=source)

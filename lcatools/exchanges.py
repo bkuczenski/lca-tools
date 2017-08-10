@@ -222,7 +222,10 @@ class ExchangeValue(Exchange):
                 self._value_dict[reference] += value
 
     def trim(self):
-        return Exchange(self.process, self.flow, self.direction, termination=self.termination)
+        x = Exchange(self.process, self.flow, self.direction, termination=self.termination)
+        if self.is_reference:
+            x.set_ref(self.process)
+        return x
 
     def __init__(self, *args, value=None, value_dict=None, **kwargs):
         super(ExchangeValue, self).__init__(*args, **kwargs)

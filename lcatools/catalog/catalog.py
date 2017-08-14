@@ -47,7 +47,7 @@ from .lc_resource import LcResource
 from lcatools.tools import create_archive, update_archive  # archive_from_json, archive_factory
 from lcatools.providers.qdb import Qdb
 from lcatools.flowdb.compartments import REFERENCE_INT  # reference intermediate flows
-from lcatools.tables import FlowablesGrid
+from lcatools.tables.flowables import FlowablesGrid
 
 
 _protocol = re.compile('^(\w+)://')

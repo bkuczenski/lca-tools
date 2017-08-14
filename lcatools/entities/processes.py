@@ -215,17 +215,18 @@ class LcProcess(LcEntity):
         is supplied but the process is NOT allocated to that reference, generate unallocated ExchangeValues (excluding
         the reference itself).  Reference must be a flow or exchange found in the process's reference entity.
 
-        TESTING: if a reference is supplied but the process is NOT allocated to that reference, behave as if it were.
+        TESTING: if a reference is supplied but the process is NOT allocated to that reference,
 
         :param reference:
         :param strict: [False] whether to use strict flow name matching [default- first regex match]
         :return:
         """
-        chk_alloc = None
+        # chk_alloc = None
         if reference is not None:
             try:
                 reference = self.find_reference(reference, strict=strict)
-                chk_alloc = self.is_allocated(reference)
+                if not self.is_allocated(reference):
+                    return
             except NoReferenceFound:
                 reference = None
         for i in self._exchanges.values():

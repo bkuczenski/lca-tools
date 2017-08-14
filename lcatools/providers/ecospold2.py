@@ -383,14 +383,14 @@ class EcospoldV2Archive(LcArchive):
                     # use exch.is_ref to identify references; store unallocated values (rx already None)
                     if exch.is_ref:
                         if exch.termination is not None:
-                            if self._linked:
-                                raise EcospoldV2Error('Terminated Reference flow encountered in %s\nFlow %s Term %s' % (
-                                    p.get_uuid(), exch.flow.get_uuid(), exch.termination))
-                            # pass on this for unlinked database because of wonky conditional exchanges
+                            raise EcospoldV2Error('Terminated Reference flow encountered in %s\nFlow %s Term %s' % (
+                                                  p.get_uuid(), exch.flow.get_uuid(), exch.termination))
+                            # suggested resolution: neutralize the is_ref
                     self._print('## Exch %s [%s] (%g)' % (exch.flow, exch.direction, exch.value))
                     p.add_exchange(exch.flow, exch.direction, reference=rx, value=exch.value,
                                    termination=exch.termination)
                     if exch.is_ref:
+                        self._print('## ## Exch is reference %s %s' % (exch.flow, exch.direction))
                         p.add_reference(exch.flow, exch.direction)
         return p
 

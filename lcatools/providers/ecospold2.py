@@ -235,6 +235,10 @@ class EcospoldV2Archive(LcArchive):
         p = LcProcess(u, Name=n, Comment=c, SpatialScope=g, TemporalScope=stt,
                       Classifications=cls)
 
+        parent = find_tag(o, 'activity').get('parentActivityId')
+        if parent is not None:
+            p['ParentActivityId'] = parent
+
         self.add(p)
         return p
 
@@ -321,6 +325,9 @@ class EcospoldV2Archive(LcArchive):
                 print('  !!Failed loading %s' % filename)
                 raise
         return o
+
+    def find_tag(self, filename, tag):
+        return find_tag(self.objectify(filename), tag)
 
     def _create_process(self, filename, exchanges=True):
         """

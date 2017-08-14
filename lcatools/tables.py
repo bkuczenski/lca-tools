@@ -362,7 +362,8 @@ class FlowablesGrid(BaseTableOutput):
                         for rx, v in item._value_dict.items():
                             key = '%s: %s' % (rx.direction, rx.flow['Name'])
                             d[key] += v
-                    d[self._canonical(item.flow)] += item.value
+                    if item.value is not None:
+                        d[self._canonical(item.flow)] += item.value
                 elif item.entity_type == 'characterization':
                     for loc, v in item._locations.items():
                         if loc == 'GLO':

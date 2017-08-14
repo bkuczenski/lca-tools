@@ -157,8 +157,17 @@ class LcProcess(LcEntity):
         return hits[0]
 
     def inventory(self, reference=None):
+        """
+        Convenience wrapper around self.exchanges() which:
+         * sorts the exchanges by reference, then by direction
+         * prints the exchanges to output
+         * provides an enumeration of exchanges for interactive access
+         = returns the exchanges as a sorted list.
+        :param reference:
+        :return:
+        """
         num = 0
-        it = sorted(self.exchanges(reference), key=lambda x: x.direction)
+        it = sorted(self.exchanges(reference), key=lambda x: (not x.is_reference, x.direction))
         if reference is None:
             print('%s' % self)
         else:
@@ -206,6 +215,8 @@ class LcProcess(LcEntity):
         is supplied but the process is NOT allocated to that reference, generate unallocated ExchangeValues (excluding
         the reference itself).  Reference must be a flow or exchange found in the process's reference entity.
 
+        TESTING: if a reference is supplied but the process is NOT allocated to that reference, behave as if it were.
+
         :param reference:
         :param strict: [False] whether to use strict flow name matching [default- first regex match]
         :return:
@@ -220,9 +231,9 @@ class LcProcess(LcEntity):
         for i in self._exchanges.values():
             if reference is None:
                 yield i
-            elif not chk_alloc:
-                if i != reference:
-                    yield i
+            # elif not chk_alloc:
+            #     if i != reference:
+            #         yield i
             else:
                 if i in self.reference_entity:
                     continue

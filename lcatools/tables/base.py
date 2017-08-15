@@ -261,7 +261,7 @@ class BaseTableOutput(object):
 
         for row in body:
             if self._returns_sets:
-                for subrow in row:
+                for subrow in sorted(row, key=lambda x: x[-1]):
                     print(fmt % printable(subrow, width=width))
             else:
                 print(fmt % printable(row, width=width))

@@ -33,7 +33,8 @@ class InventoryImplementation(BasicImplementation, InventoryInterface):
         if self.privacy > 0:
             raise PrivateArchive('Exchange values are protected')
         p = self._archive.retrieve_or_fetch_entity(process)
-        for x in sorted(p.exchanges(reference=ref_flow), key=lambda x: (not x.is_reference, x.direction, x.value)):
+        for x in sorted(p.exchanges(reference=ref_flow),
+                        key=lambda t: (not t.is_reference, t.direction, t.value or 0.0)):
             yield x
 
     def exchange_relation(self, process, ref_flow, exch_flow, direction, termination=None, **kwargs):

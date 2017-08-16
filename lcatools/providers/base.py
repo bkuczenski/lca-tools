@@ -441,6 +441,16 @@ class NsUuidArchive(LcArchive):
         else:
             return str(uuid.uuid3(self._ns_uuid, key))
 
+    def __getitem__(self, item):
+        """
+        Override base to skip upstream lookup if a numeric key is being requested
+        :param item:
+        :return:
+        """
+        if isinstance(item, int):
+            return self._get_entity(item)
+        return super(NsUuidArchive, self).__getitem__(item)
+
 
 class XlsArchive(NsUuidArchive):
     """

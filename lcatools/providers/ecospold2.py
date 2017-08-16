@@ -420,7 +420,7 @@ class EcospoldV2Archive(LcArchive):
         :return:
         """
 
-        entity = self._get_entity(ext_ref)  # this checks upstream if it exists
+        entity = self.__getitem__(ext_ref)  # this checks upstream if it exists
         if entity is not None:
             rx = spold_reference_flow(ext_ref)
             if rx is not None:

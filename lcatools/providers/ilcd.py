@@ -236,7 +236,7 @@ class IlcdArchive(LcArchive):
         return self._archive.readfile(filename)
 
     def _check_or_retrieve_child(self, uid, uri):
-        child = self._get_entity(uid)
+        child = self.__getitem__(uid)  # looks upstream first
         if child is None:
             child = self._fetch(uid, uri=uri)
         return child
@@ -275,7 +275,7 @@ class IlcdArchive(LcArchive):
             return self._search_for_term(term, dtype=dtype)
 
         # if we get here, uid is valid and dtype is valid
-        entity = self._get_entity(uid)
+        entity = self.__getitem__(uid)  # checks upstream first (!! should this be local only?)
         if entity is not None:
             return entity
 

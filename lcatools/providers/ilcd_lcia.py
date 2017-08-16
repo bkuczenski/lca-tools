@@ -110,7 +110,7 @@ class IlcdLcia(IlcdArchive):
     def _load_lcia(self, **kwargs):
         for f in self.list_objects('LCIAMethod'):
             u = uuid_regex.search(f).groups()[0]
-            if self._get_entity(u) is not None:
+            if self._get_entity(u) is not None:  # we want to look strictly locally
                 continue
 
             self.load_lcia_method(u, **kwargs)

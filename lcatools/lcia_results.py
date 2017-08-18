@@ -34,6 +34,14 @@ class DuplicateResult(Exception):
     pass
 
 
+class InconsistentScores(Exception):
+    pass
+
+
+class InconsistentSummaries(Exception):
+    pass
+
+
 def number(val):
     try:
         return '%10.3g' % val
@@ -200,6 +208,22 @@ class SummaryLciaResult(object):
         if self.static:
             return self
         return self._internal_result.flatten(_apply_scale=self.node_weight)
+
+    def __add__(self, other):
+        if not isinstance(other, SummaryLciaResult):
+            raise TypeError('Can only add SummaryLciaResults together')
+        if self.static and other.static:
+            # either the node weights or the unit scores must be equal
+            if self.node_weight == other.node_weight:
+                self._static_value += other.unit_score
+            elif self.unit_score == other.unit_score:
+                raise ValueError('have not figured this out yet')
+            else:
+                raise InconsistentScores('These summaries do not add together')
+        elif not self.static and not other.static:
+            self._internal_result += other._internal_result
+        else:
+            raise InconsistentSummaries('One static, the other not')
 
 
 class AggregateLciaScore(object):
@@ -450,8 +474,10 @@ class LciaResult(object):
 
     def add_summary(self, key, entity, node_weight, unit_score):
         if key in self._LciaScores.keys():
-            raise DuplicateResult('Key %s is already present' % key)
-        self._LciaScores[key] = SummaryLciaResult(self, entity, node_weight, unit_score)
+            # raise DuplicateResult('Key %s is already present' % key)
+            self._LciaScores[key] += SummaryLciaResult(self, entity, node_weight, unit_score)
+        else:
+            self._LciaScores[key] = SummaryLciaResult(self, entity, node_weight, unit_score)
 
     def keys(self):
         if self._private:
@@ -541,6 +567,41 @@ class LciaResult(object):
         if sum(data) != self.total():
             print('Contributions do not equal total [%g vs total %g]' % (sum(data), self.total()))
         return data
+
+    def contrib_new(self, *args):
+        """
+        re-implement contrib query with a better spec.
+
+        Queries are specified as entries from self.keys(). One way to get the keys to be more legible is to first
+        perform an aggregation using self.aggregate().
+
+        The current __getitem__ method, which uses a fuzzy match (self._match_keys()) is not currently used.
+
+        :param args: A sequential list of components to query.  The special component '*' can be used to select the
+        balance of results.
+        :return: a 2-tuple: results, balance where results is a list having the same length as the number of arguments,
+         and balance is a float reporting the remainder.  sum(results, balance) == self.total().  If '*' is specified as
+         one of the queries, balance will always be 0.
+        """
+        bal_idx = None
+        results = []
+        for i, query in enumerate(args):
+            if query == '*':
+                bal_idx = i  # save for later
+                results.append(0.0)
+            else:
+                try:
+                    results.append(self._LciaScores[query].cumulative_result)
+                except KeyError:
+                    results.append(0.0)
+
+        balance = self.total() - sum(results)
+
+        if bal_idx is not None:
+            results[bal_idx] = balance
+            return results, 0.0
+        else:
+            return results, balance
 
 
 class LciaResults(dict):

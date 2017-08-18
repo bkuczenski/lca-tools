@@ -170,6 +170,9 @@ class Qdb(LcArchive):
         if ref is None:
             ref = 'local.qdb'
         super(Qdb, self).__init__(source, ref=ref, **kwargs)
+        if not os.path.exists(source):
+            print('Using default reference quantities')
+            source = REF_QTYS
         self.load_json(from_json(source))
 
         if isinstance(compartments, CompartmentManager):

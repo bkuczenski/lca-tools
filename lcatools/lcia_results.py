@@ -150,6 +150,9 @@ class SummaryLciaResult(object):
 
         self._lc = lc_result
 
+    def update_parent(self, lc):
+        self._lc = lc
+
     @property
     def static(self):
         return self._static_value is not None
@@ -212,18 +215,27 @@ class SummaryLciaResult(object):
     def __add__(self, other):
         if not isinstance(other, SummaryLciaResult):
             raise TypeError('Can only add SummaryLciaResults together')
-        if self.static and other.static:
+        if self.unit_score == other.unit_score:
+            if self.static:
+                unit_score = self._static_value
+            else:
+                unit_score = self._internal_result
+            # just sum the node weights, ignoring our local scaling factor (DWR!)
+            if self.entity == other.entity:
+                _node_weight = self._node_weight + other.node_weight
+            else:
+                print("entities do not match\n self: %s\nother: %s" % (self.entity, other.entity))
+                raise InconsistentSummaries
+        elif self.static and other.static:
             # either the node weights or the unit scores must be equal
-            if self.node_weight == other.node_weight:
-                self._static_value += other.unit_score
-            elif self.unit_score == other.unit_score:
-                raise ValueError('have not figured this out yet')
+            if self._node_weight == other.node_weight:
+                _node_weight = self._node_weight
+                unit_score = self._static_value + other.unit_score
             else:
                 raise InconsistentScores('These summaries do not add together')
-        elif not self.static and not other.static:
-            self._internal_result += other._internal_result
         else:
-            raise InconsistentSummaries('One static, the other not')
+            raise InconsistentSummaries('One static, the other not, and unit scores do not match')
+        return SummaryLciaResult(self._lc, self.entity, _node_weight, unit_score)
 
 
 class AggregateLciaScore(object):
@@ -384,7 +396,7 @@ class LciaResult(object):
             return
     '''
 
-    def aggregate(self, key=lambda x: x.fragment['StageName']):
+    def aggregate(self, key=lambda x: x.fragment['StageName'], entity=None):
         """
         returns a new LciaResult object in which the components of the original LciaResult object are aggregated
         according to a key.  The key is a lambda expression that is applied to each AggregateLciaScore component's
@@ -393,17 +405,21 @@ class LciaResult(object):
         The special key '*' will aggregate all components together.
 
         :param key: default: lambda x: x.fragment['StageName'] -- assuming the payload is a FragmentFlow
+        :param entity: if obfuscating aggregation is being performed (key = '*'), this logs the agg entity for reference
         :return:
         """
         agg_result = LciaResult(self.quantity, scenario=self.scenario, private=self._private, scale=self._scale)
         if key == '*':
-            key = lambda x: 'result'
-        for v in self._LciaScores.values():
-            keystring = 'other'
-            try:
-                keystring = key(v.entity)
-            finally:
-                agg_result.add_summary(keystring, v.entity, 1.0, v.cumulative_result)
+            if entity is None:
+                entity = 'aggregated process'
+            agg_result.add_summary('result', entity, 1.0, self.total())
+        else:
+            for v in self._LciaScores.values():
+                keystring = 'other'
+                try:
+                    keystring = key(v.entity)
+                finally:
+                    agg_result.add_summary(keystring, v.entity, 1.0, v.cumulative_result)
         return agg_result
 
     def show_agg(self, **kwargs):
@@ -475,6 +491,18 @@ class LciaResult(object):
     def add_summary(self, key, entity, node_weight, unit_score):
         if key in self._LciaScores.keys():
             # raise DuplicateResult('Key %s is already present' % key)
+            '''
+            tgt = self._LciaScores[key]
+            if isinstance(unit_score, LciaResult):
+                uss = unit_score.total()
+            else:
+                uss = unit_score
+            print('Key %s [%s] (%10.4g x %10.4g) adding %s (%10.4g x %10.4g)' % (key,
+                                                                                 tgt.entity,
+                                                                                 tgt.node_weight, tgt.unit_score,
+                                                                                 entity,
+                                                                                 node_weight, uss))
+            '''
             self._LciaScores[key] += SummaryLciaResult(self, entity, node_weight, unit_score)
         else:
             self._LciaScores[key] = SummaryLciaResult(self, entity, node_weight, unit_score)

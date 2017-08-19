@@ -167,7 +167,7 @@ class WaterfallChart(object):
             self._waterfall_horiz(ax, data_array[i], colors, **kwargs)
             ax.set_yticklabels(stages)
             xticklabels = [_i.get_text() for _i in ax.get_xticklabels()]
-            xticklabels[-1] += ' %s' % self._q.unitstring()
+            xticklabels[-1] += ' %s' % self._q.unit()
             ax.set_xticklabels(xticklabels)
 
             xlim = ax.get_xlim()

@@ -82,7 +82,7 @@ class BackgroundInterface(BasicInterface):
 
     def _ensure_ref_flow(self, ref_flow):
         if ref_flow is not None:
-            if isinstance(ref_flow, str):
+            if isinstance(ref_flow, str) or isinstance(ref_flow, int):
                 ref_flow = self._archive.retrieve_or_fetch_entity(ref_flow)
         return ref_flow
 

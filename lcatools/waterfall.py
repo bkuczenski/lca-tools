@@ -11,6 +11,10 @@ from math import floor
 
 from lcatools.charts import save_plot, net_color
 
+net_style = {
+    'edgecolor': 'none'
+}
+
 mpl.rcParams['patch.force_edgecolor'] = True
 mpl.rcParams['errorbar.capsize'] = 3
 mpl.rcParams['grid.color'] = 'k'
@@ -58,8 +62,22 @@ class WaterfallChart(object):
     A WaterfallChart turns a collection of LciaResult objects into a collection of waterfall graphs that share an
     ordinal axis.
     """
+    def _stage_style(self, stage):
+        if stage in self._color_dict:
+            this_style = {'color': self._color_dict[stage]}
+        else:
+            this_style = {'color': self._color}
+        if stage in self._style_dict:
+            this_style.update(self._style_dict[stage])
+        else:
+            if self._style is not None:
+                this_style.update(self._style)
+        return this_style
 
-    def __init__(self, *results, stages=None, color=None, color_dict=None, filename=None, width=6, **kwargs):
+    def __init__(self, *results, stages=None, color=None, color_dict=None,
+                 style=None, style_dict=None,
+                 include_net=True, net_name='remainder',
+                 filename=None, size=6, **kwargs):
         """
         Create a waterfall chart that compares the stage contributions of separate LciaResult objects.
 
@@ -77,34 +95,40 @@ class WaterfallChart(object):
         Each bar is drawn in the same default color, unless
         :param results: positional parameters must all be LciaResult objects having the same quantity
         :param stages:
+
         :param color:
         :param color_dict:
 
+        :param style: default style spec for each bar (to override pyplot bar/barh default
+        :param style_dict: dict of dicts for custom styles
+
+        :param include_net: [True] whether to include a net-result bar, if a discrepancy exists between the stage query
+         and the total result
+        :param net_name: ['remainder'] what to call the net-result bar
+
         :param filename:
-        :param width: axes width in inches (default 8")
-        :param kwargs:
+        :param size: axes size in inches (default 6") (width for horiz bars; height for vert bars)
+        :param kwargs: num_format [%3.2g], bar_width [0.85]
         """
 
         self._q = results[0].quantity
 
-        if color is None:
-            color = _random_color(self._q.uuid)
-
-        if color_dict is None:
-            color_dict = dict()
+        self._color = color or _random_color(self._q.uuid)
+        self._color_dict = color_dict or dict()
+        self._style = style or None
+        self._style_dict = style_dict or dict()
 
         if stages is None:
             stages = _grab_stages(*results)
 
         if filename is None:
-            filename = 'waterfall_%.3s' % self._q.uuid
+            filename = 'waterfall_%.3s.eps' % self._q.uuid
 
-        colors = []
+        styles = []
+        _stages = []
         for stage in stages:
-            if stage in color_dict:
-                colors.append(color_dict[stage])
-            else:
-                colors.append(color)
+            _stages.append(stage)
+            styles.append(self._stage_style(stage))
 
         data_array = []
         scenarios = []
@@ -118,44 +142,99 @@ class WaterfallChart(object):
                 data.append(net)
             data_array.append(data)
 
-        if _net_flag:
-            colors.append(net_color)
-            stages.append('remainder')
+        if _net_flag and include_net:
+            _stages.append(net_name)
+            if net_name not in self._color_dict:
+                self._color_dict[net_name] = net_color
+            if net_name not in self._style_dict:
+                self._style_dict[net_name] = net_style
+            styles.append(self._stage_style(net_name))
 
         self._d = data_array
         self._span = _data_range(self._d)
-        self._width = width
+        self._size = size
 
-        self._waterfall_staging_horiz(scenarios, stages, data_array, colors, **kwargs)
+        self._waterfall_staging_horiz(scenarios, _stages, styles, **kwargs)
         save_plot(filename)
 
     @property
     def int_threshold(self):
-        return (self._span[1] - self._span[0]) / (self._width * 1.8)
+        """
+        Useful only for horiz charts
+        :return:
+        """
+        return (self._span[1] - self._span[0]) / (self._size * 1.8)
 
-    def _waterfall_staging_horiz(self, scenarios, stages, data_array, colors,
+    '''
+    def _waterfall_staging_vert(self, scenarios, stages, styles, aspect=0.1, panel_sep=0.75, **kwargs):
+        """
+
+        :param scenarios:
+        :param stages:
+        :param styles:
+        :param aspect:
+        :param panel_sep:
+        :param kwargs:
+        :return:
+        """
+        num_ax = len(self._d)
+        num_steps = len(stages)
+        width = num_ax * (self._size * aspect * num_steps) + (num_ax - 1) * panel_sep
+
+        _ax_wid = self._size * aspect * num_steps / width
+        _gap_wid = panel_sep / width
+
+        fig = plt.figure(figsize=[width, self._size])
+        left = 0.0
+
+        _mn = _mx = 0.0
+        axes = []
+        for i in range(num_ax):
+            right = left + _ax_wid
+            ax = fig.add_axes([left, 0.0, _ax_wid, 1.0])
+            axes.append(ax)
+            self._waterfall_vert(ax, self._d[i], styles, **kwargs)
+            ax.set_xticklabels(stages)
+            xticklabels = [_i.get_text() for _i in ax.get_xticklabels()]
+            xticklabels[-1] += ' %s' % self._q.unit()
+            ax.set_xticklabels(xticklabels)
+
+            xlim = ax.get_xlim()
+            if xlim[0] < _mn:
+                _mn = xlim[0]
+            if xlim[1] > _mx:
+                _mx = xlim[1]
+
+            if scenarios[i] is not None or num_ax > 1:
+                ax.set_title(scenarios[i], fontsize=12)
+
+            top = bottom - _gap_hgt
+
+        for ax in axes:
+            ax.set_xlim([_mn, _mx])
+    '''
+
+    def _waterfall_staging_horiz(self, scenarios, stages, styles,
                                  aspect=0.1, panel_sep=0.5,
                                  **kwargs):
         """
         Creates a figure and axes and populates them with waterfalls.
         :param scenarios:
         :param stages:
-        :param data_array:
-        :param colors:
-        :param horiz:
+        :param styles:
         :param aspect:
         :param panel_sep:
         :param kwargs: num_format=%3.2g, bar_width=0.85
         :return:
         """
-        num_ax = len(data_array)
+        num_ax = len(self._d)
         num_steps = len(stages)
-        height = num_ax * (self._width * aspect * num_steps) + (num_ax - 1) * panel_sep
+        height = num_ax * (self._size * aspect * num_steps) + (num_ax - 1) * panel_sep
 
-        _ax_hgt = self._width * aspect * num_steps / height
+        _ax_hgt = self._size * aspect * num_steps / height
         _gap_hgt = panel_sep / height
 
-        fig = plt.figure(figsize=[self._width, height])
+        fig = plt.figure(figsize=[self._size, height])
         top = 1.0
 
         _mn = _mx = 0.0
@@ -164,7 +243,7 @@ class WaterfallChart(object):
             bottom = top - _ax_hgt
             ax = fig.add_axes([0.0, bottom, 1.0, _ax_hgt])
             axes.append(ax)
-            self._waterfall_horiz(ax, data_array[i], colors, **kwargs)
+            self._waterfall_horiz(ax, self._d[i], styles, **kwargs)
             ax.set_yticklabels(stages)
             xticklabels = [_i.get_text() for _i in ax.get_xticklabels()]
             xticklabels[-1] += ' %s' % self._q.unit()
@@ -184,12 +263,12 @@ class WaterfallChart(object):
         for ax in axes:
             ax.set_xlim([_mn, _mx])
 
-    def _waterfall_horiz(self, ax, data, colors, num_format='%3.2g', bar_width=0.85):
+    def _waterfall_horiz(self, ax, data, styles, num_format='%3.2g', bar_width=0.85):
         """
 
         :param ax:
         :param data:
-        :param colors:
+        :param styles: a list of style kwargs to add to each bar.  must include 'color' key; all others extra.
         :param num_format:
         :param bar_width:
         :return:
@@ -213,27 +292,48 @@ class WaterfallChart(object):
         yticks = []
 
         mx = 0.0
+        midpoint = self._span[0] + 0.6 * (self._span[1] - self._span[0])
 
         for i, dat in enumerate(data):
             yticks.append(center)
+            style = styles[i]
 
-            color = colors[i]
+            color = style['color']
 
             if dat < 0:
-                color = _fade_color(color)
+                style['color'] = _fade_color(color)
 
-            ax.barh(center, dat, left=cum, height=bar_width, color=color)
+            ax.barh(center, dat, left=cum, height=bar_width, **style)
             if self.int_threshold is not None and abs(dat) > self.int_threshold:
+                if sum(color) < 0.6:
+                    text_color = (1, 1, 1)
+                else:
+                    text_color = (0, 0, 0)
+
                 # interior label
                 x = cum + (dat / 2)
-                ax.text(x, center, num_format % dat, ha='center', va='center')
+                ax.text(x, center, num_format % dat, ha='center', va='center', color=text_color)
             else:
-                # end label
-                x = cum + dat
-                if x < self.int_threshold:
-                    ax.text(x + _h_gap, center, num_format % dat, ha='left', va='center')
+                '''# end label positioning-- this is complicated!
+                IF the bar is positive and the result is not too far to the right, we want the label on the right
+                IF the bar is too far to the right, we want the label on the left regardless of direction
+                IF the bar is too far to the left, we want the label on the right regardless of direction
+                We know the span. So let's pick a midpoint (above)
+                We know if we're here, the bar is short.  so we only need to think about the end.
+                '''
+                if cum > midpoint:
+                    ha = 'right'
+                    if dat > 0:
+                        x = cum - _h_gap
+                    else:
+                        x = cum + dat - _h_gap
                 else:
-                    ax.text(x - _h_gap, center, num_format % dat, ha='right', va='center')
+                    ha = 'left'
+                    if dat > 0:
+                        x = cum + dat + _h_gap
+                    else:
+                        x = cum + _h_gap
+                ax.text(x, center, num_format % dat, ha=ha, va='center')
 
             # connector
             if cum != 0:

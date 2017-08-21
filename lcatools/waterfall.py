@@ -31,10 +31,9 @@ def _fade_color(color):
     return colorsys.hsv_to_rgb(hsv[0], hsv[1], hsv[2]*0.8)
 
 
-def _random_color(uuid, sat=0.65, val=0.95):
+def random_color(uuid, sat=0.65, val=0.95, offset=14669):
 
-    _offset = 14669
-    hue = ((int('%.4s' % uuid, 16) + _offset) % 65536) / 65536
+    hue = ((int('%.4s' % uuid, 16) + offset) % 65536) / 65536
     return colorsys.hsv_to_rgb(hue, sat, val)
 
 
@@ -113,7 +112,7 @@ class WaterfallChart(object):
 
         self._q = results[0].quantity
 
-        self._color = color or _random_color(self._q.uuid)
+        self._color = color or random_color(self._q.uuid)
         self._color_dict = color_dict or dict()
         self._style = style or None
         self._style_dict = style_dict or dict()
@@ -168,6 +167,9 @@ class WaterfallChart(object):
     '''
     def _waterfall_staging_vert(self, scenarios, stages, styles, aspect=0.1, panel_sep=0.75, **kwargs):
         """
+        For the vertical-bar waterfall charts, we make just one axes and position the waterfalls at different x
+        positions. We may try to do the same thing for horiz waterfallos if we like it better.  This is nice because
+        it automatically adjusts for results with
 
         :param scenarios:
         :param stages:

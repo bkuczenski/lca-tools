@@ -213,6 +213,18 @@ class SummaryLciaResult(object):
         return self._internal_result.flatten(_apply_scale=self.node_weight)
 
     def __add__(self, other):
+        """
+        Add two summary LCIA results together.  This only works under the following circumstances:
+         * different instances of the same entity are being added (e.g. two instances of the same flow).
+           In this case, the two summaries' entities must compare as equal and their unit scores must be equal.
+           The node weights are added.  Scale is ignored (scale is inherited from the primary summary)
+
+         * Two static-valued summaries are added together.  In this case, either the scores must be equal (in which case
+           the node weights are summed) or the node weights must be equal, and the unit scores are summed.
+
+        :param other:
+        :return:
+        """
         if not isinstance(other, SummaryLciaResult):
             raise TypeError('Can only add SummaryLciaResults together')
         if self.unit_score == other.unit_score:
@@ -222,6 +234,7 @@ class SummaryLciaResult(object):
                 unit_score = self._internal_result
             # just sum the node weights, ignoring our local scaling factor (DWR!)
             if self.entity == other.entity:
+                # WARNING: FragmentFlow equality does not include magnitude or node weight
                 _node_weight = self._node_weight + other.node_weight
             else:
                 print("entities do not match\n self: %s\nother: %s" % (self.entity, other.entity))
@@ -398,9 +411,9 @@ class LciaResult(object):
 
     def aggregate(self, key=lambda x: x.fragment['StageName'], entity=None):
         """
-        returns a new LciaResult object in which the components of the original LciaResult object are aggregated
-        according to a key.  The key is a lambda expression that is applied to each AggregateLciaScore component's
-        entity property (components where the lambda fails will all be grouped together).
+        returns a new LciaResult object in which the components of the original LciaResult object are aggregated into
+        static values according to a key.  The key is a lambda expression that is applied to each AggregateLciaScore
+        component's entity property (components where the lambda fails will all be grouped together).
 
         The special key '*' will aggregate all components together.
 
@@ -419,7 +432,8 @@ class LciaResult(object):
                 try:
                     keystring = key(v.entity)
                 finally:
-                    agg_result.add_summary(keystring, v.entity, 1.0, v.cumulative_result)
+                    # use keystring AS entity
+                    agg_result.add_summary(keystring, keystring, 1.0, v.cumulative_result)
         return agg_result
 
     def show_agg(self, **kwargs):

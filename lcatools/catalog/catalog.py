@@ -477,6 +477,7 @@ class LcCatalog(object):
         for cf in ref.factors():
             self._qdb.add_cf(cf)
         self._lcia_methods.add(lcia)
+        self._lcia_methods.add(ref)
 
     def lcia(self, p_ref, q_ref, ref_flow=None, refresh=False):
         """

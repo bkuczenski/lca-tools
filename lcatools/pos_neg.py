@@ -8,7 +8,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 
-from lcatools.charts import save_plot, net_color, open_ylims
+from lcatools.charts import save_plot, net_color, open_ylims, standard_labels
 from lcatools.waterfall import random_color
 
 
@@ -37,7 +37,7 @@ class PosNegChart(object):
         """
         return (self._span[1] - self._span[0]) / (self._size * 18)
 
-    def __init__(self, *args, color=None, horiz=False, size=4, aspect=0.4, bar_width=0.3, filename=None):
+    def __init__(self, *args, color=None, horiz=False, size=4, aspect=0.4, bar_width=0.28, filename=None):
         """
         aspect reports the aspect ratio of a single chart.  aspect + bar_width together determine the aspect
         ratio of multi-arg charts.
@@ -62,6 +62,10 @@ class PosNegChart(object):
         self._pos = []
         self._neg = []
         self._idx = []
+
+        self._pos_handle = None
+        self._neg_handle = None  # for legend
+
         ptr = 0.0
         for i, arg in enumerate(args):
             _pos = 0.0
@@ -97,8 +101,7 @@ class PosNegChart(object):
                 self._pos_neg_horiz(ax, i)
             else:
                 self._pos_neg_vert(ax, i)
-                ax.set_xticks(self._idx)
-                ax.set_xticklabels([arg.scenario for arg in args])
+                standard_labels(ax, [arg.scenario for arg in args], ticks=self._idx, rotate=False, width=22)
 
                 ax.spines['top'].set_visible(False)
                 ax.spines['bottom'].set_visible(False)
@@ -113,6 +116,9 @@ class PosNegChart(object):
             open_ylims(ax, margin=0.05)
             ax.set_ylabel(qty.unit())
 
+        if self._neg_handle is not None:
+            ax.legend((self._pos_handle, self._neg_handle), ('Impacts', 'Avoided'))
+
         ax.set_title(qty['Name'])
         save_plot(filename)
 
@@ -124,12 +130,16 @@ class PosNegChart(object):
         neg = self._neg[i]
         x = self._idx[i]
 
-        ax.bar(x, pos, align='center', width=0.85 * self._bw, color=self._color)
+        h = ax.bar(x, pos, align='center', width=0.85 * self._bw, color=self._color)
+        if self._pos_handle is None:
+            self._pos_handle = h
         if neg != 0:
             ax.text(x + 0.5 * self._bw, pos + self._tgap, '%3.2g' % pos, ha='center', va='bottom')
             x += self._bw
-            ax.bar(x, neg, bottom=pos, width=0.85 * self._bw, align='center', color=net_color,
-                   linewidth=0)
+            h = ax.bar(x, neg, bottom=pos, width=0.62 * self._bw, align='center', color=net_color,
+                       linewidth=0)
+            if self._neg_handle is None:
+                self._neg_handle = h
             # edge line
             ax.plot([x, x - self._bw], [pos, pos], color=(0.3, 0.3, 0.3), zorder=-1)
 

@@ -116,14 +116,17 @@ def save_plot(file, close_after=True):
         plt.close()
 
 
-def standard_labels(ax, stages):
-    ax.set_xticks(range(len(stages)))
+def standard_labels(ax, stages, ticks=None, width=25, rotate=True):
+    rotation = 0
+    if ticks is None:
+        ticks = range(len(stages))
+    ax.set_xticks(ticks)
     if max([len(l) for l in stages]) > 12:
-        labels = ['\n'.join(wrap(l, 25)) for l in stages]
-        rotation = 90
+        labels = ['\n'.join(wrap(l, width)) for l in stages]
+        if rotate:
+            rotation = 90
     else:
         labels = stages
-        rotation = 0
 
     ax.set_xticklabels(labels, rotation=rotation)
 

@@ -107,7 +107,7 @@ class WaterfallChart(object):
 
         :param filename:
         :param size: axes size in inches (default 6") (width for horiz bars; height for vert bars)
-        :param kwargs: num_format [%3.2g], bar_width [0.85]
+        :param kwargs: panel_sep [0.65in], num_format [%3.2g], bar_width [0.85]
         """
 
         self._q = results[0].quantity
@@ -136,7 +136,9 @@ class WaterfallChart(object):
         for res in results:
             scenarios.append(res.scenario)
             data, net = res.contrib_new(*stages)
-            if _net_flag or net != 0:
+            _span = _data_range([data])
+            if abs(net) * 1e8 > (_span[1] - _span[0]):
+                # only include remainder if it is greater than 10 ppb
                 _net_flag = True
                 data.append(net)
             data_array.append(data)
@@ -217,7 +219,7 @@ class WaterfallChart(object):
     '''
 
     def _waterfall_staging_horiz(self, scenarios, stages, styles,
-                                 aspect=0.1, panel_sep=0.5,
+                                 aspect=0.1, panel_sep=0.65,
                                  **kwargs):
         """
         Creates a figure and axes and populates them with waterfalls.
@@ -258,7 +260,14 @@ class WaterfallChart(object):
                 _mx = xlim[1]
 
             if scenarios[i] is not None or num_ax > 1:
-                ax.set_title(scenarios[i], fontsize=12)
+                sc_name = scenarios[i]
+            else:
+                sc_name = ''
+
+            if i == 0:
+                ax.set_title('%s\n%s' % (self._q['Name'], sc_name), fontsize=12)
+            else:
+                ax.set_title('%s' % sc_name, fontsize=12)
 
             top = bottom - _gap_hgt
 

@@ -555,10 +555,18 @@ class LciaResult(object):
         print('%s' % self)
 
     def show_details(self, key=None, **kwargs):
+        """
+        Sorting by parts is not ideal but it will have to do.
+        :param key:
+        :param kwargs:
+        :return:
+        """
         self._header()
         if not self._private:
             if key is None:
-                for e in self._LciaScores.keys():
+                for e in sorted(self._LciaScores.keys(),
+                                key=lambda x: self._LciaScores[x].cumulative_result,
+                                reverse=True):
                     self._LciaScores[e].show_detailed_result(**kwargs)
             else:
                 self._LciaScores[key].show_detailed_result(**kwargs)

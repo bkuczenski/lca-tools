@@ -8,7 +8,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 
-from lcatools.charts import save_plot, net_color
+from lcatools.charts import save_plot, net_color, open_ylims
 from lcatools.waterfall import random_color
 
 
@@ -99,7 +99,6 @@ class PosNegChart(object):
                 self._pos_neg_vert(ax, i)
                 ax.set_xticks(self._idx)
                 ax.set_xticklabels([arg.scenario for arg in args])
-                ax.set_title(qty['Name'])
 
                 ax.spines['top'].set_visible(False)
                 ax.spines['bottom'].set_visible(False)
@@ -107,10 +106,14 @@ class PosNegChart(object):
                 ax.spines['left'].set_linewidth(2)
                 ax.spines['right'].set_visible(False)
 
-                ax.plot(ax.get_xlim(), [0, 0], 'k', linewidth=2, zorder=-1)
+        if horiz:
+            pass
+        else:
+            ax.plot(ax.get_xlim(), [0, 0], 'k', linewidth=2, zorder=-1)
+            open_ylims(ax, margin=0.05)
+            ax.set_ylabel(qty.unit())
 
-                ax.set_ylabel(qty.unit())
-
+        ax.set_title(qty['Name'])
         save_plot(filename)
 
     def _pos_neg_horiz(self, ax, i):

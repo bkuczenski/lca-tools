@@ -586,7 +586,7 @@ def stack_bars(ax, series, hue, units, labels=None, title='Scenario Analysis', s
         ax.set_ylim(btm, 3.6)
 
 
-def _open_ylims(ax, margin=0.1):
+def open_ylims(ax, margin=0.1):
     """
     workaround for buggy Axes.margins() (https://github.com/matplotlib/matplotlib/pull/7995 and others)
     :param ax:
@@ -596,7 +596,7 @@ def _open_ylims(ax, margin=0.1):
     bottom, top = ax.get_ylim()
     yr = top - bottom
     if bottom < 0 < top:
-        bottom -= margin * yr
+        # bottom -= margin * yr
         top += margin * yr
         ax.set_ylim(bottom=bottom, top=top)
 

@@ -4,6 +4,7 @@ This object replaces the LciaResult types spelled out in Antelope-- instead, it 
 """
 from lcatools.exchanges import ExchangeValue, DissipationExchange
 from lcatools.characterizations import Characterization
+from lcatools.autorange import AutoRange
 from numbers import Number
 from math import isclose
 # from lcatools.interfaces import to_uuid
@@ -121,8 +122,9 @@ class DetailedLciaResult(object):
         else:
             dirn_mod = ' '
         return '%s%s x %-s  = %-s [%s] %s' % (dirn_mod,
-                                              number(self.value), number(self.factor[self.location]),
-                                              number(self.result),
+                                              number(self.value),
+                                              number(self.factor[self.location] * self._lc.autorange),
+                                              number(self.result * self._lc.autorange),
                                               self.location,
                                               self.factor.flow)
 
@@ -185,7 +187,8 @@ class SummaryLciaResult(object):
         return self.entity == other.entity
 
     def __str__(self):
-        return '%s = %-s x %-s %s' % (number(self.cumulative_result), number(self.node_weight), number(self.unit_score),
+        return '%s = %-s x %-s %s' % (number(self.cumulative_result * self._lc.autorange), number(self.node_weight),
+                                      number(self.unit_score * self._lc.autorange),
                                       self.entity)
 
     def show(self):
@@ -310,7 +313,7 @@ class AggregateLciaScore(object):
         # print('             Total score: %g ' % self.cumulative_result)
 
     def __str__(self):
-        return '%s  %s' % (number(self.cumulative_result), self.entity)
+        return '%s  %s' % (number(self.cumulative_result * self._lc.autorange), self.entity)
 
 
 def show_lcia(lcia_results):
@@ -369,6 +372,40 @@ class LciaResult(object):
         self._scale = scale
         self._LciaScores = dict()
         self._private = private
+        self._autorange = None
+
+    def set_autorange(self, value=True):
+        """
+        Update the AutoRange object. Should be done before results are presented, if auto-ranging is in use.
+
+        Auto-ranging affects the following outputs:
+         * any show() or printed string
+         * the results of contrib_new()
+        No other outputs are affected.
+        :param value:
+        :return:
+        """
+        assert isinstance(value, bool), 'cannot set autorange to %s of type %s' % (value, type(value))
+        if value:
+            self._autorange = AutoRange(self.range())
+        else:
+            self._autorange = None
+
+    def unset_autorange(self):
+        self.set_autorange(False)
+
+    @property
+    def autorange(self):
+        if self._autorange is None:
+            return 1.0
+        else:
+            return self._autorange.scale
+
+    def unit(self):
+        if self._autorange is not None:
+            return self._autorange.adj_unit(self.quantity.unit())
+        else:
+            return self.quantity.unit()
 
     @property
     def scale(self):
@@ -537,7 +574,10 @@ class LciaResult(object):
         return [k.entity for k in self._LciaScores.values()]
 
     def _header(self):
-        print('%s %s' % (self.quantity, self.quantity.reference_entity.unitstring))
+        print('%s %s' % (self.quantity, self.unit()))
+        if self._autorange:
+            self.set_autorange()  # update AutoRange object
+            print('Auto-ranging: x %g' % self.autorange)
         print('-' * 60)
         if self._scale != 1.0:
             print('%10.4gx %s' % (self._scale, 'scale'))
@@ -618,7 +658,7 @@ class LciaResult(object):
             print('Contributions do not equal total [%g vs total %g]' % (sum(data), self.total()))
         return data
 
-    def contrib_new(self, *args):
+    def contrib_new(self, *args, autorange=None):
         """
         re-implement contrib query with a better spec.
 
@@ -629,10 +669,16 @@ class LciaResult(object):
 
         :param args: A sequential list of components to query.  The special component '*' can be used to select the
         balance of results.
+        :param autorange: [None] do not alter autorange settings.  [True / False]: activate or deactivate auto-ranging.
         :return: a 2-tuple: results, balance where results is a list having the same length as the number of arguments,
          and balance is a float reporting the remainder.  sum(results, balance) == self.total().  If '*' is specified as
          one of the queries, balance will always be 0.
         """
+        if autorange is not None:
+            self.set_autorange(autorange)
+        elif self._autorange is not None:
+                self.set_autorange()
+
         bal_idx = None
         results = []
         for i, query in enumerate(args):
@@ -641,11 +687,11 @@ class LciaResult(object):
                 results.append(0.0)
             else:
                 try:
-                    results.append(self._LciaScores[query].cumulative_result)
+                    results.append(self._LciaScores[query].cumulative_result * self.autorange)
                 except KeyError:
                     results.append(0.0)
 
-        balance = self.total() - sum(results)
+        balance = self.total() * self.autorange - sum(results)
 
         if bal_idx is not None:
             results[bal_idx] = balance

@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 
 from lcatools.charts import save_plot, net_color, open_ylims, standard_labels
 from lcatools.waterfall import random_color
+from lcatools.autorange import AutoRange
 
 
 mpl.rcParams['patch.force_edgecolor'] = True
@@ -37,7 +38,8 @@ class PosNegChart(object):
         """
         return (self._span[1] - self._span[0]) / (self._size * 18)
 
-    def __init__(self, *args, color=None, horiz=False, size=4, aspect=0.4, bar_width=0.28, filename=None):
+    def __init__(self, *args, color=None, horiz=False, size=4, aspect=0.4, bar_width=0.28, filename=None,
+                 num_format='%3.2g', autorange=False):
         """
         aspect reports the aspect ratio of a single chart.  aspect + bar_width together determine the aspect
         ratio of multi-arg charts.
@@ -49,6 +51,8 @@ class PosNegChart(object):
         :param aspect:
         :param bar_width:
         :param filename:
+        :param num_format:
+        :param autorange:
         """
         self._bw = bar_width
         self._size = size
@@ -88,6 +92,14 @@ class PosNegChart(object):
 
         self._span = [min(self._neg), max(self._pos)]
 
+        if autorange:
+            a = AutoRange(self._span[1] - self._span[0])
+            self._ar_scale = a.scale
+            self._unit = a.adj_unit(qty.unit())
+        else:
+            self._ar_scale = 1.0
+            self._unit = qty.unit()
+
         cross = size * aspect * (ptr + bar_width)
         if horiz:
             fig = plt.figure(figsize=[self._size, cross])
@@ -100,7 +112,7 @@ class PosNegChart(object):
             if horiz:
                 self._pos_neg_horiz(ax, i)
             else:
-                self._pos_neg_vert(ax, i)
+                self._pos_neg_vert(ax, i, num_format=num_format)
                 standard_labels(ax, [arg.scenario for arg in args], ticks=self._idx, rotate=False, width=22)
 
                 ax.spines['top'].set_visible(False)
@@ -114,7 +126,7 @@ class PosNegChart(object):
         else:
             ax.plot(ax.get_xlim(), [0, 0], 'k', linewidth=2, zorder=-1)
             open_ylims(ax, margin=0.05)
-            ax.set_ylabel(qty.unit())
+            ax.set_ylabel(self._unit)
 
         if self._neg_handle is not None:
             ax.legend((self._pos_handle, self._neg_handle), ('Impacts', 'Avoided'))
@@ -125,32 +137,32 @@ class PosNegChart(object):
     def _pos_neg_horiz(self, ax, i):
         pass
 
-    def _pos_neg_vert(self, ax, i):
-        pos = self._pos[i]
-        neg = self._neg[i]
+    def _pos_neg_vert(self, ax, i, num_format='%3.2g'):
+        pos = self._pos[i] * self._ar_scale
+        neg = self._neg[i] * self._ar_scale
         x = self._idx[i]
 
         h = ax.bar(x, pos, align='center', width=0.85 * self._bw, color=self._color)
         if self._pos_handle is None:
             self._pos_handle = h
         if neg != 0:
-            ax.text(x + 0.5 * self._bw, pos + self._tgap, '%3.2g' % pos, ha='center', va='bottom')
+            ax.text(x + 0.5 * self._bw, pos + self._tgap, num_format % pos, ha='center', va='bottom')
             x += self._bw
             h = ax.bar(x, neg, bottom=pos, width=0.62 * self._bw, align='center', color=net_color,
                        linewidth=0)
             if self._neg_handle is None:
                 self._neg_handle = h
             # edge line
-            ax.plot([x, x - self._bw], [pos, pos], color=(0.3, 0.3, 0.3), zorder=-1)
+            ax.plot([x, x - self._bw], [pos, pos], color=(0.3, 0.3, 0.3), zorder=-1, linewidth=0.5)
 
             x += self._bw
             tot = pos + neg
             ax.plot([x, x], [0, tot], color='k', marker='_')
-            ax.text(x, 0.5 * tot, '%3.2g' % tot, ha='center', va='center',
+            ax.text(x, 0.5 * tot, num_format % tot, ha='center', va='center',
                     bbox=dict(boxstyle='square,pad=0.02', fc='w', ec='none'))
             ax.plot([x, x + self._bw], [0, 0], linewidth=0)
 
             # edge line
-            ax.plot([x, x - self._bw], [tot, tot], color=(0.3, 0.3, 0.3), zorder=-1)
+            ax.plot([x, x - self._bw], [tot, tot], color=(0.3, 0.3, 0.3), zorder=-1, linewidth=0.5)
         else:
             ax.text(x, pos, '%3.2g' % pos)

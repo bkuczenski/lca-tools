@@ -15,12 +15,12 @@ net_style = {
     'edgecolor': 'none'
 }
 
-mpl.rcParams['patch.force_edgecolor'] = True
+# mpl.rcParams['patch.force_edgecolor'] = False
 mpl.rcParams['errorbar.capsize'] = 3
 mpl.rcParams['grid.color'] = 'k'
 mpl.rcParams['grid.linestyle'] = ':'
 mpl.rcParams['grid.linewidth'] = 0.5
-mpl.rcParams['lines.linewidth'] = 1.0
+# mpl.rcParams['lines.linewidth'] = 1.0
 mpl.rcParams['axes.autolimit_mode'] = 'round_numbers'
 mpl.rcParams['axes.xmargin'] = 0
 mpl.rcParams['axes.ymargin'] = 0
@@ -73,10 +73,19 @@ class WaterfallChart(object):
                 this_style.update(self._style)
         return this_style
 
+    def _adjust_autorange(self, autorange, autounits):
+        the_max = next(i for i, x in enumerate(autorange) if x == max(autorange))
+        the_max_range = autorange[the_max]
+        self._unit = autounits[the_max]
+        for i, x in enumerate(autorange):
+            if i != the_max:
+                factor = the_max_range / x
+                self._d[i] = [k * factor for k in self._d[i]]
+
     def __init__(self, *results, stages=None, color=None, color_dict=None,
                  style=None, style_dict=None,
                  include_net=True, net_name='remainder',
-                 filename=None, size=6, **kwargs):
+                 filename=None, size=6, autorange=False, **kwargs):
         """
         Create a waterfall chart that compares the stage contributions of separate LciaResult objects.
 
@@ -107,6 +116,7 @@ class WaterfallChart(object):
 
         :param filename:
         :param size: axes size in inches (default 6") (width for horiz bars; height for vert bars)
+        :param autorange: [False] whether to auto-range the results
         :param kwargs: panel_sep [0.65in], num_format [%3.2g], bar_width [0.85]
         """
 
@@ -132,10 +142,16 @@ class WaterfallChart(object):
         data_array = []
         scenarios = []
         _net_flag = False
+        ar_scale = []
+        ar_units = []
 
         for res in results:
             scenarios.append(res.scenario)
-            data, net = res.contrib_new(*stages)
+            data, net = res.contrib_new(*stages, autorange=autorange)
+            ar_scale.append(res.autorange)
+            ar_units.append(res.unit())
+            self._unit = res.unit()  # only need to correct this if autounits are not all the same
+
             _span = _data_range([data])
             if abs(net) * 1e8 > (_span[1] - _span[0]):
                 # only include remainder if it is greater than 10 ppb
@@ -155,6 +171,10 @@ class WaterfallChart(object):
         self._span = _data_range(self._d)
         self._size = size
 
+        # need to deal with inconsistent autoranges
+        if len(set(ar_scale)) != 1:
+            self._adjust_autorange(ar_scale, ar_units)
+
         self._waterfall_staging_horiz(scenarios, _stages, styles, **kwargs)
         save_plot(filename)
 
@@ -162,7 +182,7 @@ class WaterfallChart(object):
     def int_threshold(self):
         """
         Useful only for horiz charts
-        :return:
+        :return: about 0.55" in axis units
         """
         return (self._span[1] - self._span[0]) / (self._size * 1.8)
 
@@ -250,7 +270,7 @@ class WaterfallChart(object):
             self._waterfall_horiz(ax, self._d[i], styles, **kwargs)
             ax.set_yticklabels(stages)
             xticklabels = [_i.get_text() for _i in ax.get_xticklabels()]
-            xticklabels[-1] += ' %s' % self._q.unit()
+            xticklabels[-1] += ' %s' % self._unit
             ax.set_xticklabels(xticklabels)
 
             xlim = ax.get_xlim()
@@ -265,7 +285,7 @@ class WaterfallChart(object):
                 sc_name = ''
 
             if i == 0:
-                ax.set_title('%s\n%s' % (self._q['Name'], sc_name), fontsize=12)
+                ax.set_title('%s [%s]\n%s' % (self._q['Name'], self._unit, sc_name), fontsize=12)
             else:
                 ax.set_title('%s' % sc_name, fontsize=12)
 
@@ -303,7 +323,6 @@ class WaterfallChart(object):
         yticks = []
 
         mx = 0.0
-        midpoint = self._span[0] + 0.6 * (self._span[1] - self._span[0])
 
         for i, dat in enumerate(data):
             yticks.append(center)
@@ -329,26 +348,52 @@ class WaterfallChart(object):
                 IF the bar is positive and the result is not too far to the right, we want the label on the right
                 IF the bar is too far to the right, we want the label on the left regardless of direction
                 IF the bar is too far to the left, we want the label on the right regardless of direction
-                We know the span. So let's pick a midpoint (above)
-                We know if we're here, the bar is short.  so we only need to think about the end.
+                BUT if the bar is close to 0, we want it printed on the far side from the y axis, to not overwrite
+                We know if we're here, the bar is short.  so we only need to think about one end.
                 '''
-                if cum > midpoint:
-                    ha = 'right'
-                    if dat > 0:
-                        x = cum - _h_gap
+                if cum + dat > self._span[1] - self.int_threshold:
+                    # must do left: too close to right
+                    if cum > 0 and cum < self.int_threshold:
+                        anchor = 'zero left'
                     else:
-                        x = cum + dat - _h_gap
+                        anchor = 'left'
+                elif cum + dat < self._span[0] + self.int_threshold:
+                    # too close to left
+                    if cum < 0 and abs(cum) < self.int_threshold:
+                        anchor = 'zero right'
+                    else:
+                        anchor = 'right'
+                elif abs(cum) < self.int_threshold:
+                    if cum >= 0:
+                        anchor = 'right'
+                    else:
+                        anchor = 'left'
                 else:
-                    ha = 'left'
-                    if dat > 0:
-                        x = cum + dat + _h_gap
+                    # not in a danger zone
+                    if dat >= 0:
+                        anchor = 'right'
                     else:
-                        x = cum + _h_gap
+                        anchor = 'left'
+
+                if anchor == 'left':
+                    x = min([cum, cum + dat]) - _h_gap
+                    ha = 'right'
+                elif anchor == 'zero left':
+                    x = -_h_gap
+                    ha = 'right'
+                elif anchor == 'zero right':
+                    x = _h_gap
+                    ha = 'left'
+                else:
+                    x = max([cum, cum + dat]) + _h_gap
+                    ha = 'left'
+
                 ax.text(x, center, num_format % dat, ha=ha, va='center')
 
             # connector
             if cum != 0:
-                ax.plot([cum, cum], [center, center - 1], color=_conn_color, zorder=-1)
+                ax.plot([cum, cum], [center - 0.5*bar_width, center - 1 + 0.5*bar_width],
+                        color=_conn_color, zorder=-1, linewidth=0.5)
 
             cum += dat
             if cum > mx:
@@ -366,12 +411,12 @@ class WaterfallChart(object):
         ax.tick_params(axis='y', length=0)
 
         # cumsum marker
-        ax.plot([cum, cum], [center - 1, bottom], color=_conn_color, zorder=-1)
+        ax.plot([cum, cum], [center - 1 + 0.5*bar_width, bottom], color=_conn_color, zorder=-1, linewidth=0.5)
         ax.plot(cum, bottom - 0.4 * _low_gap, marker='v', markerfacecolor=(1, 0, 0), markeredgecolor='none',
                 markersize=8)
 
         # x labels
-        if abs(cum) > self.int_threshold:
+        if abs(cum) > self.int_threshold and abs(mx) > self.int_threshold:
             xticks = [0]
             xticklabels = ['0']
         else:

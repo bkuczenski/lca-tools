@@ -114,7 +114,7 @@ class WaterfallChart(object):
          and the total result
         :param net_name: ['remainder'] what to call the net-result bar
 
-        :param filename:
+        :param filename: default 'waterfall_%.3s.eps' % uuid.  Enter 'none' to return (and not save) the chart
         :param size: axes size in inches (default 6") (width for horiz bars; height for vert bars)
         :param autorange: [False] whether to auto-range the results
         :param kwargs: panel_sep [0.65in], num_format [%3.2g], bar_width [0.85]
@@ -175,8 +175,13 @@ class WaterfallChart(object):
         if len(set(ar_scale)) != 1:
             self._adjust_autorange(ar_scale, ar_units)
 
-        self._waterfall_staging_horiz(scenarios, _stages, styles, **kwargs)
-        save_plot(filename)
+        self._fig = self._waterfall_staging_horiz(scenarios, _stages, styles, **kwargs)
+        if filename != 'none':
+            save_plot(filename)
+
+    @property
+    def fig(self):
+        return self._fig
 
     @property
     def int_threshold(self):
@@ -293,6 +298,7 @@ class WaterfallChart(object):
 
         for ax in axes:
             ax.set_xlim([_mn, _mx])
+        return fig
 
     def _waterfall_horiz(self, ax, data, styles, num_format='%3.2g', bar_width=0.85):
         """
@@ -335,7 +341,7 @@ class WaterfallChart(object):
 
             ax.barh(center, dat, left=cum, height=bar_width, **style)
             if self.int_threshold is not None and abs(dat) > self.int_threshold:
-                if sum(color) < 0.6:
+                if sum(color[:2]) < 0.6:
                     text_color = (1, 1, 1)
                 else:
                     text_color = (0, 0, 0)

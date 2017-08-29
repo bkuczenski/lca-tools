@@ -111,7 +111,7 @@ def _has_pos_neg(res):
 
 
 def save_plot(file, close_after=True):
-    plt.savefig(file, format='eps', bbox_inches='tight')
+    plt.savefig(file, format='eps', bbox_inches='tight', transparent=True)
     if close_after:
         plt.close()
 

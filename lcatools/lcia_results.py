@@ -244,7 +244,7 @@ class SummaryLciaResult(object):
                 raise InconsistentSummaries
         elif self.static and other.static:
             # either the node weights or the unit scores must be equal
-            if self._node_weight == other.node_weight:
+            if self._node_weight == other._node_weight:
                 _node_weight = self._node_weight
                 unit_score = self._static_value + other.unit_score
             else:

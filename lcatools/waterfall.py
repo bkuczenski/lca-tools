@@ -341,7 +341,7 @@ class WaterfallChart(object):
 
             ax.barh(center, dat, left=cum, height=bar_width, **style)
             if self.int_threshold is not None and abs(dat) > self.int_threshold:
-                if sum(color[:2]) < 0.6:
+                if sum(style['color'][:2]) < 0.6:
                     text_color = (1, 1, 1)
                 else:
                     text_color = (0, 0, 0)

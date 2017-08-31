@@ -39,7 +39,7 @@ class PosNegChart(object):
         return (self._span[1] - self._span[0]) / (self._size * 18)
 
     def __init__(self, *args, color=None, horiz=False, size=4, aspect=0.4, bar_width=0.28, filename=None,
-                 num_format='%3.2g', autorange=False):
+                 num_format='%3.2g', autorange=False, legend=True):
         """
         aspect reports the aspect ratio of a single chart.  aspect + bar_width together determine the aspect
         ratio of multi-arg charts.
@@ -128,7 +128,7 @@ class PosNegChart(object):
             open_ylims(ax, margin=0.05)
             ax.set_ylabel(self._unit)
 
-        if self._neg_handle is not None:
+        if legend and self._neg_handle is not None:
             ax.legend((self._pos_handle, self._neg_handle), ('Impacts', 'Avoided'))
 
         ax.set_title(qty['Name'])

@@ -248,7 +248,7 @@ class SummaryLciaResult(object):
                 _node_weight = self._node_weight
                 unit_score = self._static_value + other.unit_score
             else:
-                raise InconsistentScores('These summaries do not add together')
+                raise InconsistentScores('These summaries do not add together:\n%s\n%s' % (self, other))
         else:
             raise InconsistentSummaries('One static, the other not, and unit scores do not match')
         return SummaryLciaResult(self._lc, self.entity, _node_weight, unit_score)

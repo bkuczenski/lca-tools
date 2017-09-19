@@ -34,7 +34,11 @@ class Characterization(object):
         self._natural_dirn = None
 
     def origin(self, location='GLO'):
-        org = self._origins[location]
+        org = None
+        if location in self._origins:
+            org = self._origins[location]
+        elif 'GLO' in self._origins:
+            org = self._origins['GLO']
         if org is None:
             return self.flow.origin
         return org

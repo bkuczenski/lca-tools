@@ -109,25 +109,40 @@ def has_pos_neg(res):
     return False
 
 
-def save_plot(file, close_after=True):
-    plt.savefig(file, format='eps', bbox_inches='tight')
+def save_plot(file, close_after=True, transparent=True):
+    plt.savefig(file, format='eps', bbox_inches='tight', transparent=transparent)
     if close_after:
         plt.close()
 
 
-def standard_labels(ax, stages):
-    ax.set_xticks(range(len(stages)))
+def standard_labels(ax, stages, ticks=None, width=25, rotate=True):
+    """
+
+    :param ax: axes to modify
+    :param stages: tick labels
+    :param ticks: locations of ticks [default: range(len(stages))]
+    :param width: [25] text wrap width
+    :param rotate: [True] whether to rotate long labels.  specify bool or rotation argument.
+    :return:
+    """
+    rotation = 0
+    if ticks is None:
+        ticks = range(len(stages))
+    ax.set_xticks(ticks)
     if max([len(l) for l in stages]) > 12:
-        labels = ['\n'.join(wrap(l, 25)) for l in stages]
-        rotation = 90
+        labels = ['\n'.join(wrap(l, width)) for l in stages]
+        if rotate:
+            if isinstance(rotate, bool):
+                rotation = 90
+            else:
+                rotation = rotate
     else:
         labels = stages
-        rotation = 0
 
     ax.set_xticklabels(labels, rotation=rotation)
 
 
-def _open_ylims(ax, margin=0.1):
+def open_ylims(ax, margin=0.1):
     """
     workaround for buggy Axes.margins() (https://github.com/matplotlib/matplotlib/pull/7995 and others)
     :param ax:

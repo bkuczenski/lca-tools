@@ -4,6 +4,7 @@ This object replaces the LciaResult types spelled out in Antelope-- instead, it 
 """
 from lcatools.exchanges import ExchangeValue, DissipationExchange
 from lcatools.characterizations import Characterization
+from lcatools.autorange import AutoRange
 from numbers import Number
 from math import isclose
 # from lcatools.interfaces import to_uuid
@@ -31,6 +32,14 @@ class InconsistentScenario(Exception):
 
 
 class DuplicateResult(Exception):
+    pass
+
+
+class InconsistentScores(Exception):
+    pass
+
+
+class InconsistentSummaries(Exception):
     pass
 
 
@@ -113,8 +122,9 @@ class DetailedLciaResult(object):
         else:
             dirn_mod = ' '
         return '%s%s x %-s  = %-s [%s] %s' % (dirn_mod,
-                                              number(self.value), number(self.factor[self.location]),
-                                              number(self.result),
+                                              number(self.value),
+                                              number(self.factor[self.location] * self._lc.autorange),
+                                              number(self.result * self._lc.autorange),
                                               self.location,
                                               self.factor.flow)
 
@@ -141,6 +151,9 @@ class SummaryLciaResult(object):
             self._internal_result = unit_score
 
         self._lc = lc_result
+
+    def update_parent(self, lc):
+        self._lc = lc
 
     @property
     def static(self):
@@ -174,7 +187,8 @@ class SummaryLciaResult(object):
         return self.entity == other.entity
 
     def __str__(self):
-        return '%s = %-s x %-s %s' % (number(self.cumulative_result), number(self.node_weight), number(self.unit_score),
+        return '%s = %-s x %-s %s' % (number(self.cumulative_result * self._lc.autorange), number(self.node_weight),
+                                      number(self.unit_score * self._lc.autorange),
                                       self.entity)
 
     def show(self):
@@ -200,6 +214,44 @@ class SummaryLciaResult(object):
         if self.static:
             return self
         return self._internal_result.flatten(_apply_scale=self.node_weight)
+
+    def __add__(self, other):
+        """
+        Add two summary LCIA results together.  This only works under the following circumstances:
+         * different instances of the same entity are being added (e.g. two instances of the same flow).
+           In this case, the two summaries' entities must compare as equal and their unit scores must be equal.
+           The node weights are added.  Scale is ignored (scale is inherited from the primary summary)
+
+         * Two static-valued summaries are added together.  In this case, either the scores must be equal (in which case
+           the node weights are summed) or the node weights must be equal, and the unit scores are summed.
+
+        :param other:
+        :return:
+        """
+        if not isinstance(other, SummaryLciaResult):
+            raise TypeError('Can only add SummaryLciaResults together')
+        if self.unit_score == other.unit_score:
+            if self.static:
+                unit_score = self._static_value
+            else:
+                unit_score = self._internal_result
+            # just sum the node weights, ignoring our local scaling factor (DWR!)
+            if self.entity == other.entity:
+                # WARNING: FragmentFlow equality does not include magnitude or node weight
+                _node_weight = self._node_weight + other.node_weight
+            else:
+                print("entities do not match\n self: %s\nother: %s" % (self.entity, other.entity))
+                raise InconsistentSummaries
+        elif self.static and other.static:
+            # either the node weights or the unit scores must be equal
+            if self._node_weight == other._node_weight:
+                _node_weight = self._node_weight
+                unit_score = self._static_value + other.unit_score
+            else:
+                raise InconsistentScores('These summaries do not add together:\n%s\n%s' % (self, other))
+        else:
+            raise InconsistentSummaries('One static, the other not, and unit scores do not match')
+        return SummaryLciaResult(self._lc, self.entity, _node_weight, unit_score)
 
 
 class AggregateLciaScore(object):
@@ -261,7 +313,7 @@ class AggregateLciaScore(object):
         # print('             Total score: %g ' % self.cumulative_result)
 
     def __str__(self):
-        return '%s  %s' % (number(self.cumulative_result), self.entity)
+        return '%s  %s' % (number(self.cumulative_result * self._lc.autorange), self.entity)
 
 
 def show_lcia(lcia_results):
@@ -320,6 +372,40 @@ class LciaResult(object):
         self._scale = scale
         self._LciaScores = dict()
         self._private = private
+        self._autorange = None
+
+    def set_autorange(self, value=True):
+        """
+        Update the AutoRange object. Should be done before results are presented, if auto-ranging is in use.
+
+        Auto-ranging affects the following outputs:
+         * any show() or printed string
+         * the results of contrib_new()
+        No other outputs are affected.
+        :param value:
+        :return:
+        """
+        assert isinstance(value, bool), 'cannot set autorange to %s of type %s' % (value, type(value))
+        if value:
+            self._autorange = AutoRange(self.range())
+        else:
+            self._autorange = None
+
+    def unset_autorange(self):
+        self.set_autorange(False)
+
+    @property
+    def autorange(self):
+        if self._autorange is None:
+            return 1.0
+        else:
+            return self._autorange.scale
+
+    def unit(self):
+        if self._autorange is not None:
+            return self._autorange.adj_unit(self.quantity.unit())
+        else:
+            return self.quantity.unit()
 
     @property
     def scale(self):
@@ -360,26 +446,31 @@ class LciaResult(object):
             return
     '''
 
-    def aggregate(self, key=lambda x: x.fragment['StageName']):
+    def aggregate(self, key=lambda x: x.fragment['StageName'], entity=None):
         """
-        returns a new LciaResult object in which the components of the original LciaResult object are aggregated
-        according to a key.  The key is a lambda expression that is applied to each AggregateLciaScore component's
-        entity property (components where the lambda fails will all be grouped together).
+        returns a new LciaResult object in which the components of the original LciaResult object are aggregated into
+        static values according to a key.  The key is a lambda expression that is applied to each AggregateLciaScore
+        component's entity property (components where the lambda fails will all be grouped together).
 
         The special key '*' will aggregate all components together.
 
         :param key: default: lambda x: x.fragment['StageName'] -- assuming the payload is a FragmentFlow
+        :param entity: if obfuscating aggregation is being performed (key = '*'), this logs the agg entity for reference
         :return:
         """
         agg_result = LciaResult(self.quantity, scenario=self.scenario, private=self._private, scale=self._scale)
         if key == '*':
-            key = lambda x: 'result'
-        for v in self._LciaScores.values():
-            keystring = 'other'
-            try:
-                keystring = key(v.entity)
-            finally:
-                agg_result.add_summary(keystring, v.entity, 1.0, v.cumulative_result)
+            if entity is None:
+                entity = 'aggregated process'
+            agg_result.add_summary('result', entity, 1.0, self.total())
+        else:
+            for v in self._LciaScores.values():
+                keystring = 'other'
+                try:
+                    keystring = key(v.entity)
+                finally:
+                    # use keystring AS entity
+                    agg_result.add_summary(keystring, keystring, 1.0, v.cumulative_result)
         return agg_result
 
     def show_agg(self, **kwargs):
@@ -450,8 +541,22 @@ class LciaResult(object):
 
     def add_summary(self, key, entity, node_weight, unit_score):
         if key in self._LciaScores.keys():
-            raise DuplicateResult('Key %s is already present' % key)
-        self._LciaScores[key] = SummaryLciaResult(self, entity, node_weight, unit_score)
+            # raise DuplicateResult('Key %s is already present' % key)
+            '''
+            tgt = self._LciaScores[key]
+            if isinstance(unit_score, LciaResult):
+                uss = unit_score.total()
+            else:
+                uss = unit_score
+            print('Key %s [%s] (%10.4g x %10.4g) adding %s (%10.4g x %10.4g)' % (key,
+                                                                                 tgt.entity,
+                                                                                 tgt.node_weight, tgt.unit_score,
+                                                                                 entity,
+                                                                                 node_weight, uss))
+            '''
+            self._LciaScores[key] += SummaryLciaResult(self, entity, node_weight, unit_score)
+        else:
+            self._LciaScores[key] = SummaryLciaResult(self, entity, node_weight, unit_score)
 
     def keys(self):
         if self._private:
@@ -469,7 +574,10 @@ class LciaResult(object):
         return [k.entity for k in self._LciaScores.values()]
 
     def _header(self):
-        print('%s %s' % (self.quantity, self.quantity.reference_entity.unitstring))
+        print('%s %s' % (self.quantity, self.unit()))
+        if self._autorange:
+            self.set_autorange()  # update AutoRange object
+            print('Auto-ranging: x %g' % self.autorange)
         print('-' * 60)
         if self._scale != 1.0:
             print('%10.4gx %s' % (self._scale, 'scale'))
@@ -487,10 +595,18 @@ class LciaResult(object):
         print('%s' % self)
 
     def show_details(self, key=None, **kwargs):
+        """
+        Sorting by parts is not ideal but it will have to do.
+        :param key:
+        :param kwargs:
+        :return:
+        """
         self._header()
         if not self._private:
             if key is None:
-                for e in self._LciaScores.keys():
+                for e in sorted(self._LciaScores.keys(),
+                                key=lambda x: self._LciaScores[x].cumulative_result,
+                                reverse=True):
                     self._LciaScores[e].show_detailed_result(**kwargs)
             else:
                 self._LciaScores[key].show_detailed_result(**kwargs)
@@ -541,6 +657,47 @@ class LciaResult(object):
         if sum(data) != self.total():
             print('Contributions do not equal total [%g vs total %g]' % (sum(data), self.total()))
         return data
+
+    def contrib_new(self, *args, autorange=None):
+        """
+        re-implement contrib query with a better spec.
+
+        Queries are specified as entries from self.keys(). One way to get the keys to be more legible is to first
+        perform an aggregation using self.aggregate().
+
+        The current __getitem__ method, which uses a fuzzy match (self._match_keys()) is not currently used.
+
+        :param args: A sequential list of components to query.  The special component '*' can be used to select the
+        balance of results.
+        :param autorange: [None] do not alter autorange settings.  [True / False]: activate or deactivate auto-ranging.
+        :return: a 2-tuple: results, balance where results is a list having the same length as the number of arguments,
+         and balance is a float reporting the remainder.  sum(results, balance) == self.total().  If '*' is specified as
+         one of the queries, balance will always be 0.
+        """
+        if autorange is not None:
+            self.set_autorange(autorange)
+        elif self._autorange is not None:
+                self.set_autorange()
+
+        bal_idx = None
+        results = []
+        for i, query in enumerate(args):
+            if query == '*':
+                bal_idx = i  # save for later
+                results.append(0.0)
+            else:
+                try:
+                    results.append(self._LciaScores[query].cumulative_result * self.autorange)
+                except KeyError:
+                    results.append(0.0)
+
+        balance = self.total() * self.autorange - sum(results)
+
+        if bal_idx is not None:
+            results[bal_idx] = balance
+            return results, 0.0
+        else:
+            return results, balance
 
 
 class LciaResults(dict):

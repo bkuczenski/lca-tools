@@ -44,13 +44,13 @@ class AutoRange(object):
             else:
                 return
 
-    def __init__(self, range):
+    def __init__(self, rng):
         """
         creates an object for computing auto-ranged values.  The input argument should be the largest value that
         is expected to appear in the context.  It will be ranged to fall between 0-1000 (absolute value).
-        :param range:
+        :param rng:
         """
-        self._range = abs(range)
+        self._range = abs(rng)
         self._shift = 0
         self._set_shift()
 

@@ -1,6 +1,5 @@
 """
-The StudyManager is an LcCatalog that has further abilities to deal with LcStudies: to create and compute with
- fragments.
+We are new and improving this file.  There is no reason for the prior Foreground Catalog
 
 """
 import os

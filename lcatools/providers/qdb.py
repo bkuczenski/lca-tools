@@ -224,7 +224,7 @@ class Qdb(LcArchive):
             raise TypeError('Not adding non-quantity to Qdb: %s' % q)
         if not q.is_entity:
             q = q.fetch()
-        ind = self._q.add_set(self._q_terms(q), merge=True)
+        ind = self._q.add_set(self._q_terms(q), merge=False)  # allow different versions of the same quantity
         if self._q.entity(ind) is None:
             self._q.set_entity(ind, q)
             try:
@@ -470,7 +470,13 @@ class Qdb(LcArchive):
 
     @staticmethod
     def _q_terms(q):
-        return q.external_ref, q.link, q['Name'], str(q)
+        """
+        ordered from most- to least-specific
+        :param q:
+        :return:
+        """
+        for i in q.link, str(q), q.external_ref, q['Name']:
+            yield i
 
     def add_cf(self, factor, flow=None):
         """

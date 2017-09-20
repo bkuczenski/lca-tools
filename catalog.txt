@@ -1,4 +1,87 @@
 ==========
+Tue Sep 19 15:08:01 -0700 2017
+
+Progress?  We made the decision to refactor ForegroundCatalog but we have yet to actually do it.
+
+We DO have a test case, however: to successfully import the AUOMA model.  So let's start there.
+
+No, let's first start by refactoring foreground_catalog, and then using AUOMA as a test case from there.
+
+first mistake of the day: should have merged WaterfallCharts into master instead of into ReCatalog.
+
+oh well live and learn.  ReCatalog will be merged soon enough.
+
+So what do we want to accomplish with Foreground Catalog?
+
+ * if fragments are just another entity type, why do we need another catalog type? ans: we don't.
+   - previously, we utilized the difference when de-serializing FlowTerminations.  If they terminate to processes, we created a catalog_ref; otherwise, we just retrieved the fragment itself.
+   - but now, we want that catalog ref to stand in for fragment, just as it stands in for process.
+   - all we need to do is provide foregrounds as a new LcResource.
+     = we can do that with existing code using catalog.new_resource()
+     = only we can't EXACTLY, because an LcForeground needs a catalog as an argument.  We can provide it- but we should do so automatically.
+     == Ah! catalog is already provided to create_archive() because it's needed in archive_from_json-- so we just need to add another case (done)
+   - so wtf is the ForegroundCatalog supposed to do?? we identified 4 features:
+     ** ed: hi, I'm ed
+     ** __getitem__(self, name) -> retrieves named foreground.  We DID want foregrounds to be scoped distinctly.
+     ** frag()
+     ** fragment_lcia()
+
+The editor is [only, presently] used in the LcForeground. So why don't we put the fucking editor straight in the fucking foreground?
+ 1. because the editor needs a Qdb
+ 2. because we only want to have one editor. (??)
+
+So why don't we just put the fucking editor in the LcCatalog?
+ 3. because we want to disallow fragment creation for simple catalogs? seems like an odd / quixotic decision.
+ 4. because LcCatalog is already too heavy? just like catalog_ref?
+
+Getitem could be useful for catalogs in general-- presently it pulls the archive by name.  could just transplant that.
+
+Frag() -- aha, now this is tricky.  We need a way of spooling through the existing, LOADED foregrounds and looking for a fragment by ref or leading uuid portion.-  That's as simple as filtering by type
+
+Fragment LCIA. This gets to a more fundamental question.
+Fragment LCIA operates on a list of FragmentFlows (and relies on flow terminations caching nested fragment flows internally)
+ - it needs qdb
+ - it needs to tell qdb to load factors
+ - it needs to call itself recursively.
+
+So... how are we going to be invoking this in the REAL world?  if we are going to be calling it as a catalog_ref method, then we want to model the behavior of the entity itself.
+EXCEPT-- a fragment ENTITY does not know how to compute its own LCIA-- it needs a catalog for that.
+Is there a precedent? YES- catalog_refs have all sorts of methods (mainly background methods) that don't work on literal entities.
+
+So- IF we made Fragment LCIA a catalog_ref function-- then what would it do, and where would it be implemented?
+ ans: it would be implemented in the inventory interface... the InventoryImplementation inherits the BasicImplementation, which keeps a pointer to the catalog, which has a Qdb
+ Better- the BasicImplementation is also one of n places where we're already keeping a log of characterized quantities-- but that's a different list-- because that's a list of quantities that are looked up externally and applied to native flows in the archive
+ so hmm.
+
+NO NO NO. The Qdb ALONE should keep track of what quantities have been loaded into the Qdb.  Right now that is not done because the Qdb only has add_cf, not add_all_cfs_for_quantity.
+
+I'm seriously recursing here....
+
+where are we at?
+
+AUOMA Testing
+-> ForegroundCatalog refactor
+  -> fragment_lcia()
+    -> catalog_ref()
+      -> Catalog.load_lcia_factors()
+        -> Qdb.get_canonical_quantity()
+
+What on earth do we want a canonical quantity for?  ans: the canonical quantity is the actual entity stored in the Qdb.  We want to retrieve it if we want to know whether it's loaded?  BUT- the literal (canonical) quantity ITSELF can't tell me its factors, because that is a catalog function.
+
+Where is get_canonical_quantity used? 6 places
+ * LcCatalog.lcia() -> to test if loaded; as argument to do_lcia
+ * LcCatalog.load_lcia_factors() -> to store a list of loaded quantities
+ * Qdb.do_lcia() -> to dance around a bit before retrieving the same quantity with get_quantity() (which is functionally identical)
+ * in BackgroundImplementation.bg_lcia(), in an if False: block (linked with BasicImplementation.characterize()
+ * in QuantityImplementation.lcia_methods(), in an apparent NOP (return value not used)
+ * in QuantityImplementation.quantities(), in the same apparent NOP (return value not used)
+   = now it's not really a NOP because it calls _get_q_ind, which ADDS the quantity if it doesn't already exist. But isn't there a better way of doing that?
+
+More to the point- the original question still stands: Why do we ever WANT to obtain a "canonical" quantity?  What does it allow us to do that having a quantity_ref.uuid doesn't?
+
+
+
+==========
 Tue Aug 01 13:25:08 -0700 2017
 
 This is still stalled out.

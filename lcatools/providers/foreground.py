@@ -21,7 +21,7 @@ class FragmentNotFound(Exception):
 
 class LcForeground(LcArchive):
     """
-    An LcForeground is defined by its being anchored to a physical directory, which is used to serialize the non-fragment
+    An LcForeground is defined by being anchored to a physical directory, which is used to serialize the non-fragment
     entities.  Also within this directory is a subdirectory called fragments, which is used to store fragments.
     """
     def _load_json_file(self, filename):
@@ -253,7 +253,7 @@ class LcForeground(LcArchive):
                        comment (override existing Comment if present; applied to all)
         :return:
         """
-        clone = self._catalog.ed.clone_fragment(frag, **kwargs)
+        clone = self.ed.clone_fragment(frag, **kwargs)
         self.add_entity_and_children(clone)
         return clone
 

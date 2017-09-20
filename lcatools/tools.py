@@ -51,6 +51,9 @@ def create_archive(source, ds_type, catalog=None, **kwargs):
     """
     if ds_type.lower() == 'json':
         a = archive_from_json(source, catalog=catalog, **kwargs)
+    elif ds_type.lower() in {'foreground', 'lcforeground'}:
+        # LcForeground needs a catalog
+        a = archive_factory(source, ds_type, catalog=catalog, **kwargs)
     else:
         a = archive_factory(source, ds_type, **kwargs)
     return a
@@ -82,6 +85,7 @@ def archive_factory(source, ds_type, **kwargs):
         'ecoinventlcia': EcoinventLcia,
         'ecoinvent_lcia': EcoinventLcia,
         'foreground': LcForeground,
+        'lcforeground': LcForeground,
         'traci2': Traci21Factors,
         'traci21': Traci21Factors,
         'traci21factors': Traci21Factors

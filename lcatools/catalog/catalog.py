@@ -156,7 +156,7 @@ class LcCatalog(object):
     def _ensure_resource(self, res):
         """
         create the archive requested. install qdb as upstream.
-        :param res:
+        :param res: an LcResource
         :return:
         """
         if not self._is_loaded(res):

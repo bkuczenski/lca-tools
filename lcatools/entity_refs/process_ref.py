@@ -1,0 +1,1 @@
+from lcatools.entity_refs.base import BaseRef

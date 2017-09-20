@@ -233,15 +233,6 @@ class Qdb(LcArchive):
                 pass
         return ind
 
-    def get_canonical_quantity(self, q):
-        """
-        q is an actual quantity entity
-        :param q:
-        :return: the canonical entity.  If none exists, the supplied quantity is made canonical
-        """
-        ind = self._get_q_ind(q)
-        return self._q.entity(ind)
-
     def is_known(self, q):
         """
         Checks whether the given quantity has been indexed by checking for a list of flowables
@@ -712,7 +703,9 @@ class Qdb(LcArchive):
 
     def do_lcia(self, quantity, inventory, locale='GLO', refresh=False, **kwargs):
         """
-        takes a quantity and an exchanges generator; returns an LciaResult for the given quantity
+        takes a quantity and an exchanges generator; returns an LciaResult for the given quantity.
+        For now, does NOT pre-load quantity LCIA methods. that is a catalog action. the Qdb doesn't do catalog stuff.
+        I am open to re-thinking it, though.
         :param quantity:
         :param inventory: generates exchanges
         :param locale: ['GLO']
@@ -720,14 +713,6 @@ class Qdb(LcArchive):
         :param kwargs: just quell_biogenic_co2 for the moment
         :return: an LciaResult whose components are the flows of the exchanges
         """
-        if isinstance(quantity, str):
-            quantity = self.get_canonical_quantity(quantity)
-        if not self.is_known(quantity):
-            if quantity.is_entity:
-                raise QuantityNotLoaded('%s is not a catalogRef' % quantity)
-            else:
-                for cf in quantity.factors():
-                    self.add_cf(cf)
         q = self.get_quantity(quantity.link)
         q_ind = self._get_q_ind(q)
         r = LciaResult(q)
@@ -842,4 +827,5 @@ class Qdb(LcArchive):
         :param locale:
         :return:
         """
-        pass
+        return self.convert(flowable=flowable, compartment=compartment, reference=ref_quantity,
+                            query=query_quantity, locale=locale)

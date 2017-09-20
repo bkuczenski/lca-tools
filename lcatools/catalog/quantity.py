@@ -13,10 +13,9 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
     The interface works normally on normally-constituted archives, but also allows the archives to override the default
     implementations (which require load_all)
     """
-    def __init__(self, catalog, archive, qdb, **kwargs):
+    def __init__(self, catalog, archive, **kwargs):
         super(QuantityImplementation, self).__init__(catalog, archive, **kwargs)
-        self._qdb = qdb
-        self._cm = qdb.c_mgr
+        self._cm = catalog.qdb.c_mgr
         self._flowables = None
         self._compartments = dict()
 
@@ -48,13 +47,11 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
     def quantities(self, **kwargs):
         for q_e in self._archive.quantities(**kwargs):
             q_ref = self.make_ref(q_e)
-            self._qdb.get_canonical_quantity(q_ref)
             yield q_ref
 
     def lcia_methods(self, **kwargs):
         for l in self._archive.lcia_methods(**kwargs):
             l_ref = self.make_ref(l)
-            self._qdb.get_canonical_quantity(l_ref)
             yield l_ref
 
     def _check_compartment(self, string):

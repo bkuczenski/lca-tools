@@ -118,7 +118,6 @@ class FlowTermination(object):
                 entity = fragment
         self._term = entity  # this must have origin, external_ref, and entity_type, and be operable (if ref)
         self._descend = True
-        self._subfragment_flows = []
         self.term_flow = None
         self._cached_ev = 1.0
         self._score_cache = LciaResults(fragment)
@@ -374,20 +373,6 @@ class FlowTermination(object):
 
         self.term_flow = term_flow
         self._cached_ev = inbound_ev or 1.0
-
-    def aggregate_subfragments(self, subfrags):
-        """
-        Stores enclosed subfragments for later aggregation. This gets set during traversal and used during LCIA.
-        :param subfrags: list of FragmentFlows to be aggregated
-        :return:
-        """
-        self._subfragment_flows = subfrags
-
-    @property
-    def subfragments(self):
-        if self.is_subfrag and (self.descend is False):
-            return self._subfragment_flows
-        return []
 
     def flowdb_results(self, lcia_results):
         self._score_cache = lcia_results

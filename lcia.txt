@@ -79,12 +79,22 @@ So-- 3 minutes to wrap this up:
  - RESTful implementation of the quantity relation is still a bit sketchy
  - but local implementation should still be fine.
  - steps required:
-   * get rid of get_canonical_quantity
-   * move LcCatalog.lcia() into InventoryInterface
-   * move ForegroundCatalog.fragment_lcia() into InventoryInterface
-   * move aggregate_subfragments() into FragmentFlow
+   X get rid of get_canonical_quantity
+   X move LcCatalog.lcia() into InventoryInterface-- scratch that-- no, unscratch it
+   X move ForegroundCatalog.fragment_lcia() into InventoryInterface
+   X move aggregate_subfragments() into FragmentFlow
    * then work on subclassing CatalogRef.
 
-
-
 Tue 2017-09-19 17:31:17 -0700
+
+
+==========
+Tue Sep 19 22:23:37 -0700 2017
+
+Let's think this through a LITTLE bit more.
+
+We can't move lcia() into the InventoryInterface because the InventoryImplementation doesn't have access to the catalog's (private) Qdb.  BUT- both Quantity and Background already require qdbs; in both cases they just use the catalog's own.  Why not simply make the qdb publicly accessible?
+
+Tue 2017-09-19 23:15:02 -0700
+
+ok... checked that off... tomorrow is the testing.

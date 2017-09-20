@@ -48,6 +48,7 @@ from lcatools.tools import create_archive, update_archive  # archive_from_json, 
 from lcatools.providers.qdb import Qdb
 from lcatools.flowdb.compartments import REFERENCE_INT  # reference intermediate flows
 from lcatools.tables.flowables import FlowablesGrid
+from lcatools.entities.editor import FragmentEditor
 
 
 _protocol = re.compile('^(\w+)://')
@@ -136,6 +137,8 @@ class LcCatalog(object):
         _names :=  ref:interface -> source
         _nicknames := nickname -> source
         """
+        self.ed = FragmentEditor(qdb=self._qdb, interactive=False)
+
         self._archives = dict()  # maps source to archive
         self._names = dict()  # maps reference to source
         self._nicknames = dict()  # keep a collection of shorthands for sources
@@ -143,6 +146,10 @@ class LcCatalog(object):
         self.add_existing_archive(qdb, interfaces=('index', 'quantity'), store=False)
 
         self._lcia_methods = set()
+
+    @property
+    def qdb(self):
+        return self._qdb
 
     def quantities(self, **kwargs):
         return self._qdb.quantities(**kwargs)
@@ -468,13 +475,13 @@ class LcCatalog(object):
                 continue
             matches = itype.intersection(set(res.interfaces))
             if 'quantity' in matches:
-                yield QuantityImplementation(self, self._archives[res.source], self._qdb, privacy=res.privacy)
+                yield QuantityImplementation(self, self._archives[res.source], privacy=res.privacy)
             if 'index' in matches:
                 yield IndexImplementation(self, self._archives[res.source], privacy=res.privacy)
             if 'inventory' in matches:
                 yield InventoryImplementation(self, self._archives[res.source], privacy=res.privacy)
             if 'background' in matches:
-                yield BackgroundImplementation(self, self._archives[res.source], self._qdb, privacy=res.privacy)
+                yield BackgroundImplementation(self, self._archives[res.source], privacy=res.privacy)
         '''
         # no need for this because qdb is (a) listed in the resolver and (b) upstream of everything
         if 'quantity' in itype:
@@ -516,32 +523,15 @@ class LcCatalog(object):
     def is_elementary(self, flow):
         return self._qdb.c_mgr.is_elementary(flow)
 
-    def is_loaded(self, lcia):
-        return lcia in self._lcia_methods
-
     def load_lcia_factors(self, ref):
-        lcia = self._qdb.get_canonical_quantity(self.fetch(ref))
-        for fb in ref.flowables():
-            self._qdb.add_new_flowable(*filter(None, fb))
-        for cf in ref.factors():
-            self._qdb.add_cf(cf)
-        self._lcia_methods.add(lcia)
-        self._lcia_methods.add(ref)
-
-    def lcia(self, p_ref, q_ref, ref_flow=None, refresh=False):
-        """
-        Perform LCIA of a process (p_ref) with respect to a given LCIA quantity (q_ref).  Returns an LciaResult.
-        :param p_ref: either a process, or a catalog_ref for a process
-        :param q_ref: either an LCIA method (quantity with 'Indicator'), or a catalog_ref for an LCIA method. Only
-         catalog refs have the capability to auto-load characterization factors.
-        :param ref_flow: [None] if applicable, reference flow to be considered for the process
-        :param refresh: [False] whether to re-calculate CFs
-        :return:
-        """
-        q_e = self._qdb.get_canonical_quantity(self.fetch(q_ref))
-        if not self.is_loaded(q_e):
-            self.load_lcia_factors(q_ref)
-        return self._qdb.do_lcia(q_e, p_ref.inventory(ref_flow=ref_flow), locale=p_ref['SpatialScope'], refresh=refresh)
+        lcia = self._qdb.get_quantity(self.fetch(ref))
+        if lcia not in self._lcia_methods:
+            for fb in ref.flowables():
+                self._qdb.add_new_flowable(*filter(None, fb))
+            for cf in ref.factors():
+                self._qdb.add_cf(cf)
+            self._lcia_methods.add(lcia)
+            self._lcia_methods.add(ref)
 
     def annotate(self, flow, quantity=None, factor=None, value=None, locale=None):
         """

@@ -303,9 +303,9 @@ class LcFragment(LcEntity):
         else:
             re = self.reference_entity.uuid[:7]
         if self.external_ref == self.uuid:
-            extname=''
+            extname = ''
         else:
-            extname='{%s}' % self.external_ref
+            extname = '{%s}' % self.external_ref
 
         return '(%s) %s %.5s %s %s  [%s] %s %s' % (re, self.dirn, self.uuid, self.dirn, self.term,
                                                    self.unit, self['Name'], extname)
@@ -1184,7 +1184,7 @@ class LcFragment(LcEntity):
             else:
                 # if aggregating, we are only setting unit scores- so don't scale
                 _print('aggregating', level=0)
-                ff[0].term.aggregate_subfragments(subfrags)
+                ff[0].aggregate_subfragments(subfrags)
                 ff[0].node_weight = downstream_nw
 
             # next we traverse our own child flows, determining the exchange values from the subfrag traversal
@@ -1269,6 +1269,16 @@ class FragmentFlow(object):
         self.node_weight = node_weight
         self.term = term
         self.is_conserved = is_conserved
+        self._subfragments = []
+
+    @property
+    def subfragments(self):
+        if self.term.is_subfrag and (self.term.descend is False):
+            return self._subfragments
+        return []
+
+    def aggregate_subfragments(self, subfrags):
+        self._subfragments = subfrags
 
     def scale(self, x):
         self.node_weight *= x

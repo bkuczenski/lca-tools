@@ -16,9 +16,8 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
     The BackgroundInterface exposes LCI computation with matrix ordering and inversion, and LCIA computation with
     enclosed private access to a quantity db.
     """
-    def __init__(self, catalog, archive, qdb, **kwargs):
+    def __init__(self, catalog, archive, **kwargs):
         super(BackgroundImplementation, self).__init__(catalog, archive, **kwargs)
-        self._qdb = qdb
 
         self._bm = None
 
@@ -129,7 +128,7 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
 
     def cutoffs(self, direction=None, search=None, **kwargs):
         for k in self._bg.exterior_flows:
-            if self._qdb.is_elementary(k):
+            if self._catalog.is_elementary(k):
                 continue
             if direction is not None:
                 if k.direction != direction:
@@ -141,7 +140,7 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
 
     def emissions(self, direction=None, search=None, **kwargs):
         for k in self._bg.exterior_flows:
-            if not self._qdb.is_elementary(k):
+            if not self._catalog.is_elementary(k):
                 continue
             if direction is not None:
                 if k.direction != direction:
@@ -172,15 +171,8 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
     def bg_lcia(self, process, query_qty, ref_flow=None, **kwargs):
         p = self._archive.retrieve_or_fetch_entity(process)
         ref_flow = self._ensure_ref_flow(ref_flow)
-        if False:  # self._archive.static:
-            q = self._qdb.get_canonical_quantity(query_qty)  #
-            # just stick with what works. In future: if lci is not available bc private, then we will need it
-            if not self.is_characterized(q):
-                self.characterize(self._qdb, q)
-            res = self._bg.lcia(p, query_qty, ref_flow=ref_flow, **kwargs)
-        else:
-            lci = self._bg.lci(p, ref_flow=ref_flow)
-            res = self._qdb.do_lcia(query_qty, lci, locale=p['SpatialScope'], **kwargs)
+        lci = self._bg.lci(p, ref_flow=ref_flow)
+        res = self._catalog.qdb.do_lcia(query_qty, lci, locale=p['SpatialScope'], **kwargs)
         if self.privacy > 0:
             return res.aggregate('*')
         return res

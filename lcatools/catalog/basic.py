@@ -24,6 +24,13 @@ class BasicImplementation(object):
 
         self._quantities = set()  # quantities for which archive has been characterized
 
+    def validate(self):
+        """
+        way to check that a query implementation is valid without querying anything
+        :return:
+        """
+        return self.origin
+
     @property
     def origin(self):
         return self._archive.ref

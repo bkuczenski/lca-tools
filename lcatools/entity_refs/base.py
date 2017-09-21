@@ -110,7 +110,11 @@ class BaseRef(object):
         Place for subclass-dependent specialization of show()
         :return:
         """
-        pass
+        print(' ** UNRESOLVED **')
+
+    @property
+    def resolved(self):
+        return False
 
     def show(self):
         """
@@ -188,6 +192,10 @@ class EntityRef(BaseRef):
         for i in iterable:
             if not self._query.is_elementary(i):
                 yield i
+
+    @property
+    def resolved(self):
+        return True
 
     def _show_hook(self):
         for i in ('Name', 'Comment'):

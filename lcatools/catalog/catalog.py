@@ -468,6 +468,8 @@ class LcCatalog(object):
         """
         if isinstance(itype, str):
             itype = [itype]
+        if itype is None:
+            itype = READONLY_INTERFACE_TYPES
         itype = set(itype)
         for res in sorted(self._resolver.resolve(origin, interfaces=itype),
                           key=lambda x: (not self._is_loaded(x), x.reference != origin, x.priority)):

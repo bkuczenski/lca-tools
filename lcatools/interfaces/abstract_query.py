@@ -1,6 +1,8 @@
 """
 Root-level catalog interface
 """
+class ValidationError(Exception):
+    pass
 
 
 class AbstractQuery(object):
@@ -32,3 +34,10 @@ class AbstractQuery(object):
             if result is not None:
                 return result
         raise exc
+
+    def validate(self):
+        try:
+            self._perform_query(None, 'validate', ValidationError)
+            return True
+        except ValidationError:
+            return False

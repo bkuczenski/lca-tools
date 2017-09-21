@@ -98,3 +98,42 @@ We can't move lcia() into the InventoryInterface because the InventoryImplementa
 Tue 2017-09-19 23:15:02 -0700
 
 ok... checked that off... tomorrow is the testing.
+
+==========
+Wed Sep 20 15:12:04 -0700 2017
+
+Today, that is.
+
+Let's look into subclassing CatalogRef.
+On the one hand, this doesn't seem like it would work because we want to be able to create a catalog ref without knowing what kind of entity it corresponds to.  Once we create it, we can't exactly morph it into a subclass.
+
+One option is to have CatalogRef create subclasses through the use of class methods.  This seems trick because we can just replace invocations of CatalogRef() with CatalogRef.new().  This seems like it would be prone to circular dependencies-- we would have to have all the subclasses in the same file because the constructors would need to be able to see each other.  That is basically exchanging one antipattern (having all the tricks in one class) with a slightly less obviously broken antipattern (having all the tricks in one file).  Plus it's contrived.
+
+Another option is to have the catalog generate the ref-- but that is undesirable because the whole genius OF the CatalogRef was its lack of dependency (currently, catalog_ref.py imports literally nothing)
+
+So what's the problem with the status quo, exactly?  We have to police all the methods. Every method needs to check for entity_type compatibility before executing.  NEEDS TO is maybe too strong a term, but it certainly provides a courtesy to the user.
+
+I mean, the function is not THAT long, and it grows slowly.
+
+Let's audit:
+
+lines 0-20: Exception classes
+lines 21-26: Class definition + basic doc
+lines 27-42: from_json(), accepting 'entity_type', 'origin' OR 'source', and 'externalId'
+lines 43-90: __init__(), including 20 lines of doc
+lines 91-95: _check_query() -- ERR_CHECK
+lines 96-122: query access methods
+lines 123-166: properties (including the somewhat concerning default_rx)
+
+
+OK there are two different things going on, and these are the things that should be split into separate classes- and not even subclasses- totally separate classes.
+
+First is the catalog lookup.  I specify an origin and an ID, and the catalog lookup gives me a floating reference that I can use for... well, nothing really.  All it can do is perform the lookup and give me a grounded reference that IS one entity type.
+
+Looking over the code, there are some functions that are only useful if _query is None, and many functions that are only useful if _query is non-None.  And a few things that are ambiguous: like _d access.
+
+I think I will create a new package called catalog_ref and give it:
+
+A base class with origin, external_ref, and _d;
+a set of entity refs that inherit the base class and provide entity-specific functionality, but require the query to be passed as an argument;
+a catalog ref that inherits the base class, imports the entity classes, and provides lookup functionality and RETURNS one of the entity refs.

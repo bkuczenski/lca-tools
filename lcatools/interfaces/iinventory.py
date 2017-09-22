@@ -39,6 +39,9 @@ class InventoryInterface(AbstractQuery):
         Return a list of exchanges with values. If no reference is supplied, return all unallocated exchanges, including
         reference exchanges. If a reference is supplied, return allocated (but not normalized) exchanges, excluding
         reference exchanges.
+
+        Note: if this is called on a fragment, the signature is the same but the 'ref_flow' argument is interpreted
+        as a 'scenario' specification instead, inclusive of the fragment's reference exchange
         :param process:
         :param ref_flow:
         :return:

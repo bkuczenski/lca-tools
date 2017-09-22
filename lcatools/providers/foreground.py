@@ -8,7 +8,7 @@ import re
 from lcatools.providers.base import LcArchive, to_uuid, entity_types
 from lcatools.entities import LcFragment
 from lcatools.exchanges import comp_dir
-from lcatools.catalog_ref import CatalogRef, NoCatalog
+from lcatools.entity_refs import CatalogRef, NoCatalog
 
 
 class AmbiguousReference(Exception):
@@ -76,9 +76,12 @@ class LcForeground(LcArchive):
         return self._catalog.ed
 
     def catalog_ref(self, origin, external_ref, entity_type=None):
-        ref = CatalogRef(origin, external_ref, catalog=self._catalog, entity_type=entity_type)
-        if entity_type == 'flow':
-            return self._catalog.fetch(ref)
+        ref = CatalogRef.lookup(origin, external_ref, catalog=self._catalog)
+        if ref is None:
+            ref = CatalogRef(origin, external_ref, entity_type=entity_type)
+        else:
+            if entity_type == 'flow':
+                return self._catalog.fetch(ref)
         return ref
 
     def add(self, entity):

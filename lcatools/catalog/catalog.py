@@ -37,7 +37,7 @@ from shutil import copy2
 import hashlib
 from collections import defaultdict
 
-from lcatools.interfaces.iquery import CatalogQuery, READONLY_INTERFACE_TYPES
+from lcatools.interfaces.iquery import CatalogQuery, READONLY_INTERFACE_TYPES, EntityNotFound
 from .index import IndexImplementation
 from .inventory import InventoryImplementation
 from .background import BackgroundImplementation
@@ -52,6 +52,10 @@ from lcatools.entities.editor import FragmentEditor
 
 
 _protocol = re.compile('^(\w+)://')
+
+
+class DuplicateEntries(Exception):
+    pass
 
 
 class LcCatalog(object):
@@ -423,29 +427,44 @@ class LcCatalog(object):
                               store=store,
                               static=True)
 
-    def _check_entity(self, source, external_ref):
-        ent = self._archives[source].retrieve_or_fetch_entity(external_ref)
+    def _add_lookup_token(self, link, ent):
         if ent is not None:
-            self._entities[ent.link] = ent
+            if link in self._entities:
+                if self._entities[link] is not ent:
+                    raise DuplicateEntries('stored: %s\nfound: \%s' % (self._entities[ent.link], ent))
+            else:
+                self._entities[link] = ent
+
+    def _check_entity(self, source, external_ref):
+        """
+        In the event of remote access, this is the call that will trigger a remote query
+        :param source:
+        :param external_ref:
+        :return:
+        """
+        ent = self._archives[source].retrieve_or_fetch_entity(external_ref)
+        self._add_lookup_token(ent.link, ent)  # cache entity itself
         return ent
 
     def _dereference(self, origin, external_ref, interface=None):
         """
-        Converts an origin + external_ref into an entity.  Under the current design, _dereference is used only for
-        non-fragments.  foreground catalogs implement a _retrieve method that is used for fragments.
+        Converts an origin + external_ref into an entity.  Both are interpreted as strings.
         :param origin:
         :param external_ref:
         :param interface:
         :return: resource.reference, entity
         """
-        uname = '/'.join([origin, str(external_ref)])
-        found_ref = None
+        origin = str(origin)
+        external_ref = str(external_ref)
+        uname = '/'.join([origin, external_ref])
+        found_org = None
         if uname in self._entities:
             return origin, self._entities[uname]
+        ent = None
         if origin in self._nicknames:
             ent = self._check_entity(self._nicknames[origin], external_ref)
-        else:
-            ent = None
+            found_org = self._archives[self._nicknames[origin]].ref
+        if ent is None:
             for res in self._resolver.resolve(origin, interfaces=interface):
                 try:
                     self._ensure_resource(res)
@@ -456,9 +475,23 @@ class LcCatalog(object):
                     raise
                 ent = self._check_entity(res.source, external_ref)
                 if ent is not None:
-                    found_ref = res.reference
+                    found_org = res.reference
                     break
-        return found_ref, ent
+        if ent is not None:
+            self._add_lookup_token('/'.join([found_org, external_ref]), ent)  # cache found entry
+            self._add_lookup_token(uname, ent)  # cache original query
+        return found_org, ent
+
+    def _dereference_req(self, *args):
+        """
+        When an answer is required-- wrap the result and screen for EntityNotFound
+        :param args:
+        :return:
+        """
+        f, e = self._dereference(*args)
+        if e is None:
+            raise EntityNotFound('/'.join(args))
+        return f, e
 
     def _get_interfaces(self, origin, itype):
         """
@@ -501,23 +534,34 @@ class LcCatalog(object):
         next(self._resolver.resolve(origin))  # raises UnknownOrigin
         return CatalogQuery(origin, catalog=self, **kwargs)
 
-    def lookup(self, ref):
+    def lookup(self, origin, external_ref):
         """
         Attempts to secure an entity
-        :param ref: a CatalogRef
-        :return: The lowest-priority origin to contain the entity
+        :param origin:
+        :param external_ref:
+        :return: The origin of the lowest-priority resource to match the query
         """
-        found_ref, e = self._dereference(ref.origin, ref.external_ref, READONLY_INTERFACE_TYPES)
-        return found_ref
+        found_org, e = self._dereference_req(origin, external_ref)
+        return found_org
+
+    def lookup_ref(self, ref):
+        """
+        Finds an origin for a supplied CatalogRef
+        :param ref: a CatalogRef
+        :return: The origin of the lowest-priority resource to resolve the ref
+        """
+        found_org, e = self._dereference_req(ref.origin, ref.external_ref)
+        return found_org
 
     def fetch(self, ref):
         if ref.is_entity:
             return ref
-        _, e = self._dereference(ref.origin, ref.external_ref, ('inventory', 'background', 'quantity'))
+        _, e = self._dereference_req(ref.origin, ref.external_ref)
         return e
 
-    def entity_type(self, ref):
-        return self.fetch(ref).entity_type
+    def entity_type(self, origin, external_ref):
+        _, e = self._dereference_req(origin, external_ref)
+        return e.entity_type
 
     """
     Qdb interaction

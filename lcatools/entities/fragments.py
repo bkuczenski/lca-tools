@@ -12,7 +12,7 @@ from lcatools.literate_float import LiterateFloat
 from lcatools.lcia_results import DetailedLciaResult, SummaryLciaResult, traversal_to_lcia
 from lcatools.interact import ifinput, parse_math
 from lcatools.terminations import FlowTermination
-from lcatools.catalog_ref import CatalogRef, NoCatalog
+from lcatools.entity_refs import CatalogRef, NoCatalog
 
 
 class InvalidParentChild(Exception):
@@ -882,6 +882,15 @@ class LcFragment(LcEntity):
         for f in io:
             frag_exchs.append(ExchangeValue(self, f.fragment.flow, f.fragment.direction, value=f.magnitude * scale))
         return sorted(frag_exchs, key=lambda x: (x.direction == 'Input', x.value), reverse=True)
+
+    def exchanges(self, scenario=None):
+        """
+        Generator for query compatibility with processes
+        :param scenario:
+        :return:
+        """
+        for x in self.inventory(scenario=scenario):
+            yield x
 
     def unit_inventory(self, scenario=None, observed=False):
         """

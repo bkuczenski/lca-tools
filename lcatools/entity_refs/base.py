@@ -35,7 +35,7 @@ class BaseRef(object):
     """
     _etype = None
 
-    def __init__(self, origin, external_ref, uuid=None, **kwargs):
+    def __init__(self, origin, external_ref, **kwargs):
         """
 
         :param origin:
@@ -44,8 +44,6 @@ class BaseRef(object):
         """
         self._origin = origin
         self._ref = external_ref
-
-        self._uuid = uuid
 
         self._d = kwargs
 
@@ -56,17 +54,6 @@ class BaseRef(object):
     @property
     def external_ref(self):
         return self._ref
-
-    @property
-    def uuid(self):
-        return self._uuid
-
-    def get_uuid(self):
-        """
-        DEPRECATED
-        :return:
-        """
-        return self.uuid
 
     @property
     def link(self):
@@ -105,6 +92,19 @@ class BaseRef(object):
             key = 'Local%s' % key
         self._d[key] = value
 
+    @property
+    def _name(self):
+        if self.has_property('Name'):
+            return ' ' + self['Name']
+        return ''
+
+    @property
+    def _addl(self):
+        return ''
+
+    def __str__(self):
+        return '%s/%s%s [%s]' % (self.origin, self.external_ref, self._name, self._addl)
+
     def _show_hook(self):
         """
         Place for subclass-dependent specialization of show()
@@ -123,8 +123,6 @@ class BaseRef(object):
         """
         print('%s catalog reference (%s)' % (self.__class__.__name__, self.external_ref))
         print('origin: %s' % self.origin)
-        if self.uuid is not None:
-            print('UUID: %s' % self.uuid)
         self._show_hook()
         if len(self._d) > 0:
             print('==Local Fields==')
@@ -148,7 +146,7 @@ class EntityRef(BaseRef):
     An EntityRef is a CatalogRef that has been provided a valid catalog query.  the EntityRef is still semi-abstract
     since there is no meaningful reference to an entity that is not typed.
     """
-    def __init__(self, origin, external_ref, query, **kwargs):
+    def __init__(self, origin, external_ref, query, uuid=None, **kwargs):
         """
 
         :param origin:
@@ -160,11 +158,23 @@ class EntityRef(BaseRef):
         if not query.validate():
             raise InvalidQuery('Query failed validation')
         self._query = query
+        self._uuid = uuid or self._query.get_uuid(self.external_ref)
 
     def _check_query(self, message=''):
         if self._query is None:
             print(self)
             raise NoCatalog(message)
+
+    @property
+    def uuid(self):
+        return self._uuid
+
+    def get_uuid(self):
+        """
+        DEPRECATED
+        :return:
+        """
+        return self.uuid
 
     def fetch(self):
         return self._query.fetch(self)
@@ -197,7 +207,20 @@ class EntityRef(BaseRef):
     def resolved(self):
         return True
 
+    @property
+    def privacy(self):
+        return self._query.privacy()
+
+    @property
+    def reference_entity(self):
+        return self._query.get_reference(self.external_ref)
+
+    def _show_ref(self):
+        print('reference: %s' % self.reference_entity)
+
     def _show_hook(self):
+        if self.uuid is not None:
+            print('UUID: %s' % self.uuid)
         for i in ('Name', 'Comment'):
             print('%7s: %s' % (i, self._query.get_item(self.external_ref, i)))
 

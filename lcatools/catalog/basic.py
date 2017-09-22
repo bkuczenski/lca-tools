@@ -1,4 +1,4 @@
-from lcatools.catalog_ref import CatalogRef
+from lcatools.entity_refs.catalog_ref import CatalogRef
 
 
 class PrivateArchive(Exception):
@@ -80,8 +80,7 @@ class BasicImplementation(object):
             return None
         if entity.entity_type == 'flow':
             return entity  # keep characterizations intact
-        return CatalogRef(self.origin, entity.external_ref, _query=self._catalog.query(self.origin),
-                          entity_type=entity.entity_type)
+        return self._catalog.make_ref(self.origin, entity.external_ref)
 
     def get_item(self, external_ref, item):
         return self._archive.get_item(external_ref, item)

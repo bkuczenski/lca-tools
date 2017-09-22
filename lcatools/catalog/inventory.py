@@ -35,9 +35,13 @@ class InventoryImplementation(BasicImplementation, InventoryInterface):
         if self.privacy > 0:
             raise PrivateArchive('Exchange values are protected')
         p = self._archive.retrieve_or_fetch_entity(process)
-        for x in sorted(p.exchanges(reference=ref_flow),
-                        key=lambda t: (not t.is_reference, t.direction, t.value or 0.0)):
-            yield x
+        if p.entity_type == 'process':
+            for x in sorted(p.exchanges(reference=ref_flow),
+                            key=lambda t: (not t.is_reference, t.direction, t.value or 0.0)):
+                yield x
+        elif p.entity_type == 'fragment':
+            for x in p.exchanges(scenario=ref_flow):
+                yield x
 
     def exchange_relation(self, process, ref_flow, exch_flow, direction, termination=None, **kwargs):
         """

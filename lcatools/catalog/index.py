@@ -24,9 +24,6 @@ class IndexImplementation(BasicImplementation, IndexInterface):
         for q in self._archive.quantities(**kwargs):
             yield self.make_ref(q)
 
-    def get(self, eid, **kwargs):
-        return self.make_ref(self._archive.retrieve_or_fetch_entity(eid, **kwargs))
-
     def terminate(self, flow, direction=None, **kwargs):
         for p in self._archive.terminate(flow, direction=direction, **kwargs):
             yield self.make_ref(p)

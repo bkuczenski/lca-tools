@@ -80,7 +80,8 @@ class BasicImplementation(object):
             return None
         if entity.entity_type == 'flow':
             return entity  # keep characterizations intact
-        return self._catalog.make_ref(self.origin, entity.external_ref)
+        return CatalogRef.from_query(self.origin, entity.external_ref, self._catalog.query(self.origin),
+                                     entity.entity_type)
 
     def get_item(self, external_ref, item):
         return self._archive.get_item(external_ref, item)
@@ -92,6 +93,8 @@ class BasicImplementation(object):
         return self._archive.get_uuid(external_ref)
 
     def get(self, external_ref, **kwargs):
+        if external_ref is None:
+            return None
         return self.make_ref(self._archive.retrieve_or_fetch_entity(external_ref, **kwargs))
 
     def fetch(self, external_ref, **kwargs):

@@ -46,9 +46,6 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
     foreground compat methods
     '''
 
-    def get(self, eid, **kwargs):
-        return self.make_ref(self._archive.retrieve_or_fetch_entity(eid, **kwargs))
-
     def exchange_values(self, process, flow, direction, termination=None, **kwargs):
         """
         Just yield reference exchanges through the foreground interface. TODO: also yield LCI results

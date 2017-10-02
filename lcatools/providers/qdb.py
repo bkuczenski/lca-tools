@@ -224,7 +224,10 @@ class Qdb(LcArchive):
             raise TypeError('Not adding non-quantity to Qdb: %s' % q)
         if not q.is_entity:
             q = q.fetch()
-        ind = self._q.add_set(self._q_terms(q), merge=False)  # allow different versions of the same quantity
+        if q.is_lcia_method():
+            ind = self._q.add_set(self._q_terms(q), merge=False)  # allow different versions of the same LCIA method
+        else:
+            ind = self._q.add_set(self._q_terms(q), merge=True)  # squash together different versions of a ref quantity
         if self._q.entity(ind) is None:
             self._q.set_entity(ind, q)
             try:

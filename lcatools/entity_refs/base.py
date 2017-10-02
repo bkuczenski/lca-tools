@@ -146,15 +146,14 @@ class EntityRef(BaseRef):
     An EntityRef is a CatalogRef that has been provided a valid catalog query.  the EntityRef is still semi-abstract
     since there is no meaningful reference to an entity that is not typed.
     """
-    def __init__(self, origin, external_ref, query, uuid=None, **kwargs):
+    def __init__(self, external_ref, query, uuid=None, **kwargs):
         """
 
-        :param origin:
         :param external_ref:
         :param query:
         :param kwargs:
         """
-        super(EntityRef, self).__init__(origin, external_ref, **kwargs)
+        super(EntityRef, self).__init__(query.origin, external_ref, **kwargs)
         if not query.validate():
             raise InvalidQuery('Query failed validation')
         self._query = query

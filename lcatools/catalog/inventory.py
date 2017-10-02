@@ -9,6 +9,9 @@ class InventoryImplementation(BasicImplementation, InventoryInterface):
     This provides access to detailed exchange values and computes the exchange relation
     """
     def exchanges(self, process, **kwargs):
+        if hasattr(self._archive, 'exchanges'):
+            for x in self._archive.exchanges(process, **kwargs):
+                yield x
         if self.privacy > 1:
             raise PrivateArchive('Exchange lists are protected')
         p = self._archive.retrieve_or_fetch_entity(process)

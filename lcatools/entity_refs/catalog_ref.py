@@ -59,17 +59,24 @@ class CatalogRef(BaseRef):
             return cls(origin, external_ref, entity_type=etype, **j)
 
     @classmethod
-    def from_query(cls, org, external_ref, query, etype):
-        if etype == 'process':
-            return ProcessRef(org, external_ref, query)
-        elif etype == 'flow':
-            return FlowRef(org, external_ref, query)
-        elif etype == 'quantity':
-            return QuantityRef(org, external_ref, query)
-        elif etype == 'fragment':
-            return FragmentRef(org, external_ref, query)
+    def from_entity(cls, entity, query):
+        if entity.entity_type == 'flow':
+            return FlowRef.from_flow(entity, query)
         else:
-            return cls(org, external_ref, entity_type=etype)
+            return cls.from_query(entity.external_ref, query, entity.entity_type)
+
+    @classmethod
+    def from_query(cls, external_ref, query, etype):
+        if etype == 'process':
+            return ProcessRef(external_ref, query)
+        elif etype == 'flow':
+            return FlowRef(external_ref, query)
+        elif etype == 'quantity':
+            return QuantityRef(external_ref, query)
+        elif etype == 'fragment':
+            return FragmentRef(external_ref, query)
+        else:
+            return cls(query.origin, external_ref, entity_type=etype)
 
     @classmethod
     def lookup(cls, origin, external_ref, catalog, **kwargs):
@@ -80,7 +87,7 @@ class CatalogRef(BaseRef):
             return None
         query = catalog.query(org, **kwargs)
         etype = catalog.entity_type(org, external_ref)
-        return cls.from_query(org, external_ref, query, etype)
+        return cls.from_query(external_ref, query, etype)
 
     def __init__(self, origin, external_ref, entity_type=None, **kwargs):
         super(CatalogRef, self).__init__(origin, external_ref, **kwargs)

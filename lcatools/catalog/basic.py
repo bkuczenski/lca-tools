@@ -22,8 +22,6 @@ class BasicImplementation(object):
         self._archive = archive
         self._privacy = privacy or 0
 
-        self._quantities = set()  # quantities for which archive has been characterized
-
     def validate(self):
         """
         way to check that a query implementation is valid without querying anything
@@ -45,43 +43,10 @@ class BasicImplementation(object):
     def __getitem__(self, item):
         return self._archive[item]
 
-    def is_characterized(self, quantity):
-        return quantity in self._quantities
-
-    def characterize(self, qdb, quantity, force=False, overwrite=False, locale='GLO'):
-        """
-        A hook that allows the LcCatalog to lookup characterization values using a supplied quantity db.  Quantities
-        that are looked up are added to a list so they aren't repeated.
-        :param qdb:
-        :param quantity: an actual entity
-        :param force: [False] re-characterize even if the quantity has already been characterized.
-        :param overwrite: [False] remove and replace existing characterizations.  (may have no effect if force=False)
-        :param locale: ['GLO'] which CF to retrieve
-        :return: a list of flows that have been characterized
-        """
-        chars = []
-        if quantity not in self._quantities or force:
-            for f in self._archive.flows():
-                if f.has_characterization(quantity):
-                    if overwrite:
-                        f.del_characterization(quantity)
-                    else:
-                        chars.append(f)
-                        continue
-                val = qdb.convert(flow=f, query=quantity, locale=locale)
-                if val != 0.0:
-                    chars.append(f)
-                    f.add_characterization(quantity, value=val)
-            self._quantities.add(quantity)
-        return chars
-
     def make_ref(self, entity):
         if entity is None:
             return None
-        if entity.entity_type == 'flow':
-            return entity  # keep characterizations intact
-        return CatalogRef.from_query(self.origin, entity.external_ref, self._catalog.query(self.origin),
-                                     entity.entity_type)
+        return CatalogRef.from_entity(entity, self._catalog.query(self.origin))
 
     def get_item(self, external_ref, item):
         return self._archive.get_item(external_ref, item)

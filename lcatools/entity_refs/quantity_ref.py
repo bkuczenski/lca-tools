@@ -15,9 +15,12 @@ class QuantityRef(EntityRef):
         return self.unit()
 
     def is_lcia_method(self):
-        if self._query.get_item(self.external_ref, 'Indicator') is not None:
-            return True
-        return False
+        ind = self._query.get_item(self.external_ref, 'Indicator')
+        if ind is None:
+            return False
+        elif len(ind) == 0:
+            return False
+        return True
 
     def flowables(self, **kwargs):
         return self._query.flowables(quantity=self.external_ref, **kwargs)

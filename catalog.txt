@@ -1,4 +1,203 @@
 ==========
+Fri Sep 29 15:18:39 -0700 2017
+
+Back to the top.
+
+What we want to happen is this:
+
+User is noodling around on a thin client.
+ * User requests a specific entity
+   = CatalogQuery.get() -> catalog._dereference
+     -> _entities? no
+     -> _check_entity -> archive.retrieve_or_fetch_entity()
+     	archive handles request.
+	if archive is an Antelope remote, 
+   
+
+
+
+
+ * User performs a search;
+   = index implementation... generator yields make_ref(p)
+   = 
+
+receives a list of entities:
+   - with their signatures, but
+   - without full dictionaries, and
+   - without quantitative data
+   = query 
+
+==========
+Fri Sep 22 12:24:56 -0700 2017
+
+this should be moved into the repo.... 
+
+Yesterday- "Finished" the catalog ref refactor but didn't test it.  Reflections after the fact were mainly focused on the increasingly urgent need to refactor providers according to the same interface spec.  Right now the Catalog doesn't distinguish between local and remote access (because remote access has not been implemented) but more or less ALL of the interface implementations (BasicImplementation subclasses) are dependent on a local archive.  
+
+IT WASN'T SUPPOSED TO BE THIS WAY! Antelope is supposed to abstract the archive.
+
+MOREOVER, the fully-featured catalog is too heavyweight, because the first thing I want prospective users to touch is a TERMINAL that performs only foreground computations locally.
+
+SO:
+
+ - We still need to write an Antelope provider that obtains info from web requests
+ - We still need to write the Antelope SERVER that will answer requests via web api
+and now we ALSO need to :
+ - refactor Catalog into 
+   * core functions
+   * terminal functions
+   * central repo functions
+ - refactor the ancient provider interface:
+   * abstract base class that is drawn from the same QueryInterface-- it is an interface provider, after all
+   * local implementation -- creates a local archive
+   * remote implementation 
+
+Then we have a lingering problem: caching metadata about remote entities.  Queries like get_property, get_uuid, entity_type, and so on should ABSOLUTELY NOT incur a remote access after the entity is first retrieved.
+
+We obviously got blocked up on entity_type quite a bit yesterday-- because current arch (which was maintained) has us asking the Catalog and not the Query.  Because the Query doesn't know.  but it should. 
+
+And finally, we have the problem of flows and flow characterizations.  The Qdb, for all its incremental improvements, STILL relies on assigning CFs to the "actual" flow entities used in the computations.  Is this what we want, going forward?  Come to think of it, weren't we recently pondering the possibility of making this REQUIRED at the DetailedLciaResult level?  We shouldn't. 
+
+Characterizations and Exchanges should be the meat of LciaResults-- those can both be constructed locally IN THE ABSENCE of any entities (e.g. using catalog refs instead of entities).  THAT is the model we should pursue.
+
+Then the CatalogRefs need to know how to retrieve (meta)information about themselves.  
+
+OK- the problem was the decision in the refactor to make the catalog refs anchored to a query, instead of the catalogs themselves.  What THAT means, especially with the nondeterministic selection of query implementations, is that "you never know what you're gonna get." which is SHITTY.
+
+now, a Query has an origin and a catalog. and that's IT.  all the query does is ask the catalog for an interface.
+
+OK things are starting to resolve a bit here.
+
+the QUERY should know how to get_property, get_uuid, entity_type, and so on because the CATALOG knows it.  The CATALOG should cache all the entities it receives on a metadata level, and the query (with the fixed origin) should be confident in being able to retrieve just the one it wants (i.e. matching the Query's origin and the request's external_ref) because the CATALOG will have cached it in its entities list.
+
+ALL the metadata queries should come down to a catalog._dereference call, so that it checks the local _entities dict first.
+
+Presently, all catalog_ref instantiations go through _dereference because they call catalog.lookup()
+
+So how would this work?  
+ * You have a query, you make a request-- say for ALL PROCESSES.  
+ * For this, you don't need to anchor the catalog refs.  You just get a bunch of unresolved catalog refs back-- (even though they AREN'T unresolved- they just aren't retrieved)
+ * the Query gets an implementation-- the implementation is simply a passthrough to a web request, which spits back JSON
+ * the implementation takes the passthrough stuff and makes it into a list of CatalogRefs
+   = at this point we've been SENT all the JSON of ALL the processes.  
+   = Maybe the server will not send e.g. tags and things for an unrestricted all-entities query.  So there's no need to cache it? but if you don't get tags, what do you get? just IDs? just name + comment? + spatial scope / compartment / signature fields + reference entity, kind of a lot of shit. it should kind of get cached.
+   = let's keep going
+ * you have a list of un-fetched (but RESOLVED to exist) catalog refs. you pick one at random and ask to look at its inventory.
+
+HOLD UP.  The way that's supposed to work is, you go catalog_ref.inventory().  But that method only exists on ProcessRefs.  And you can only create a ProcessRef by giving it a Query.  And normatively (based on the way the code is written) the way you get a query is by FINDING an entity and making a query for the origin of the resource that actually HAS the entity.
+
+In this case, we KNOW where the entities are coming rom because the query already asked for them.  and we know the entity type.
+
+so we can just make a CatalogRef.from_query() because we are getting the RESPONSE from the origin KNOWN TO CONTAIN the processes.  And we've ALREADY done the costly part-- retrieving the list.
+
+To a first order, one process METADATA entry is about 1k, so retrieving the full list of all processes in, say, ecoinvent, is 13000 x 1k  = 13 MB of data.  Even GZipped it will be 1-2MB.
+
+In fact, ei3.2 undefined has 11552 processes and is 14,007,226 bytes; 2,196,017 gzipped
+
+maybe we should disallow .processes() and .flows() for large databases (without a paying account :) )
+
+ok, anyway.
+
+let's say viewing all processes is disallowed via remote, and at least one kwarg is required to accept the request.  THEN say you search for 'steel' and get 574 results, gzipped to about 100k of bandwidth, in 2.5 sec.  SINCE you received that, and let's go ahead and say ALL the metadata were included, so you want to cache it.
+
+at this point, it's the INTERFACE IMPLEMENTATION that has the results.  The Implementation can make catalog refs from the json, supplying a query (because it has _catalog and knows its own origin) and an entity type (because it was specified) and you wind up with a list of properly typed, anchored entity refs.  
+
+what about reference entities? same again-- the external refs are supplied-- so you create flow refs (again, using the query) and create ref exchanges and install them
+
+But then as soon as you want to do something with flows, say print them, you will need *their* reference entities-- but there are probably only like 20 of those-- and you can get them on an as-needed basis... or better... get local quantities from the Qdb.
+NOW we are getting into some serious higher-order shits-fucked-up.  Because we just took out the provision that merged quantities from differing sources, for the express reason that we wanted different versions of LCIA methods to track differently.  (Looks like we can fix that just by asking the quantity if it is an lcia method, and then deciding to merge based on that) (DONE)
+
+OOOOOOhKAAAAY.  anyway, we DO need to retrieve the quantities from remote, on an as-needed basis, and then subsequently add them to the Qdb (with merge in the case of non-LCIA-methods) for unit conversions to operate smoothly.  
+The only way this is a problem is if iwe try to print a large set of flows, based on their catalog refs, but none of them have compartment information retrieved... at present that will generate a large number of separate get_property('Compartment') requests, which is terrible.
+
+We don't want flow refs.  we want actual flows.
+
+No, we want refs.  There is no way around it, the flows have to be queried from the remote source. The only advantage would be to querying them all at once- but again, you have a massive size issue.  Ecoinvent 3.2 undefined has 4680 flows totalling 2,877,168 bytes unzipped (253,306 bytes gzipped)
+
+we do NOT want to ever run into the situation of having 1,800 distinct get_property() queries sent to a remote server.  
+
+I think the Antelope server needs to send back a complete flow signature with every request that involves flows (minus characterizations) so that at least reference entities and compartments come through.
+
+This means that exchanges and characterizations need to serialize differently for antelope requests. no prob.
+
+then flow refs need to know how to query their own characterizations from remote.  and the antelope server needs to pass quantity requests through the Qdb to find the local match.
+
+ok, this is helpful.
+
+Back to our narrative.
+
+ * You have a query, you make a request-- say for ALL PROCESSES having Name='steel'.
+ * the Query gets an implementation-- the implementation is simply a passthrough to a web request, which spits back JSON
+   = the JSON is a list of processes, with only reference exchanges, with the full (uncharacterized) flows
+ * the implementation takes the passthrough stuff and makes it into a list of anchored, fully populated CatalogRefs
+ * the implementation gives these back to the catalog to cache them
+ * the implementation returns them 
+
+
+Fri 2017-09-22 15:08:00 -0700
+
+It is really clarifying (and agonizing) to think this through in terms of what functionality we actually want on a thin client.  e.g. charts? (if so, we need matplotib) background computation? (scipy) and so on.
+
+
+
+It's really all about the INTERFACE (as specified in iquery.py).  This SHOULD tell us everything we would ever want to know (need to add: characterizations for flows; terminations for fragments (?) )
+NO: terminations are not included.  you get traversal results for fragments.  you do need to know supported scenarios. 
+
+Let's audit the use of _archive in the Implementations-- and then call it a day.
+
+60 usages.  Most of them are retrieve_or_fetch_entity-- so the question is when does the retrieved entity need to be the literal entity and when can it be a remote ref?
+
+
+Basic: 9 usages
+ * __getitem__: return self._archive[item] --> not valid for remote
+#* __str__: needs _archive.source --> should be known from resource
+ * characterize(): abandoning
+#* fetch: -> retrieve_or_fetch_entity -> catalog ref OK!
+#* get: -> same as fetch
+#* get_item: -> catalog ref OK!
+#* get_reference: catalog ref OK!
+#* get_uuid: -> catalog ref OK!
+#* origin: _archive.ref --> should be known from resource
+
+Index: 7 usages
+#* .flows(**kwarg) --> need implementation
+#* .processes(**kwarg) ""
+#* .quantities(**kwarg) ""
+ * .get -> useless; already in basic
+#* .terminate() --> need implementation
+#* .originate() ""
+ * .mix --> jury's still out
+
+Inventory: 6 usages
+
+Short version is, no, this is going to need to be completely rewritten (and background too)
+maybe quantity provides the means how: simply allow the _archive to override the implementation.
+I think that's the winning approach.
+and then the implementation provides the default mechanism for local archives.
+
+The last question, then, is whether we want to make the Catalog the default cache for ALL archives and not just remote ones? i.e. change BasicImplementation.  I think not.
+
+---crufty---
+
+Background: this is the hardest one. do it last.
+ * if static (web version is no) then we install a local background manager
+   since it's not static, we install the proxy-- 
+   but it's not local- so we don't want a fg proxy, we want a web proxy that will actually pass
+	    
+
+
+The implementation hands those BACK to the 
+
+After that, ALL the non-metadata queries should come down to implementation. Then the IMPLEMENTATION is either:
+
+ * (for REMOTE providers) ask the antelope server and take the result.  
+   RO: Strings-- nothing to cache, nothing to do. Just give it to the user. (only for Quantity iface)
+   R1: entities-- just straight json, except use it to make a CatalogRef
+
+
+
+
+==========
 Tue Sep 19 15:08:01 -0700 2017
 
 Progress?  We made the decision to refactor ForegroundCatalog but we have yet to actually do it.

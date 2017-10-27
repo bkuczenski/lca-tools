@@ -2,6 +2,13 @@ import os
 import json
 from lcatools.interfaces.iquery import INTERFACE_TYPES
 from lcatools.providers.interfaces import local_ref
+from lcatools.tools import create_archive, update_archive
+
+from .basic import BasicImplementation
+from .index import IndexImplementation
+from .inventory import InventoryImplementation
+from .background import BackgroundImplementation
+from .quantity import QuantityImplementation
 
 
 class LcResource(object):
@@ -23,7 +30,11 @@ class LcResource(object):
             ref = local_ref(source)
         ds_type = type(archive)  # static flag indicates whether archive is complete
         kwargs.update(archive.init_args)
-        return cls(ref, source, ds_type, interfaces=interfaces, static=archive.static, **kwargs)
+        res = cls(ref, source, ds_type, interfaces=interfaces, static=archive.static, **kwargs)
+
+        # install the archive
+        res._archive = archive
+        return res
 
     @classmethod
     def from_dict(cls, ref, d):
@@ -52,6 +63,45 @@ class LcResource(object):
 
         return sorted([cls.from_dict(ref, d) for d in j[ref]], key=lambda x: x.priority)
 
+    def _instantiate(self, catalog):
+        self._archive = create_archive(self.source, self.ds_type, catalog=catalog, ref=self.reference,
+                                       upstream=catalog.qdb, **self.init_args)
+        if os.path.exists(catalog.cache_file(self.source)):
+            update_archive(self._archive, catalog.cache_file(self.source))
+        if self.static and self.ds_type.lower() != 'json':
+            self._archive.load_all()  # static json archives are by convention saved in complete form
+
+    @property
+    def is_loaded(self):
+        return self._archive is not None
+
+    def check(self, catalog):
+        if self._archive is None:
+            # TODO: try/catch exceptions or return false
+            self._instantiate(catalog)
+        return True
+
+    def make_index(self, index_file):
+        self._archive.load_all()
+        self._archive.write_to_file(index_file, gzip=True, exchanges=False, characterizations=False, values=False)
+
+    def make_cache(self, cache_file):
+        self._archive.write_to_file(cache_file, gzip=True, exchanges=True, characterizations=True, values=True)
+        print('Created archive of %s containing:' % self._archive)
+        self._archive.check_counter()
+
+    def make_interface(self, catalog, iface):
+        if iface == 'basic':
+            return BasicImplementation(catalog, self._archive, privacy=self.privacy)
+        elif iface == 'quantity':
+            return QuantityImplementation(catalog, self._archive, privacy=self.privacy)
+        elif iface == 'index':
+            return IndexImplementation(catalog, self._archive, privacy=self.privacy)
+        elif iface == 'inventory':
+            return InventoryImplementation(catalog, self._archive, privacy=self.privacy)
+        elif iface == 'background':
+            return BackgroundImplementation(catalog, self._archive, privacy=self.privacy)
+
     def __init__(self, reference, source, ds_type, interfaces=None, privacy=0, priority=0, static=False, **kwargs):
         """
 
@@ -66,6 +116,9 @@ class LcResource(object):
         """
         if not os.path.exists(source):
             raise EnvironmentError('%s not found' % source)
+
+        self._archive = None
+
         self._ref = reference
         self._source = source
         self._type = ds_type
@@ -74,7 +127,7 @@ class LcResource(object):
         self._issaved = False
 
         if interfaces is None:
-            interfaces = ['inventory']
+            interfaces = ['basic']
 
         if isinstance(interfaces, str):
             interfaces = [interfaces]
@@ -109,6 +162,7 @@ class LcResource(object):
 
     @property
     def interfaces(self):
+        yield 'basic'
         for k in self._interfaces:
             yield k
 

@@ -41,6 +41,15 @@ class LcCatalogResolver(object):
                     ints.add(t)
             yield k, sorted(list(ints))
 
+    @property
+    def sources(self):
+        seen = set()
+        for k, v in self._resources.items():
+            for res in v:
+                if res.source not in seen:
+                    seen.add(res.source)
+                    yield res.source
+
     def _update_semantic_ref(self, ref):
         resources = LcResource.from_json(os.path.join(self._resource_dir, ref))
         self._resources[ref] = resources
@@ -66,6 +75,13 @@ class LcCatalogResolver(object):
         new_res = LcResource(ref, source, ds_type, **kwargs)
         self.add_resource(new_res, store=store)
         return new_res
+
+    def known_source(self, source):
+        try:
+            next(self.resources_with_source(source))
+        except StopIteration:
+            return False
+        return True
 
     def resources_with_source(self, source):
         for ref, ress in self._resources.items():

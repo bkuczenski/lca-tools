@@ -1,4 +1,134 @@
 ==========
+Thu Oct 26 12:54:15 -0700 2017
+
+OK dammit. This needs to move forward. I was *mostly* done refactoring LcCatalog; all that remained was the fetch + dereference machinery.  In the spirit of simplicity, I'm going to say that the catalog should not provide a cache.  What it should do is provide catalog references.
+
+The problem is, I still haven't figured out how it's supposed to work.  And what is the fucking point of all the interfaces?
+
+The point is for both the query and the implementation to implement the same interfaces. But maybe that whole concept is wrong anyway.  CatalogRef certainly doesn't implement them.
+
+
+==========
+Tue Oct 24 12:26:09 -0700 2017
+
+3 weeks later... and we're left with an incomplete refactor in LcCatalog.  It's NEARLY complete- there are error marks by everything that must be fixed.  But we have lost track of what we are doing.
+
+So- let's review.
+
+The Catalog-- which runs in a thin container-- keeps a cache of all the entities it queries.  That cache includes CatalogRefs, except flow refs need to be actual flows so as to have characterization abilities (?)
+
+Tue 2017-10-24 12:42:47 -0700
+
+Honestly, I can't remember where I am at with all of this.  The whole thing is a mess; the LcEntity structure is kind of fatally flawed.  The reliance on UUIDs everywhere, when UUIDs are suddenly out of vogue- external refs are also supposed to be unique.  UUIDs should be totally invisible to the user EXCEPT when no external ref is explicitly specified.  Entity UUIDs should definitely not be serialized: only external refs should show up in serializations.
+
+Why does the query interface need get_uuid()? because uuids are used everywhere to uniquely identify entities. but I'm saying entity.link should be used to uniquely identify an entity.
+
+fuck all.
+
+Let's think this through one more time.
+
+User instantiates an LcCatalog in a container that knows nothing about anything, except it has a set of resource files.
+User can submit queries to any of the resources.  If the queries result in responses that are entities, the catalog caches them as entity refs.  [flow refs ARE entity refs that happen to be entities; as opposed to process refs which are NOT entities; quantity refs should get stored in the local Qdb which is used to dereference ALL quantities.]
+
+Anytime the user asks
+
+
+so to recap-- user submits a query to a specified origin.  the CatalogQuery determines what interface is being requested. The LcCatalog 
+
+generates LcResource objects that implement the given interface for the specified origin.  The CatalogQuery should then ask the resource to answer the query, and return the successful result as soon as one is found.
+
+IF the query response is an entity
+
+
+
+==========
+Mon Oct 02 06:27:11 -0700 2017
+
+Here's the problem: the catalog does too much.
+I've known this for a long time but only now figured out how to fix it.
+
+the LcResources are the place to store archives.  Much of the mess surrounding indexing+archiving (e.g. _find_single_source) is because of failure to realize this and goes away if the resource actually *provides* the resource.  Ditto _get_interfaces -> gets moved into the resource, which already knows what kinds of interfaces it provides.
+
+The resource is responsible for retrieving entity information and delivering either catalog refs or query responses. the resource is responsible for implementing the interfaces.
+
+so the way this works is:
+ * user client accesses catalog, gets list of semantic refs
+ * picks a ref and asks a query
+   - the catalog resolves the query to a set of resources
+   - asks them sequentially (according to priority) to answer the query
+   - each resource, to its ability, answers the query by implementing the interface against its archive
+   - returns 2-tuple: entity_refs, result (or None if the entity refs are the result)
+   - the catalog logs the entity refs in its local cache
+     = which gets serialized using only local content so as to avoid stale remote data issues
+   - the catalog delivers the result to the client
+
+ * catalog can also make indexes + caches for local resources-> which implies making new resources
+
+Let's review required changes.
+
+catalog loses _archives
+-> _names. What is this for?
+   : for @property names (not used);
+   : in get_archive --> which is now done by the resolver-> get resource -> archive
+     :: this is private anyway since we don't want the user to circumvent the interface structure in general practice
+   : for "hunting for" archives
+   => looks obsolete.  pull them both.
+   => ok, so _register_archive is entirely obsolete
+-> _is_loaded: now just asks the resource
+-> load_all
+   : moved to resource, if static
+-> add_nickname
+   : never had occasion to use this yet (would help for pata/virent upgrade)
+   : nickname was to SOURCE; really a nickname is for a resource (which has but one source)
+   => so we need a new resolver method to find_resource_with_source
+      - um, resources_with_source() already exists
+   => and catalog._nicknames behaves the same
+-> @property sources  also unused; also could be offloaded to the resolver
+-> _index_source()
+   : _register_index
+   : index_resource
+   : create_source_cache
+   : create_static_archive
+   => needs refactored.  but I don't think this blocks anything
+   * let's be specific:
+     - _find_single_source actually doesn't change; does count checking so we should keep it
+       except return the LcResource rather than the source itself
+     - _index_source moves into LcResource; catalog calls it and provides the inx file
+     index_resource: finds source; indexes it; registers it. um, very little refactor needed
+     - create_source_cache:
+
+     Almost none of this changes. The only complexity is in how to uniquely specify resources (which honestly REMAINS a complexity, but is not produced nor solved)
+
+     OK. let's try it; notes go here.
+
+-> _retrieve_entity
+   : _dereference
+   : _get_interfaces
+   => all get refactored as per above.
+
+That's a clean review! do it.
+
+
+Mon 2017-10-02 11:02:29 -0700
+
+I have concerns.  Isn't it possible for multiple resources to have the same source file? and if so, doesn't that mean we end up with duplicate archive instantiations??  and isn't that the reason why we designed the catalog the way we did???
+
+Moreover, and more fundamentally, create_archive needs a catalog (for foregrounds and for JSON upstream references, which are already kind of sketchy)
+but even if we did ditch the upstream reference handling, which I would like to pull out frankly, it still leaves us requiring catalog to instantiate a foreground.
+but that's fine- the catalog will be instructing the LcResource to instantiate; so just pass itself as an argument.
+
+but the multiple-resources-same-source flaw:
+
+PRACTICALLY, is this even a good idea?  I can imagine one resource having multiple sources, which is why we have the multiple interfaces and why everything is a generator.  but multiple resources being provided by the same archive? doesn't. really. make. sense.
+
+IF we are not going to allow it, we should prohibit it.  That just means checking len([r for r in resolver.resources_with_source(s)]) == 0 before instantiating a new archive.
+
+the fuzzy query already allows us to answer lower specificity queries with higher specificity resources (with priority).  I can't really imagine a good reason (other than some weird compatibility thing that I would probably want to discourage anyway) to allow the same archive to include multiple resources.  maybe the same antelope server, but in that case there is no cost to multiple archive instantiations since they don't store anything.  Though it does argue against prohibiting duplicate sources.
+
+OK. onward. fuckin a.
+
+
+==========
 Fri Sep 29 15:18:39 -0700 2017
 
 Back to the top.

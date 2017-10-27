@@ -342,10 +342,10 @@ class LcArchive(ArchiveInterface):
             self._index_terminations()  # we don't really want to re-index *every time* but what is the alternative?
         for x in self._terminations[flow_ref]:  # defaultdict, so no KeyError
             if direction is None:
-                yield x[1].trim()
+                yield x[1]
             else:
                 if comp_dir(direction) == x[0]:
-                    yield x[1].trim()
+                    yield x[1]
 
     def originate(self, flow_ref, direction=None):
         if direction is not None:

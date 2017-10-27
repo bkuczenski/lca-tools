@@ -63,6 +63,8 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
         :param termination:
         :return:
         """
+        if True:
+            raise AttributeError('You should not be accessing this method!')
         # TODO: make this use the _bg interface below instead
         if termination is not None:
             raise TypeError('Reference exchanges cannot be terminated')

@@ -1,6 +1,3 @@
-from lcatools.entity_refs.catalog_ref import CatalogRef
-
-
 class PrivateArchive(Exception):
     pass
 
@@ -46,7 +43,7 @@ class BasicImplementation(object):
     def make_ref(self, entity):
         if entity is None:
             return None
-        return CatalogRef.from_entity(entity, self._catalog.query(self.origin))
+        return entity.make_ref(self._catalog.query(self.origin))
 
     def get_item(self, external_ref, item):
         return self._archive.get_item(external_ref, item)
@@ -57,10 +54,15 @@ class BasicImplementation(object):
     def get_uuid(self, external_ref):
         return self._archive.get_uuid(external_ref)
 
-    def get(self, external_ref, **kwargs):
+    def _fetch(self, external_ref, **kwargs):
         if external_ref is None:
             return None
-        return self.make_ref(self._archive.retrieve_or_fetch_entity(external_ref, **kwargs))
-
-    def fetch(self, external_ref, **kwargs):
         return self._archive.retrieve_or_fetch_entity(external_ref, **kwargs)
+
+    def lookup(self, external_ref, **kwargs):
+        if self._fetch(external_ref, **kwargs) is not None:
+            return True
+        return False
+
+    def get(self, external_ref, **kwargs):
+        return self.make_ref(self._fetch(external_ref, **kwargs))

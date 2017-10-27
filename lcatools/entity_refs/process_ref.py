@@ -45,11 +45,11 @@ class ProcessRef(EntityRef):
         else:
             print('Not a valid reference exchange specification')
 
-    def reference(self, flow=None, **kwargs):
-        return next(x for x in self.references(flow=flow, **kwargs))
+    def reference(self, flow=None):
+        return next(x for x in self.references(flow=flow))
 
-    def references(self, flow=None, **kwargs):
-        for x in self._query.get_reference(self.external_ref, **kwargs):
+    def references(self, flow=None):
+        for x in self.reference_entity:
             if flow is None:
                 yield x
             else:

@@ -2,6 +2,10 @@ from lcatools.catalog.basic import BasicImplementation
 from lcatools.interfaces.iindex import IndexInterface
 
 
+class NotForeground(Exception):
+    pass
+
+
 class IndexImplementation(BasicImplementation, IndexInterface):
     """
     A CatalogInterface provides basic-level semantic data about entities
@@ -24,6 +28,12 @@ class IndexImplementation(BasicImplementation, IndexInterface):
         for q in self._archive.quantities(**kwargs):
             yield self.make_ref(q)
 
+    def fragments(self, **kwargs):
+        if hasattr(self._archive, 'fragments'):
+            for q in self._archive.fragments(show_all=False, **kwargs):
+                yield self.make_ref(q)
+        raise NotForeground('The resource does not contain fragments: %s' % self._archive.ref)
+
     def terminate(self, flow, direction=None, **kwargs):
         for p in self._archive.terminate(flow, direction=direction, **kwargs):
             yield self.make_ref(p)
@@ -32,5 +42,7 @@ class IndexImplementation(BasicImplementation, IndexInterface):
         for p in self._archive.originate(flow, direction=direction, **kwargs):
             yield self.make_ref(p)
 
+    '''
     def mix(self, flow, direction, **kwargs):
         return self._archive.mix(flow, direction, **kwargs)
+    '''

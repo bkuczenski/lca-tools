@@ -3,6 +3,7 @@ from __future__ import print_function, unicode_literals
 import uuid
 from itertools import chain
 from numbers import Number
+from lcatools.entity_refs import CatalogRef
 
 
 entity_types = ('process', 'flow', 'quantity', 'fragment')
@@ -52,8 +53,18 @@ class LcEntity(object):
         for k, v in kwargs.items():
             self[k] = v
 
-    def trim(self):
-        return type(self)(self.uuid, origin=self.origin, external_ref=self.external_ref, **self._d)
+    def _make_ref_ref(self, query):
+        return self.reference_entity.make_ref(query)
+
+    def make_ref(self, query):
+        d = dict()
+        reference_entity = None
+        for k in self.signature_fields():
+            if k == self._ref_field:
+                reference_entity = self._make_ref_ref(query)
+            else:
+                d[k] = self._d[k]
+        return CatalogRef.from_query(self.external_ref, query, self.entity_type, reference_entity=reference_entity, **d)
 
     @property
     def entity_type(self):
@@ -221,7 +232,9 @@ class LcEntity(object):
             self._ref_field: self._print_ref_field(),
         }
         for k, v in self._d.items():
-            if isinstance(v, list):
+            if v is None:
+                continue
+            elif isinstance(v, list):
                 j[k] = v
             elif isinstance(v, set):
                 j[k] = sorted(list(v))

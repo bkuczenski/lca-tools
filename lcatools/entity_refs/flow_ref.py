@@ -1,5 +1,9 @@
 from .base import EntityRef
 
+'''
+FlowRef needs to actually inherit from flow entity and not from EntityRef-- because the flowRef needs to be able
+to store characterizations.
+'''
 
 class FlowRef(EntityRef):
     """
@@ -19,4 +23,3 @@ class FlowRef(EntityRef):
 
     def mix(self, direction, **kwargs):
         return self._query.mix(self.external_ref, direction, **kwargs)
-

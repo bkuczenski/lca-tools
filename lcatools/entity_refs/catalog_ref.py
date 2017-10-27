@@ -54,42 +54,51 @@ class CatalogRef(BaseRef):
         else:
             origin = 'foreground'
         if catalog is not None:
-            return cls.lookup(origin, external_ref, catalog)
+            org = catalog.lookup(origin, external_ref)
         else:
             return cls(origin, external_ref, entity_type=etype, **j)
 
     @classmethod
-    def from_entity(cls, entity, query):
-        if entity.entity_type == 'flow':
-            return FlowRef.from_flow(entity, query)
-        else:
-            return cls.from_query(entity.external_ref, query, entity.entity_type)
-
-    @classmethod
-    def from_query(cls, external_ref, query, etype):
+    def from_query(cls, external_ref, query, etype, **kwargs):
         if etype == 'process':
-            return ProcessRef(external_ref, query)
+            return ProcessRef(external_ref, query, **kwargs)
         elif etype == 'flow':
-            return FlowRef(external_ref, query)
+            return FlowRef(external_ref, query, **kwargs)
         elif etype == 'quantity':
-            return QuantityRef(external_ref, query)
+            return QuantityRef(external_ref, query, **kwargs)
         elif etype == 'fragment':
-            return FragmentRef(external_ref, query)
+            return FragmentRef(external_ref, query, **kwargs)
         else:
-            return cls(query.origin, external_ref, entity_type=etype)
+            return cls(query.origin, external_ref, entity_type=etype, **kwargs)
 
-    @classmethod
-    def lookup(cls, origin, external_ref, catalog, **kwargs):
+    def lookup(self, catalog, **kwargs):
+        """
+        RETURNS a grounded catalogRef matching the current item.  Note that the current item cannot be transformed
+        into a grounded ref.
+        :param catalog:
+        :param kwargs:
+        :return: typed EntityRef
+        """
         try:
-            org = catalog.lookup(origin, external_ref)
+            org = catalog.lookup(self.origin, self.external_ref)
         except EntityNotFound:
-            print('Not found: %s/%s' % (origin, external_ref))
+            print('Not found: %s/%s' % (self.origin, self.external_ref))
             return None
         query = catalog.query(org, **kwargs)
-        etype = catalog.entity_type(org, external_ref)
-        return cls.from_query(external_ref, query, etype)
+        ref = query.get(self.external_ref)
+        for k, v in self._d.items():
+            if not ref.has_property(k):
+                ref[k] = v # copy local items
+        return ref
 
     def __init__(self, origin, external_ref, entity_type=None, **kwargs):
+        """
+        A CatalogRef that is created from scratch will not be active
+        :param origin:
+        :param external_ref:
+        :param entity_type:
+        :param kwargs:
+        """
         super(CatalogRef, self).__init__(origin, external_ref, **kwargs)
 
         self._asgn_etype = entity_type

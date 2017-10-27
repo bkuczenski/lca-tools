@@ -2,6 +2,8 @@ from __future__ import print_function, unicode_literals
 
 import uuid
 
+from collections import namedtuple
+
 from lcatools.entities.entities import LcEntity
 from lcatools.entities.flows import LcFlow
 from lcatools.exchanges import Exchange, ExchangeValue, DuplicateExchangeError, AmbiguousReferenceError
@@ -24,6 +26,10 @@ class ReferenceSettingFailed(Exception):
     pass
 
 
+# a shorthand for storing operable reference exchanges in a process ref. maybe this will need to be a class, we'll see.
+RxRef = namedtuple('RxRef', ['flow', 'direction'])
+
+
 class LcProcess(LcEntity):
 
     _ref_field = 'referenceExchange'
@@ -36,17 +42,6 @@ class LcProcess(LcEntity):
         :return:
         """
         return cls(uuid.uuid4(), Name=name, **kwargs)
-
-    def trim(self):
-        """
-        Return an identical LcProcess that has had its non-reference exchanges removed
-        :return:
-        """
-        trimmed = super(LcProcess, self).trim()
-        for rf in self.references():
-            trimmed.add_exchange(rf.flow, rf.direction, value=rf.value)
-            trimmed.add_reference(rf.flow, rf.direction)
-        return trimmed
 
     def __init__(self, entity_uuid, **kwargs):
         """
@@ -76,6 +71,9 @@ class LcProcess(LcEntity):
             self._d['SpatialScope'] = 'GLO'
         if 'TemporalScope' not in self._d:
             self._d['TemporalScope'] = '0'
+
+    def _make_ref_ref(self, query):
+        return [RxRef(x.flow.make_ref(query), x.direction) for x in self.reference_entity]
 
     def __str__(self):
         return '%s [%s]' % (self._d['Name'], self._d['SpatialScope'])

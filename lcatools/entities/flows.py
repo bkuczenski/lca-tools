@@ -4,7 +4,7 @@ import re
 
 from lcatools.characterizations import Characterization
 from lcatools.entities.entities import LcEntity
-from lcatools.entities.quantities import LcQuantity
+# from lcatools.entities.quantities import LcQuantity
 
 
 def trim_cas(cas):
@@ -36,15 +36,6 @@ class LcFlow(LcEntity):
         :return:
         """
         return cls(uuid.uuid4(), Name=name, ReferenceQuantity=ref_qty, **kwargs)
-
-    def trim(self):
-        """
-        Return an identical LcFlow that has had its non-reference characterizations removed
-        :return:
-        """
-        trimmed = super(LcFlow, self).trim()
-        trimmed.add_characterization(self.reference_entity, reference=True)
-        return trimmed
 
     def __init__(self, entity_uuid, local_unit=None, **kwargs):
         super(LcFlow, self).__init__('flow', entity_uuid, **kwargs)

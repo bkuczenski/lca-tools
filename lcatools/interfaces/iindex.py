@@ -46,6 +46,11 @@ class IndexInterface(AbstractQuery):
         '''
         return self._perform_query(_interface, 'quantities', IndexRequired('Index access required'), **kwargs)
 
+    def fragments(self, show_all=False, **kwargs):
+        if show_all:
+            raise ValueError('Cannot retrieve non-parent fragments via interface')
+        return self._perform_query(_interface, 'fragments', IndexRequired('Index access required'), **kwargs)
+
     """
     API functions- entity-specific -- get accessed by catalog ref
     index interface
@@ -70,6 +75,7 @@ class IndexInterface(AbstractQuery):
         return self._perform_query(_interface, 'originate', IndexRequired('Index access required'),
                                    flow, direction=direction, **kwargs)
 
+    '''
     def mix(self, flow, direction, **kwargs):
         """
         Create a mixer process whose inputs are all processes that terminate the given flow and direction
@@ -79,3 +85,4 @@ class IndexInterface(AbstractQuery):
         """
         return self._perform_query(_interface, 'mix', IndexRequired('Index access required'),
                                    flow, direction, **kwargs)
+    '''

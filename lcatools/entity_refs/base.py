@@ -88,7 +88,7 @@ class BaseRef(object):
         return self._localitem(item) is not None
 
     def __setitem__(self, key, value):
-        if key in ('Name', 'Comment'):
+        if not key.startswith('Local'):
             key = 'Local%s' % key
         self._d[key] = value
 
@@ -146,7 +146,7 @@ class EntityRef(BaseRef):
     An EntityRef is a CatalogRef that has been provided a valid catalog query.  the EntityRef is still semi-abstract
     since there is no meaningful reference to an entity that is not typed.
     """
-    def __init__(self, external_ref, query, uuid=None, **kwargs):
+    def __init__(self, external_ref, query, uuid=None, reference_entity=None, **kwargs):
         """
 
         :param external_ref:
@@ -156,6 +156,8 @@ class EntityRef(BaseRef):
         super(EntityRef, self).__init__(query.origin, external_ref, **kwargs)
         if not query.validate():
             raise InvalidQuery('Query failed validation')
+        self._reference_entity = reference_entity
+
         self._query = query
         self._uuid = uuid or self._query.get_uuid(self.external_ref)
 
@@ -168,15 +170,16 @@ class EntityRef(BaseRef):
     def uuid(self):
         return self._uuid
 
+    @property
+    def reference_entity(self):
+        return self._reference_entity
+
     def get_uuid(self):
         """
         DEPRECATED
         :return:
         """
         return self.uuid
-
-    def fetch(self):
-        return self._query.fetch(self)
 
     def elementary(self, iterable):
         """
@@ -233,12 +236,18 @@ class EntityRef(BaseRef):
             return False
         return True
 
-    def __getitem__(self, item):
-        loc = self._localitem(item)
-        if loc is not None:
-            return loc
+    def get_item(self, item, force_query=False):
+        if not force_query:
+            # check local first.  return Localitem if present.
+            loc = self._localitem(item)
+            if loc is not None:
+                return loc
         self._check_query('getitem %s' % item)
         val = self._query.get_item(self.external_ref, item)
-        if item in ('Name', 'Comment'):
-            self._d['Local%s' % item] = val
-        return val
+        if val is not None:
+            self._d[item] = val
+            return val
+        return None
+
+    def __getitem__(self, item):
+        self.get_item(item)

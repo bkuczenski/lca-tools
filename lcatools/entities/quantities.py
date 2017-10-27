@@ -24,6 +24,9 @@ class LcQuantity(LcEntity):
     def unit(self):
         return self.reference_entity.unitstring
 
+    def _make_ref_ref(self, query):
+        return self.unit()
+
     def is_lcia_method(self):
         return 'Indicator' in self.keys()
 

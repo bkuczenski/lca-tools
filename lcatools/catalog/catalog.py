@@ -35,16 +35,11 @@ import re
 import os
 from shutil import copy2
 import hashlib
-from collections import defaultdict
+# from collections import defaultdict
 
-from lcatools.interfaces.iquery import CatalogQuery, READONLY_INTERFACE_TYPES, EntityNotFound
-from .index import IndexImplementation
-from .inventory import InventoryImplementation
-from .background import BackgroundImplementation
-from .quantity import QuantityImplementation
+from lcatools.interfaces.iquery import CatalogQuery, EntityNotFound
 from .lc_resolver import LcCatalogResolver
 from .lc_resource import LcResource
-from lcatools.tools import create_archive, update_archive  # archive_from_json, archive_factory
 from lcatools.providers.qdb import Qdb
 from lcatools.flowdb.compartments import REFERENCE_INT  # reference intermediate flows
 from lcatools.tables.flowables import FlowablesGrid
@@ -94,7 +89,7 @@ class LcCatalog(object):
     def _cache_dir(self):
         return os.path.join(self._rootdir, 'cache')
 
-    def _cache_file(self, source):
+    def cache_file(self, source):
         return os.path.join(self._cache_dir, self._source_hash_file(source))
 
     @property
@@ -134,7 +129,6 @@ class LcCatalog(object):
             copy2(REFERENCE_INT, self._compartments)
         if qdb is None:
             qdb = Qdb(source=self._reference_qtys, compartments=self._compartments)
-        self._entities = dict()  # maps '/'.join(origin, external_ref) to entity
         self._qdb = qdb
         """
         _archives := source -> archive
@@ -143,8 +137,6 @@ class LcCatalog(object):
         """
         self.ed = FragmentEditor(qdb=self._qdb, interactive=False)
 
-        self._archives = dict()  # maps source to archive
-        self._names = dict()  # maps reference to source
         self._nicknames = dict()  # keep a collection of shorthands for sources
 
         self.add_existing_archive(qdb, interfaces=('index', 'quantity'), store=False)
@@ -157,31 +149,6 @@ class LcCatalog(object):
 
     def quantities(self, **kwargs):
         return self._qdb.quantities(**kwargs)
-
-    def _register_archive(self, archive, res):
-        self._archives[res.source] = archive
-        for t in res.interfaces:
-            for k in archive.catalog_names.keys():
-                self._names[':'.join([k, t])] = res.source
-
-    def _ensure_resource(self, res):
-        """
-        create the archive requested. install qdb as upstream.
-        :param res: an LcResource
-        :return:
-        """
-        if not self._is_loaded(res):
-            a = create_archive(res.source, res.ds_type, catalog=self, ref=res.reference,  upstream=self._qdb,
-                               **res.init_args)
-            if os.path.exists(self._cache_file(res.source)):
-                update_archive(a, self._cache_file(res.source))
-            if res.static and res.ds_type.lower() != 'json':
-                a.load_all()  # static json archives are by convention saved in complete form
-            self._register_archive(a, res)
-        return True
-
-    def _is_loaded(self, res):
-        return res.source in self._archives
 
     def _find_single_source(self, origin, interface, source=None):
         ress = [r for r in self._resolver.resolve(origin, interfaces=interface)]
@@ -215,10 +182,6 @@ class LcCatalog(object):
 
             # self._ensure_resource(res)
 
-    def load_all(self, origin, interface=None, source=None):
-        source = self._find_single_source(origin, interface, source=source)
-        self._archives[source].load_all()
-
     def add_resource(self, resource, store=True):
         """
         Add an existing LcResource to the catalog.
@@ -240,39 +203,36 @@ class LcCatalog(object):
         """
         res = LcResource.from_archive(archive, interfaces, **kwargs)
         self._resolver.add_resource(res, store=store)
-        self._archives[res.source] = archive
-        for t in res.interfaces:
-            for k in archive.catalog_names.keys():
-                self._names[':'.join([k, t])] = res.source
 
-    def get_archive(self, name):
+    def get_resource(self, name):
         """
-        Retrieve a physical archive by namespace and interface
+        Retrieve a physical archive by nickname or ref:interface
         :param name: takes the form of ref:interface.  If the exact name is not specified, the catalog will find a
         source whose ref and interface start with name.
         :return: an LcArchive subclass
         """
         if name in self._nicknames:
-            return self._archives[self._nicknames[name]]
-        elif name in self._names:
-            return self._archives[self._names[name]]
+            _gen_rs = self._resolver.resources_with_source(self._nicknames[name])
         else:
-            # need to hunt for it.  Make a list of sources that match the name
-            sources = defaultdict(list)
-            for k, v in self._names.items():
-                if k.startswith(name):
-                    sources[v].append(k)
-            if len(sources) == 1:
-                return self._archives[next(s for s in sources.keys())]
-            elif len(sources) > 1:
-                for k in sources.keys():
-                    print(k)
-                raise ValueError('Ambiguous reference %s refers to multiple sources' % name)
-            elif len(sources) == 0:
-                raise KeyError('%s not found.' % name)
+            parts = name.split(':')
+            ref = parts[0]
+            iface = None
+            if len(parts) > 1:
+                iface = parts[1]
+            _gen_rs = self._resolver.resolve(ref, interfaces=iface)
+        rs = [r for r in _gen_rs]
+        if len(rs) == 1:
+            return rs[0]
+        elif len(rs) > 1:
+            for k in rs:
+                for i in k.interfaces:
+                    print('%s:%s' % (k.reference, i))
+            raise ValueError('Ambiguous reference %s refers to multiple sources' % name)
+        elif len(rs) == 0:
+            raise KeyError('%s not found.' % name)
 
-    def privacy(self, ref):
-        res = next(r for r in self._resolver.resolve(ref))
+    def privacy(self, ref, interfaces=None):
+        res = next(r for r in self._resolver.resolve(ref, interfaces=interfaces))
         return res.privacy
 
     def flows_table(self, *args, **kwargs):
@@ -287,11 +247,12 @@ class LcCatalog(object):
     @property
     def names(self):
         """
-        List loaded references.
+        List known references.
         :return:
         """
-        for k in self._names.keys():
-            yield k
+        for k, ifaces in self._resolver.references:
+            for iface in ifaces:
+                yield ':'.join([k, iface])
         for k in self._nicknames.keys():
             yield k
 
@@ -302,14 +263,14 @@ class LcCatalog(object):
         :param nickname:
         :return:
         """
-        if source in self._archives:
+        if self._resolver.known_source(source):
             self._nicknames[nickname] = source
         else:
             raise KeyError('Source %s not found' % source)
 
     @property
     def sources(self):
-        for k in self._archives.keys():
+        for k in self._resolver.sources:
             yield k
 
     @property
@@ -334,10 +295,9 @@ class LcCatalog(object):
                 print('Not overwriting existing index. force=True to override.')
                 return
             print('Re-indexing %s' % source)
-        self._ensure_resource(next(r for r in self._resolver.resources_with_source(source)))
-        archive = self._archives[source]
-        archive.load_all()
-        archive.write_to_file(inx_file, gzip=True, exchanges=False, characterizations=False, values=False)
+        res = next(r for r in self._resolver.resources_with_source(source))
+        res.check(self)
+        res.make_index(inx_file)
 
     def _register_index(self, source, priority):
         inx_file = self._index_file(source)
@@ -377,21 +337,13 @@ class LcCatalog(object):
         :param static: [False] create archives of a static archive (use to force archival of a complete database)
         :return:
         """
-        if source not in self._archives:
-            if source in self._nicknames:
-                source = self._nicknames[source]
-            else:
-                source = self._names[source]
-        archive = self._archives[source]
-        if archive.static:
+        res = next(r for r in self._resolver.resources_with_source(source))
+        if res.static:
             if not static:
-                print('Not archiving static resource %s' % archive)
+                print('Not archiving static resource %s' % res)
                 return
-            print('Archiving static resource %s' % archive)
-        cache_file = self._cache_file(source)
-        archive.write_to_file(cache_file, gzip=True, exchanges=True, characterizations=True, values=True)
-        print('Created archive of %s containing:' % archive)
-        archive.check_counter()
+            print('Archiving static resource %s' % res)
+        res.make_cache(self.cache_file(source))
 
     def create_static_archive(self, archive_file, origin, interface=None, source=None, background=True, priority=90):
         """
@@ -417,7 +369,7 @@ class LcCatalog(object):
         if not os.path.isabs(archive_file):
             archive_file = os.path.join(self._archive_dir, archive_file)
         self.create_source_cache(source, static=True)
-        os.rename(self._cache_file(source), archive_file)
+        os.rename(self.cache_file(source), archive_file)
         for res in self._resolver.resources_with_source(source):
             ifaces = set(i for i in res.interfaces)
             if background:
@@ -427,73 +379,7 @@ class LcCatalog(object):
                               store=store,
                               static=True)
 
-    def _add_lookup_token(self, link, ent):
-        if ent is not None:
-            if link in self._entities:
-                if self._entities[link] is not ent:
-                    raise DuplicateEntries('stored: %s\nfound: \%s' % (self._entities[ent.link], ent))
-            else:
-                self._entities[link] = ent
-
-    def _check_entity(self, source, external_ref):
-        """
-        In the event of remote access, this is the call that will trigger a remote query
-        :param source:
-        :param external_ref:
-        :return:
-        """
-        ent = self._archives[source].retrieve_or_fetch_entity(external_ref)
-        self._add_lookup_token(ent.link, ent)  # cache entity itself
-        return ent
-
-    def _dereference(self, origin, external_ref, interface=None):
-        """
-        Converts an origin + external_ref into an entity.  Both are interpreted as strings.
-        :param origin:
-        :param external_ref:
-        :param interface:
-        :return: resource.reference, entity
-        """
-        origin = str(origin)
-        external_ref = str(external_ref)
-        uname = '/'.join([origin, external_ref])
-        found_org = None
-        if uname in self._entities:
-            return origin, self._entities[uname]
-        ent = None
-        if origin in self._nicknames:
-            ent = self._check_entity(self._nicknames[origin], external_ref)
-            found_org = self._archives[self._nicknames[origin]].ref
-        if ent is None:
-            for res in self._resolver.resolve(origin, interfaces=interface):
-                try:
-                    self._ensure_resource(res)
-                except Exception as e:
-                    print('Archive Instantiation for %s failed with %s' % (origin, e))
-                    # TODO: try to get more specific with exceptions.  p.s.: no idea what happens to this logging info
-                    # logging.info('Static archive for %s failed with %s' % (origin, e))
-                    raise
-                ent = self._check_entity(res.source, external_ref)
-                if ent is not None:
-                    found_org = res.reference
-                    break
-        if ent is not None:
-            self._add_lookup_token('/'.join([found_org, external_ref]), ent)  # cache found entry
-            self._add_lookup_token(uname, ent)  # cache original query
-        return found_org, ent
-
-    def _dereference_req(self, *args):
-        """
-        When an answer is required-- wrap the result and screen for EntityNotFound
-        :param args:
-        :return:
-        """
-        f, e = self._dereference(*args)
-        if e is None:
-            raise EntityNotFound('/'.join(args))
-        return f, e
-
-    def _get_interfaces(self, origin, itype):
+    def gen_interfaces(self, origin, itype):
         """
         :param origin:
         :param itype: single interface or iterable of interfaces
@@ -502,30 +388,19 @@ class LcCatalog(object):
         if isinstance(itype, str):
             itype = [itype]
         if itype is None:
-            itype = READONLY_INTERFACE_TYPES
+            itype = 'basic'  # fetch, get properties, uuid, reference
         itype = set(itype)
         for res in sorted(self._resolver.resolve(origin, interfaces=itype),
-                          key=lambda x: (not self._is_loaded(x), x.reference != origin, x.priority)):
-            if not self._ensure_resource(res):
-                continue
-            matches = itype.intersection(set(res.interfaces))
-            if 'quantity' in matches:
-                yield QuantityImplementation(self, self._archives[res.source], privacy=res.privacy)
-            if 'index' in matches:
-                yield IndexImplementation(self, self._archives[res.source], privacy=res.privacy)
-            if 'inventory' in matches:
-                yield InventoryImplementation(self, self._archives[res.source], privacy=res.privacy)
-            if 'background' in matches:
-                yield BackgroundImplementation(self, self._archives[res.source], privacy=res.privacy)
+                          key=lambda x: (not x.is_loaded, x.reference != origin, x.priority)):
+            res.check(self)
+            for iface in res.interfaces:
+                if iface == itype:
+                    yield res.make_interface(self, itype)
         '''
         # no need for this because qdb is (a) listed in the resolver and (b) upstream of everything
         if 'quantity' in itype:
             yield self._qdb  # fallback to our own quantity db for Quantity Interface requests
             '''
-
-    def get_interface(self, origin, itype):
-        for arch in self._get_interfaces(origin, itype):
-            yield arch
 
     """
     public functions -- should these operate directly on a catalog ref instead? I think so but let's see about usage
@@ -541,27 +416,14 @@ class LcCatalog(object):
         :param external_ref:
         :return: The origin of the lowest-priority resource to match the query
         """
-        found_org, e = self._dereference_req(origin, external_ref)
-        return found_org
+        for i in self.gen_interfaces(origin, None):
+            if i.lookup(external_ref):
+                return i.origin
+        raise EntityNotFound('%s/%s' % (origin, external_ref))
 
-    def lookup_ref(self, ref):
-        """
-        Finds an origin for a supplied CatalogRef
-        :param ref: a CatalogRef
-        :return: The origin of the lowest-priority resource to resolve the ref
-        """
-        found_org, e = self._dereference_req(ref.origin, ref.external_ref)
-        return found_org
-
-    def fetch(self, ref):
-        if ref.is_entity:
-            return ref
-        _, e = self._dereference_req(ref.origin, ref.external_ref)
-        return e
-
-    def entity_type(self, origin, external_ref):
-        _, e = self._dereference_req(origin, external_ref)
-        return e.entity_type
+    def fetch(self, origin, external_ref):
+        org = self.lookup(origin, external_ref)
+        return self.query(org).get(external_ref)
 
     """
     Qdb interaction
@@ -570,14 +432,12 @@ class LcCatalog(object):
         return self._qdb.c_mgr.is_elementary(flow)
 
     def load_lcia_factors(self, ref):
-        lcia = self._qdb.get_quantity(self.fetch(ref))
-        if lcia not in self._lcia_methods:
+        if ref.link not in self._lcia_methods:
             for fb in ref.flowables():
                 self._qdb.add_new_flowable(*filter(None, fb))
             for cf in ref.factors():
                 self._qdb.add_cf(cf)
-            self._lcia_methods.add(lcia)
-            self._lcia_methods.add(ref)
+            self._lcia_methods.add(ref.link)
 
     def annotate(self, flow, quantity=None, factor=None, value=None, locale=None):
         """

@@ -27,7 +27,7 @@ class LcEntity(object):
     """
     All LC entities behave like dicts, but they all have some common properties, defined here.
     """
-    _pre_fields = ['EntityType', 'Name']
+    _pre_fields = ['Name']
     _new_fields = []
     _ref_field = ''
     _post_fields = ['Comment']
@@ -42,7 +42,6 @@ class LcEntity(object):
 
         self._entity_type = entity_type
         self.reference_entity = None
-        self._scenarios = dict()
         self._origin = origin
 
         self._d['Name'] = ''
@@ -54,15 +53,15 @@ class LcEntity(object):
             self[k] = v
 
     def _make_ref_ref(self, query):
-        return self.reference_entity.make_ref(query)
+        if self.reference_entity is not None:
+            return self.reference_entity.make_ref(query)
+        return None
 
     def make_ref(self, query):
         d = dict()
-        reference_entity = None
+        reference_entity = self._make_ref_ref(query)
         for k in self.signature_fields():
-            if k == self._ref_field:
-                reference_entity = self._make_ref_ref(query)
-            else:
+            if k != self._ref_field:
                 d[k] = self._d[k]
         return CatalogRef.from_query(self.external_ref, query, self.entity_type, reference_entity=reference_entity, **d)
 

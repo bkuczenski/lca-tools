@@ -8,8 +8,8 @@ from .iforeground import ForegroundInterface
 from .iinventory import InventoryInterface
 from .iquantity import QuantityInterface
 
-INTERFACE_TYPES = {'index', 'inventory', 'background', 'quantity', 'foreground'}
-READONLY_INTERFACE_TYPES = {'index', 'inventory', 'background', 'quantity'}
+INTERFACE_TYPES = {'basic', 'index', 'inventory', 'background', 'quantity', 'foreground'}
+READONLY_INTERFACE_TYPES = {'basic', 'index', 'inventory', 'background', 'quantity'}
 
 
 class NoCatalog(Exception):
@@ -59,7 +59,7 @@ class CatalogQuery(IndexInterface, BackgroundInterface, ForegroundInterface, Inv
             print('Origin: %s' % self.origin)
         if self._catalog is None:
             raise NoCatalog
-        for i in self._catalog.get_interface(self._origin, itype):
+        for i in self._catalog.gen_interfaces(self._origin, itype):
             if strict:
                 if i.origin != self.origin:
                     if self._debug:

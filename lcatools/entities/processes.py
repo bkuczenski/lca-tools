@@ -78,34 +78,6 @@ class LcProcess(LcEntity):
     def __str__(self):
         return '%s [%s]' % (self._d['Name'], self._d['SpatialScope'])
 
-    def add_scenario(self, scenario, reference):
-        """
-        Here's how scenarios work:
-        a scenario acts equivalently to an alternative reference flow in an allocation exchange.
-        When a user wants to define a new scenario parameter- first the process needs to know it is parameterized
-        within that scenario- and what reference to use for un-parameterized exchanges. that's what add_scenario is for.
-        Then, the user can parameterize a specific exchange-> the exchange gets upgraded to an AllocatedExchange
-        if it is not already so, the scenario id is used as the reference flow, and the param value is installed
-        as the exchange value.
-        When a user makes an exchange query, they specify a reference flow (or no reference).  If the reference flow
-        shows up in the list of scenarios, then the internal exchange answering mechanism switches gears:
-         - if the scenario is a reference in the exchange, it uses that;
-         - otherwise it uses the reference pointed to by the process's scenarios dict (set here)
-
-        implication is that an allocated exchange should be earlier in inheritance than an exchange value- but the
-        current workaround is satisfactory for ff params and pf params excluding dissipation (dissipation
-        would inherit from exchangevalue). LCIA params (as
-        previously observed) should / could be new quantities- flow property params in general need a reworking
-         of the current [location] spec- which is the same as the param interface- but not today.
-
-         reference: fragment traversal- TODO
-        :param scenario:
-        :param reference:
-        :return:
-        """
-        if reference in self.reference_entity:
-            self._scenarios[scenario] = reference
-
     def _validate_reference(self, ref_set):
         for x in ref_set:
             if not super(LcProcess, self)._validate_reference(x):
@@ -183,20 +155,14 @@ class LcProcess(LcEntity):
         :param direction:
         :return:
         """
-        if isinstance(flow, LcFlow):
-            for x in self._exchanges.values():
-                if x.flow == flow:
-                    if direction is None:
-                        yield x
-                    else:
-                        if x.direction == direction:
-                            yield x
-        elif flow in self._scenarios:
-            for x in self._exchanges.values():
-                if x.flow == self._scenarios[flow]:
+        for x in self._exchanges.values():
+            if x.flow == flow:
+                if direction is None:
                     yield x
-        else:
-            raise TypeError('LcProcess.exchange input %s %s' % (flow, type(flow)))
+                else:
+                    if x.direction == direction:
+                        yield x
+        # raise TypeError('LcProcess.exchange input %s %s' % (flow, type(flow)))
 
     def has_exchange(self, flow, direction=None):
         try:

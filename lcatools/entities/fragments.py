@@ -73,7 +73,7 @@ class LcFragment(LcEntity):
 
     _ref_field = 'parent'
 
-    _new_fields = ['Parent', 'StageName']
+    _new_fields = ['StageName']
 
     @classmethod
     def from_json(cls, fg, j):

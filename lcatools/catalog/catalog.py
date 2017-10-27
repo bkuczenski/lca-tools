@@ -385,11 +385,8 @@ class LcCatalog(object):
         :param itype: single interface or iterable of interfaces
         :return:
         """
-        if isinstance(itype, str):
-            itype = [itype]
         if itype is None:
             itype = 'basic'  # fetch, get properties, uuid, reference
-        itype = set(itype)
         for res in sorted(self._resolver.resolve(origin, interfaces=itype),
                           key=lambda x: (not x.is_loaded, x.reference != origin, x.priority)):
             res.check(self)

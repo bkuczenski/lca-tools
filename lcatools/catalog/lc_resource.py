@@ -188,6 +188,8 @@ class LcResource(object):
         if isinstance(ifaces, str):
             ifaces = [ifaces]
         for i in ifaces:
+            if i == 'basic':
+                return True
             if i in self._interfaces:
                 return True
         return False

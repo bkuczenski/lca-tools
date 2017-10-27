@@ -250,4 +250,4 @@ class EntityRef(BaseRef):
         return None
 
     def __getitem__(self, item):
-        self.get_item(item)
+        return self.get_item(item)

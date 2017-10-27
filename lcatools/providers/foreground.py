@@ -76,12 +76,9 @@ class LcForeground(LcArchive):
         return self._catalog.ed
 
     def catalog_ref(self, origin, external_ref, entity_type=None):
-        ref = CatalogRef.lookup(origin, external_ref, catalog=self._catalog)
+        ref = self._catalog.fetch(origin, external_ref)
         if ref is None:
             ref = CatalogRef(origin, external_ref, entity_type=entity_type)
-        else:
-            if entity_type == 'flow':
-                return self._catalog.fetch(ref)
         return ref
 
     def add(self, entity):

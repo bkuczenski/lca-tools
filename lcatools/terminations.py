@@ -8,7 +8,8 @@ either one from the other.
 
 from lcatools.lcia_results import LciaResult, LciaResults
 from lcatools.exchanges import comp_dir, ExchangeValue
-from lcatools.catalog.inventory import PrivateArchive
+from lcatools.catalog.basic import PrivateArchive
+from lcatools.interfaces.iinventory import InventoryRequired
 from lcatools.entities.processes import AmbiguousReferenceError
 # from lcatools.catalog_ref import NoCatalog
 # from lcatools.interact import parse_math
@@ -354,7 +355,7 @@ class FlowTermination(object):
                 else:
                     try:
                         r_e = [r for r in self._term.exchange_values(term_flow, self.direction)]
-                    except PrivateArchive:
+                    except (PrivateArchive, InventoryRequired):
                         print('%s\nprivate... falling back to reference exchanges' % self._term)
                         r_e = [r for r in self._term.references()]
                 if len(r_e) > 1:

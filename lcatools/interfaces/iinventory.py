@@ -30,7 +30,7 @@ class InventoryInterface(AbstractQuery):
         :param termination: [None] if none, return all terminations
         :return:
         """
-        return self._perform_query([_interface, 'background'], 'exchange_values',
+        return self._perform_query(_interface, 'exchange_values',
                                    InventoryRequired('No access to exchange data'),
                                    process, flow, direction, termination=termination, **kwargs)
 

@@ -1,4 +1,68 @@
 ==========
+Mon Oct 30 10:09:46 -0700 2017
+
+Debugging the work... I've come across a problematic situation which is the FlowTermination.is_subfrag property.
+
+A subfrag is a fragment termination that is not foreground and not background.
+
+A background termination is one whose parent is marked background OR whose termination is marked background.
+
+This becomes a problem if the termination is from a different foreground, because the interface doesn't currently support querying is_background.
+
+So there are three options:
+ * extend the interface to include is_background for FragmentRefs
+ * refactor the is_bg test to be more correct
+ * refactor the is_subfrag test to be more correct
+
+since the first option is undesirable unless there's a true requirement, we want to know WHAT is is_subfrag used for and what is is_bg used for?
+
+first- what is is_background even used for?
+
+ans:
+ 1. If the FRAGMENT is marked background, then it ends traversal
+ 2. The fragment string representation is marked (B)
+ 3. LcForeground optionally selects foreground vs background fragments
+ 4. fragment.cutoffs() extends cutoffs with those found in background fragments (**DWR**)
+ 5. if TERM NODE is background, then [relying on 1 above] its traversal result replaces the current fragment
+ 6. if TERM NODE is background, the termination serializes as --C or -B
+ 7. if term is subfrag- raise SubFragmentAggregation on traversal
+    else- if parent is background- perform bg_lcia
+    (implicit: if parent is not background but term_node is background, then is_subfrag will be false but we'll end up treating the term node as a fg process and feed _unobserved_exchanges() to qdb. this seems broken.)
+
+OK, so there's a bit of a mess
+
+FYI, the antelope query is_background should be replaced with is_in_background to distinguish semantically- because it is asking the partial ordering whether the process is in the background, rather than if it "is" a background process.
+
+Now then- what about is_subfrag? I have a feeling that is mostly bound up in #7 above, but let's see:
+ 1. used for spacing in the TeX report-- to detect whether to widen the node position
+ 2. if fragment's parent's termination is_subfrag, then fragment is not observable-- its value is set by traversal
+ 3. if a FragmentFlow termination is_subfrag, and the termination descend is False, then subfrags need to be retained
+ 4. in fragment creation, again to determine observability
+ 5. ** in FlowTermination.set_term_params(): flip directionality depending on whether we are connecting to a subfragment's reference flow or IO flow-- again, this seems broken to be excluding cases where the term_node is background
+ 6. #7 above- in compute_unit_scores
+
+and that's it.
+
+Mon 2017-10-30 11:00:07 -0700
+
+LAST thing to check is the usage of Termination.is_bg():
+
+ 1. for sorting child nodes in TeX report
+ 2. for adjusting spacing-- to make smaller
+ 3. ** if term is_bg then we terminate it right there instead of making it a subfrag ** this behavior will change!!
+ 4. in show_tree, again for sorting
+ 5. in string formatting the termination
+
+
+So, to summarize:
+The reason we have been excluding background terminations from being considered as subfragments appears to be mainly drawn from convenience, to reduce the complexity of accounting for traversals with dedicated (UO-LCA-style) background fragments- we've been wanting to auto-merge two columns of Af instead of simply distinguishing between Af and Ad.  As noted above in two places, this seems to break expectations.  solution is probably to do away with this behavior.
+
+HOWEVER, there also seems to be a need to distinguish local from remote subfragments.  There's a strong argument that a remote fragment should be treated just like a process, should be required to behave the same as a process.  That will solve the problem of lacking local access to traversal results because there is no expectation.
+
+So what that means is a remotely-terminated node is NOT a subfrag.  even if it's a fragment.  Since we can put a process anywhere, this shouldn't affect anything in the traversal.  The unit scores should be computed the same either way.
+
+
+==========
 Thu Oct 26 12:54:15 -0700 2017
 
 OK dammit. This needs to move forward. I was *mostly* done refactoring LcCatalog; all that remained was the fetch + dereference machinery.  In the spirit of simplicity, I'm going to say that the catalog should not provide a cache.  What it should do is provide catalog references.

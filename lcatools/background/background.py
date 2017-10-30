@@ -268,7 +268,7 @@ class BackgroundEngine(object):
                 raise
 
     def compute_lci(self, product_flow, **kwargs):
-        if self.is_background(product_flow):
+        if self.is_in_background(product_flow):
             num_ad = sp.array([[self.tstack.bg_dict(product_flow.index), 0, 1.0]])
             ad = self.construct_sparse(num_ad, self.tstack.ndim, 1)
             x, bx = self.compute_bg_lci(ad, **kwargs)
@@ -362,13 +362,13 @@ class BackgroundEngine(object):
         """
         if isinstance(pf, int):
             pf = self.product_flow(pf)
-        if self.is_background(pf):
+        if self.is_in_background(pf):
             return []
         return self.tstack.foreground(pf)
 
-    def is_background(self, pf):
+    def is_in_background(self, pf):
         """
-        Tells whether a Product Flow OR index is background.
+        Tells whether a Product Flow OR index is part of the background SCC.
         :param pf: product_flow OR product_flow.index
         :return: bool
         """
@@ -398,12 +398,12 @@ class BackgroundEngine(object):
             if self.tstack.pdim == 0:
                 return None, None, None
             for fg in self._foreground:
-                if self.is_background(fg.term.index):
+                if self.is_in_background(fg.term.index):
                     ad_exch.append(fg)
                 else:
                     af_exch.append(fg)
         else:
-            if self.is_background(product_flow):
+            if self.is_in_background(product_flow):
                 _af = self.construct_sparse([], 1, 1)
                 bg_index = self.tstack.bg_dict(product_flow.index)
                 _ad = self._a_matrix[:, bg_index]
@@ -420,7 +420,7 @@ class BackgroundEngine(object):
 
             for fg in self._foreground:
                 if fg.parent.index in _fg_dict:
-                    if self.is_background(fg.term.index):
+                    if self.is_in_background(fg.term.index):
                         ad_exch.append(fg)
                     elif fg.term.index in _fg_dict:
                         af_exch.append(fg)
@@ -448,7 +448,7 @@ class BackgroundEngine(object):
         while len(self._interior_incoming) > 0:
             k = self._interior_incoming.pop()
             k.adjust_val()
-            if self.is_background(k.parent.index):
+            if self.is_in_background(k.parent.index):
                 self._interior.append(k)
             else:
                 self._foreground.append(k)
@@ -456,7 +456,7 @@ class BackgroundEngine(object):
         while len(self._cutoff_incoming) > 0:
             k = self._cutoff_incoming.pop()
             k.adjust_val()
-            if self.is_background(k.parent.index):
+            if self.is_in_background(k.parent.index):
                 self._bg_emission.append(k)
             else:
                 self._cutoff.append(k)

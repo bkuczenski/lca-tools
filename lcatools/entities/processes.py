@@ -27,7 +27,7 @@ class ReferenceSettingFailed(Exception):
 
 
 # a shorthand for storing operable reference exchanges in a process ref. maybe this will need to be a class, we'll see.
-RxRef = namedtuple('RxRef', ['flow', 'direction'])
+RxRef = namedtuple('RxRef', ['flow', 'direction', 'value'])
 
 
 class LcProcess(LcEntity):
@@ -73,7 +73,7 @@ class LcProcess(LcEntity):
             self._d['TemporalScope'] = '0'
 
     def _make_ref_ref(self, query):
-        return [RxRef(x.flow.make_ref(query), x.direction) for x in self.reference_entity]
+        return [RxRef(x.flow.make_ref(query), x.direction, x.value) for x in self.references()]
 
     def __str__(self):
         return '%s [%s]' % (self._d['Name'], self._d['SpatialScope'])

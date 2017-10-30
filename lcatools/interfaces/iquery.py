@@ -102,8 +102,10 @@ class CatalogQuery(IndexInterface, BackgroundInterface, ForegroundInterface, Inv
                                    external_ref, item)
 
     def get_reference(self, external_ref):
-        return self._perform_query(None, 'get_reference', EntityNotFound('%s' % external_ref),
-                                   external_ref)
+        re = self._perform_query(None, 'get_reference', EntityNotFound('%s' % external_ref),
+                                 external_ref)
+        if re == []:
+            return None
 
     def get_uuid(self, external_ref):
         return self._perform_query(None, 'get_uuid', EntityNotFound('%s' % external_ref),

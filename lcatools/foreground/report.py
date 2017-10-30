@@ -317,7 +317,7 @@ xs        """
                 # foreground
                 boxes = fg_box(fragment.get_uuid())
                 frag_name = fragment['Name']
-            elif term.is_bg:
+            elif term.term_is_bg:
                 if term.term_node.term.is_null:
                     # cutoff
                     boxes = cutoff_box(fragment.get_uuid())

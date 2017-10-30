@@ -41,8 +41,8 @@ class BackgroundProxy(object):
         """
         return process.reference(flow=ref_flow)
 
-    def is_background(self, process, ref_flow=None):
-        return True
+    def is_in_background(self, process, ref_flow=None):
+        return False
 
     def lci(self, process, ref_flow=None):
         for x in process.exchanges(reference=ref_flow):

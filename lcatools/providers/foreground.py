@@ -8,7 +8,7 @@ import re
 from lcatools.providers.base import LcArchive, to_uuid, entity_types
 from lcatools.entities import LcFragment
 from lcatools.exchanges import comp_dir
-from lcatools.entity_refs import CatalogRef, NoCatalog
+from lcatools.entity_refs import CatalogRef
 
 
 class AmbiguousReference(Exception):
@@ -133,7 +133,7 @@ class LcForeground(LcArchive):
             frag = self[f['entityId']]
             try:
                 frag.finish_json_load(self, f)
-            except NoCatalog:
+            except AttributeError:
                 print(f)
                 raise
 
@@ -235,7 +235,7 @@ class LcForeground(LcArchive):
             else:
                 child_frag = self.ed.create_fragment(x.flow, x.direction, parent=top_frag, value=x.value,
                                                      comment='Subfragment; %s' % comment)
-                if process.is_background(termination=x.termination, ref_flow=x.flow):
+                if process.is_in_background(termination=x.termination, ref_flow=x.flow):
                     bg = self.find_or_create_term(x, background=True)
                     child_frag.terminate(bg)
                 else:

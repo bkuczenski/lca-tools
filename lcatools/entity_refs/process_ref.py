@@ -96,7 +96,7 @@ class ProcessRef(EntityRef):
         if termination is None:
             termination = self.external_ref
         ref_flow = self._use_ref_exch(ref_flow)
-        return self._query.is_background(termination, ref_flow=ref_flow, **kwargs)
+        return self._query.is_in_background(termination, ref_flow=ref_flow, **kwargs)
 
     def ad(self, ref_flow=None, **kwargs):
         ref_flow = self._use_ref_exch(ref_flow)

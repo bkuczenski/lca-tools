@@ -61,9 +61,11 @@ class LcEntity(object):
         d = dict()
         reference_entity = self._make_ref_ref(query)
         for k in self.signature_fields():
-            if k != self._ref_field:
+            if k == self._ref_field:
+                continue
+            if k in self._d:
                 d[k] = self._d[k]
-        return CatalogRef.from_query(self.external_ref, query, self.entity_type, reference_entity=reference_entity, **d)
+        return CatalogRef.from_query(self.external_ref, query, self.entity_type, reference_entity, **d)
 
     @property
     def entity_type(self):

@@ -146,7 +146,7 @@ class EntityRef(BaseRef):
     An EntityRef is a CatalogRef that has been provided a valid catalog query.  the EntityRef is still semi-abstract
     since there is no meaningful reference to an entity that is not typed.
     """
-    def __init__(self, external_ref, query, uuid=None, reference_entity=None, **kwargs):
+    def __init__(self, external_ref, query, reference_entity, uuid=None, **kwargs):
         """
 
         :param external_ref:
@@ -160,6 +160,9 @@ class EntityRef(BaseRef):
 
         self._query = query
         self._uuid = uuid or self._query.get_uuid(self.external_ref)
+
+    def get_reference(self):
+        return self._reference_entity
 
     def _check_query(self, message=''):
         if self._query is None:
@@ -212,10 +215,6 @@ class EntityRef(BaseRef):
     @property
     def privacy(self):
         return self._query.privacy()
-
-    @property
-    def reference_entity(self):
-        return self._query.get_reference(self.external_ref)
 
     def _show_ref(self):
         print('reference: %s' % self.reference_entity)

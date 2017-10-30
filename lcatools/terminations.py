@@ -170,7 +170,17 @@ class FlowTermination(object):
             return None
         elif self.term_node.entity_type == 'fragment':
             return ExchangeValue(self.term_node, self.term_flow, self.direction, value=self._cached_ev)
-        return ExchangeValue(self.term_node.entity(), self.term_flow, self.direction, value=self._cached_ev)
+        return ExchangeValue(self.term_node, self.term_flow, self.direction, value=self._cached_ev)
+
+    @property
+    def is_local(self):
+        """
+        Fragment and termination have the same origin
+        :return:
+        """
+        if self.is_null:
+            return True
+        return self._parent.origin == self.term_node.origin
 
     @property
     def is_frag(self):
@@ -194,7 +204,15 @@ class FlowTermination(object):
         parent is marked background, or termination is a background fragment
         :return:
         """
-        return self._parent.is_background or (self.is_frag and self.term_node.is_background)
+        return self._parent.is_background
+
+    @property
+    def term_is_bg(self):
+        """
+        Termination is local and background
+        :return:
+        """
+        return self.is_local and self.term_node.is_background
 
     @property
     def is_subfrag(self):
@@ -372,6 +390,7 @@ class FlowTermination(object):
         self.term_flow = term_flow
         self._cached_ev = inbound_ev or 1.0
 
+    '''
     def flowdb_results(self, lcia_results):
         self._score_cache = lcia_results
 
@@ -395,6 +414,7 @@ class FlowTermination(object):
             if self.is_fg or self.term_node.entity_type == 'process':
                 results = lcia(self.term_node, self.term_flow, q_run)
                 self._score_cache.update(results)
+    '''
 
     def _unobserved_exchanges(self):
         """
@@ -405,9 +425,9 @@ class FlowTermination(object):
         if self.is_fg:
             x = ExchangeValue(self._parent, self._parent.flow, self._parent.direction)
             yield x
-        elif self.is_frag:
-            for x in []:
-                yield x
+        # elif self.is_frag:  # fragments can have unobserved exchanges too!
+        #     for x in []:
+        #         yield x
         else:
             children = set()
             for c in self._parent.child_flows:
@@ -419,9 +439,11 @@ class FlowTermination(object):
     def compute_unit_score(self, quantity, qdb, **kwargs):
         """
         four different ways to do this.
-        1- we are fg flow: give qdb self as exchange
-        2- we are fg process: give qdb unobserved exchanges
-        3- we are bg process: ask catalog to give us lcia
+        0- we are a subfragment-- throw exception: use subfragment traversal results contained in the FragmentFlow
+        1- parent is bg: ask catalog to give us bg_lcia (process or fragment)
+        2- get fg lcia for unobserved exchanges
+
+        If
         :param quantity:
         :param qdb:
         :return:
@@ -430,6 +452,7 @@ class FlowTermination(object):
             raise SubFragmentAggregation  # to be caught
 
         if self._parent.is_background:
+            # need bg_lcia method for FragmentRefs
             res = self.term_node.bg_lcia(lcia_qty=quantity, ref_flow=self.term_flow.external_ref, **kwargs)
         else:
             try:
@@ -519,7 +542,7 @@ class FlowTermination(object):
           '-O  ' = foreground node
           '-*  ' = process
           '-#  ' - sub-fragment (aggregate)
-          '-#: ' - sub-fragment (descend)
+          '-#::' - sub-fragment (descend)
           '-B ' - terminated background
           '--C ' - cut-off background
         """
@@ -533,7 +556,7 @@ class FlowTermination(object):
             else:
                 term = '-*  '
         elif self.term_node.entity_type == 'fragment':
-            if self.term_node.is_background:
+            if self.term_is_bg:
                 # TODO: Broken! needs to be scenario-aware
                 if self.term_node.term.is_null:
                     term = '--C '
@@ -541,7 +564,7 @@ class FlowTermination(object):
                     term = '-B  '
             else:
                 if self.descend:
-                    term = '-#: '
+                    term = '-#::'
                 else:
                     term = '-#  '
         else:

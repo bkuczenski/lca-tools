@@ -78,7 +78,7 @@ class BackgroundInterface(AbstractQuery):
         return self._perform_query(_interface, 'foreground', BackgroundRequired('No knowledge of background'),
                                    process, ref_flow=ref_flow, **kwargs)
 
-    def is_background(self, process, ref_flow=None, **kwargs):
+    def is_in_background(self, process, ref_flow=None, **kwargs):
         """
 
         :param process:
@@ -86,7 +86,7 @@ class BackgroundInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'is_background', BackgroundRequired('No knowledge of background'),
+        return self._perform_query(_interface, 'is_in_background', BackgroundRequired('No knowledge of background'),
                                    process, ref_flow=ref_flow, **kwargs)
 
     def ad(self, process, ref_flow=None, **kwargs):

@@ -192,6 +192,11 @@ class LcFragment(LcEntity):
         if level < self.__dbg_threshold:
                 print(qwer)
 
+    def make_ref(self, query):
+        ref = super(LcFragment, self).make_ref(query)
+        ref.set_config(self.flow.make_ref(query), self.direction)
+        return ref
+
     def top(self):
         if self.reference_entity is None:
             return self
@@ -360,7 +365,8 @@ class LcFragment(LcEntity):
         if len(children) > 0:
             print('   %s [%s] %s' % (prefix, term.unit, self['Name']))
             prefix += '    | '
-            for c in sorted(children, key=lambda x: (x['StageName'], not x.term.is_null, x.term.is_bg)):
+            for c in sorted(children, key=lambda x: (x['StageName'], not x.term.is_null,
+                                                     x.term.is_bg or x.term.term_is_bg)):
                 if observed and c.exchange_value(scenario, observed=observed) == 0:
                     continue
                 if c['StageName'] != latest_stage:
@@ -1159,10 +1165,10 @@ class LcFragment(LcEntity):
             handle sub-fragments, including background flows--
             for sub-fragments, the flow magnitudes are determined at the time of traversal and must be pushed out to
              child flows
-            for background flows, the background ff should replace the current ff, except maintaining self as fragment
+            for LOCAL background flows, the background ff should replace the current ff, maintaining self as fragment
             '''
 
-            if term.term_node.is_background:
+            if term.term_is_bg:
                 bg_ff, cons = term.term_node.traverse(node_weight, scenario, observed=observed)
                 bg_ff[0].fragment = self
                 return bg_ff, conserved_val

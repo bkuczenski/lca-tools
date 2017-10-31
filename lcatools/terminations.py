@@ -179,7 +179,7 @@ class FlowTermination(object):
         :return:
         """
         if self.is_null:
-            return True
+            return False
         return self._parent.origin == self.term_node.origin
 
     @property

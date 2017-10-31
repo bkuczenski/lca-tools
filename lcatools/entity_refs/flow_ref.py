@@ -11,6 +11,9 @@ class FlowRef(EntityRef):
     """
     _etype = 'flow'
 
+    def unit(self):
+        return self.reference_entity.reference_entity
+
     @property
     def _addl(self):
         return self.reference_entity.unit()

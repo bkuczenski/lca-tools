@@ -298,7 +298,10 @@ class IlcdArchive(LcArchive):
         :return:
         """
         dtype = _extract_dtype(unit_ref, self._pathtype)
-        uid = _extract_uuid(unit_ref)
+        try:
+            uid = _extract_uuid(unit_ref)
+        except AttributeError:
+            return super(IlcdArchive, self)._create_unit(unit_ref)
         filename = self._path_from_parts(dtype, uid)
         o = self._get_objectified_entity(filename)
 

@@ -79,6 +79,9 @@ class LcQuantity(LcEntity):
 
         return outbound / inbound
 
+    def _print_ref_field(self):
+        return self.reference_entity.unitstring
+
     def reset_unitstring(self, ustring):
         self.reference_entity.reset_unitstring(ustring)
 

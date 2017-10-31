@@ -46,7 +46,6 @@ class InventoryInterface(AbstractQuery):
         :param ref_flow:
         :return:
         """
-        print(_interface)
         return self._perform_query(_interface, 'inventory', InventoryRequired('No access to exchange data'),
                                    process, ref_flow=ref_flow, **kwargs)
 

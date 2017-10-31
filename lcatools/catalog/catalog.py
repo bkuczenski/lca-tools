@@ -343,6 +343,7 @@ class LcCatalog(object):
                 print('Not archiving static resource %s' % res)
                 return
             print('Archiving static resource %s' % res)
+        res.check(self)
         res.make_cache(self.cache_file(source))
 
     def create_static_archive(self, archive_file, origin, interface=None, source=None, background=True, priority=90):

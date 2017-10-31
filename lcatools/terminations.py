@@ -53,6 +53,7 @@ class FlowTermination(object):
             origin = j['source']
         external_ref = j['externalId']
         term_flow = j.pop('termFlow', None)
+        inbound_ev = j.pop('inboundExchangeValue', None)
         if origin == fg.ref:
             term_node = fg[external_ref]
             if term_flow is not None:
@@ -71,7 +72,8 @@ class FlowTermination(object):
 
         direction = j.pop('direction', None)
         descend = j.pop('descend', None)
-        term = cls(fragment, term_node, direction=direction, term_flow=term_flow, descend=descend)
+        term = cls(fragment, term_node, direction=direction, term_flow=term_flow, descend=descend,
+                   inbound_ev=inbound_ev)
         if 'scoreCache' in j.keys():
             term._deserialize_score_cache(fg, j['scoreCache'], scenario)
         return term
@@ -517,6 +519,8 @@ class FlowTermination(object):
             j['direction'] = self.direction
         if self._descend is False:
             j['descend'] = False
+        if self._cached_ev != 1.0:
+            j['inboundExchangeValue'] = self._cached_ev
         if self._parent.is_background and save_unit_scores and len(self._score_cache) > 0:
             j['scoreCache'] = self._serialize_score_cache()
         return j

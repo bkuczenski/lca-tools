@@ -925,42 +925,6 @@ class LcFragment(LcEntity):
         ffs.append(FragmentFlow.ref_flow(top, scenario=scenario, observed=observed))
         ios, internal = _group_ios(self, ffs)
 
-        '''
-        io_ffs.append(FragmentFlow.ref_flow(self, scenario=scenario, observed=observed))
-
-        accum = defaultdict(float)  # exch value
-        ent = dict()  # flow entity
-
-        for i in io_ffs:
-            ent[i.fragment.flow.external_ref] = i.fragment.flow
-            if i.fragment.direction == 'Input':
-                accum[i.fragment.flow.external_ref] += i.magnitude
-            else:
-                accum[i.fragment.flow.external_ref] -= i.magnitude
-
-        in_ex = accum.pop(self.flow.external_ref)
-        if in_ex * ev < 0:  # i.e. if the signs are different
-            raise ValueError('Fragment requires more reference flow than it generates')
-        frag_exchs = []
-        for k, v in accum.items():
-            val = abs(v)
-            if self.reference_entity is None:
-                if ev != in_ex:
-                    val *= (ev / in_ex)
-            if v == 0:
-                continue
-            elif val < 1.0e-16:
-                # controversial?
-                self._print('SQUASHING %s: %g' % (ent[k], v), level=3)
-                continue
-            elif v < 0:
-                dirn = 'Output'
-            else:
-                dirn = 'Input'
-
-            frag_exchs.append(ExchangeValue(self, ent[k], dirn, value=val))
-        return sorted(frag_exchs, key=lambda x: x.direction)
-        '''
         return ios, internal
 
     def cutoffs(self, scenario=None, observed=False, aggregate=True):

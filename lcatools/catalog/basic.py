@@ -49,10 +49,7 @@ class BasicImplementation(object):
         return self._archive.get_item(external_ref, item)
 
     def get_reference(self, external_ref):
-        re = self._archive.get_reference(external_ref)
-        if re is None:
-            return []
-        return re
+        return self._archive.get_reference(external_ref)
 
     def get_uuid(self, external_ref):
         return self._archive.get_uuid(external_ref)

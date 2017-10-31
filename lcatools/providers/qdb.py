@@ -704,7 +704,7 @@ class Qdb(LcArchive):
             # TODO: implement semantic disambiguator to pick best CF
         return vals[0]
 
-    def do_lcia(self, quantity, inventory, locale='GLO', refresh=False, **kwargs):
+    def do_lcia(self, quantity, inventory, locale='GLO', refresh=False, debug=False, **kwargs):
         """
         takes a quantity and an exchanges generator; returns an LciaResult for the given quantity.
         For now, does NOT pre-load quantity LCIA methods. that is a catalog action. the Qdb doesn't do catalog stuff.
@@ -718,17 +718,23 @@ class Qdb(LcArchive):
         """
         q = self.get_quantity(quantity.link)
         q_ind = self._get_q_ind(q)
+        if debug:
+            print('q_ind: %d' % q_ind)
         r = LciaResult(q)
         for x in inventory:
             if refresh or not x.flow.has_characterization(q):
                 try:
                     factor = self.convert(flow=x.flow, query_q_ind=q_ind, locale=locale, **kwargs)
                 except ConversionReferenceMismatch:
-                    print('%s' % x)
+                    print('Mismatch %s' % x)
                     factor = None
                 if factor is not None:
+                    if debug:
+                        print('factor %g %s' % (factor, x))
                     x.flow.add_characterization(q, value=factor, overwrite=refresh)
                 else:
+                    if debug:
+                        print('factor NONE %s' % x)
                     x.flow.add_characterization(q)
             if x.flow.cf(q) is not None:
                 r.add_component(x.flow.external_ref, entity=x.flow)

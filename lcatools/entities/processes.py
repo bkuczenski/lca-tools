@@ -179,26 +179,17 @@ class LcProcess(LcEntity):
         is supplied but the process is NOT allocated to that reference, generate unallocated ExchangeValues (excluding
         the reference itself).  Reference must be a flow or exchange found in the process's reference entity.
 
-        TESTING: if a reference is supplied but the process is NOT allocated to that reference,
-
         :param reference:
         :param strict: [False] whether to use strict flow name matching [default- first regex match]
         :return:
         """
-        # chk_alloc = None
-        if reference is not None:
-            try:
-                reference = self.find_reference(reference, strict=strict)
-                if not self.is_allocated(reference):
-                    return
-            except NoReferenceFound:
-                reference = None
+        try:
+            reference = self.find_reference(reference, strict=strict)
+        except NoReferenceFound:
+            reference = None
         for i in self._exchanges.values():
             if reference is None:
                 yield i
-            # elif not chk_alloc:
-            #     if i != reference:
-            #         yield i
             else:
                 if i in self.reference_entity:
                     continue
@@ -219,12 +210,12 @@ class LcProcess(LcEntity):
             ref = next(x for x in self.reference_entity)
         elif isinstance(reference, str):
             ref = self._find_reference_by_string(reference, strict=strict)
-        elif isinstance(reference, LcFlow):
+        elif reference.entity_type == 'flow':
             try:
                 ref = next(rf for rf in self.reference_entity if rf.flow == reference)
             except StopIteration:
                 raise NoReferenceFound('No reference exchange found with flow %s' % reference)
-        elif isinstance(reference, Exchange):
+        elif reference.entity_type == 'exchange':
             if reference in self.reference_entity:
                 ref = reference
             else:

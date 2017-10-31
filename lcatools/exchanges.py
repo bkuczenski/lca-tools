@@ -199,11 +199,14 @@ class ExchangeValue(Exchange):
         """
         Use to flatten an allocated process inventory into a standalone inventory
         :param allocated:
-        :param reference:
+        :param reference: a reference exchange
         :return:
         """
-        return cls(allocated.process, allocated.flow, allocated.direction, value=allocated[reference],
-                   termination=allocated.termination)
+        if isinstance(allocated, ExchangeValue):
+            return cls(allocated.process, allocated.flow, allocated.direction, value=allocated[reference],
+                       termination=allocated.termination)
+        elif isinstance(allocated, Exchange):
+            return allocated
 
     @classmethod
     def from_scenario(cls, allocated, scenario, fallback):

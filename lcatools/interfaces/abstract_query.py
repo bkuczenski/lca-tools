@@ -1,6 +1,8 @@
 """
 Root-level catalog interface
 """
+
+
 class ValidationError(Exception):
     pass
 

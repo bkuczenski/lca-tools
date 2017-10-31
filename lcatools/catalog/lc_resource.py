@@ -28,7 +28,7 @@ class LcResource(object):
             ref = archive.get_names()[source]
         else:
             ref = local_ref(source)
-        ds_type = type(archive)  # static flag indicates whether archive is complete
+        ds_type = archive.__class__.__name__  # static flag indicates whether archive is complete
         kwargs.update(archive.init_args)
         res = cls(ref, source, ds_type, interfaces=interfaces, static=archive.static, **kwargs)
 

@@ -607,6 +607,7 @@ class LciaResult(object):
                 for e in sorted(self._LciaScores.keys(),
                                 key=lambda x: self._LciaScores[x].cumulative_result,
                                 reverse=True):
+                    print('\n%s:' % self._LciaScores[e].entity)
                     self._LciaScores[e].show_detailed_result(**kwargs)
             else:
                 self._LciaScores[key].show_detailed_result(**kwargs)

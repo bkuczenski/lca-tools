@@ -48,3 +48,6 @@ class FragmentRef(EntityRef):
 
     def bg_lcia(self, lcia_qty, scenario=None, **kwargs):
         return self.fragment_lcia(self.external_ref, lcia_qty, scenario=scenario, **kwargs)
+
+    def unit_inventory(self, scenario=None):
+        pass

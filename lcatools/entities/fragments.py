@@ -822,7 +822,7 @@ class LcFragment(LcEntity):
                 else:
                     child.set_exchange_value(scenario, x.value)
 
-    def node_weight(self, magnitude, scenario, observed):
+    def _node_weight(self, magnitude, scenario, observed):
         term = self.termination(scenario)
         if self.reference_entity is None and term.is_fg:
             return magnitude / self.exchange_value(scenario, observed=observed)
@@ -868,11 +868,11 @@ class LcFragment(LcEntity):
             self._exchange_values[match] = _balance
 
     def fragment_lcia(self, scenario=None, observed=False):
-        ffs = self.traversal_entry(scenario, observed=observed)
+        ffs = self.traverse(scenario, observed=observed)
         return traversal_to_lcia(ffs)
 
     def io_flows(self, scenario, observed=False):
-        ffs = self.traversal_entry(scenario, observed=observed)
+        ffs = self.traverse(scenario, observed=observed)
         return [ff for ff in ffs if ff.term.is_null]
 
     def inventory(self, scenario=None, scale=1.0, observed=False):
@@ -920,7 +920,7 @@ class LcFragment(LcEntity):
         """
         top = self.top()
 
-        ffs = top.traversal_entry(scenario, observed=observed)
+        ffs = top.traverse(scenario, observed=observed)
 
         ffs.append(FragmentFlow.ref_flow(top, scenario=scenario, observed=observed))
         ios, internal = _group_ios(self, ffs)
@@ -937,7 +937,7 @@ class LcFragment(LcEntity):
         cutoff from a distinct node distinctly.
         :return:
         """
-        ffs = self.traversal_entry(scenario, observed=observed)
+        ffs = self.traverse(scenario, observed=observed)
         cos = []
         for ff in ffs:
             if ff.term.is_null:
@@ -960,25 +960,16 @@ class LcFragment(LcEntity):
                        for f in cos], key=lambda x: (x.direction == 'Input', x.flow['Compartment'],
                                                      x.flow['Name'], x.value), reverse=True)
 
-    def traversal_entry(self, scenario, observed=False):
-        if False:
-            # this has been reformed
-            if self.reference_entity is None:
-                in_wt = self.exchange_value(scenario, observed=observed)
-            else:
-                in_wt = 1.0 / self.exchange_value(scenario, observed=observed)
-        else:
-            in_wt = 1.0
-
+    def traverse(self, scenario, observed=False):
         if scenario is not None:
             # Controversial? The Cached EVs are basically meaningless. Scenarios should strictly be observed flows.
             observed = True
 
-        ffs, _ = self.traverse(in_wt, scenario, observed=observed)
+        ffs, _ = self.traverse_node(1.0, scenario, observed=observed)
         return ffs
 
-    def traverse(self, upstream_nw, scenario,
-                 observed=False, frags_seen=None, conserved_qty=None, _balance=None):
+    def traverse_node(self, upstream_nw, scenario,
+                      observed=False, frags_seen=None, conserved_qty=None, _balance=None):
 
         """
         If the node has a non-null termination, use that; follow child flows.
@@ -1034,7 +1025,7 @@ class LcFragment(LcEntity):
                 conserved_val *= -1
             _print('%.3s %g' % (self.uuid, conserved_val), level=2)
 
-        node_weight = self.node_weight(magnitude, scenario, observed)
+        node_weight = self._node_weight(magnitude, scenario, observed)
         term = self.termination(scenario)
 
         # print('%6f %6f %s' % (magnitude, node_weight, self))
@@ -1104,8 +1095,8 @@ class LcFragment(LcEntity):
 
             for f in self.child_flows:
                 try:
-                    child_ff, cons = f.traverse(node_weight, scenario, observed=observed,
-                                                frags_seen=set(frags_seen), conserved_qty=self._conserved_quantity)
+                    child_ff, cons = f.traverse_node(node_weight, scenario, observed=observed,
+                                                     frags_seen=set(frags_seen), conserved_qty=self._conserved_quantity)
                     if cons is not None:
                         stock += cons
                 except BalanceFlowError:
@@ -1120,8 +1111,8 @@ class LcFragment(LcEntity):
                 # if it is an output, its exchange must equal the balance
                 if bal_f.direction == 'Input':
                     stock *= -1
-                bal_ff, cons = bal_f.traverse(node_weight, scenario, observed=observed,
-                                              frags_seen=set(frags_seen), conserved_qty=None, _balance=stock)
+                bal_ff, _ = bal_f.traverse(node_weight, scenario, observed=observed,
+                                           frags_seen=set(frags_seen), conserved_qty=None, _balance=stock)
                 ff.extend(bal_ff)
 
         else:
@@ -1133,7 +1124,7 @@ class LcFragment(LcEntity):
             '''
 
             if term.term_is_bg:
-                bg_ff, cons = term.term_node.traverse(node_weight, scenario, observed=observed)
+                bg_ff, _ = term.term_node.traverse_node(node_weight, scenario, observed=observed)
                 bg_ff[0].fragment = self
                 return bg_ff, conserved_val
 
@@ -1183,8 +1174,8 @@ class LcFragment(LcEntity):
                     continue
 
                 _print('traversing with ev = %g' % ev, 4)
-                child_ff, cons = f.traverse(downstream_nw, scenario, observed=observed,
-                                            frags_seen=frags_seen, _balance=ev)
+                child_ff, _ = f.traverse_node(downstream_nw, scenario, observed=observed,
+                                              frags_seen=frags_seen, _balance=ev)
                 ff.extend(child_ff)
 
             # remaining un-accounted io flows are getting appended, so do scale

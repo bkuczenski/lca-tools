@@ -191,7 +191,7 @@ class FragmentEditor(FlowEditor):
                                   balance_flow=balance, Name=name, **kwargs)
 
             # traverse -- may not need to do this anymore if we switch to live traversals for everything
-            parent.traversal_entry(None)
+            parent.traverse(None)
 
         if self._qdb.is_elementary(frag.flow):
             frag.terminate(frag.flow)

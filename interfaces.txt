@@ -1,4 +1,74 @@
 ==========
+Wed Nov 01 10:43:46 -0700 2017
+
+Hard to believe how long this project has been going and how piss poor it all is.
+
+The best thing going right now is the process_ref interface, which provides all the information required about nodes in a process-flow network.
+
+The process API doesn't even match the process_ref API though.  and fragments are just utterly confused.
+
+Here's what we should do:
+ - rearrange the process API to match the process_ref
+   * filter that through usage
+ - make the fragment API match the relevant aspects of process_ref
+ - simply extend fragment to fragment_ref
+
+We also wind up back at the same quandary regarding specifying LCIA quantities over REST. I guess they should be query args.  e.g. API_ROOT/semantic.origin/p_entity_id/lcia?quantity=semantic.origin/q_entity_id&locale=x
+with the default locale of course being the process's SpatialScope
+
+
+I keep getting stuck on "how should this work REALLY?"
+
+How it should work is this:
+ - the interface specification should be the master of all things
+ - fragments should behave like bg processes if they are remote, and like foregrounds if they are local
+ x except we don't want remote fragments to behave like processes because we still want to enable deep stage aggregation, a la the used oil study, which is required for AUOMA.
+ - we can pre-aggregate on the remote side.  presumably we would want to allow the remote authors to specify the aggregation.  But they can do that by setting the descend flag during subfragment construction.
+ - I think we need to implement unit_inventory and then derive inventory + exchanges from that
+ - unit_inventory delivers two sets of fragmentflows: exterior, interior
+   = inventory + exchanges convert the exterior ones to exchanges and return the list
+   = exchange relation can work the same
+   = fg_lcia--> not sure we want to implement this but we could conceivably do fragment_lcia only for non-background ffs
+   = foreground--> same as traversal
+   = is_in_background--> false for all fragments
+   = ad, bf--> can conceivably construct these from interior ffs
+   = lci--> to be implemented
+   = bg_lcia--> this is just fragment_lcia
+   = fragment lcia -> score_cache -> if term is remote, just recurse at query time. NOPE NOPE NOPE
+     == that just means that remote queries will result in repeated traversals. that is maybe not efficient.
+     == plus we will need to serialize the entire LciaResult and then deserialize it.
+     == plus that prevents local referents from overriding stage names
+   = fragment_lcia -> score_cache -> if term is remote, DO NOTHING.
+     == we DO need to extend fragment_refs to include a 'private' flag indicating whether agg is mandatory
+     = given that, if descend is allowed, we just receive and deserialize the interior ffs as current
+     = if descend is false locally, we receive and deserialize interior ffs as current and store them
+       == when fragment lcia comes around, we recurse on the list of ffs per usual and locally compute unit scores
+     = if descend is not allowed remotely, we receive a single agg interior ff
+       == when fragment lcia comes around, we recurse on the single agg interior ff
+
+OK this is going well.  We DO need a mechanism to mark fragments as private. But that's not urgent. For now we just need to implement unit_inventory.
+
+and refactor process to match process_ref
+and continue fragment and fragment_ref refactor
+and work through the traversal snarl!
+and implement frag_flow_lcia in LcFragment (or make a dedicated class?)
+
+fuck this is all a big mess.
+
+Another problem is, all process queries expect/require a ref_flow specification, but all fragment queries have a single reference flow but expect/require a scenario specification.  So the traversal machinery still must distinguish between them.
+
+On that note, let's review the traversal machinery.
+
+Three major blocks:
+ 1. determine exchange value w.r.t. node balance
+ 2. recurse over children, process case
+ 3. recurse over children, fragment case
+
+Ultimately we want 2 and 3 to align. but they do need to be different.  processes are static but frags are not.
+Can we / do we want to implement conservation flows on fragment children?
+ 
+
+==========
 Thu Apr 20 13:01:43 -0700 2017
 
 Notes on current de-facto and future idealized interfaces between components.

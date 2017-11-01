@@ -83,14 +83,14 @@ class InventoryImplementation(BasicImplementation, InventoryInterface):
 
     def traverse(self, fragment, scenario=None, **kwargs):
         frag = self._archive.retrieve_or_fetch_entity(fragment)
-        return frag.traversal_entry(scenario, observed=True)
+        return frag.traverse(scenario, observed=True)
 
     def fragment_lcia(self, fragment, quantity_ref, scenario=None, refresh=False, **kwargs):
         self._catalog.load_lcia_factors(quantity_ref)
         fragmentflows = self.traverse(fragment, scenario=scenario, **kwargs)
-        return self._frag_flow_lcia(fragmentflows, quantity_ref, refresh=refresh)
+        return self._frag_flow_lcia(fragmentflows, quantity_ref, scenario=scenario, refresh=refresh)
 
-    def _frag_flow_lcia(self, fragmentflows, quantity_ref, refresh=False):
+    def _frag_flow_lcia(self, fragmentflows, quantity_ref, scenario=None, refresh=False):
         result = LciaResult(quantity_ref)
         for ff in fragmentflows:
             if ff.term.is_null:
@@ -103,7 +103,11 @@ class InventoryImplementation(BasicImplementation, InventoryInterface):
             try:
                 v = ff.term.score_cache(quantity=quantity_ref, qdb=self._catalog.qdb, refresh=refresh)
             except SubFragmentAggregation:
-                v = self._frag_flow_lcia(ff.subfragments, quantity_ref, refresh=refresh)
+                # if we were given interior fragments, recurse on them. otherwise ask remote.
+                if len(ff.subfragments) == 0:
+                    v = ff.term.term_node.fragment_lcia(quantity_ref, scenario=scenario, refresh=refresh)
+                else:
+                    v = self._frag_flow_lcia(ff.subfragments, quantity_ref, refresh=refresh)
             if v.total() == 0:
                 continue
 

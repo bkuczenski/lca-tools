@@ -45,5 +45,5 @@ class BackgroundProxy(object):
         return False
 
     def lci(self, process, ref_flow=None):
-        for x in process.exchanges(reference=ref_flow):
+        for x in process.inventory(reference=ref_flow):
             yield x

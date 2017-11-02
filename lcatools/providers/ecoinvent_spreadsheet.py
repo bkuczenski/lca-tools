@@ -153,6 +153,7 @@ class EcoinventSpreadsheet(NsUuidArchive):
 
         return [x.flow for x in p.reference_entity if x.flow.match(ref_flow)][0]
 
+    '''
     def fg_lookup(self, process_id, ref_flow=None):
         """
         Supply a process and optional reference flow-- returns a list of exchanges
@@ -169,7 +170,6 @@ class EcoinventSpreadsheet(NsUuidArchive):
             rf = self._find_rf(p, ref_flow=ref_flow)
             return p.exchanges(rf)
 
-    '''
     def lci_lookup(self, process_id):
         if self.lci is None:
             print('No LCI data')
@@ -180,7 +180,6 @@ class EcoinventSpreadsheet(NsUuidArchive):
             self.lci.write_to_file(self._lci_cache, gzip=True, exchanges=True, values=True)
             print('LCI: %s' % p)
             return p
-    '''
 
     def bg_lookup(self, process_id, ref_flow=None, reference=None, quantities=None, scenario=None, flowdb=None):
         """
@@ -199,7 +198,7 @@ class EcoinventSpreadsheet(NsUuidArchive):
             print('No background')
             return super(EcoinventSpreadsheet, self).bg_lookup(process_id)
         else:
-            '''
+            """
             p = self.bg_proxy(process_id)
             rf = self._find_rf(p, ref_flow=ref_flow)
             lcia = self.bg.retrieve_lcia_scores('_'.join([process_id, rf.get_uuid()]) + '.spold',
@@ -209,7 +208,7 @@ class EcoinventSpreadsheet(NsUuidArchive):
                 if q.get_uuid() not in lcia.keys():
                     missing_q.append(q)
         if len(missing_q) > 0:
-            '''
+            """
             lci = self.bg_proxy(process_id)
             if ref_flow is None:
                 ref_flow = lci.find_reference(reference).flow
@@ -219,6 +218,7 @@ class EcoinventSpreadsheet(NsUuidArchive):
                 self.bg.add_entity_and_children(q)
                 lcia[q.get_uuid()] = lci.lcia(q, ref_flow=rf, scenario=scenario, flowdb=flowdb)
         return lcia
+    '''
 
     def lcia_lookup(self, process_id, ref_flow=None, reference=None, quantities=None):
         if self.lcia is None:

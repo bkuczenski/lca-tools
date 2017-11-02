@@ -126,9 +126,9 @@ class LcProcess(LcEntity):
             raise NoReferenceFound('process:%s key: %s' % (self, term))
         return hits[0]
 
-    def inventory(self, reference=None):
+    def show_inventory(self, reference=None):
         """
-        Convenience wrapper around self.exchanges() which:
+        Convenience wrapper around self.inventory() which:
          * sorts the exchanges by reference, then by direction
          * prints the exchanges to output
          * provides an enumeration of exchanges for interactive access
@@ -137,7 +137,7 @@ class LcProcess(LcEntity):
         :return:
         """
         num = 0
-        it = sorted(self.exchanges(reference), key=lambda x: (not x.is_reference, x.direction))
+        it = sorted(self.inventory(reference), key=lambda x: (not x.is_reference, x.direction))
         if reference is None:
             print('%s' % self)
         else:
@@ -147,22 +147,36 @@ class LcProcess(LcEntity):
             num += 1
         return it
 
-    def exchange_values(self, flow, direction=None):
+    def _gen_exchanges(self, flow=None, direction=None):
         """
-        Generate a list of exchanges matching the supplied flow and direction. This will yield multiple exchanges
-        only in the event that several different terminations exist for the same flow and direction.
+        Generate a list of exchanges matching the supplied flow and direction.
         :param flow:
         :param direction:
         :return:
         """
         for x in self._exchanges.values():
-            if x.flow == flow:
-                if direction is None:
-                    yield x
-                else:
-                    if x.direction == direction:
-                        yield x
-        # raise TypeError('LcProcess.exchange input %s %s' % (flow, type(flow)))
+            if flow is not None:
+                if x.flow != flow:
+                    continue
+            if direction is not None:
+                if x.direction != direction:
+                    continue
+            yield x
+
+    def exchanges(self, flow=None, direction=None):
+        for x in self._gen_exchanges(flow=flow, direction=direction):
+            yield x.trim()
+
+    def exchange_values(self, flow, direction=None):
+        """
+        Yield full exchanges matching flow specification.  Flow specification required.
+        Will only yield multiple results if there are multiple terminations for the same flow.
+        :param flow:
+        :param direction:
+        :return:
+        """
+        for x in self._gen_exchanges(flow=flow, direction=direction):
+            yield x
 
     def has_exchange(self, flow, direction=None):
         try:
@@ -171,7 +185,7 @@ class LcProcess(LcEntity):
             return False
         return True
 
-    def exchanges(self, reference=None, strict=False):
+    def inventory(self, reference=None, strict=False):
         """
         generate a process's exchanges.  If no reference is supplied, generate unallocated exchanges, including all
         reference exchanges.  If a reference is supplied AND the process is allocated with respect to that reference,
@@ -274,7 +288,7 @@ class LcProcess(LcEntity):
 
         for rf in self.references():
             alloc_factor = mags[rf.flow] / total  # sum of all allocated exchanges should equal unallocated value
-            for x in self.exchanges():
+            for x in self.inventory():
                 if x not in self.reference_entity:
                     x[rf] = x.value * alloc_factor
         self['AllocatedByQuantity'] = quantity
@@ -409,21 +423,16 @@ class LcProcess(LcEntity):
             results[q.get_uuid()] = self.lcia(q, **kwargs)
         return results
 
-    def lcia(self, quantity, ref_flow=None, flowdb=None):
-        result = LciaResult(quantity)
-        result.add_component(self.get_uuid(), entity=self)
-        for ex in self.exchanges(ref_flow, ):
-            if not ex.flow.has_characterization(quantity):
-                if flowdb is not None:
-                    if quantity in flowdb.known_quantities():
-                        factor = flowdb.lookup_single_cf(ex.flow, quantity, self['SpatialScope'])
-                        if factor is None:
-                            ex.flow.add_characterization(quantity)
-                        else:
-                            ex.flow.add_characterization(factor)
-            factor = ex.flow.factor(quantity)
-            result.add_score(self.get_uuid(), ex, factor, self['SpatialScope'])
-        return result
+    def lcia(self, quantity, ref_flow=None, qdb=None):
+        if qdb is not None:
+            return qdb.do_lcia(quantity, self.inventory(reference=ref_flow), locale=self['SpatialScope'])
+        else:
+            result = LciaResult(quantity)
+            result.add_component(self.get_uuid(), entity=self)
+            for ex in self.inventory(ref_flow):
+                factor = ex.flow.factor(quantity)
+                result.add_score(self.get_uuid(), ex, factor, self['SpatialScope'])
+            return result
 
     def merge(self, other):
         raise NotImplemented('This should be done via fragment construction + aggregation')

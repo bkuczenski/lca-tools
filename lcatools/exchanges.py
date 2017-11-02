@@ -84,6 +84,9 @@ class Exchange(object):
             return True
         return False
 
+    def trim(self):
+        return self
+
     """
     These all need to be immutable because they form the exchange's hash
     """

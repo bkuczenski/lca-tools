@@ -9,14 +9,14 @@ class InventoryImplementation(BasicImplementation, InventoryInterface):
     This provides access to detailed exchange values and computes the exchange relation
     """
     def exchanges(self, process, **kwargs):
-        if hasattr(self._archive, 'exchanges'):
-            for x in self._archive.exchanges(process, **kwargs):
-                yield x
+        # if hasattr(self._archive, 'exchanges'):
+        #     for x in self._archive.exchanges(process, **kwargs):
+        #         yield x
         if self.privacy > 1:
             raise PrivateArchive('Exchange lists are protected')
         p = self._archive.retrieve_or_fetch_entity(process)
         for x in p.exchanges():
-            yield x.trim()
+            yield x
 
     def exchange_values(self, process, flow, direction, termination=None, **kwargs):
         if self.privacy > 0:
@@ -29,16 +29,16 @@ class InventoryImplementation(BasicImplementation, InventoryInterface):
                 if x.termination == termination:
                     yield x
 
-    def inventory(self, process, ref_flow=None, **kwargs):
+    def inventory(self, process, ref_flow=None, scenario=None, **kwargs):
         if self.privacy > 0:
             raise PrivateArchive('Exchange values are protected')
         p = self._archive.retrieve_or_fetch_entity(process)
         if p.entity_type == 'process':
-            for x in sorted(p.exchanges(reference=ref_flow),
+            for x in sorted(p.inventory(reference=ref_flow),
                             key=lambda t: (not t.is_reference, t.direction, t.value or 0.0)):
                 yield x
         elif p.entity_type == 'fragment':
-            for x in p.exchanges(scenario=ref_flow):
+            for x in p.inventory(scenario=scenario, observed=True):
                 yield x
 
     def exchange_relation(self, process, ref_flow, exch_flow, direction, termination=None, **kwargs):
@@ -54,7 +54,7 @@ class InventoryImplementation(BasicImplementation, InventoryInterface):
         if self.privacy > 0:
             raise PrivateArchive('Exchange values are protected')
         p = self._archive.retrieve_or_fetch_entity(process)
-        xs = [x for x in p.exchanges(reference=ref_flow)
+        xs = [x for x in p.inventory(reference=ref_flow)
               if x.flow.external_ref == exch_flow and x.direction == direction]
         norm = p.reference(ref_flow)
         if termination is not None:

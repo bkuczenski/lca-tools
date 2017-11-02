@@ -98,7 +98,7 @@ def remove_bad_references(archive, bad_references):
             raise TypeError('Entry is not a ConfigBadReference\n%s' % br)
         fl = archive[br.flow_ref]
         if br.process_ref is None:
-            for x in archive.exchanges(fl, direction=br.direction):
+            for x in archive.exchange_values(fl, direction=br.direction):
                 if x.is_reference:
                     x.process.remove_reference(x)
         else:

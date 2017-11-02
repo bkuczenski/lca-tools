@@ -528,13 +528,13 @@ class BackgroundEngine(object):
 
         if no_alloc:
             if net_coproducts:
-                exchs = [x for x in parent.process.exchanges()]
+                exchs = [x for x in parent.process.inventory(rx)]
                 cutoff_refs = True
             else:
                 print('Cutting off at un-allocated multi-output process:\n %s\n %s' % (parent.process, rx))
                 exchs = []
         else:
-            exchs = [x for x in parent.process.exchanges()]
+            exchs = [x for x in parent.process.inventory(rx)]
 
         for exch in exchs:  # unallocated exchanges
             if cutoff_refs:

@@ -37,7 +37,7 @@ from shutil import copy2
 import hashlib
 # from collections import defaultdict
 
-from lcatools.interfaces.iquery import CatalogQuery, EntityNotFound
+from lcatools.interfaces.iquery import CatalogQuery, EntityNotFound, INTERFACE_TYPES
 from .lc_resolver import LcCatalogResolver
 from .lc_resource import LcResource
 from lcatools.providers.qdb import Qdb
@@ -230,6 +230,14 @@ class LcCatalog(object):
             raise ValueError('Ambiguous reference %s refers to multiple sources' % name)
         elif len(rs) == 0:
             raise KeyError('%s not found.' % name)
+
+    def get_archive(self, ref, interface=None):
+        if interface in INTERFACE_TYPES:
+            rc = self.get_resource(':'.join([ref, interface]))
+        else:
+            rc = self.get_resource(ref)
+        rc.check(self)
+        return rc.archive
 
     def privacy(self, ref, interfaces=None):
         res = next(r for r in self._resolver.resolve(ref, interfaces=interfaces))

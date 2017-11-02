@@ -487,7 +487,7 @@ class LcFragment(LcEntity):
                 c.observe(scenario=scenario, accept_all=accept_all, recurse=True, _traverse=False)
 
         if _traverse:
-            self.traverse(1.0, scenario, observed=True)
+            self.traverse(scenario, observed=True)
 
     @property
     def is_background(self):
@@ -858,14 +858,15 @@ class LcFragment(LcEntity):
         :param scenario:
         :return:
         """
-        match = self._match_scenario_ev(scenario)
-        if match is None:
+        if scenario is None:
             if observed:
                 self._exchange_values[1] = _balance
             else:
                 self._exchange_values[0] = _balance
         else:
-            self._exchange_values[match] = _balance
+            match = self._match_scenario_ev(scenario)
+            if match is not None:
+                self._exchange_values[match] = _balance
 
     def fragment_lcia(self, scenario=None, observed=False):
         ffs = self.traverse(scenario, observed=observed)
@@ -968,6 +969,167 @@ class LcFragment(LcEntity):
         ffs, _ = self.traverse_node(1.0, scenario, observed=observed)
         return ffs
 
+    def _traverse_fg_node(self, ff, scenario, observed, frags_seen):
+        """
+        Handle foreground nodes and processes--> these can be quantity-conserving, but except for
+        balancing flows the flow magnitudes are determined at the time of construction (or scenario specification).
+
+        Balancing flow exchange values are always determined with respect to a unit activity of the terminal node.
+
+        This is messy so it deserves some notes.
+        the fragment's exchange value specifies the scaling factor for the terminal node, EXCEPT if the
+        fragment is a reference fragment (no parent) AND the terminal node is in the foreground.  In this case
+        ONLY, the exchange value functions as an inbound exchange value, and the node weight should be 1.0.
+        The prototypical example of this is a fragment for cultivation of 1 ha of corn, with the reference
+        flow being (e.g.) 9300 kg of corn.  The reference fragment's exchange value is 9300 kg; the reference
+         node's node weight is 1.0
+
+        If the reference node has a balancing flow (say, we want to balance carbon content), then the stock
+        value is the reference flow converted to the conservation quantity, e.g. 9300 * 0.43 = 3999 kg C, sign
+        negative since it's going out (note that the reference fragment's direction is 'Input' in this case
+        because direction is always interpreted relative to the parent).
+
+        So then we traverse the child flows, let's say none of them have kg C characterization, and so our stock
+        remains -3999 kg. WHen we hit the balancing fragment "atmospheric carbon in", we catch the BalanceFlowError
+        and come back to it.
+
+        When we come back, we re-negate the stock to +3999 and pass that as _balance to the balancing flow, which
+        becomnes that flow's exchange value (again w.r.t. this node's unit node weight).
+
+        IF the terminal node is a process, or if the node is an interior (non-reference) fragment, it's much easier.
+        The stock is simply the process's inbound exchange value (with respect to a unit activity level), or if
+        it's a foreground node then the stock is simply 1, and the node_weight already accounts for the exchange
+        value and scales the balancing flow correctly.
+
+        :param ff: a FragmentFlow containing the termination to recurse into
+        :param scenario:
+        :param observed:
+        :param frags_seen:
+        :return: a list of FragmentFlows in the order encountered, with input ff in position 0
+        """
+        term = ff.term
+        node_weight = ff.node_weight
+        ffs = [ff]
+        if term.is_fg:
+            if self.reference_entity is None:
+                # inbound exchange value w.r.t. term node's unit magnitude
+                stock = self.exchange_value(scenario, observed=observed)
+            else:
+                stock = 1.0  # balance measurement w.r.t. term node's unit magnitude
+        else:
+            stock = term.inbound_exchange_value  # balance measurement w.r.t. term node's unit magnitude
+        bal_f = None
+        if self._conserved_quantity is not None:
+            stock *= self.flow.cf(self._conserved_quantity)
+            if self.direction == 'Input':  # convention: inputs to self are positive
+                stock *= -1
+            self._print('%.3s %g inbound-balance' % (self.uuid, stock), level=2)
+
+        for f in self.child_flows:
+            try:
+                child_ff, cons = f.traverse_node(node_weight, scenario, observed=observed,
+                                                 frags_seen=set(frags_seen), conserved_qty=self._conserved_quantity)
+                if cons is not None:
+                    stock += cons
+            except BalanceFlowError:
+                bal_f = f
+                child_ff = []
+
+            ffs.extend(child_ff)
+
+        if bal_f is not None:
+            # balance reports net inflows; positive value is more coming in than out
+            # if balance flow is an input, its exchange must be the negative of the balance
+            # if it is an output, its exchange must equal the balance
+            if bal_f.direction == 'Input':
+                stock *= -1
+            bal_ff, _ = bal_f.traverse_node(node_weight, scenario, observed=observed,
+                                            frags_seen=set(frags_seen), conserved_qty=None, _balance=stock)
+            ffs.extend(bal_ff)
+
+        return ffs
+
+    def _traverse_subfragment(self, ff, scenario, observed, frags_seen):
+        """
+        handle sub-fragments, including background flows--
+        for sub-fragments, the flow magnitudes are determined at the time of traversal and must be pushed out to
+         child flows
+        for LOCAL background flows, the background ff should replace the current ff, maintaining self as fragment
+
+        :param ff:
+        :param scenario:
+        :param observed:
+        :param frags_seen:
+        :return:
+        """
+        '''
+        '''
+
+        term = ff.term
+        node_weight = ff.node_weight
+        ffs = [ff]
+        if term.term_is_bg:
+            bg_ff, _ = term.term_node.traverse_node(node_weight, scenario, observed=observed)
+            bg_ff[0].fragment = self
+            return bg_ff
+
+        unit_inv, subfrags = term.term_node.unit_inventory(scenario, observed=observed)
+
+        # find the inventory flow that matches us
+        # use term_flow over term_node.flow because that allows client code to specify inverse traversal knowing
+        #  only the sought flow.
+        # unit_inventory guarantees that there is exactly one of these flows
+        match = next(k for k in unit_inv if k.fragment.flow == term.term_flow)
+        unit_inv.remove(match)
+
+        in_ex = match.magnitude
+        if match.fragment.direction == self.direction:
+            # self is driving subfragment in reverse
+            in_ex *= -1
+
+        downstream_nw = node_weight / in_ex
+
+        # then we add the results of the subfragment, either in aggregated or disaggregated form
+        if term.descend:
+            # if appending, we are traversing in situ, so do scale
+            self._print('descending', level=0)
+            for i in subfrags:
+                i.scale(downstream_nw)
+            ffs.extend(subfrags)
+        else:
+            # if aggregating, we are only setting unit scores- so don't scale
+            self._print('aggregating', level=0)
+            ffs[0].aggregate_subfragments(subfrags)
+            ffs[0].node_weight = downstream_nw
+
+        # next we traverse our own child flows, determining the exchange values from the subfrag traversal
+        for f in self.child_flows:
+            self._print('Handling child flow %s' % f, 4)
+            ev = 0.0
+            try:
+                m = next(j for j in unit_inv if j.fragment.flow == f.flow)
+                if m.fragment.direction == f.direction:
+                    self._print('  ev += %g' % m.magnitude, 4)
+                    ev += m.magnitude
+                else:
+                    self._print('  ev -= %g' % m.magnitude, 4)
+                    ev -= m.magnitude
+                unit_inv.remove(m)
+            except StopIteration:
+                continue
+
+            self._print('traversing with ev = %g' % ev, 4)
+            child_ff, _ = f.traverse_node(downstream_nw, scenario, observed=observed,
+                                          frags_seen=frags_seen, _balance=ev)
+            ffs.extend(child_ff)
+
+        # remaining un-accounted io flows are getting appended, so do scale
+        for x in unit_inv:
+            x.scale(downstream_nw)
+        ffs.extend(list(unit_inv))
+
+        return ffs
+
     def traverse_node(self, upstream_nw, scenario,
                       observed=False, frags_seen=None, conserved_qty=None, _balance=None):
 
@@ -989,27 +1151,23 @@ class LcFragment(LcEntity):
         :return: an array of FragmentFlow records reporting the traversal
         """
 
-        def _print(qwer, level=1):
-            self._print(qwer, level=level)
-        '''
-        First handle the traversal entry
-        inputs:
-         _balance
-         conserved_qty
-         observed
-         scenario
-         upstream_nw
+        # first check for cycles
+        if frags_seen is None:
+            frags_seen = set()
 
-        outputs:
-         own ff
-         conserved_val
-        '''
+        if self.reference_entity is None:
+            if self.uuid in frags_seen:
+                # this should really get resolved into a loop-closing algorithm
+                raise InvalidParentChild('Frag %s seeing self\n %s' % (self.uuid, '; '.join(frags_seen)))
+            frags_seen.add(self.uuid)
+
         if _balance is None:
             ev = self.exchange_value(scenario, observed=observed)
         else:
-            _print('%.3s %g balance' % (self.uuid, _balance), level=2)
+            self._print('%.3s %g balance' % (self.uuid, _balance), level=2)
             ev = _balance
-            self._cache_balance_ev(_balance, scenario, observed)
+            if self._check_observability(scenario):
+                self._cache_balance_ev(_balance, scenario, observed)
 
         magnitude = upstream_nw * ev
 
@@ -1023,168 +1181,29 @@ class LcFragment(LcEntity):
                 conserved = True
             if self.direction == 'Output':  # convention: inputs to parent are positive
                 conserved_val *= -1
-            _print('%.3s %g' % (self.uuid, conserved_val), level=2)
+            self._print('%.3s %g' % (self.uuid, conserved_val), level=2)
 
         node_weight = self._node_weight(magnitude, scenario, observed)
         term = self.termination(scenario)
 
         # print('%6f %6f %s' % (magnitude, node_weight, self))
-        ff = [FragmentFlow(self, magnitude, node_weight, term, conserved)]
+        ff = FragmentFlow(self, magnitude, node_weight, term, conserved)
 
+        '''
+        now looking forward: is our termination a cutoff, background, foreground or subfragment?
+        '''
         if term.is_null or self.is_background or magnitude == 0:
-            return ff, conserved_val
-
-        '''
-        now looking forward: is our child node conserving?
-        '''
-
-        if frags_seen is None:
-            frags_seen = set()
-
-        if self.reference_entity is None:
-            if self.uuid in frags_seen:
-                raise InvalidParentChild('Frag %s seeing self\n %s' % (self.uuid, '; '.join(frags_seen)))
-            frags_seen.add(self.uuid)
-        # print('Traversing %s\nfrags seen: %s\n' % (self, '; '.join(frags_seen)))
+            # cutoff and background both end traversal
+            return [ff], conserved_val
 
         if term.is_fg or term.term_node.entity_type == 'process':
-            '''
-            Handle foreground nodes and processes--> these can be quantity-conserving, but except for
-            balancing flows the flow magnitudes are determined at the time of construction.
-
-            Balancing flow exchange values are always determined with respect to a unit activity of the terminal node.
-
-            This is messy so it deserves some notes.
-            the fragment's exchange value specifies the scaling factor for the terminal node, EXCEPT if the
-            fragment is a reference fragment (no parent) AND the terminal node is in the foreground.  In this case
-            ONLY, the exchange value functions as an inbound exchange value, and the node weight should be 1.0.
-            The prototypical example of this is a fragment for cultivation of 1 ha of corn, with the reference
-            flow being (e.g.) 9300 kg of corn.  The reference fragment's exchange value is 9300 kg; the reference
-             node's node weight is 1.0
-
-            If the reference node has a balancing flow (say, we want to balance carbon content), then the stock
-            value is the reference flow converted to the conservation quantity, e.g. 9300 * 0.43 = 3999 kg C, sign
-            negative since it's going out (note that the reference fragment's direction is 'Input' in this case
-            because direction is always interpreted relative to the parent).
-
-            So then we traverse the child flows, let's say none of them have kg C characterization, and so our stock
-            remains -3999 kg. WHen we hit the balancing fragment "atmospheric carbon in", we catch the BalanceFlowError
-            and come back to it.
-
-            When we come back, we re-negate the stock to +3999 and pass that as _balance to the balancing flow, which
-            becomnes that flow's exchange value (again w.r.t. this node's unit node weight).
-
-            IF the terminal node is a process, or if the node is an interior (non-reference) fragment, it's much easier.
-            The stock is simply the process's inbound exchange value (with respect to a unit activity level), or if
-            it's a foreground node then the stock is simply 1, and the node_weight already accounts for the exchange
-            value and scales the balancing flow correctly.
-            '''
-            if term.is_fg:
-                if self.reference_entity is None:
-                    stock = ev  # ev IS inbound exchange value w.r.t. term node's unit magnitude
-                else:
-                    stock = 1.0  # balance measurement w.r.t. term node's unit magnitude
-            else:
-                stock = term.inbound_exchange_value  # balance measurement w.r.t. term node's unit magnitude
-            bal_f = None
-            if self._conserved_quantity is not None:
-                stock *= self.flow.cf(self._conserved_quantity)
-                if self.direction == 'Input':  # convention: inputs to self are positive
-                    stock *= -1
-                _print('%.3s %g inbound-balance' % (self.uuid, stock), level=2)
-
-            for f in self.child_flows:
-                try:
-                    child_ff, cons = f.traverse_node(node_weight, scenario, observed=observed,
-                                                     frags_seen=set(frags_seen), conserved_qty=self._conserved_quantity)
-                    if cons is not None:
-                        stock += cons
-                except BalanceFlowError:
-                    bal_f = f
-                    child_ff = []
-
-                ff.extend(child_ff)
-
-            if bal_f is not None:
-                # balance reports net inflows; positive value is more coming in than out
-                # if balance flow is an input, its exchange must be the negative of the balance
-                # if it is an output, its exchange must equal the balance
-                if bal_f.direction == 'Input':
-                    stock *= -1
-                bal_ff, _ = bal_f.traverse(node_weight, scenario, observed=observed,
-                                           frags_seen=set(frags_seen), conserved_qty=None, _balance=stock)
-                ff.extend(bal_ff)
+            ffs = self._traverse_fg_node(ff, scenario, observed, frags_seen)
 
         else:
-            '''
-            handle sub-fragments, including background flows--
-            for sub-fragments, the flow magnitudes are determined at the time of traversal and must be pushed out to
-             child flows
-            for LOCAL background flows, the background ff should replace the current ff, maintaining self as fragment
-            '''
-
-            if term.term_is_bg:
-                bg_ff, _ = term.term_node.traverse_node(node_weight, scenario, observed=observed)
-                bg_ff[0].fragment = self
-                return bg_ff, conserved_val
-
-            unit_inv, subfrags = term.term_node.unit_inventory(scenario, observed=observed)
-
-            # find the inventory flow that matches us
-            # use term_flow over term_node.flow because that allows client code to specify inverse traversal knowing
-            #  only the sought flow.
-            # unit_inventory guarantees that there is exactly one of these flows
-            match = next(k for k in unit_inv if k.fragment.flow == term.term_flow)
-            unit_inv.remove(match)
-
-            in_ex = match.magnitude
-            if match.fragment.direction == self.direction:
-                # self is driving subfragment in reverse
-                in_ex *= -1
-
-            downstream_nw = node_weight / in_ex
-
-            # then we add the results of the subfragment, either in aggregated or disaggregated form
-            if term.descend:
-                # if appending, we are traversing in situ, so do scale
-                _print('descending', level=0)
-                for i in subfrags:
-                    i.scale(downstream_nw)
-                ff.extend(subfrags)
-            else:
-                # if aggregating, we are only setting unit scores- so don't scale
-                _print('aggregating', level=0)
-                ff[0].aggregate_subfragments(subfrags)
-                ff[0].node_weight = downstream_nw
-
-            # next we traverse our own child flows, determining the exchange values from the subfrag traversal
-            for f in self.child_flows:
-                _print('Handling child flow %s' % f, 4)
-                ev = 0.0
-                try:
-                    m = next(j for j in unit_inv if j.fragment.flow == f.flow)
-                    if m.fragment.direction == f.direction:
-                        _print('  ev += %g' % m.magnitude, 4)
-                        ev += m.magnitude
-                    else:
-                        _print('  ev -= %g' % m.magnitude, 4)
-                        ev -= m.magnitude
-                    unit_inv.remove(m)
-                except StopIteration:
-                    continue
-
-                _print('traversing with ev = %g' % ev, 4)
-                child_ff, _ = f.traverse_node(downstream_nw, scenario, observed=observed,
-                                              frags_seen=frags_seen, _balance=ev)
-                ff.extend(child_ff)
-
-            # remaining un-accounted io flows are getting appended, so do scale
-            for x in unit_inv:
-                x.scale(downstream_nw)
-            ff.extend(list(unit_inv))
+            ffs = self._traverse_subfragment(ff, scenario, observed, frags_seen)
 
         # if descend is true- we give back everything- otherwise we aggregate
-        return ff, conserved_val
+        return ffs, conserved_val
 
 
 class FragmentFlow(object):

@@ -145,6 +145,10 @@ class LcResource(object):
         return os.path.exists(os.path.join(path, self.reference))
 
     @property
+    def archive(self):
+        return self._archive
+
+    @property
     def is_saved(self):
         return self._issaved
 

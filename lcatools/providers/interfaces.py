@@ -148,6 +148,7 @@ class ArchiveInterface(object):
         self._serialize_dict = dict()  # this gets added to
 
         self._counter = defaultdict(int)
+        self._ents_by_type = defaultdict(set)
         self._upstream = None
 
         self._loaded = False
@@ -293,6 +294,7 @@ class ArchiveInterface(object):
                 entity.origin = self.ref
             self._entities[u] = entity
             self._counter[entity.entity_type] += 1
+            self._ents_by_type[entity.entity_type].add(u)  # it's not ok to change an entity's type
 
         else:
             raise ValueError('Entity fails validation.')
@@ -302,7 +304,7 @@ class ArchiveInterface(object):
             [self.check_counter(entity_type=k) for k in ('process', 'flow', 'quantity')]
         else:
             print('%d new %s entities added (%d total)' % (self._counter[entity_type], entity_type,
-                                                           len([e for e in self._entities_by_type(entity_type)])))
+                                                           len([e for e in self.entities_by_type(entity_type)])))
             self._counter[entity_type] = 0
 
     @staticmethod
@@ -361,7 +363,7 @@ class ArchiveInterface(object):
             if 'entity_type' in kwargs.keys():
                 etype = kwargs.pop('entity_type')
         if etype is not None:
-            for ent in self._entities_by_type(etype):
+            for ent in self.entities_by_type(etype):
                 if self._narrow_search(ent, **kwargs):
                     yield ent
         else:
@@ -446,10 +448,9 @@ class ArchiveInterface(object):
             self._load_all(**kwargs)
             self._loaded = True
 
-    def _entities_by_type(self, entity_type):
-        for v in self._entities.values():
-            if v.entity_type == entity_type:
-                yield v
+    def entities_by_type(self, entity_type):
+        for u in self._ents_by_type[entity_type]:
+            yield self._entities[u]
 
     @property
     def init_args(self):

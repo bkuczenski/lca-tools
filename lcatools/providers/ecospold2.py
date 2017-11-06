@@ -444,11 +444,11 @@ class EcospoldV2Archive(LcArchive):
 
         Only stores cfs for quantities that exist locally.
         :param filename:
-        :param quantities: list of quantity entities to look for (defaults to self.quantities())
+        :param quantities: list of quantity entities to look for (defaults to all local lcia_methods)
         :return: a dict of quantity uuid to score
         """
         if quantities is None:
-            quantities = self.quantities()
+            quantities = [l for l in self.entities_by_type('quantity') if l.is_lcia_method()]
 
         import time
         start_time = time.time()

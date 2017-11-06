@@ -258,7 +258,7 @@ class LcForeground(LcArchive):
         return clone
 
     def clear_score_caches(self):
-        for f in self._entities_by_type('fragment'):
+        for f in self.entities_by_type('fragment'):
             for s, t in f.terminations():
                 t.clear_score_cache()
 
@@ -266,7 +266,7 @@ class LcForeground(LcArchive):
     Retrieve + display fragments
     '''
     def _fragments(self, background=None):
-        for f in self._entities_by_type('fragment'):
+        for f in self.entities_by_type('fragment'):
             if f.reference_entity is None:
                 if background is None or f.is_background == background:
                     yield f

@@ -198,7 +198,7 @@ class Qdb(LcArchive):
         self._comp_from_air = self.c_mgr.find_matching('Resources from air')
 
         # load CFs from reference flows
-        for f in self.flows():
+        for f in self.entities_by_type('flow'):
             for cf in f.characterizations():
                 if cf.quantity is not f.reference_entity:
                     self.add_cf(cf)
@@ -262,7 +262,7 @@ class Qdb(LcArchive):
         return self._fq_dict[f_idx, q_idx].find(compartment)
 
     def _index_quantities(self):
-        for q in self.quantities():
+        for q in self.entities_by_type('quantity'):
             try:
                 self._q.set_entity(q['Name'], q)
             except EntityFound:
@@ -410,7 +410,7 @@ class Qdb(LcArchive):
 
     @property
     def flow_properties(self):
-        for q in self.quantities():
+        for q in self.entities_by_type('quantity'):
             if not q.is_lcia_method():
                 yield q
 
@@ -420,7 +420,7 @@ class Qdb(LcArchive):
         An indicator is a quantity with the 'Indicator' property
         :return:
         """
-        for q in self.quantities():
+        for q in self.entities_by_type('quantity'):
             if q.is_lcia_method():
                 yield q
 

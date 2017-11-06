@@ -10,7 +10,6 @@ from collections import defaultdict
 import six
 
 from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcUnit, entity_types
-from lcatools.exchanges import comp_dir
 from lcatools.providers.interfaces import ArchiveInterface, to_uuid
 
 if six.PY2:
@@ -92,7 +91,7 @@ class LcArchive(ArchiveInterface):
         super(LcArchive, self).set_upstream(upstream)
         # create a dict of upstream quantities
         self._upstream_hash = dict()  # clobber old dict
-        for i in self._upstream.quantities():
+        for i in self._upstream.entities_by_type('quantity'):
             if not i.is_entity:
                 continue
             up_key = self._upstream_key(i)
@@ -134,21 +133,6 @@ class LcArchive(ArchiveInterface):
         else:
             return None
 
-    def get_item(self, key, item):
-        entity = self.retrieve_or_fetch_entity(key)
-        if entity and entity.has_property(item):
-            return entity[item]
-        return None
-
-    def get_reference(self, key):
-        entity = self.retrieve_or_fetch_entity(key)
-        if entity is None:
-            return None
-        if entity.entity_type == 'process':
-            # need to get actual references with exchange values-- not the reference_entity
-            return [x for x in entity.references()]
-        return entity.reference_entity
-
     def get_uuid(self, key):
         return self._key_to_id(key)
 
@@ -185,7 +169,6 @@ class LcArchive(ArchiveInterface):
         for e in j['processes']:
             self.entity_from_json(e)
         self.check_counter()
-        self._index_terminations()
 
     def _quantity_from_json(self, entity_j, uid):
         # can't move this to entity because we need _create_unit- so we wouldn't gain anything
@@ -296,94 +279,14 @@ class LcArchive(ArchiveInterface):
         entity.set_external_ref(ext_ref)
         self.add(entity)
 
-    def processes(self, **kwargs):
-        return [p for p in self.search('process', **kwargs)]
-
-    def flows(self, **kwargs):
-        return [f for f in self.search('flow', **kwargs)]
-
-    def quantities(self, **kwargs):
-        return [q for q in self.search('quantity', **kwargs)]
-
-    def lcia_methods(self, **kwargs):
-        return [q for q in self.search('quantity', **kwargs) if q.is_lcia_method()]
-
-    def _entities_by_type(self, entity_type):
+    def entities_by_type(self, entity_type):
         if entity_type not in entity_types:
             entity_type = {
                 'p': 'process',
                 'f': 'flow',
                 'q': 'quantity'
             }[entity_type[0]]
-        return super(LcArchive, self)._entities_by_type(entity_type)
-
-    def _index_terminations(self):
-        """
-        Need some way to make this not have to happen for every query
-        :return:
-        """
-        self._terminations = defaultdict(set)  # reset the index
-        for p in self.processes():
-            for rx in p.reference_entity:
-                self._terminations[rx.flow.external_ref].add((rx.direction, p))
-
-    def terminate(self, flow_ref, direction=None):
-        """
-        Generate processes in the archive that terminate a given exchange i.e. - have the same flow and a complementary
-        direction.  If refs_only is specified, only report processes that terminate the exchange with a reference
-        exchange.
-        :param flow_ref: flow or flow's external key
-        :param direction: [None] filter
-        :return:
-        """
-        if isinstance(flow_ref, LcFlow):
-            flow_ref = flow_ref.external_ref
-        if not self.static:
-            self._index_terminations()  # we don't really want to re-index *every time* but what is the alternative?
-        for x in self._terminations[flow_ref]:  # defaultdict, so no KeyError
-            if direction is None:
-                yield x[1]
-            else:
-                if comp_dir(direction) == x[0]:
-                    yield x[1]
-
-    def originate(self, flow_ref, direction=None):
-        if direction is not None:
-            direction = comp_dir(direction)
-        return self.terminate(flow_ref, direction)
-
-    def mix(self, flow_ref, direction):
-        if isinstance(flow_ref, LcFlow):
-            flow_ref = flow_ref.external_ref
-        terms = [t for t in self.terminate(flow_ref, direction=direction)]
-        flow = self[flow_ref]
-        p = LcProcess.new('Market for %s' % flow['Name'], Comment='Auto-generated')
-        p.add_exchange(flow, comp_dir(direction), value=float(len(terms)))
-        p.add_reference(flow, comp_dir(direction))
-        for t in terms:
-            p.add_exchange(flow, direction, value=1.0, termination=t.external_ref)
-        return p
-
-    def exchanges(self, flow, direction=None):
-        """
-        Generate exchanges that contain the given flow. Optionally limit to exchanges having the specified direction.
-        Default is to include both inputs and outputs.
-        :param flow:
-        :param direction: [None]
-        :return:
-        """
-        for p in self.processes():
-            for x in p.exchanges():
-                if x.flow == flow:
-                    if direction is None:
-                        yield x
-                    else:
-                        if x.direction == direction:
-                            yield x
-
-    def load_all(self, **kwargs):
-        super(LcArchive, self).load_all(**kwargs)
-        self._index_terminations()
+        return super(LcArchive, self).entities_by_type(entity_type)
 
     def serialize(self, exchanges=False, characterizations=False, values=False):
         """
@@ -394,11 +297,15 @@ class LcArchive(ArchiveInterface):
         :return:
         """
         j = super(LcArchive, self).serialize()
-        j['processes'] = sorted([p.serialize(exchanges=exchanges, values=values) for p in self.processes()],
+        j['processes'] = sorted([p.serialize(exchanges=exchanges, values=values)
+                                 for p in self.entities_by_type('process')],
                                 key=lambda x: x['entityId'])
-        j['flows'] = sorted([f.serialize(characterizations=characterizations, values=values) for f in self.flows()],
+        j['flows'] = sorted([f.serialize(characterizations=characterizations, values=values)
+                             for f in self.entities_by_type('flow')],
                             key=lambda x: x['entityId'])
-        j['quantities'] = sorted([q.serialize() for q in self.quantities()], key=lambda x: x['entityId'])
+        j['quantities'] = sorted([q.serialize()
+                                  for q in self.entities_by_type('quantity')],
+                                 key=lambda x: x['entityId'])
         return j
 
 

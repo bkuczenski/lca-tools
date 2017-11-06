@@ -11,8 +11,11 @@ class ProcessRef(EntityRef):
     def _addl(self):
         return self.__getitem__('SpatialScope')
 
-    def __init__(self, *args, **kwargs):
-        super(ProcessRef, self).__init__(*args, **kwargs)
+    def __init__(self, external_ref, query, reference_entity, **kwargs):
+        if reference_entity is None:
+            reference_entity = []
+        reference_entity = tuple(reference_entity)  # non mutable
+        super(ProcessRef, self).__init__(external_ref, query, reference_entity, **kwargs)
         self._default_rx = None
         rxs = [rx for rx in self.references()]
         if len(rxs) == 1:

@@ -78,9 +78,9 @@ class LcArchive(ArchiveInterface):
     method-- which itself should be offloaded to the entities wherever possible.
 
     """
-    def __init__(self, source, ref=None, **kwargs):
+    def __init__(self, source, **kwargs):
         self._upstream_hash = dict()  # for lookup use later
-        super(LcArchive, self).__init__(source, ref=ref, **kwargs)
+        super(LcArchive, self).__init__(source, **kwargs)
         self._terminations = defaultdict(set)
 
     @classmethod

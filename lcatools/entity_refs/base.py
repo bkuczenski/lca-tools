@@ -223,7 +223,7 @@ class EntityRef(BaseRef):
         if self.uuid is not None:
             print('UUID: %s' % self.uuid)
         for i in ('Name', 'Comment'):
-            print('%7s: %s' % (i, self._query.get_item(self.external_ref, i)))
+            print('%7s: %s' % (i, self.get_item(i)))
 
     def validate(self):
         """

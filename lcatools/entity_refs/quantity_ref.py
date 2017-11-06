@@ -16,7 +16,7 @@ class QuantityRef(EntityRef):
         return self.unit()
 
     def is_lcia_method(self):
-        ind = self._query.get_item(self.external_ref, 'Indicator')
+        ind = self.get_item('Indicator')
         if ind is None:
             return False
         elif len(ind) == 0:

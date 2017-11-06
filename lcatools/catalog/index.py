@@ -67,14 +67,18 @@ class IndexImplementation(BasicImplementation, IndexInterface):
         :param direction: [None] filter
         :return:
         """
-        if not isinstance(flow_ref, str):
-            flow_ref = flow_ref.external_ref
-        for x in self._terminations[flow_ref]:  # defaultdict, so no KeyError
-            if direction is None:
-                yield self.make_ref(x[1])
-            else:
-                if comp_dir(direction) == x[0]:
+        if hasattr(self._archive, 'terminate'):
+            for x in self._archive.terminate(flow_ref, direction=direction, **kwargs):
+                yield x
+        else:
+            if not isinstance(flow_ref, str):
+                flow_ref = flow_ref.external_ref
+            for x in self._terminations[flow_ref]:  # defaultdict, so no KeyError
+                if direction is None:
                     yield self.make_ref(x[1])
+                else:
+                    if comp_dir(direction) == x[0]:
+                        yield self.make_ref(x[1])
 
     def originate(self, flow_ref, direction=None, **kwargs):
         if direction is not None:

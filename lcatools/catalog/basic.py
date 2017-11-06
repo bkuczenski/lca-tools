@@ -43,25 +43,25 @@ class BasicImplementation(object):
     def make_ref(self, entity):
         if entity is None:
             return None
-        return entity.make_ref(self._catalog.query(self.origin))
+        if entity.is_entity:
+            return entity.make_ref(self._catalog.query(self.origin))
+        else:
+            return entity  # already a ref
 
     def get_item(self, external_ref, item):
-        entity = self._archive.retrieve_or_fetch_entity(key)
+        entity = self._archive.retrieve_or_fetch_entity(external_ref)
         if entity and entity.has_property(item):
             return entity[item]
         return None
 
     def get_reference(self, key):
-        entity = self.retrieve_or_fetch_entity(key)
+        entity = self._archive.retrieve_or_fetch_entity(key)
         if entity is None:
             return None
         if entity.entity_type == 'process':
             # need to get actual references with exchange values-- not the reference_entity
             return [x for x in entity.references()]
         return entity.reference_entity
-
-    def get_reference(self, external_ref):
-        return self._archive.get_reference(external_ref)
 
     def get_uuid(self, external_ref):
         return self._archive.get_uuid(external_ref)

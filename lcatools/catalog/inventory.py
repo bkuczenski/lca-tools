@@ -61,8 +61,8 @@ class InventoryImplementation(BasicImplementation, InventoryInterface):
         :return:
         """
         if hasattr(self._archive, 'exchange_relation'):
-            return self._archive.exchange_values(process, ref_flow, exch_flow, direction, termination=termination,
-                                                 **kwargs)
+            return self._archive.exchange_relation(process, ref_flow, exch_flow, direction, termination=termination,
+                                                   **kwargs)
         if self.privacy > 0:
             raise PrivateArchive('Exchange values are protected')
         p = self._archive.retrieve_or_fetch_entity(process)

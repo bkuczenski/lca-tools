@@ -1,6 +1,8 @@
 from lcatools.terminations import FlowTermination
 from lcatools.exchanges import comp_dir
-from lcatools.lcia_results import DetailedLciaResult, SummaryLciaResult
+from lcatools.entity_refs import CatalogRef
+from lcatools.lcia_results import LciaResult, DetailedLciaResult, SummaryLciaResult
+from lcatools.terminations import SubFragmentAggregation
 
 from collections import defaultdict
 
@@ -39,8 +41,50 @@ class FragmentFlow(object):
 
     """
     @classmethod
-    def from_antelope_v1(cls, j):
-        pass
+    def from_antelope_v1(cls, j, query):
+        """
+        Need to:
+         * create a termination
+         * create a fragment ref
+         * extract node weight
+         * extract magnitude
+         * extract is_conserved
+        :param j: JSON-formatted fragmentflow, from a v1 .NET antelope instance.  Must be modified to include StageName
+         instead of fragmentStageID
+        :param query: a catalog query for the fragmentflow's origin
+        :return:
+        """
+        ref_mag = j['flowPropertyMagnitudes'][0]
+        ref_qty = CatalogRef.from_query('flowproperties/%s' % ref_mag['flowPropertyID'], query, 'quantity',
+                                        ref_mag['unit'])
+        flow = CatalogRef.from_query('flows/%s' % j['flowID'], query, 'flow', ref_qty)
+        dirn = j['direction']
+        if 'StageName' in j:
+            stage_name = j['StageName']
+        else:
+            stage_name = 'InputOutput'
+        frag = GhostFragment('fragments/%s/fragmentflows/%s' % (j['fragmentID'], j['parentFragmentFlowID']),
+                             flow, dirn)
+        # frag = CatalogRef.from_query('fragments/%s' % j['fragmentFlowID'], query, 'fragment', None,
+        #                              Name=j['name'], StageName=stage_name)
+        # frag.set_config(flow, dirn)
+
+        node_type = j['nodeType']
+
+        if node_type == 'Process':
+            term_node = CatalogRef.from_query('processes/%s' % j['processID'], query, 'process', [])
+            term = FlowTermination(frag, term_node, term_flow=flow, inbound_ev=1.0)
+        elif node_type == 'Fragment':
+            term_node = CatalogRef.from_query('fragments/%s' % j['subFragmentID'], query, 'fragment', [])
+            term = FlowTermination(frag, term_node, term_flow=flow, inbound_ev=1.0)
+        else:
+            term = FlowTermination.null(frag)
+        nw = j['nodeWeight']
+        if 'isConserved' in j:
+            conserved = j['isConserved']
+        else:
+            conserved = False
+        return cls(frag, ref_mag['magnitude'], nw, term, conserved)
 
     @classmethod
     def ref_flow(cls, parent, scenario=None, observed=False):
@@ -164,6 +208,44 @@ def group_ios(parent, ios):
             direction = 'Input'
         external.add(FragmentFlow.cutoff(parent, flow, direction, abs(value)))
     return external, internal
+
+
+def frag_flow_lcia(qdb, fragmentflows, quantity_ref, scenario=None, refresh=False):
+    """
+    Recursive function to compute LCIA of a traversal record contained in a set of Fragment Flows.
+    :param qdb:
+    :param fragmentflows:
+    :param quantity_ref:
+    :param scenario: necessary if any remote traversals are required
+    :param refresh: whether to refresh the LCIA CFs
+    :return:
+    """
+    result = LciaResult(quantity_ref)
+    for ff in fragmentflows:
+        if ff.term.is_null:
+            continue
+
+        node_weight = ff.node_weight
+        if node_weight == 0:
+            continue
+
+        try:
+            v = ff.term.score_cache(quantity=quantity_ref, qdb=qdb, refresh=refresh)
+        except SubFragmentAggregation:
+            # if we were given interior fragments, recurse on them. otherwise ask remote.
+            if len(ff.subfragments) == 0:
+                v = ff.term.term_node.fragment_lcia(quantity_ref, scenario=scenario, refresh=refresh)
+            else:
+                v = frag_flow_lcia(qdb, ff.subfragments, quantity_ref, refresh=refresh)
+        if v.total() == 0:
+            continue
+
+        if ff.term.direction == ff.fragment.direction:
+            # if the directions collide (rather than complement), the term is getting run in reverse
+            node_weight *= -1
+
+        result.add_summary(ff.fragment.uuid, ff, node_weight, v)
+    return result
 
 
 class GhostFragment(object):

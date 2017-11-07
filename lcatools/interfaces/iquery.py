@@ -20,6 +20,10 @@ class EntityNotFound(Exception):
     pass
 
 
+class PrivateArchive(Exception):
+    pass
+
+
 class CatalogQuery(IndexInterface, BackgroundInterface, ForegroundInterface, InventoryInterface, QuantityInterface):
     """
     A CatalogQuery is a class that performs any supported query against a supplied catalog.

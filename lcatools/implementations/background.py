@@ -1,10 +1,10 @@
 import re
+
+from .basic import BasicImplementation
 from lcatools.background.background_manager import BackgroundManager
-from lcatools.background.proxy import BackgroundProxy
 from lcatools.background.product_flow import ProductFlow
-# from lcatools.background.emission import Emission
-from lcatools.catalog.basic import BasicImplementation, PrivateArchive
-from lcatools.interfaces.ibackground import BackgroundInterface
+from lcatools.background.proxy import BackgroundProxy
+from lcatools.interfaces import BackgroundInterface, PrivateArchive
 
 
 class NonStaticBackground(Exception):

@@ -1,9 +1,8 @@
 from collections import defaultdict
 
-
-from lcatools.catalog.basic import BasicImplementation
-from lcatools.interfaces.iindex import IndexInterface
+from .basic import BasicImplementation
 from lcatools.exchanges import comp_dir
+from lcatools.interfaces.iindex import IndexInterface
 
 
 class NotForeground(Exception):

@@ -1,14 +1,10 @@
-import os
 import json
+import os
+
 from lcatools.interfaces.iquery import INTERFACE_TYPES
 from lcatools.providers.interfaces import local_ref
 from lcatools.tools import create_archive, update_archive
-
-from .basic import BasicImplementation
-from .index import IndexImplementation
-from .inventory import InventoryImplementation
-from .background import BackgroundImplementation
-from .quantity import QuantityImplementation
+from lcatools.implementations import *
 
 
 class LcResource(object):
@@ -114,8 +110,10 @@ class LcResource(object):
         :param static: [False] if True, load_all() after initializing
         :param kwargs: additional keyword arguments to constructor
         """
+        '''
         if not os.path.exists(source):
             raise EnvironmentError('%s not found' % source)
+        '''
 
         self._archive = None
 

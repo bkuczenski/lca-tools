@@ -1,6 +1,7 @@
-from lcatools.catalog.basic import BasicImplementation
-from lcatools.interfaces.iquantity import QuantityInterface
 from synlist import Flowables, InconsistentIndices
+
+from .basic import BasicImplementation
+from lcatools.interfaces.iquantity import QuantityInterface
 
 
 class QuantityImplementation(BasicImplementation, QuantityInterface):

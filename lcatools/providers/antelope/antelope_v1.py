@@ -1,6 +1,7 @@
 from lcatools.providers.interfaces import ArchiveInterface
 from lcatools.interfaces import IndexInterface, InventoryInterface, QuantityInterface
-from lcatools.entity_refs.catalog_ref import CatalogRef
+from lcatools.entity_refs import CatalogRef
+from lcatools.fragment_flows import FragmentFlow
 import json
 from collections import defaultdict
 
@@ -86,6 +87,10 @@ class AntelopeV1Client(ArchiveInterface, IndexInterface, InventoryInterface, Qua
                 yield self._parse_and_save_entity(j)
             self._fetched_all[entity_type] = True
 
+    def get_uuid(self, ext_ref):
+        ent = self.retrieve_or_fetch_entity(ext_ref)
+        return ent.uuid
+
     def _load_all(self, **kwargs):
         raise AntelopeV1Error('Cannot load all entities from remote Antelope server')
 
@@ -100,7 +105,7 @@ class AntelopeV1Client(ArchiveInterface, IndexInterface, InventoryInterface, Qua
 
     def _fetch(self, entity, **kwargs):
         self._print('Fetching %s from remote server' % entity)
-        j = self._get_endpoint(entity)
+        j = self._get_endpoint(entity)[0]
         return self._parse_and_save_entity(j)
 
     def _get_comment(self, processId):
@@ -110,10 +115,23 @@ class AntelopeV1Client(ArchiveInterface, IndexInterface, InventoryInterface, Qua
 
     def _get_impact_category(self, cat_id):
         cats = self._get_endpoint('impactcategories')
+        cat_id = int(cat_id)
+        if cats[cat_id - 1]['impactCategoryID'] == cat_id:
+            return cats[cat_id - 1]['name']
         try:
-            return next(j['name'] for j in cats if j['impactCategoryID'] == int(cat_id))
+            return next(j['name'] for j in cats if j['impactCategoryID'] == cat_id)
         except StopIteration:
-            raise ValueError('Unknown impact category ID %d' % int(cat_id))
+            raise ValueError('Unknown impact category ID %d' % cat_id)
+
+    def _get_stage_name(self, stage_id):
+        stgs = self._get_endpoint('stages')
+        stage_id = int(stage_id)
+        if stgs[stage_id - 1]['fragmentStageID'] == stage_id:
+            return stgs[stage_id - 1]['name']
+        try:
+            return next(j['name'] for j in stgs if j['fragmentStageID'] == stage_id)
+        except StopIteration:
+            raise ValueError('Unknown fragment stage ID %d' % stage_id)
 
     '''
     Entity handling
@@ -223,7 +241,15 @@ class AntelopeV1Client(ArchiveInterface, IndexInterface, InventoryInterface, Qua
         pass
 
     def traverse(self, fragment, scenario=None, **kwargs):
-        pass
+        if scenario is not None:
+            endpoint = 'scenarios/%s/%s/fragmentflows' % (scenario, fragment)
+        else:
+            endpoint = '%s/fragmentflows' % fragment
+        ffs = self._get_endpoint(endpoint)
+        for ff in ffs:
+            if 'fragmentStageID' in ff:
+                ff['StageName'] = self._get_stage_name(ff['fragmentStageID'])
+        return [FragmentFlow.from_antelope_v1(ff, self._query) for ff in ffs]
 
     def lcia(self, process, ref_flow, quantity_ref, refresh=False, **kwargs):
         pass

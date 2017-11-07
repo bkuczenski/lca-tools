@@ -1,7 +1,6 @@
-from lcatools.catalog.basic import BasicImplementation, PrivateArchive
-from lcatools.interfaces.iinventory import InventoryInterface
-from lcatools.lcia_results import LciaResult
-from lcatools.terminations import SubFragmentAggregation
+from .basic import BasicImplementation
+from lcatools.fragment_flows import frag_flow_lcia
+from lcatools.interfaces import InventoryInterface, PrivateArchive
 
 
 class InventoryImplementation(BasicImplementation, InventoryInterface):
@@ -89,6 +88,7 @@ class InventoryImplementation(BasicImplementation, InventoryInterface):
         :return:
         """
         if hasattr(self._archive, 'lcia'):
+            # this needs a fallback-
             return self._archive.lcia(process, ref_flow, quantity_ref, refresh=refresh, **kwargs)
         self._catalog.load_lcia_factors(quantity_ref)
         return self._catalog.qdb.do_lcia(quantity_ref, process.inventory(ref_flow=ref_flow),
@@ -106,32 +106,4 @@ class InventoryImplementation(BasicImplementation, InventoryInterface):
             return self._archive.fragment_lcia(fragment, quantity_ref, scenario=scenario, refresh=refresh, **kwargs)
         self._catalog.load_lcia_factors(quantity_ref)
         fragmentflows = self.traverse(fragment, scenario=scenario, **kwargs)
-        return self._frag_flow_lcia(fragmentflows, quantity_ref, scenario=scenario, refresh=refresh)
-
-    def _frag_flow_lcia(self, fragmentflows, quantity_ref, scenario=None, refresh=False):
-        result = LciaResult(quantity_ref)
-        for ff in fragmentflows:
-            if ff.term.is_null:
-                continue
-
-            node_weight = ff.node_weight
-            if node_weight == 0:
-                continue
-
-            try:
-                v = ff.term.score_cache(quantity=quantity_ref, qdb=self._catalog.qdb, refresh=refresh)
-            except SubFragmentAggregation:
-                # if we were given interior fragments, recurse on them. otherwise ask remote.
-                if len(ff.subfragments) == 0:
-                    v = ff.term.term_node.fragment_lcia(quantity_ref, scenario=scenario, refresh=refresh)
-                else:
-                    v = self._frag_flow_lcia(ff.subfragments, quantity_ref, refresh=refresh)
-            if v.total() == 0:
-                continue
-
-            if ff.term.direction == ff.fragment.direction:
-                # if the directions collide (rather than complement), the term is getting run in reverse
-                node_weight *= -1
-
-            result.add_summary(ff.fragment.uuid, ff, node_weight, v)
-        return result
+        return frag_flow_lcia(self._catalog.qdb, fragmentflows, quantity_ref, scenario=scenario, refresh=refresh)

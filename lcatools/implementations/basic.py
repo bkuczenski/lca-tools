@@ -1,7 +1,3 @@
-class PrivateArchive(Exception):
-    pass
-
-
 class BasicImplementation(object):
     def __init__(self, catalog, archive, privacy=None, **kwargs):
         """
@@ -52,7 +48,7 @@ class BasicImplementation(object):
         entity = self._archive.retrieve_or_fetch_entity(external_ref)
         if entity and entity.has_property(item):
             return entity[item]
-        return None
+        return ''
 
     def get_reference(self, key):
         entity = self._archive.retrieve_or_fetch_entity(key)

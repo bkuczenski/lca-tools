@@ -263,14 +263,26 @@ class FlowTermination(object):
     @property
     def flow_conversion(self):
         """
-        this gets computed at query time- raises an issue about parameterization (scenario must be known?)
-        # TODO: figure out flow conversion params
-        flow conversion info must be saved in fragment's flow because it is guaranteed to live in foreground
+        express the parent's flow in terms of the quantity of the term flow
+        if the flows are equal, skip-- paranoid would bypass this step
+         if the quantities are equal, skip
+         else, ask the flow for a cf
+         else, ask the quantity for a conversion
+         what if the quantity is not a ref? how do we find our local catalog and qdb?
+          - unless qdb is upstream of entities themselves
+          - perhaps for quantities that makes sense
+          - qty query will always fallback to qdb
+
+        how to deal with scenario cfs? tbd
+        problem is, the term doesn't know its own scenario
         :return:
         """
-        # TODO: this should belong to the flow
+        if self._parent.flow == self.term_flow:
+            return 1.0
         parent_qty = self._parent.flow.reference_entity
         tgt_qty = self.term_flow.reference_entity
+        if parent_qty == tgt_qty:
+            return 1.0
         if self._parent.flow.cf(tgt_qty) == 0:
             if self.term_flow.cf(parent_qty) == 0:
                 '''
@@ -287,27 +299,6 @@ class FlowTermination(object):
         return self._parent.flow.convert(1.0, to=tgt_qty)
 
     def validate_flow_conversion(self):
-        # TODO: this should belong to the flow
-        '''
-        try:
-            a = self.flow_conversion
-            if a == 42:
-                print('you are so lucky!')
-        except FlowConversionError:
-            print('Flow %s ' % self._parent.flow)
-            print('Termination %s' % self.term_node)
-            print('Provide conversion factor %s (fragment) to %s (termination)' % (self._parent.flow.unit(),
-                                                                                   self.term_flow.unit()))
-            cf = parse_math(input('Enter conversion factor: '))
-            self._parent.flow.add_characterization(self.term_flow.reference_entity, value=cf)
-
-            # this is surely a hack!
-            if self.term_node.entity_type != 'fragment':
-                # TODO: this is all kinds of fucked up
-                # if it's a fragment, then its flow's quantities are already in catalog[0]
-                self._term.catalog[0].add(self.term_flow.reference_entity)
-            # funny, it doesn't look like that bad of a hack.
-        '''
         return self.flow_conversion  # deal with it when an error comes up
 
     @property

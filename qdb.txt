@@ -1,0 +1,42 @@
+==========
+Tue Nov 07 21:32:33 -0800 2017
+
+This file needs to be started...
+
+A characterization is actually a really complex beast
+
+you have a flowable-- about which nothing physical is known because it's abstract.  ref qty assigned
+
+a "flow" is a flowable plus two contexts: its origin and its terminus.
+ - context is a synonymized namespace
+
+observations are made in one context or the other--> take the form of a named qty and a characterization value
+so a scenario is just another context
+term is a context- just means context is the external ref for some [the above] semantic namespace
+
+qdb exists to convert between arbitrarily specified qtys for a given flowable exchanged between two contexts
+
+which makes the exchange the fundamental unit of this model
+
+both exchange and characterization map a named flowable from one context (process; origin) to another (termination)
+
+but the exchange measures the amount of flow with respect to a reference functional unit
+and the characterization quantifies the flow itself with respect to a reference quantity
+
+a traversal is taking the product of the two
+
+so if you COULD put them all in one database
+then the LCA is automatically computed by traversing exchange or characterization identically and continuing the traversal until some condition is met on the context
+(like, it reaches the environment)
+and the flowable is logged as a terminal context- a B vector
+the traversal has to be depth first, and ordered based on the remote context-- processes first, then emissions, and lastly characterizations-- allowing process nodes with no complementary flows but only unit impact scores
+and processes with no terminations become cutoffs
+that is bo weidema's dream of one giant matrix
+except in graph form
+and the traversal is depth first but nonrecursive- so a set of contexts encountered is created and matrixized by background.py
+
+background.py could essentially do this
+or a new background + tarjan stack if nec.
+probably not realistic to put it all into one graphdb
+but antelope v2 references
+

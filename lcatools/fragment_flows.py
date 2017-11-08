@@ -59,15 +59,19 @@ class FragmentFlow(object):
                                         ref_mag['unit'])
         flow = CatalogRef.from_query('flows/%s' % j['flowID'], query, 'flow', ref_qty)
         dirn = j['direction']
-        if 'StageName' in j:
-            stage_name = j['StageName']
+
+        if 'parentFragmentFlowID' in j:
+            parent = 'fragments/%s/fragmentflows/%s' % (j['fragmentID'], j['parentFragmentFlowID'])
+            frag = GhostFragment(parent, flow, dirn)
+
         else:
-            stage_name = 'InputOutput'
-        frag = GhostFragment('fragments/%s/fragmentflows/%s' % (j['fragmentID'], j['parentFragmentFlowID']),
-                             flow, dirn)
-        # frag = CatalogRef.from_query('fragments/%s' % j['fragmentFlowID'], query, 'fragment', None,
-        #                              Name=j['name'], StageName=stage_name)
-        # frag.set_config(flow, dirn)
+            if 'StageName' in j:
+                stage_name = j['StageName']
+            else:
+                stage_name = 'InputOutput'
+            frag = CatalogRef.from_query('fragments/%s' % j['fragmentID'], query, 'fragment', None,
+                                         Name=j['name'], StageName=stage_name)
+            frag.set_config(flow, dirn)
 
         node_type = j['nodeType']
 

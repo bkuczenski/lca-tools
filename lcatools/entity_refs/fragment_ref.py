@@ -30,6 +30,14 @@ class FragmentRef(EntityRef):
         return self._direction
 
     @property
+    def is_background(self):
+        """
+        Can't figure out whether it ever makes sense for a fragment ref to be regarded 'background'
+        :return:
+        """
+        return False
+
+    @property
     def flow(self):
         return self._flow
 

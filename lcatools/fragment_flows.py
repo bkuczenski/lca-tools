@@ -74,21 +74,23 @@ class FragmentFlow(object):
             frag.set_config(flow, dirn)
 
         node_type = j['nodeType']
+        nw = j['nodeWeight']
+        magnitude = ref_mag['magnitude']
+        inbound_ev = magnitude / nw
 
         if node_type == 'Process':
             term_node = CatalogRef.from_query('processes/%s' % j['processID'], query, 'process', [])
-            term = FlowTermination(frag, term_node, term_flow=flow, inbound_ev=1.0)
+            term = FlowTermination(frag, term_node, term_flow=flow, inbound_ev=inbound_ev)
         elif node_type == 'Fragment':
             term_node = CatalogRef.from_query('fragments/%s' % j['subFragmentID'], query, 'fragment', [])
-            term = FlowTermination(frag, term_node, term_flow=flow, inbound_ev=1.0)
+            term = FlowTermination(frag, term_node, term_flow=flow, inbound_ev=inbound_ev)
         else:
             term = FlowTermination.null(frag)
-        nw = j['nodeWeight']
         if 'isConserved' in j:
             conserved = j['isConserved']
         else:
             conserved = False
-        return cls(frag, ref_mag['magnitude'], nw, term, conserved)
+        return cls(frag, magnitude, nw, term, conserved)
 
     @classmethod
     def ref_flow(cls, parent, scenario=None, observed=False):

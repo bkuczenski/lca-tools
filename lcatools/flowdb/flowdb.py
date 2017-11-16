@@ -296,7 +296,7 @@ class FlowDB(object):
 
     def import_quantity(self, archive, quantity):
         missing_flows = set()
-        for f in archive.flows():
+        for f in archive.entities_by_type('flow'):
             if f.has_characterization(quantity):
                 k = self.import_cfs(f)
                 if k is not None:
@@ -325,7 +325,7 @@ class FlowDB(object):
         :return: list of flows
         """
         missing_flows = set()
-        for f in archive.flows():
+        for f in archive.entities_by_type('flow'):
             k = self.import_cfs(f)
             if k is not None:
                 missing_flows.add(k)

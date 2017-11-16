@@ -40,3 +40,6 @@ or a new background + tarjan stack if nec.
 probably not realistic to put it all into one graphdb
 but antelope v2 references
 
+right now the qdb is best its own private thing
+
+

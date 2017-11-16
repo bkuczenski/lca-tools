@@ -129,7 +129,7 @@ class BackgroundEngine(object):
         self._a_matrix = None  # includes only interior exchanges -- dependencies in _interior
         self._b_matrix = None  # SciPy.csc_matrix for bg only
 
-        self._rec_limit = len([p for p in self.fg.processes()])
+        self._rec_limit = len([p for p in self.fg.entities_by_type('process')])
         if self.required_recursion_limit > MAX_SAFE_RECURSION_LIMIT:
             raise EnvironmentError('This database may require too high a recursion limit-- time to learn lisp.')
 
@@ -468,7 +468,7 @@ class BackgroundEngine(object):
         # self.make_foreground()
 
     def add_all_ref_products(self, multi_term='first', default_allocation=None, net_coproducts=False):
-        for p in self.fg.processes():
+        for p in self.fg.entities_by_type('process'):
             for x in p.references():
                 j = self.check_product_flow(x.flow, p)
                 if j is None:

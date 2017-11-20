@@ -117,4 +117,4 @@ class ProductFlow(object):
         return '%s:=%s=%s' % (self._process, self._dirn, self._flow)
 
     def table_label(self):
-        return '%s (%s) [%s]' % (self._flow['Name'], self._flow.unit(), self._process['SpatialScope'])
+        return '%s [%s] (%s)' % (self._flow['Name'], self._process['SpatialScope'], self._flow.unit())

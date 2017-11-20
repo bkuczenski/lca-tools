@@ -68,5 +68,5 @@ class Emission(object):
         :return:
         """
         if concise:
-            return '%s: %s' % (self._direction, self._flow['Name'])
+            return '%s: %s (%s)' % (self._direction, self._flow['Name'], self._flow.unit())
         return str(self)

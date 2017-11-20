@@ -6,7 +6,7 @@ from lcatools.lcia_results import LciaResult
 from lcatools.exchanges import ExchangeValue
 from lcatools.characterizations import Characterization
 import json
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from math import isclose
 
 try:
@@ -19,6 +19,23 @@ except ImportError:
 
 class AntelopeV1Error(Exception):
     pass
+
+
+class FragmentFlowProxy(object):
+    def __init__(self, entity_type, external_ref):
+        self._etype = entity_type
+        self._eref = external_ref
+
+    @property
+    def entity_type(self):
+        return self._etype
+
+    @property
+    def external_ref(self):
+        return self._eref
+
+    def __str__(self):
+        return '%s %s' % (self.external_ref, self.entity_type)
 
 
 def remote_ref(url):
@@ -233,6 +250,45 @@ class AntelopeV1Client(ArchiveInterface, IndexInterface, InventoryInterface, Qua
         return ref
 
     '''
+    LCIA handling
+    '''
+    def _get_lcia_quantity(self, quantity_ref):
+        if isinstance(quantity_ref, str):
+            return self.retrieve_or_fetch_entity(quantity_ref)
+        elif quantity_ref.origin == self.ref:
+            return self.retrieve_or_fetch_entity(quantity_ref.external_ref)
+        else:
+            raise EntityNotFound
+
+    def _add_lcia_component(self, res, component):
+        if 'processID' in component:
+            entity = self.retrieve_or_fetch_entity('processes/%s' % component['processID'])
+            loc = entity['SpatialScope']
+        elif 'fragmentFlowID' in component:  # not currently implemented
+            entity = FragmentFlowProxy('FragmentFlow', 'fragmentflows/%s' % component['fragmentFlowID'])
+            loc = 'GLO'
+        elif 'fragmentStageID' in component:  # currently the default
+            entity = FragmentFlowProxy('Stage', self._get_stage_name(component['fragmentStageID']))
+            loc = 'GLO'
+        else:
+            raise ValueError('Unable to handle unrecognized LCIA Result Type\n%s' % component)
+
+        if len(component['lciaDetail']) == 0:
+            res.add_summary(entity.external_ref, entity, 1.0, component['cumulativeResult'])
+        else:
+            if entity.entity_type != 'process':
+                raise TypeError('Antelope v1 should not have details for non-process entities\n%s' % entity)
+            res.add_component(entity.external_ref, entity)
+            for d in component['lciaDetail']:
+                self._add_lcia_detail(res, entity, d, loc=loc)
+
+    def _add_lcia_detail(self, res, entity, detail, loc='GLO'):
+        flow = self.retrieve_or_fetch_entity('flows/%s' % detail['flowID'])
+        exch = ExchangeValue(entity, flow, detail['direction'], value=detail['quantity'])
+        fact = Characterization(flow, res.quantity, value=detail['factor'], location=loc)
+        res.add_score(entity.external_ref, exch, fact, loc)
+
+    '''
     Interface implementations
     '''
     def exchanges(self, process, **kwargs):
@@ -272,37 +328,24 @@ class AntelopeV1Client(ArchiveInterface, IndexInterface, InventoryInterface, Qua
         :param kwargs:
         :return:
         """
-        if isinstance(quantity_ref, str):
-            lcia_q = self.retrieve_or_fetch_entity(quantity_ref)
-        elif quantity_ref.origin == self.ref:
-            lcia_q = self.retrieve_or_fetch_entity(quantity_ref.external_ref)
-        else:
-            raise EntityNotFound
+        lcia_q = self._get_lcia_quantity(quantity_ref)
         endpoint = '%s/%s/lciaresults' % (process, lcia_q.external_ref)
         lcia_r = self._get_endpoint(endpoint, cache=False)
-        lcia_r['origin'] = self.ref
 
         res = LciaResult(lcia_q, scenario=lcia_r.pop('scenarioID'))
         total = lcia_r.pop('total')
+
         if len(lcia_r['lciaScore']) > 1:
             raise AntelopeV1Error('Process LCIA result contains too many components\n%s' % process)
-        l = lcia_r['lciaScore'][0]
-        cum = l['cumulativeResult']
+        component = lcia_r['lciaScore'][0]
+        cum = component['cumulativeResult']
         if not isclose(cum, total, rel_tol=1e-8):
             raise AntelopeV1Error('Total and Cumulative Result do not match! %g / %g' % (total, cum))
-        if 'processes/%s' % l['processID'] != process:
-            raise AntelopeV1Error('Reference mismatch: %s begat %s' % (process, l['processID']))
-        ent = self.retrieve_or_fetch_entity(process)
-        loc = ent['SpatialScope']
-        if len(l['lciaDetail']) == 0:
-            res.add_summary(ent.external_ref, ent, 1.0, cum)
-        else:
-            res.add_component(ent.external_ref, ent)
-            for d in l['lciaDetail']:
-                flow = self.retrieve_or_fetch_entity('flows/%s' % d['flowID'])
-                exch = ExchangeValue(ent, flow, d['direction'], value=d['quantity'])
-                fact = Characterization(flow, lcia_q, value=d['factor'], location=loc)
-                res.add_score(ent.external_ref, exch, fact, loc)
+
+        if 'processes/%s' % component['processID'] != process:
+            raise AntelopeV1Error('Reference mismatch: %s begat %s' % (process, component['processID']))
+
+        self._add_lcia_component(res, component)
 
         if not isclose(res.total(), total, rel_tol=1e-8):
             raise AntelopeV1Error('Total and computed result do not match! %g / %g' % (total, res.total()))
@@ -310,7 +353,22 @@ class AntelopeV1Client(ArchiveInterface, IndexInterface, InventoryInterface, Qua
         return res
 
     def fragment_lcia(self, fragment, quantity_ref, scenario=None, refresh=False, **kwargs):
-        pass
+        if scenario is None:
+            scenario = '1'
+        lcia_q = self._get_lcia_quantity(quantity_ref)
+        endpoint = 'scenarios/%s/%s/%s/lciaresults' % (scenario, fragment, lcia_q.external_ref)
+        lcia_r = self._get_endpoint(endpoint, cache=False)
+
+        res = LciaResult(lcia_q, scenario=lcia_r.pop('scenarioID'))
+        total = lcia_r.pop('total')
+
+        for component in lcia_r['lciaScore']:
+            self._add_lcia_component(res, component)
+
+        if not isclose(res.total(), total, rel_tol=1e-8):
+            raise AntelopeV1Error('Total and computed result do not match! %g / %g' % (total, res.total()))
+
+        return res
 
     def factors(self, quantity, flowable=None, compartment=None, **kwargs):
         pass

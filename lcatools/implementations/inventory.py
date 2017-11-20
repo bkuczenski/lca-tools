@@ -1,6 +1,6 @@
 from .basic import BasicImplementation
 from lcatools.fragment_flows import frag_flow_lcia
-from lcatools.interfaces import InventoryInterface, PrivateArchive
+from lcatools.interfaces import InventoryInterface, PrivateArchive, EntityNotFound
 
 
 class InventoryImplementation(BasicImplementation, InventoryInterface):
@@ -89,7 +89,10 @@ class InventoryImplementation(BasicImplementation, InventoryInterface):
         """
         if hasattr(self._archive, 'lcia'):
             # this needs a fallback-
-            return self._archive.lcia(process, ref_flow, quantity_ref, refresh=refresh, **kwargs)
+            try:
+                return self._archive.lcia(process, ref_flow, quantity_ref, refresh=refresh, **kwargs)
+            except EntityNotFound:
+                pass  # fall through to local LCIA
         self._catalog.load_lcia_factors(quantity_ref)
         return self._catalog.qdb.do_lcia(quantity_ref, process.inventory(ref_flow=ref_flow),
                                          locale=process['SpatialScope'],

@@ -1,9 +1,13 @@
 from lcatools.providers.interfaces import ArchiveInterface
-from lcatools.interfaces import IndexInterface, InventoryInterface, QuantityInterface
+from lcatools.interfaces import IndexInterface, InventoryInterface, QuantityInterface, EntityNotFound
 from lcatools.entity_refs import CatalogRef
 from lcatools.fragment_flows import FragmentFlow
+from lcatools.lcia_results import LciaResult
+from lcatools.exchanges import ExchangeValue
+from lcatools.characterizations import Characterization
 import json
 from collections import defaultdict
+from math import isclose
 
 try:
     from urllib.request import urlopen, urljoin
@@ -221,10 +225,10 @@ class AntelopeV1Client(ArchiveInterface, IndexInterface, InventoryInterface, Qua
         frag_id = str(j.pop('fragmentID'))
         ext_ref = 'fragments/%s' % frag_id
         j['Name'] = j.pop('name')
-        dir = j.pop('direction')
+        dirn = j.pop('direction')
         flow = self.retrieve_or_fetch_entity('flows/%s' % j.pop('termFlowID'))
         ref = CatalogRef.from_query(ext_ref, self._query, 'fragment', None, **j)
-        ref.set_config(flow, dir)
+        ref.set_config(flow, dirn)
         self._cached['fragments'][frag_id] = ref
         return ref
 
@@ -252,7 +256,58 @@ class AntelopeV1Client(ArchiveInterface, IndexInterface, InventoryInterface, Qua
         return [FragmentFlow.from_antelope_v1(ff, self._query) for ff in ffs]
 
     def lcia(self, process, ref_flow, quantity_ref, refresh=False, **kwargs):
-        pass
+        """
+        Antelope v1 doesn't support or even have any knowledge of process reference-flows. this is a somewhat
+        significant design flaw.  well, no matter.  each antelope process must therefore represent an allocated single
+        operation process that has an unambiguous reference flow.  This is a problem to solve on the server side;
+        for now we just ignore the ref_flow argument.
+
+        If the quantity ref is one of the ones natively known by the antelope server-- i.e. if it is a catalog ref whose
+        origin matches the origin of the current archive-- then it is trivially used.  Otherwise, the lcia call reduces
+        to obtaining the inventory and computing LCIA locally.
+        :param process:
+        :param ref_flow:
+        :param quantity_ref:
+        :param refresh:
+        :param kwargs:
+        :return:
+        """
+        if isinstance(quantity_ref, str):
+            lcia_q = self.retrieve_or_fetch_entity(quantity_ref)
+        elif quantity_ref.origin == self.ref:
+            lcia_q = self.retrieve_or_fetch_entity(quantity_ref.external_ref)
+        else:
+            raise EntityNotFound
+        endpoint = '%s/%s/lciaresults' % (process, lcia_q.external_ref)
+        lcia_r = self._get_endpoint(endpoint, cache=False)
+        lcia_r['origin'] = self.ref
+
+        res = LciaResult(lcia_q, scenario=lcia_r.pop('scenarioID'))
+        total = lcia_r.pop('total')
+        if len(lcia_r['lciaScore']) > 1:
+            raise AntelopeV1Error('Process LCIA result contains too many components\n%s' % process)
+        l = lcia_r['lciaScore'][0]
+        cum = l['cumulativeResult']
+        if not isclose(cum, total, rel_tol=1e-8):
+            raise AntelopeV1Error('Total and Cumulative Result do not match! %g / %g' % (total, cum))
+        if 'processes/%s' % l['processID'] != process:
+            raise AntelopeV1Error('Reference mismatch: %s begat %s' % (process, l['processID']))
+        ent = self.retrieve_or_fetch_entity(process)
+        loc = ent['SpatialScope']
+        if len(l['lciaDetail']) == 0:
+            res.add_summary(ent.external_ref, ent, 1.0, cum)
+        else:
+            res.add_component(ent.external_ref, ent)
+            for d in l['lciaDetail']:
+                flow = self.retrieve_or_fetch_entity('flows/%s' % d['flowID'])
+                exch = ExchangeValue(ent, flow, d['direction'], value=d['quantity'])
+                fact = Characterization(flow, lcia_q, value=d['factor'], location=loc)
+                res.add_score(ent.external_ref, exch, fact, loc)
+
+        if not isclose(res.total(), total, rel_tol=1e-8):
+            raise AntelopeV1Error('Total and computed result do not match! %g / %g' % (total, res.total()))
+
+        return res
 
     def fragment_lcia(self, fragment, quantity_ref, scenario=None, refresh=False, **kwargs):
         pass

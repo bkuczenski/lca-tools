@@ -52,7 +52,7 @@ class LcFlow(LcEntity):
             self['CasNumber'] = ''
 
         if self.reference_entity is not None:
-            if self.reference_entity.get_uuid() not in self._characterizations.keys():
+            if self.reference_entity.link not in self._characterizations.keys():
                 self.add_characterization(self.reference_entity, reference=True)
 
         if local_unit is not None:
@@ -166,6 +166,7 @@ class LcFlow(LcEntity):
         :param overwrite: [False] if True, allow values to replace existing characterizations
         :return:
         """
+        ''' # we no longer want to be able to add literal characterizations. Just do it manually.
         if isinstance(quantity, Characterization):
             if quantity.flow.reference_entity != self.reference_entity:
                 adj = self.cf(quantity.flow.reference_entity)
@@ -178,13 +179,14 @@ class LcFlow(LcEntity):
                 self.add_characterization(quantity.quantity, reference=reference,
                                           value=quantity[l] / adj, location=l, origin=quantity.origin[l])
             return
+        '''
         if reference:
             if value is not None and value != 1.0:
                 raise ValueError('Reference quantity always has unit value')
             value = 1.0
             self._set_reference(quantity)
 
-        q = quantity.get_uuid()
+        q = quantity.link
         if q in self._characterizations.keys():
             if value is None:
                 return
@@ -206,25 +208,25 @@ class LcFlow(LcEntity):
         :param location:
         :return:
         """
-        if quantity.get_uuid() in self._characterizations.keys():
+        if quantity.link in self._characterizations.keys():
             if location == 'GLO' or location is None:
                 return True
-            if location in self._characterizations[quantity.get_uuid()].locations():
+            if location in self._characterizations[quantity.link].locations():
                 return True
         return False
 
     def del_characterization(self, quantity):
         if quantity is self.reference_entity:
             raise DeleteReference('Cannot delete reference quantity')
-        self._characterizations.pop(quantity.get_uuid())
+        self._characterizations.pop(quantity.link)
 
     def characterizations(self):
         for i in self._characterizations.values():
             yield i
 
     def factor(self, quantity):
-        if quantity.get_uuid() in self._characterizations:
-            return self._characterizations[quantity.get_uuid()]
+        if quantity.link in self._characterizations:
+            return self._characterizations[quantity.link]
         return Characterization(self, quantity)
 
     def cf(self, quantity, location='GLO'):
@@ -235,11 +237,11 @@ class LcFlow(LcEntity):
         :param location: ['GLO']
         :return: value of quantity per unit of reference, or 0.0
         """
-        if quantity.get_uuid() in self._characterizations:
+        if quantity.link in self._characterizations:
             try:
-                return self._characterizations[quantity.get_uuid()][location]
+                return self._characterizations[quantity.link][location]
             except KeyError:
-                return self._characterizations[quantity.get_uuid()].value
+                return self._characterizations[quantity.link].value
         return 0.0
 
     def convert(self, val, to=None, fr=None, location='GLO'):

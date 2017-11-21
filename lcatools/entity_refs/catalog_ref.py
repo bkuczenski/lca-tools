@@ -52,11 +52,11 @@ class CatalogRef(BaseRef):
         elif 'source' in j:
             origin = j['source']
         else:
-            origin = 'foreground'
+            origin = 'foreground'  # generic fallback origin
+        ref = cls(origin, external_ref, entity_type=etype, **j)
         if catalog is not None:
-            org = catalog.lookup(origin, external_ref)
-        else:
-            return cls(origin, external_ref, entity_type=etype, **j)
+            ref = ref.lookup(catalog)
+        return ref
 
     @classmethod
     def from_query(cls, external_ref, query, etype, reference_entity, **kwargs):
@@ -88,7 +88,7 @@ class CatalogRef(BaseRef):
         ref = query.get(self.external_ref)
         for k, v in self._d.items():
             if not ref.has_property(k):
-                ref[k] = v # copy local items
+                ref[k] = v  # copy local items
         return ref
 
     def __init__(self, origin, external_ref, entity_type=None, **kwargs):

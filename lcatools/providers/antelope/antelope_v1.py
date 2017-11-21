@@ -288,6 +288,11 @@ class AntelopeV1Client(ArchiveInterface, IndexInterface, InventoryInterface, Qua
         fact = Characterization(flow, res.quantity, value=detail['factor'], location=loc)
         res.add_score(entity.external_ref, exch, fact, loc)
 
+    @staticmethod
+    def _check_total(res, check):
+        if not isclose(res, check, rel_tol=1e-8):
+            raise AntelopeV1Error('Total and Check do not match! %g / %g' % (res, check))
+
     '''
     Interface implementations
     '''
@@ -337,19 +342,17 @@ class AntelopeV1Client(ArchiveInterface, IndexInterface, InventoryInterface, Qua
 
         if len(lcia_r['lciaScore']) > 1:
             raise AntelopeV1Error('Process LCIA result contains too many components\n%s' % process)
+
         component = lcia_r['lciaScore'][0]
         cum = component['cumulativeResult']
-        if not isclose(cum, total, rel_tol=1e-8):
-            raise AntelopeV1Error('Total and Cumulative Result do not match! %g / %g' % (total, cum))
+        self._check_total(cum, total)
 
         if 'processes/%s' % component['processID'] != process:
             raise AntelopeV1Error('Reference mismatch: %s begat %s' % (process, component['processID']))
 
         self._add_lcia_component(res, component)
 
-        if not isclose(res.total(), total, rel_tol=1e-8):
-            raise AntelopeV1Error('Total and computed result do not match! %g / %g' % (total, res.total()))
-
+        self._check_total(res.total(), total)
         return res
 
     def fragment_lcia(self, fragment, quantity_ref, scenario=None, refresh=False, **kwargs):
@@ -365,11 +368,9 @@ class AntelopeV1Client(ArchiveInterface, IndexInterface, InventoryInterface, Qua
         for component in lcia_r['lciaScore']:
             self._add_lcia_component(res, component)
 
-        if not isclose(res.total(), total, rel_tol=1e-8):
-            raise AntelopeV1Error('Total and computed result do not match! %g / %g' % (total, res.total()))
+        self._check_total(res.total(), total)
 
         return res
 
     def factors(self, quantity, flowable=None, compartment=None, **kwargs):
         pass
-

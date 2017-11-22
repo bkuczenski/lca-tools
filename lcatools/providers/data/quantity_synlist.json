@@ -7,7 +7,7 @@
         "Number of items [Item(s)]",
         "Number of items",
         "elcd.3.2/flowproperties/01846770-4cfe-4a25-8ad9-919d8d378345",
-        "flowproperties/01846770-4cfe-4a25-8ad9-919d8d378345"
+        "01846770-4cfe-4a25-8ad9-919d8d378345"
       ]
     },
     {
@@ -16,7 +16,7 @@
         "Vehicle transport [Items*km]",
         "Vehicle transport",
         "elcd.3.2/flowproperties/1cc347a0-3bd1-46db-a308-2707c68d2351",
-        "flowproperties/1cc347a0-3bd1-46db-a308-2707c68d2351"
+        "1cc347a0-3bd1-46db-a308-2707c68d2351"
       ]
     },
     {
@@ -25,14 +25,14 @@
         "elcd.3.2/flowproperties/23911c86-d4d2-4e3e-a45e-8e392af1dc4e",
         "Energy renewable and non renewable (gross calorific value)",
         "Energy renewable and non renewable (gross calorific value) [MJ]",
-        "flowproperties/23911c86-d4d2-4e3e-a45e-8e392af1dc4e"
+        "23911c86-d4d2-4e3e-a45e-8e392af1dc4e"
       ]
     },
     {
       "name": "Person transport",
       "synonyms": [
         "elcd.3.2/flowproperties/4872c95a-5f78-4572-883b-e076187ad87c",
-        "flowproperties/4872c95a-5f78-4572-883b-e076187ad87c",
+        "4872c95a-5f78-4572-883b-e076187ad87c",
         "Person transport [Items*km]",
         "Person transport"
       ]
@@ -43,7 +43,7 @@
         "Recycled content (mass)",
         "elcd.3.2/flowproperties/52dcf2ff-c0f6-417f-a957-788688d67b86",
         "Recycled content (mass) [kg]",
-        "flowproperties/52dcf2ff-c0f6-417f-a957-788688d67b86"
+        "52dcf2ff-c0f6-417f-a957-788688d67b86"
       ]
     },
     {
@@ -51,7 +51,7 @@
       "synonyms": [
         "Carbon content (biogenic)",
         "elcd.3.2/flowproperties/62e503ce-544a-4599-b2ad-bcea15a7bf20",
-        "flowproperties/62e503ce-544a-4599-b2ad-bcea15a7bf20",
+        "62e503ce-544a-4599-b2ad-bcea15a7bf20",
         "Carbon content (biogenic) [kg]"
       ]
     },
@@ -59,7 +59,7 @@
       "name": "Carbon content (fossil)",
       "synonyms": [
         "Carbon content (fossil)",
-        "flowproperties/64b8e725-b0ba-4837-abb9-62dc0e7b9f6f",
+        "64b8e725-b0ba-4837-abb9-62dc0e7b9f6f",
         "Carbon content (fossil) [kg]",
         "elcd.3.2/flowproperties/64b8e725-b0ba-4837-abb9-62dc0e7b9f6f"
       ]
@@ -70,7 +70,7 @@
         "Exergy [MJ]",
         "Exergy",
         "elcd.3.2/flowproperties/79920f3d-77b3-4f12-8a8f-47accf832eca",
-        "flowproperties/79920f3d-77b3-4f12-8a8f-47accf832eca"
+        "79920f3d-77b3-4f12-8a8f-47accf832eca"
       ]
     },
     {
@@ -79,13 +79,13 @@
         "Water content (mass)",
         "elcd.3.2/flowproperties/7ec8d70e-4ffc-4024-86b7-6141cc0a2bf5",
         "Water content (mass) [kg]",
-        "flowproperties/7ec8d70e-4ffc-4024-86b7-6141cc0a2bf5"
+        "7ec8d70e-4ffc-4024-86b7-6141cc0a2bf5"
       ]
     },
     {
       "name": "Goods transport (mass*distance)",
       "synonyms": [
-        "flowproperties/838aaa20-0117-11db-92e3-0800200c9a66",
+        "838aaa20-0117-11db-92e3-0800200c9a66",
         "Goods transport (mass*distance)",
         "elcd.3.2/flowproperties/838aaa20-0117-11db-92e3-0800200c9a66",
         "Goods transport (mass*distance) [t*km]"
@@ -97,7 +97,7 @@
         "Length [m]",
         "Length",
         "elcd.3.2/flowproperties/838aaa23-0117-11db-92e3-0800200c9a66",
-        "flowproperties/838aaa23-0117-11db-92e3-0800200c9a66"
+        "838aaa23-0117-11db-92e3-0800200c9a66"
       ]
     },
     {
@@ -106,7 +106,7 @@
         "Energy from renewable raw materials (net cal. value) [MJ]",
         "Energy from renewable raw materials (net cal. value)",
         "elcd.3.2/flowproperties/8695e049-7a18-4b83-b3bd-035747039652",
-        "flowproperties/8695e049-7a18-4b83-b3bd-035747039652"
+        "8695e049-7a18-4b83-b3bd-035747039652"
       ]
     },
     {
@@ -114,7 +114,7 @@
       "synonyms": [
         "elcd.3.2/flowproperties/93a60a56-a3c8-11da-a746-0800200b9a66",
         "Mass",
-        "flowproperties/93a60a56-a3c8-11da-a746-0800200b9a66",
+        "93a60a56-a3c8-11da-a746-0800200b9a66",
         "kg",
         "EcoSpold Quantity kg",
         "Mass [kg]"
@@ -125,7 +125,7 @@
       "synonyms": [
         "Net calorific value",
         "elcd.3.2/flowproperties/93a60a56-a3c8-11da-a746-0800200c9a66",
-        "flowproperties/93a60a56-a3c8-11da-a746-0800200c9a66",
+        "93a60a56-a3c8-11da-a746-0800200c9a66",
         "Net calorific value [MJ]"
       ]
     },
@@ -134,7 +134,7 @@
       "synonyms": [
         "Normal Volume [m3]",
         "elcd.3.2/flowproperties/93a60a56-a3c8-13da-a746-0800200c9a66",
-        "flowproperties/93a60a56-a3c8-13da-a746-0800200c9a66",
+        "93a60a56-a3c8-13da-a746-0800200c9a66",
         "EcoSpold Quantity Nm3",
         "Normal Volume"
       ]
@@ -144,7 +144,7 @@
       "synonyms": [
         "elcd.3.2/flowproperties/93a60a56-a3c8-14da-a746-0800200c9a66",
         "Gross calorific value [MJ]",
-        "flowproperties/93a60a56-a3c8-14da-a746-0800200c9a66",
+        "93a60a56-a3c8-14da-a746-0800200c9a66",
         "Gross calorific value"
       ]
     },
@@ -153,7 +153,7 @@
       "synonyms": [
         "Area [m2]",
         "elcd.3.2/flowproperties/93a60a56-a3c8-19da-a746-0800200c9a66",
-        "flowproperties/93a60a56-a3c8-19da-a746-0800200c9a66",
+        "93a60a56-a3c8-19da-a746-0800200c9a66",
         "Area"
       ]
     },
@@ -161,7 +161,7 @@
       "name": "Area*time",
       "synonyms": [
         "Area*time",
-        "flowproperties/93a60a56-a3c8-21da-a746-0800200c9a66",
+        "93a60a56-a3c8-21da-a746-0800200c9a66",
         "elcd.3.2/flowproperties/93a60a56-a3c8-21da-a746-0800200c9a66",
         "Area*time [m2*a]"
       ]
@@ -173,7 +173,7 @@
         "Volume [m3]",
         "Volume",
         "EcoSpold Quantity m3",
-        "flowproperties/93a60a56-a3c8-22da-a746-0800200c9a66"
+        "93a60a56-a3c8-22da-a746-0800200c9a66"
       ]
     },
     {
@@ -182,13 +182,13 @@
         "elcd.3.2/flowproperties/a182c00f-c0e5-4b7a-b2a1-a735fbee7f9a",
         "Energy renewable and non renewable (net calorific value)",
         "Energy renewable and non renewable (net calorific value) [MJ]",
-        "flowproperties/a182c00f-c0e5-4b7a-b2a1-a735fbee7f9a"
+        "a182c00f-c0e5-4b7a-b2a1-a735fbee7f9a"
       ]
     },
     {
       "name": "Price",
       "synonyms": [
-        "flowproperties/bcf81c0a-9fe9-4b88-a25b-99e0dd64ddaa",
+        "bcf81c0a-9fe9-4b88-a25b-99e0dd64ddaa",
         "elcd.3.2/flowproperties/bcf81c0a-9fe9-4b88-a25b-99e0dd64ddaa",
         "Price",
         "Price [EUR]"
@@ -200,13 +200,13 @@
         "Duration",
         "elcd.3.2/flowproperties/c0447923-0e60-4b3c-97c2-a86dddd9eea5",
         "Duration [a]",
-        "flowproperties/c0447923-0e60-4b3c-97c2-a86dddd9eea5"
+        "c0447923-0e60-4b3c-97c2-a86dddd9eea5"
       ]
     },
     {
       "name": "Hydrogen content (mass)",
       "synonyms": [
-        "flowproperties/f3e1017d-1aa3-4763-b563-9494858e1ec7",
+        "f3e1017d-1aa3-4763-b563-9494858e1ec7",
         "Hydrogen content (mass)",
         "elcd.3.2/flowproperties/f3e1017d-1aa3-4763-b563-9494858e1ec7",
         "Hydrogen content (mass) [kg]"
@@ -216,7 +216,7 @@
       "name": "Market value US 2000, bulk prices",
       "synonyms": [
         "elcd.3.2/flowproperties/fdfecf14-ff8a-4e17-b2b2-f938c4b5cc27",
-        "flowproperties/fdfecf14-ff8a-4e17-b2b2-f938c4b5cc27",
+        "fdfecf14-ff8a-4e17-b2b2-f938c4b5cc27",
         "Market value US 2000, bulk prices [EUR]",
         "Market value US 2000, bulk prices"
       ]

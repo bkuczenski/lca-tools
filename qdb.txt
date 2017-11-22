@@ -43,3 +43,113 @@ but antelope v2 references
 right now the qdb is best its own private thing
 
 
+==========
+Tue Nov 21 14:03:26 -0800 2017
+
+Current challenge: finding a conversion factor between flows of different origins.  Special case: the flows actually have the same reference unit, but that reference unit is defined with respect to different origins, so does not test as equal.
+
+Of course, this very quickly gets into territory where I have no idea what the Qdb is doing or why it is doing it or why it is doing it in the way that it is doing it.  Qdb, while better than FlowDb, is still terribly designed.
+
+SO.... I think what needs to happen is a broad reimagining of exactly what the Qdb is supposed to do and how it should do it.  And this conversion between parent flows and terminal flows in the termination is a big part of it.  Especially when we generalize "termination" to be "release to an environmental compartment", which has already been imagined, then this terminal conversion becomes even more important.
+
+So the first question is how does the Qdb even get invoked? terminations know nothing of catalogs or Qdbs.  And I think the answer is through this .cf() method-- if the conversion is between two flow entities, then they must be local, so their quantities are local, so... the local Qdb should be able to make the conversion, but how does it get in the mix?
+
+maybe it shouldn't.. maybe we should assume that term flows are always refs? is there a way to ensure that?
+
+For now let's just solve the problem assuming at least one of the flows is a ref.
+
+Tue 2017-11-21 15:10:19 -0800
+
+What is the Qdb supposed to do, in the most ideal sense?
+
+1. MAINTAIN AN authoritative LIST OF QUANTITIES.
+   * Given a reference, retrieve a canonical quantity to which it corresponds
+   * determine when different references refer to the same quantity
+
+2. MAINTAIN an authoritative HIERARCHY OF CONTEXTS -- this is much more fuzzy and new
+   * Really, it's a multihierarchy, since "emissions to rural air or from high stacks" is not part of any meaningful taxonomy
+   * If context is taken broadly, this includes geography and industry sector as well as environmental compartment
+
+3. PROVIDE CHARACTERIZATIONS for a given FLOWABLE for a supplied QUERY QUANTITY with respect to a REFERENCE QUANTITY
+   * the values of the characterization factors are (must be) bidirectionally context-dependent
+
+4. Provide searchable lists of flowables and contexts known to the Qdb
+
+
+Tue 2017-11-21 21:37:06 -0800
+
+Let's make a concrete list of the things the Qdb should do, starting with a basic architecture.
+
+The core of this whole software system is the Catalog, which allows us to specify processes, flows, and quantities simply by giving a stable semantic reference made up of an origin and an external ID.
+
+SEPARATE from the catalog is this amorphous thing called the quantity database, which is ultimately going to be a standalone graph db, which is supposed to provide real-world grounding for catalog references for quantities.  It is also the place where contexts-- the endpoints that flowables flow between-- are defined.  Characterization factors are going to be associated with conditions on those endpoints.
+
+Right now the Qdb is not a stand-alone service-- it's a captive service that runs locally and belongs to the catalog.
+
+Archives contain entities-- literal entities, whose external IDs are unique within the archive, and whose origins are the archives themselves.  The mandate is for archives to not change in the refactor.
+
+Fragments-- which are the main object of this whole thing-- cannot exist without catalogs.  A catalog is required to create a foreground archive, because the foreground has to be able to make reference to background entities in diverse archives both local and remote.  A foreground without a catalog maybe possible but is not really meaningful.
+
+So in the hierarchy, the Qdb is at the bottom because it doesn't require anything (right now the Qdb is a subclass of archive).
+Then comes the catalog, which requires a Qdb.
+Then comes the foregrounds, which require a catalog.
+
+Still to be determined are the entity editor, which isn't clear where it fits in; a possible stand alone LCIA computer (currently done by Qdb); and the antelope v2 server, which I think is going to sit on top of a catalog.
+
+Within this context, what is the Qdb supposed to do?
+
+Let's start with the functional things the Qdb currently DOES do.
+
+ * It's an attache to the Catalog
+   - it's used to create the FragmentEditor and to create FlowableGrids
+   - Given a flow, determine whether the flow is elementary (in the reimagining, it will be given a context)
+   + It stores a list of quantities
+   - Performs CF lookups via quantify(): given a flowable and a quantity and an optional compartment, return set of matching CFs (unused)
+   + It stores annotations of flows-- these are characterizations added by the user-- via annotate()
+
+ * It converts between quantities, implementing the flow-quantity relation
+   - convert() given a flow (or flowable+compartment+ref q), a query quantity, and an optional locale, determine the value of the query quantity per unit of the flow's ref quantity
+   - convert_reference(): not clear how this is different from convert(). See below.
+
+ * It computes LCIA
+   + load CFs from a quantity ref
+   + given a quantity ref and an iterable of exchanges, return an LciaResult, using convert()
+
+Now, what do we NEED it to do?
+
+ * determine when different references are to the same quantity.  For instance, know that the following two quantity references:
+ parent: elcd.3.2/flowproperties/93a60a56-a3c8-11da-a746-0800200b9a66
+   term: calrecycle.uolca.pe.sp24/flowproperties/93a60a56-a3c8-11da-a746-0800200b9a66
+   are to the same quantity, which is mass
+
+ * more generically, given two different flows with different reference quantities, determine a conversion between them, along the way identifying whether the reference quantities are in fact the same
+
+
+Wed 2017-11-22 10:41:23 -0800
+
+How does Qdb.convert_reference() differ from Qdb.convert()?
+
+convert_reference():
+
+ - determine from_q_ind and ref_q_ind
+ - _conversion_from_flow(flow is given, from_q_ind). fall back to:
+   [ determine f_inds and compartment]
+   = _lookfor_conversion(f_inds, compartment, from_q_ind, ref_q_ind)
+   = return conv
+
+convert():
+
+ - determine query_q_ind and ref_q_ind [and f_inds and compartment]
+ - deal with biogenic_co2 flag
+ {_convert_values}
+ - _lookup_cfs -> returns a set of cfs. over set:
+   = factor[location]
+   = determine cf_ref_q_ind. ONLY IF NON-MATCHING:
+     = _conversion_from_flow if available. fall back to:
+       = _lookfor_conversion(f_inds, compartment, cf_ref_q_ind, ref_q_ind)
+     = multiply factor by ref_conversion
+ - send back the first one from the set, with a TODO: semantic matching
+
+So they are weirdly duplicative, but convert is a bit more thorough-going and flexible; convert_reference only works with flows (or flow_refs) but not flowables.  They could probably be refactored a bit.
+
+

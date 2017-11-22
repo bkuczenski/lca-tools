@@ -166,7 +166,7 @@ class LcFlow(LcEntity):
         :param overwrite: [False] if True, allow values to replace existing characterizations
         :return:
         """
-        ''' # we no longer want to be able to add literal characterizations. Just do it manually.
+        ''' # we no longer want to be able to add literal characterizations. Just do it explicitly.
         if isinstance(quantity, Characterization):
             if quantity.flow.reference_entity != self.reference_entity:
                 adj = self.cf(quantity.flow.reference_entity)
@@ -203,7 +203,7 @@ class LcFlow(LcEntity):
 
     def has_characterization(self, quantity, location='GLO'):
         """
-        A flow keeps track of characterizations by uuid, because these are essentially guaranteed not to collide.
+        A flow keeps track of characterizations by link
         :param quantity:
         :param location:
         :return:

@@ -126,8 +126,9 @@ class Characterization(object):
     def __str__(self):
         if self.is_null:
             return '%s has %s %s' % (self.flow, self.quantity, self.quantity.reference_entity)
-        return '%s [%s / %s] %s' % ('\n'.join(['%10.3g [%s]' % (v, k) for k, v in self._locations.items()]),
-                                    self.quantity.unit(), self.flow.unit(), self.flow)
+        return '%s [%s / %s] %s (%s)' % ('\n'.join(['%6.3g [%s]' % (v, k) for k, v in self._locations.items()]),
+                                         self.quantity.unit(), self.flow.unit(), self.flow['Name'],
+                                         self.quantity['Name'])
 
     def q_view(self):
         if self.quantity is self.flow.reference_entity:
@@ -135,23 +136,25 @@ class Characterization(object):
         else:
             ref = ' | '
         if self.value is not None:
-            return '%10.3g %20.20s == %s%s%s' % (self.value, self.quantity.unit(),
-                                                 self.flow.unit(), ref,
-                                                 self.quantity)
+            return '%6.3g %16.16s == %s%s%s' % (self.value, self.quantity.unit(),
+                                                self.flow.unit(), ref,
+                                                self.quantity)
         else:
-            return '%10s %20.20s == %s%s%s' % (' ', self.quantity.unit(),
-                                               self.flow.unit(), ref,
-                                               self.quantity)
+            return '%6s %16.16s == %s%s%s' % (' ', self.quantity.unit(),
+                                              self.flow.unit(), ref,
+                                              self.quantity)
 
+    '''
     def tupleize(self):
         return self.flow.get_uuid(), self.quantity.get_uuid()
+    '''
 
     def serialize(self, values=False):
         j = {
             'entityType': self.entity_type,
             'quantity': self.quantity.get_uuid()
         }
-        if self.quantity == self.flow['referenceQuantity']:
+        if self.quantity == self.flow.reference_entity:
             j['isReference'] = True
         if values:
             if self.value is not None:
@@ -161,49 +164,3 @@ class Characterization(object):
     @classmethod
     def signature_fields(cls):
         return ['flow', 'quantity']
-
-
-'''
-class CharacterizationSet(object):
-    """
-    A dict of characterizations, whose key is the tupleized factor, for quick retrieval
-    """
-    def __init__(self, overwrite=False):
-        self._d = dict()
-        self.overwrite = overwrite
-
-    def __iter__(self):
-        for k, cf in self._d.items():
-            if cf.value != 0:
-                yield cf
-
-    def iter_zeros(self):
-        for k, cf in self._d.items():
-            if cf.value == 0:
-                yield cf
-
-    def add(self, char):
-        if char.tupleize() in self._d:
-            if self.overwrite is False:
-                return
-                # reject overwrite silently
-                # raise KeyError('Characterization is already in-set, and overwrite is False')
-
-        self._d[char.tupleize()] = char
-
-    def get(self, flow=None, quantity=None):
-        if flow is not None:
-            if quantity is not None:
-                return self._d[(flow.get_uuid(), quantity.get_uuid())]
-            else:
-                # flow, no quantity
-                return [cf for k, cf in self._d.items() if cf.flow is flow]  # is, really??
-        elif quantity is not None:
-            # quantity, no flow
-            return [cf for k, cf in self._d.items() if cf.quantity is quantity]  # is, really??
-        else:
-            return None
-
-    def serialize(self):
-        return sorted([cf.serialize() for cf in self], key=lambda x: x.flow)
-'''

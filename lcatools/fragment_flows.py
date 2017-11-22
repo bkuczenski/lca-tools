@@ -54,10 +54,15 @@ class FragmentFlow(object):
         :param query: a catalog query for the fragmentflow's origin
         :return:
         """
-        ref_mag = j['flowPropertyMagnitudes'][0]
+        fpms = j['flowPropertyMagnitudes']
+        ref_mag = fpms[0]
+        magnitude = ref_mag['magnitude']
         ref_qty = CatalogRef.from_query('flowproperties/%s' % ref_mag['flowPropertyID'], query, 'quantity',
                                         ref_mag['unit'])
         flow = CatalogRef.from_query('flows/%s' % j['flowID'], query, 'flow', ref_qty)
+        for fpm in fpms[1:]:
+            mag_qty = CatalogRef.from_query('flowproperties/%s' % fpm['flowPropertyID'], query, 'quantity', fpm['unit'])
+            flow.add_characterization(mag_qty, value=fpm['magnitude'] / magnitude)
         dirn = j['direction']
 
         if 'parentFragmentFlowID' in j:
@@ -75,7 +80,6 @@ class FragmentFlow(object):
 
         node_type = j['nodeType']
         nw = j['nodeWeight']
-        magnitude = ref_mag['magnitude']
         inbound_ev = magnitude / nw
 
         if node_type == 'Process':

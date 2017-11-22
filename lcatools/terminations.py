@@ -295,8 +295,8 @@ class FlowTermination(object):
                 self._parent.flow.profile()
                 raise FlowConversionError('Missing cf for %s' % tgt_qty)
             else:
-                return 1.0 / self.term_flow.convert(1.0, to=parent_qty)
-        return self._parent.flow.convert(1.0, to=tgt_qty)
+                return 1.0 / self.term_flow.cf(parent_qty)
+        return self._parent.flow.cf(to=tgt_qty)
 
     def validate_flow_conversion(self):
         return self.flow_conversion  # deal with it when an error comes up
@@ -511,8 +511,7 @@ class FlowTermination(object):
             j['direction'] = self.direction
         if self._descend is False:
             j['descend'] = False
-        if self._cached_ev != 1.0:
-            j['inboundExchangeValue'] = self._cached_ev
+        j['inboundExchangeValue'] = self._cached_ev
         if self._parent.is_background and save_unit_scores and len(self._score_cache) > 0:
             j['scoreCache'] = self._serialize_score_cache()
         return j

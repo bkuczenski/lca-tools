@@ -20,11 +20,20 @@ class QuantityInterface(AbstractQuery):
         return self._perform_query(_interface, 'lcia_methods', QuantityRequired('Must have quantity interface'),
                                    **kwargs)
 
+    def profile(self, flow, **kwargs):
+        """
+        Generate characterizations for the named flow, with the reference quantity noted
+        :param flow:
+        :return:
+        """
+        return self._perform_query(_interface, 'profile', QuantityRequired('Must have quantity interface'),
+                                   flow, **kwargs)
+
     def get_quantity(self, quantity, **kwargs):
         """
         Retrieve a canonical quantity from a qdb
         :param quantity: external_id of quantity
-        :return: quantity entity
+        :return: quantity CatalogRef
         """
         return self._perform_query(_interface, 'get_quantity', QuantityRequired('Quantity interface required'),
                                    quantity, **kwargs)

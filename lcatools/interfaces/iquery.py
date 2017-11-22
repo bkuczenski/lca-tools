@@ -102,15 +102,15 @@ class CatalogQuery(IndexInterface, BackgroundInterface, ForegroundInterface, Inv
         :param item:
         :return:
         """
-        return self._perform_query(None, 'get_item', EntityNotFound('%s' % external_ref),
+        return self._perform_query(None, 'get_item', EntityNotFound('%s/%s' % (self.origin, external_ref)),
                                    external_ref, item)
 
     def get_reference(self, external_ref):
-        return self._perform_query(None, 'get_reference', EntityNotFound('%s' % external_ref),
+        return self._perform_query(None, 'get_reference', EntityNotFound('%s/%s' % (self.origin, external_ref)),
                                    external_ref)
 
     def get_uuid(self, external_ref):
-        return self._perform_query(None, 'get_uuid', EntityNotFound('%s' % external_ref),
+        return self._perform_query(None, 'get_uuid', EntityNotFound('%s/%s' % (self.origin, external_ref)),
                                    external_ref)
 
     def get(self, eid, **kwargs):
@@ -120,4 +120,19 @@ class CatalogQuery(IndexInterface, BackgroundInterface, ForegroundInterface, Inv
         :param eid: an external Id
         :return:
         """
-        return self._perform_query(None, 'get', EntityNotFound('%s' % eid), eid, **kwargs)
+        return self._perform_query(None, 'get', EntityNotFound('%s/%s' % (self.origin, eid)), eid, **kwargs)
+
+    def cf(self, flow, query_quantity, locale='GLO', **kwargs):
+        """
+        Ask the local catalog's captive Qdb to perform a reference conversion for the given flow.
+        Return a single number that converts a unit of the flow's reference quantity into the query quantity.  Kind
+        of a simplified version of the quantity_relation that is easier to implement.
+
+        Again- it is not clear whether / how convert_reference() differs operationally from convert()
+        :param flow: the invoking flow_ref
+        :param query_quantity: a quantity_ref
+        :param locale:
+        :param kwargs:
+        :return: a float
+        """
+        return self._catalog.qdb.convert_reference(flow, from_q=query_quantity, locale=locale, **kwargs)

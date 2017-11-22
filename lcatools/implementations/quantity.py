@@ -74,6 +74,21 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
             return self.make_ref(self._archive.get_quantity(quantity))
         return self.make_ref(self._archive[quantity])
 
+    def profile(self, flow, **kwargs):
+        """
+        Generate characterizations for the named flow, with the reference quantity noted
+        :param flow:
+        :param kwargs:
+        :return:
+        """
+        if hasattr(self._archive, 'profile'):
+            for cf in self._archive.profile(flow, **kwargs):
+                yield cf
+        else:
+            f = self._archive.get(flow)
+            for cf in f.characterizations():
+                yield cf
+
     def synonyms(self, item, **kwargs):
         """
         Return a list of synonyms for the object -- quantity, flowable, or compartment

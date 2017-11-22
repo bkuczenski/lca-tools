@@ -116,17 +116,24 @@ class AntelopeV1Client(ArchiveInterface, IndexInterface, InventoryInterface, Qua
         raise AntelopeV1Error('Cannot load all entities from remote Antelope server')
 
     def _get_endpoint(self, endpoint, cache=True):
+        """
+        Generally we do not want to cache responses that get parsed_and_saved because that process pop()s
+        all the relevant information out of them.
+        :param endpoint:
+        :param cache:
+        :return:
+        """
         if endpoint in self._endpoints:
             return self._endpoints[endpoint]
         with urlopen(urljoin(self.source, endpoint)) as response:
+            self._print('Fetching %s from remote server' % endpoint)
             j = json.loads(response.read())
         if cache:
             self._endpoints[endpoint] = j
         return j
 
     def _fetch(self, entity, **kwargs):
-        self._print('Fetching %s from remote server' % entity)
-        j = self._get_endpoint(entity)[0]
+        j = self._get_endpoint(entity, cache=False)[0]
         return self._parse_and_save_entity(j)
 
     def _get_comment(self, processId):
@@ -181,7 +188,7 @@ class AntelopeV1Client(ArchiveInterface, IndexInterface, InventoryInterface, Qua
 
     def _parse_and_save_entity(self, j):
         """
-        Take a json object obtained from a query and use it to create a
+        Take a json object obtained from a query and use it to create an entity ref
         :param j:
         :return:
         """
@@ -374,3 +381,18 @@ class AntelopeV1Client(ArchiveInterface, IndexInterface, InventoryInterface, Qua
 
     def factors(self, quantity, flowable=None, compartment=None, **kwargs):
         pass
+
+    def profile(self, flow, **kwargs):
+        f = self.retrieve_or_fetch_entity(flow)
+        endpoint = '%s/flowpropertymagnitudes' % flow
+        fpms = self._get_endpoint(endpoint)
+        for cf in fpms:
+            q = self.retrieve_or_fetch_entity('flowproperties/%s' % cf['flowProperty']['flowPropertyID'])
+            if 'location' in cf:
+                location = cf['location']
+            else:
+                location = 'GLO'
+            if not f.has_characterization(q):
+                f.add_characterization(q, value=cf['magnitude'], location=location)
+        for cf in f.characterizations():
+            yield cf

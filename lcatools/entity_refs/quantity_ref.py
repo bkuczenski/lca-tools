@@ -12,6 +12,10 @@ class QuantityRef(EntityRef):
         return self.reference_entity
 
     @property
+    def q_name(self):
+        return '%s [%s]' % (self.get_item('Name'), self.reference_entity)
+
+    @property
     def _addl(self):
         return self.unit()
 

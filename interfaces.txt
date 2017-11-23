@@ -1,4 +1,38 @@
 ==========
+Wed Nov 22 13:54:38 -0800 2017
+
+Fragment interface
+
+The unit_inventory() method returns two sets of FragmentFlows: interior and exterior, with the exterior flows being grouped together by group_ios.
+
+Wed 2017-11-22 14:59:23 -0800
+Numerous snags here... first off, couldn't import group_ios because FragmentFlow depended on CatalogRef... so I masked CatalogRef inside of antelope...
+then we have this peculiar problem with making catalog refs for reference entities that have different origins-- they are failing their lookups with the original query, for obvious reasons. Worst, this problem is apparently nondeterministic, because it only occurs sometimes.
+Now, a big challenge with unit_inventory-- as it requires to be run on self.top() and not self, and apparently I actually make connections to non-reference flows in the AUOMA study, so this is implicated.  I suppose there isn't really a good reason not to just make a real-live unit_inventory method in the interface... the main reason why not is that Antelope v1 doesn't support it.
+
+I seem to remember thinking at some point about requiring the term_node to be the actual reference fragment, and using the linked flow as term_flow-- that would be analogous to how it works with processes, I suppose.
+But to implement that I would actually need to modify the AUOMA study, which is not desirable.
+ok, let's pause and eat lunch.
+
+Wed 2017-11-22 16:40:58 -0800
+
+So there's an easy answer-- just force the fragment ref to only traverse top fragments. This WILL require updates to the AUOMA model when we try to implement remote calrecycle.
+
+The bigger problem is with the reference entities failing their lookups.  This is weird and it seems like the problem has to do with adding an entity from an NsUuidArchive to an IlcdArchive, where it seems like the entity retains its old externalId even though that is no longer applicable.
+
+Let's test that.
+
+Wed 2017-11-22 21:55:52 -0800
+
+Current status:
+
+ * figured a workaround for the spurious external refs: simply disallow them if they don't validate
+ * figured out a fix for unit conversions: str(q) was not what I wanted- q_name was
+ * unit_inventory still not working as expected-- I imagine this is because of equality test. more debugging to come.
+
+
+
+==========
 Wed Nov 01 10:43:46 -0700 2017
 
 Hard to believe how long this project has been going and how piss poor it all is.

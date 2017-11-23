@@ -100,9 +100,9 @@ class InventoryImplementation(BasicImplementation, InventoryInterface):
 
     def traverse(self, fragment, scenario=None, **kwargs):
         if hasattr(self._archive, 'traverse'):
-            return self._archive.traverse(fragment, scenario=scenario, **kwargs)
+            return self._archive.traverse(fragment.top(), scenario=scenario, **kwargs)
         frag = self._archive.retrieve_or_fetch_entity(fragment)
-        return frag.traverse(scenario, observed=True)
+        return frag.top().traverse(scenario, observed=True)
 
     def fragment_lcia(self, fragment, quantity_ref, scenario=None, refresh=False, **kwargs):
         if hasattr(self._archive, 'fragment_lcia'):

@@ -57,7 +57,7 @@ class BaseRef(object):
 
     @property
     def link(self):
-        return '/'.join([self.origin, self.external_ref])
+        return '%s/%s' % (self.origin, self.external_ref)
 
     @property
     def entity_type(self):

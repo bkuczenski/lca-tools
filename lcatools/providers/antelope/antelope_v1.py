@@ -80,6 +80,9 @@ class AntelopeV1Client(ArchiveInterface, IndexInterface, InventoryInterface, Qua
             'fragment': False
         }
 
+    def _make_ref(self, external_ref, entity_type, reference_entity, **kwargs):
+        return CatalogRef.from_query(external_ref, self._query, entity_type, reference_entity, **kwargs)
+
     def entities_by_type(self, entity_type):
         if entity_type == 'process':
             endp = 'processes'
@@ -207,7 +210,7 @@ class AntelopeV1Client(ArchiveInterface, IndexInterface, InventoryInterface, Qua
         j['SpatialScope'] = j.pop('geography')
         j['TemporalScope'] = j.pop('referenceYear')
         j['Comment'] = self._get_comment(process_id)
-        ref = CatalogRef.from_query(ext_ref, self._query, 'process', [], **j)
+        ref = self._make_ref(ext_ref, 'process', [], **j)
         self._cached['processes'][process_id] = ref
         return ref
 
@@ -218,7 +221,7 @@ class AntelopeV1Client(ArchiveInterface, IndexInterface, InventoryInterface, Qua
         j['CasNumber'] = j.pop('casNumber', '')
         j['Compartment'] = [j.pop('category')]
         ref_qty = self.retrieve_or_fetch_entity('flowproperties/%s' % j.pop('referenceFlowPropertyID'))
-        ref = CatalogRef.from_query(ext_ref, self._query, 'flow', ref_qty, **j)
+        ref = self._make_ref(ext_ref, 'flow', ref_qty, **j)
         self._cached['flows'][flow_id] = ref
         return ref
 
@@ -232,7 +235,7 @@ class AntelopeV1Client(ArchiveInterface, IndexInterface, InventoryInterface, Qua
         j.pop('referenceFlowPropertyID')
         j['Indicator'] = rfp['name']
         j['Category'] = self._get_impact_category(j.pop('impactCategoryID'))
-        ref = CatalogRef.from_query(ext_ref, self._query, 'quantity', ref_unit, **j)
+        ref = self._make_ref(ext_ref, 'quantity', ref_unit, **j)
         self._cached['lciamethods'][lm_id] = ref
         return ref
 
@@ -241,7 +244,7 @@ class AntelopeV1Client(ArchiveInterface, IndexInterface, InventoryInterface, Qua
         ext_ref = 'flowproperties/%s' % fp_id
         j['Name'] = j.pop('name')
         ref_unit = j.pop('referenceUnit')
-        ref = CatalogRef.from_query(ext_ref, self._query, 'quantity', ref_unit, **j)
+        ref = self._make_ref(ext_ref, 'quantity', ref_unit, **j)
         self._cached['flowproperties'][fp_id] = ref
         return ref
 
@@ -251,7 +254,7 @@ class AntelopeV1Client(ArchiveInterface, IndexInterface, InventoryInterface, Qua
         j['Name'] = j.pop('name')
         dirn = j.pop('direction')
         flow = self.retrieve_or_fetch_entity('flows/%s' % j.pop('termFlowID'))
-        ref = CatalogRef.from_query(ext_ref, self._query, 'fragment', None, **j)
+        ref = self._make_ref(ext_ref, 'fragment', None, **j)
         ref.set_config(flow, dirn)
         self._cached['fragments'][frag_id] = ref
         return ref
@@ -321,7 +324,7 @@ class AntelopeV1Client(ArchiveInterface, IndexInterface, InventoryInterface, Qua
         for ff in ffs:
             if 'fragmentStageID' in ff:
                 ff['StageName'] = self._get_stage_name(ff['fragmentStageID'])
-        return [FragmentFlow.from_antelope_v1(ff, self._query) for ff in ffs]
+        return [FragmentFlow.from_antelope_v1(ff, self._make_ref) for ff in ffs]
 
     def lcia(self, process, ref_flow, quantity_ref, refresh=False, **kwargs):
         """

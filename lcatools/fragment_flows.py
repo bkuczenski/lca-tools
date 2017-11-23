@@ -1,6 +1,5 @@
 from lcatools.terminations import FlowTermination
 from lcatools.exchanges import comp_dir
-from lcatools.entity_refs import CatalogRef
 from lcatools.lcia_results import LciaResult, DetailedLciaResult, SummaryLciaResult
 from lcatools.terminations import SubFragmentAggregation
 
@@ -41,7 +40,7 @@ class FragmentFlow(object):
 
     """
     @classmethod
-    def from_antelope_v1(cls, j, query):
+    def from_antelope_v1(cls, j, make_ref):
         """
         Need to:
          * create a termination
@@ -51,17 +50,16 @@ class FragmentFlow(object):
          * extract is_conserved
         :param j: JSON-formatted fragmentflow, from a v1 .NET antelope instance.  Must be modified to include StageName
          instead of fragmentStageID
-        :param query: a catalog query for the fragmentflow's origin
+        :param make_ref: a function that accepts (external_id, e_type, reference_entity, **kwargs) and returns a ref
         :return:
         """
         fpms = j['flowPropertyMagnitudes']
         ref_mag = fpms[0]
         magnitude = ref_mag['magnitude']
-        ref_qty = CatalogRef.from_query('flowproperties/%s' % ref_mag['flowPropertyID'], query, 'quantity',
-                                        ref_mag['unit'])
-        flow = CatalogRef.from_query('flows/%s' % j['flowID'], query, 'flow', ref_qty)
+        ref_qty = make_ref('flowproperties/%s' % ref_mag['flowPropertyID'], 'quantity', ref_mag['unit'])
+        flow = make_ref('flows/%s' % j['flowID'], 'flow', ref_qty)
         for fpm in fpms[1:]:
-            mag_qty = CatalogRef.from_query('flowproperties/%s' % fpm['flowPropertyID'], query, 'quantity', fpm['unit'])
+            mag_qty = make_ref('flowproperties/%s' % fpm['flowPropertyID'], 'quantity', fpm['unit'])
             flow.add_characterization(mag_qty, value=fpm['magnitude'] / magnitude)
         dirn = j['direction']
 
@@ -74,8 +72,8 @@ class FragmentFlow(object):
                 stage_name = j['StageName']
             else:
                 stage_name = 'InputOutput'
-            frag = CatalogRef.from_query('fragments/%s' % j['fragmentID'], query, 'fragment', None,
-                                         Name=j['name'], StageName=stage_name)
+            frag = make_ref('fragments/%s' % j['fragmentID'], 'fragment', None,
+                            Name=j['name'], StageName=stage_name)
             frag.set_config(flow, dirn)
 
         node_type = j['nodeType']
@@ -83,10 +81,10 @@ class FragmentFlow(object):
         inbound_ev = magnitude / nw
 
         if node_type == 'Process':
-            term_node = CatalogRef.from_query('processes/%s' % j['processID'], query, 'process', [])
+            term_node = make_ref('processes/%s' % j['processID'], 'process', [])
             term = FlowTermination(frag, term_node, term_flow=flow, inbound_ev=inbound_ev)
         elif node_type == 'Fragment':
-            term_node = CatalogRef.from_query('fragments/%s' % j['subFragmentID'], query, 'fragment', [])
+            term_node = make_ref('fragments/%s' % j['subFragmentID'], 'fragment', [])
             term = FlowTermination(frag, term_node, term_flow=flow, inbound_ev=inbound_ev)
         else:
             term = FlowTermination.null(frag)
@@ -97,10 +95,20 @@ class FragmentFlow(object):
         return cls(frag, magnitude, nw, term, conserved)
 
     @classmethod
-    def ref_flow(cls, parent, scenario=None, observed=False):
+    def ref_flow(cls, parent, scenario=None, observed=False, use_ev=None):
+        """
+
+        :param parent:
+        :param scenario:
+        :param observed:
+        :param use_ev: required to create reference flows from fragment refs
+        :return:
+        """
+        if use_ev is None:
+            use_ev = parent.exchange_value(scenario=scenario, observed=observed)
         fragment = GhostFragment(parent, parent.flow, comp_dir(parent.direction))
         term = FlowTermination.null(fragment)
-        return cls(fragment, parent.exchange_value(scenario=scenario, observed=observed), 1.0, term,
+        return cls(fragment, use_ev, 1.0, term,
                    parent.is_conserved_parent)
 
     @classmethod

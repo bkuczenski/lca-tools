@@ -204,6 +204,49 @@ class Qdb(LcArchive, QuantityInterface):
                 if cf.quantity is not f.reference_entity:
                     self.add_cf(cf)
 
+    def _add_or_merge_quantity(self, q):
+        """
+        This function should only be called from _get_q_ind, after it determines the quantity does not exist
+        :param q:
+        :return:
+        """
+        if q.entity_type != 'quantity':
+            raise TypeError('Not adding non-quantity to Qdb: %s' % q)
+        if q.is_lcia_method():
+            ind = self._q.add_set(self._q_terms(q), merge=False)  # allow different versions of the same LCIA method
+            if ind is None:  # major design flaw in SynList- add_set should not return None
+                ind = self._q.index(next(_i for _i in self._q_terms(q)))
+        else:
+            ind = self._q.add_set(self._q_terms(q), merge=True)  # squash together different versions of a ref quantity
+        if self._q.entity(ind) is None:
+            self._q.set_entity(ind, q)
+            try:
+                self.add(q)
+            except KeyError:
+                pass
+        return ind
+
+    def _get_q_ind(self, quantity):
+        """
+        get index for an actual entity or synonym. Create a new entry if none is found.
+        :param quantity:
+        :return:
+        """
+        if quantity is None:
+            return None
+        if isinstance(quantity, int):
+            if quantity < len(self._q):
+                return quantity
+            raise IndexError('Quantity index %d out of range' % quantity)
+        elif isinstance(quantity, str):
+            try:
+                ind = self._q.index(quantity)
+            except KeyError:
+                raise QuantityNotKnown(quantity)
+        else:
+            ind = self._add_or_merge_quantity(quantity)
+        return ind
+
     def __getitem__(self, item):
         try:
             i = self._get_q_ind(item)
@@ -219,26 +262,6 @@ class Qdb(LcArchive, QuantityInterface):
     @property
     def quell_biogenic_co2(self):
         return self._quell_biogenic_co2
-
-    def _add_new_quantity(self, q):
-        """
-        This function should only be called from _get_q_ind, after it determines the quantity does not exist
-        :param q:
-        :return:
-        """
-        if q.entity_type != 'quantity':
-            raise TypeError('Not adding non-quantity to Qdb: %s' % q)
-        if q.is_lcia_method():
-            ind = self._q.add_set(self._q_terms(q), merge=False)  # allow different versions of the same LCIA method
-        else:
-            ind = self._q.add_set(self._q_terms(q), merge=True)  # squash together different versions of a ref quantity
-        if self._q.entity(ind) is None:
-            self._q.set_entity(ind, q)
-            try:
-                self.add(q)
-            except KeyError:
-                pass
-        return ind
 
     def is_known(self, q):
         """
@@ -434,32 +457,6 @@ class Qdb(LcArchive, QuantityInterface):
     '''
     Collecting new CFs
     '''
-    def _get_q_ind(self, quantity):
-        """
-        get index for an actual entity or synonym. Create a new entry if none is found.
-        :param quantity:
-        :return:
-        """
-        if quantity is None:
-            return None
-        if isinstance(quantity, int):
-            if quantity < len(self._q):
-                return quantity
-            raise IndexError('Quantity index %d out of range' % quantity)
-        elif isinstance(quantity, str):
-            try:
-                ind = self._q.index(quantity)
-            except KeyError:
-                raise QuantityNotKnown(quantity)
-        else:
-            try:
-                ind = self._q.index(next(k for k in self._q_terms(quantity)
-                                         if self._q.index(k) is not None))
-
-            except StopIteration:
-                ind = self._add_new_quantity(quantity)
-        return ind
-
     @staticmethod
     def _flow_terms(flow):
         if flow['CasNumber'] is None or len(flow['CasNumber']) < 5:
@@ -475,7 +472,7 @@ class Qdb(LcArchive, QuantityInterface):
         :param q:
         :return:
         """
-        for i in q.uuid, q.link, str(q):
+        for i in q.uuid, q.link, q.q_name:
             yield i
 
     def add_cf(self, factor, flow=None):
@@ -556,6 +553,8 @@ class Qdb(LcArchive, QuantityInterface):
             conv, origin = self._lookfor_conversion(f_inds, compartment, from_q_ind, ref_q_ind)
             if conv is not None:
                 flow.add_characterization(self._q.entity(from_q), location=locale, value=conv, origin=origin)
+        if conv is None:
+            return 0.0
         return conv
 
     def _lookfor_conversion(self, f_inds, compartment, from_q, to_q, locale='GLO'):

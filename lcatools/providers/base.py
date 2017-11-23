@@ -276,8 +276,11 @@ class LcArchive(ArchiveInterface):
             raise TypeError('Unknown entity type %s' % e['entityType'])
 
         entity.origin = origin
-        entity.set_external_ref(ext_ref)
         self.add(entity)
+        if self._get_entity(ext_ref) is entity:
+            entity.set_external_ref(ext_ref)
+        else:
+            print('## skipping bad external ref %s for uuid %s' % (ext_ref, uid))
 
     def entities_by_type(self, entity_type):
         if entity_type not in entity_types:

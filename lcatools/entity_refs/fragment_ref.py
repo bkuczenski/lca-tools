@@ -1,4 +1,5 @@
 from .base import EntityRef
+from lcatools.fragment_flows import FragmentFlow, group_ios
 
 
 class FragmentRef(EntityRef):
@@ -45,6 +46,10 @@ class FragmentRef(EntityRef):
     def _addl(self):
         return 'frag'
 
+    @property
+    def is_conserved_parent(self):
+        return None
+
     def inventory(self, scenario=None, **kwargs):
         return self._query.inventory(self.external_ref, ref_flow=scenario, **kwargs)
 
@@ -57,5 +62,15 @@ class FragmentRef(EntityRef):
     def bg_lcia(self, lcia_qty, scenario=None, **kwargs):
         return self.fragment_lcia(self.external_ref, lcia_qty, scenario=scenario, **kwargs)
 
-    def unit_inventory(self, scenario=None):
-        pass
+    def unit_inventory(self, scenario=None, observed=None):
+        """
+
+        :param scenario:
+        :param observed: ignored; supplied only for signature consistency
+        :return:
+        """
+        if observed is False:
+            print('Ignoring false observed flag')
+        ffs = self.traverse(scenario=scenario)  # in the future, may want to cache this
+        ffs.append(FragmentFlow.ref_flow(self, scenario=scenario, observed=True, use_ev=ffs[0].magnitude))
+        return group_ios(self, ffs)

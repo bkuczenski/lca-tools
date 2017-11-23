@@ -5,7 +5,7 @@ import uuid
 from collections import namedtuple
 
 from lcatools.entities.entities import LcEntity
-from lcatools.entities.flows import LcFlow
+# from lcatools.entities.flows import LcFlow
 from lcatools.exchanges import Exchange, ExchangeValue, DuplicateExchangeError, AmbiguousReferenceError
 from lcatools.lcia_results import LciaResult, LciaResults
 

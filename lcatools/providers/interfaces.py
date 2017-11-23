@@ -32,6 +32,8 @@ def to_uuid(_in):
         return str(_in)
     if _in is None:
         return _in
+    if isinstance(_in, int):
+        return None
     try:
         g = uuid_regex.search(_in)
     except TypeError:

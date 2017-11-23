@@ -116,7 +116,7 @@
         "Mass",
         "93a60a56-a3c8-11da-a746-0800200b9a66",
         "kg",
-        "EcoSpold Quantity kg",
+        "EcoSpold Quantity kg [kg]",
         "Mass [kg]"
       ]
     },
@@ -135,7 +135,7 @@
         "Normal Volume [m3]",
         "elcd.3.2/flowproperties/93a60a56-a3c8-13da-a746-0800200c9a66",
         "93a60a56-a3c8-13da-a746-0800200c9a66",
-        "EcoSpold Quantity Nm3",
+        "EcoSpold Quantity Nm3 [Nm3]",
         "Normal Volume"
       ]
     },
@@ -172,7 +172,7 @@
         "elcd.3.2/flowproperties/93a60a56-a3c8-22da-a746-0800200c9a66",
         "Volume [m3]",
         "Volume",
-        "EcoSpold Quantity m3",
+        "EcoSpold Quantity m3 [m3]",
         "93a60a56-a3c8-22da-a746-0800200c9a66"
       ]
     },

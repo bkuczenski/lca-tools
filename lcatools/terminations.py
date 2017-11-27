@@ -441,7 +441,10 @@ class FlowTermination(object):
         :return:
         """
         if self.is_subfrag:
-            raise SubFragmentAggregation  # to be caught
+            if self.descend:
+                return LciaResult(quantity_ref)  # null result for subfragments that are explicitly followed
+            else:
+                raise SubFragmentAggregation  # to be caught
 
         if self._parent.is_background:
             # need bg_lcia method for FragmentRefs

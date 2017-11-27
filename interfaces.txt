@@ -94,6 +94,14 @@ The only remaining hiccup is, with the new change, we no longer have a terminate
 
 And it looks like there is a double counting issue with sub fragment aggregation.
 
+Sun 2017-11-26 22:17:30 -0800
+
+double counting issue: if the term is marked descend, then we want to skip it!
+
+OK, taken care of in terminations.py
+
+Sun 2017-11-26 22:34:44 -0800
+
 
 
 

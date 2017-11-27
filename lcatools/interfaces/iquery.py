@@ -50,6 +50,14 @@ class CatalogQuery(IndexInterface, BackgroundInterface, ForegroundInterface, Inv
     def origin(self):
         return self._origin
 
+    def cascade(self, origin):
+        if origin == self.origin:
+            return self
+        return self._catalog.query(origin)
+
+    def ensure_lcia_factors(self, quantity_ref):
+        self._catalog.load_lcia_factors(quantity_ref)
+
     def get_privacy(self, origin=None):
         if origin is None:
             return self._catalog.privacy(self._origin)
@@ -136,3 +144,7 @@ class CatalogQuery(IndexInterface, BackgroundInterface, ForegroundInterface, Inv
         :return: a float
         """
         return self._catalog.qdb.convert_reference(flow, from_q=query_quantity, locale=locale, **kwargs)
+
+    def do_lcia(self, inventory, quantity_ref, **kwargs):
+        self.ensure_lcia_factors(quantity_ref)
+        return self._catalog.qdb.do_lcia(quantity_ref, inventory, **kwargs)

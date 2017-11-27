@@ -6,8 +6,7 @@ as a ProductFlow in lca-matrix, although the FlowTermination is more powerful.  
 either one from the other.
 """
 
-from lcatools.entities.processes import AmbiguousReferenceError
-from lcatools.exchanges import comp_dir, ExchangeValue
+from lcatools.exchanges import comp_dir, ExchangeValue, AmbiguousReferenceError
 from lcatools.interfaces import InventoryRequired, PrivateArchive
 from lcatools.lcia_results import LciaResult, LciaResults
 
@@ -293,7 +292,7 @@ class FlowTermination(object):
                 print('\nfragment flow %s' % self._parent)
                 self._parent.flow.show()
                 self._parent.flow.profile()
-                raise FlowConversionError('Missing cf for %s' % tgt_qty)
+                raise FlowConversionError('Missing cf\nfrom: %s\n  to: %s' % (parent_qty, tgt_qty))
             else:
                 return 1.0 / self.term_flow.cf(parent_qty)
         return self._parent.flow.cf(to=tgt_qty)
@@ -430,7 +429,7 @@ class FlowTermination(object):
                 if (x.flow, x.direction) not in children:
                     yield x
 
-    def compute_unit_score(self, quantity, qdb, **kwargs):
+    def compute_unit_score(self, quantity_ref, **kwargs):
         """
         four different ways to do this.
         0- we are a subfragment-- throw exception: use subfragment traversal results contained in the FragmentFlow
@@ -438,8 +437,7 @@ class FlowTermination(object):
         2- get fg lcia for unobserved exchanges
 
         If
-        :param quantity:
-        :param qdb:
+        :param quantity_ref:
         :return:
         """
         if self.is_subfrag:
@@ -447,23 +445,23 @@ class FlowTermination(object):
 
         if self._parent.is_background:
             # need bg_lcia method for FragmentRefs
-            res = self.term_node.bg_lcia(lcia_qty=quantity, ref_flow=self.term_flow.external_ref, **kwargs)
+            res = self.term_node.bg_lcia(lcia_qty=quantity_ref, ref_flow=self.term_flow.external_ref, **kwargs)
         else:
             try:
                 locale = self.term_node['SpatialScope']
             except KeyError:
                 locale = 'GLO'
-            res = qdb.do_lcia(quantity, self._unobserved_exchanges(), locale=locale, **kwargs)
-        self._score_cache[quantity.uuid] = res
+            res = quantity_ref.do_lcia(self._unobserved_exchanges(), locale=locale, **kwargs)
+        self._score_cache[quantity_ref.uuid] = res
         return res
 
-    def score_cache(self, quantity=None, qdb=None, **kwargs):
+    def score_cache(self, quantity=None, **kwargs):
         if quantity is None:
             return self._score_cache
         if quantity.uuid in self._score_cache:
             return self._score_cache[quantity.uuid]
         else:
-            return self.compute_unit_score(quantity, qdb, **kwargs)
+            return self.compute_unit_score(quantity, **kwargs)
 
     def score_cache_items(self):
         return self._score_cache.items()

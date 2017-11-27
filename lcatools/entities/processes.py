@@ -423,9 +423,10 @@ class LcProcess(LcEntity):
             results[q.get_uuid()] = self.lcia(q, **kwargs)
         return results
 
-    def lcia(self, quantity, ref_flow=None, qdb=None):
-        if qdb is not None:
-            return qdb.do_lcia(quantity, self.inventory(reference=ref_flow), locale=self['SpatialScope'])
+    def lcia(self, quantity, ref_flow=None):
+        if not quantity.is_entity:
+            # only works for quantity refs-- in other words, always works
+            return quantity.do_lcia(self.inventory(reference=ref_flow), locale=self['SpatialScope'])
         else:
             result = LciaResult(quantity)
             result.add_component(self.get_uuid(), entity=self)

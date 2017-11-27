@@ -6,7 +6,7 @@
 import uuid
 from collections import defaultdict
 
-from lcatools.fragment_flows import group_ios, FragmentFlow
+from lcatools.fragment_flows import group_ios, FragmentFlow, frag_flow_lcia
 from lcatools.entities import LcEntity, LcFlow
 from lcatools.exchanges import comp_dir, ExchangeValue
 from lcatools.literate_float import LiterateFloat
@@ -194,7 +194,7 @@ class LcFragment(LcEntity):
 
     def make_ref(self, query):
         ref = super(LcFragment, self).make_ref(query)
-        ref.set_config(self.flow.make_ref(query), self.direction)
+        ref.set_config(self.flow.make_ref(query.cascade(self.flow.origin)), self.direction)
         return ref
 
     def top(self):
@@ -868,6 +868,18 @@ class LcFragment(LcEntity):
             if match is not None:
                 self._exchange_values[match] = _balance
 
+    def fragment_lcia(self, quantity_ref, scenario=None, refresh=False):
+        """
+        Fragments don't have access to a qdb, so this piggybacks on the quantity_ref.
+        :param quantity_ref:
+        :param scenario:
+        :param refresh:
+        :return:
+        """
+        quantity_ref.ensure_lcia()
+        fragmentflows = self.traverse(scenario=scenario, observed=True)
+        return frag_flow_lcia(fragmentflows, quantity_ref, scenario=scenario, refresh=refresh)
+
     def inventory(self, scenario=None, scale=1.0, observed=False):
         """
         Converts unit inventory into a set of exchanges for easy display
@@ -1062,6 +1074,7 @@ class LcFragment(LcEntity):
         ffs = [ff]
         if term.term_is_bg:
             bg_ff, _ = term.term_node.traverse_node(node_weight, scenario, observed=observed)
+            assert len(bg_ff) == 1
             bg_ff[0].fragment = self
             return bg_ff
 
@@ -1071,14 +1084,24 @@ class LcFragment(LcEntity):
         # use term_flow over term_node.flow because that allows client code to specify inverse traversal knowing
         #  only the sought flow.
         # unit_inventory guarantees that there is exactly one of these flows
-        match = next(k for k in unit_inv if k.fragment.flow == term.term_flow)
+        try:
+            match = next(k for k in unit_inv if k.fragment.flow == term.term_flow)
+        except StopIteration:
+            print('Flow mismatch Traversing:\n%s' % self)
+            print('Term flow: %s' % term.term_flow.link)
+            print(term.serialize())
+            for k in unit_inv:
+                print('%s' % k.fragment.flow.link)
+            raise MissingFlow('Term flow: %s' % term.term_flow.link)
+
         unit_inv.remove(match)
 
-        in_ex = match.magnitude
+        in_ex = match.magnitude  # this is the inbound exchange value for the driven fragment
         if match.fragment.direction == self.direction:
             # self is driving subfragment in reverse
             in_ex *= -1
 
+        # node weight for the driven [downstream] fragment
         downstream_nw = node_weight / in_ex
 
         # then we add the results of the subfragment, either in aggregated or disaggregated form
@@ -1173,7 +1196,7 @@ class LcFragment(LcEntity):
                 conserved = True
             if self.direction == 'Output':  # convention: inputs to parent are positive
                 conserved_val *= -1
-            self._print('%.3s %g' % (self.uuid, conserved_val), level=2)
+            self._print('%.3s conserved_val %g' % (self.uuid, conserved_val), level=2)
 
         node_weight = self._node_weight(magnitude, scenario, observed)
         term = self.termination(scenario)
@@ -1186,12 +1209,15 @@ class LcFragment(LcEntity):
         '''
         if term.is_null or self.is_background or magnitude == 0:
             # cutoff and background both end traversal
+            self._print('%.3s cutoff or bg' % self.uuid)
             return [ff], conserved_val
 
         if term.is_fg or term.term_node.entity_type == 'process':
+            self._print('%.3s fg' % self.uuid)
             ffs = self._traverse_fg_node(ff, scenario, observed, frags_seen)
 
         else:
+            self._print('%.3s subfrag' % self.uuid)
             ffs = self._traverse_subfragment(ff, scenario, observed, frags_seen)
 
         # if descend is true- we give back everything- otherwise we aggregate

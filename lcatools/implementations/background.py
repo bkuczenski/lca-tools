@@ -171,7 +171,7 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
         p = self._archive.retrieve_or_fetch_entity(process)
         ref_flow = self._ensure_ref_flow(ref_flow)
         lci = self._bg.lci(p, ref_flow=ref_flow)
-        res = self._catalog.qdb.do_lcia(query_qty, lci, locale=p['SpatialScope'], **kwargs)
+        res = query_qty.do_lcia(lci, locale=p['SpatialScope'], **kwargs)
         if self.privacy > 0:
             return res.aggregate('*')
         return res

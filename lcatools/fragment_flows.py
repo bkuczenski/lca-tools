@@ -1,7 +1,6 @@
-from lcatools.terminations import FlowTermination
+from lcatools.terminations import FlowTermination, SubFragmentAggregation
 from lcatools.exchanges import comp_dir
 from lcatools.lcia_results import LciaResult, DetailedLciaResult, SummaryLciaResult
-from lcatools.terminations import SubFragmentAggregation
 
 from collections import defaultdict
 
@@ -228,10 +227,9 @@ def group_ios(parent, ios):
     return external, internal
 
 
-def frag_flow_lcia(qdb, fragmentflows, quantity_ref, scenario=None, refresh=False):
+def frag_flow_lcia(fragmentflows, quantity_ref, scenario=None, refresh=False):
     """
     Recursive function to compute LCIA of a traversal record contained in a set of Fragment Flows.
-    :param qdb:
     :param fragmentflows:
     :param quantity_ref:
     :param scenario: necessary if any remote traversals are required
@@ -248,13 +246,13 @@ def frag_flow_lcia(qdb, fragmentflows, quantity_ref, scenario=None, refresh=Fals
             continue
 
         try:
-            v = ff.term.score_cache(quantity=quantity_ref, qdb=qdb, refresh=refresh)
+            v = ff.term.score_cache(quantity=quantity_ref, refresh=refresh)
         except SubFragmentAggregation:
             # if we were given interior fragments, recurse on them. otherwise ask remote.
             if len(ff.subfragments) == 0:
                 v = ff.term.term_node.fragment_lcia(quantity_ref, scenario=scenario, refresh=refresh)
             else:
-                v = frag_flow_lcia(qdb, ff.subfragments, quantity_ref, refresh=refresh)
+                v = frag_flow_lcia(ff.subfragments, quantity_ref, refresh=refresh)
         if v.total() == 0:
             continue
 

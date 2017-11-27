@@ -1,6 +1,6 @@
 from .basic import BasicImplementation
-from lcatools.fragment_flows import frag_flow_lcia
 from lcatools.interfaces import InventoryInterface, PrivateArchive, EntityNotFound
+from lcatools.fragment_flows import frag_flow_lcia
 
 
 class InventoryImplementation(BasicImplementation, InventoryInterface):
@@ -93,10 +93,9 @@ class InventoryImplementation(BasicImplementation, InventoryInterface):
                 return self._archive.lcia(process, ref_flow, quantity_ref, refresh=refresh, **kwargs)
             except EntityNotFound:
                 pass  # fall through to local LCIA
-        self._catalog.load_lcia_factors(quantity_ref)
-        return self._catalog.qdb.do_lcia(quantity_ref, process.inventory(ref_flow=ref_flow),
-                                         locale=process['SpatialScope'],
-                                         refresh=refresh)
+        return quantity_ref.do_lcia(process.inventory(ref_flow=ref_flow),
+                                    locale=process['SpatialScope'],
+                                    refresh=refresh)
 
     def traverse(self, fragment, scenario=None, **kwargs):
         if hasattr(self._archive, 'traverse'):
@@ -107,6 +106,6 @@ class InventoryImplementation(BasicImplementation, InventoryInterface):
     def fragment_lcia(self, fragment, quantity_ref, scenario=None, refresh=False, **kwargs):
         if hasattr(self._archive, 'fragment_lcia'):
             return self._archive.fragment_lcia(fragment, quantity_ref, scenario=scenario, refresh=refresh, **kwargs)
-        self._catalog.load_lcia_factors(quantity_ref)
+        quantity_ref.ensure_lcia()
         fragmentflows = self.traverse(fragment, scenario=scenario, **kwargs)
-        return frag_flow_lcia(self._catalog.qdb, fragmentflows, quantity_ref, scenario=scenario, refresh=refresh)
+        return frag_flow_lcia(fragmentflows, quantity_ref, scenario=scenario, refresh=refresh)

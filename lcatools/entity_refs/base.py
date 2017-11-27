@@ -102,8 +102,20 @@ class BaseRef(object):
     def _addl(self):
         return ''
 
+    def __eq__(self, other):
+        if other is None:
+            return False
+        try:
+            return (self.entity_type == other.entity_type and self.external_ref == other.external_ref and
+                    (self.origin.startswith(other.origin) or other.origin.startswith(self.origin)))
+        except AttributeError:
+            return False
+
     def __str__(self):
         return '%s/%s%s [%s]' % (self.origin, self.external_ref, self._name, self._addl)
+
+    def __hash__(self):
+        return hash(self.link)
 
     def _show_hook(self):
         """

@@ -30,6 +30,72 @@ Current status:
  * figured out a fix for unit conversions: str(q) was not what I wanted- q_name was
  * unit_inventory still not working as expected-- I imagine this is because of equality test. more debugging to come.
 
+Sun 2017-11-26 14:28:44 -0800
+
+Update on the equality test.
+
+Number one: entity refs had no equality test, so this was primed to fail eventually. Now they do and the problem persisted.
+
+Number two: the problem comes about because of mismatched origins between the parent fragment flow (calrecycle.uolca.core) and the termination (foreground.calrecycle.uolca).  This reveals two essential issues:
+
+ * semantically, 'foreground' should NOT be a leading origin term.  It should be calrecycle.uolca.foreground or even calrecycle.uolca.core.foreground.  The latter would have masked this issue completely, with the current entity_ref equality test.
+
+ * operationally, when traversing a remote fragment, the fragment's own reference flow should ... what? the origin mismatch issue is kind of major.
+
+I see two different approaches.  Possibly both are required.
+
+(1) The bizarre practice, originating from basically when the original catalog was first deployed for the AUOMA study, of naming 'foreground' as comparable to 'local' in terms of semantic dominance, needs to be reversed, meaning that all the AUOMA fragment records need to be corrected so that the origins read 'xxx.yyy.foreground' and not 'foreground.xxx.yyy'
+
+(2) it's possible that fragments should not serialize their origins AT ALL, in which case we need a better way to specify the fragments' origins.  Let's think this through.
+
+    One idea would be to substitute the 'fragments' directory with a 'semantic.origin' directory, and omit the origin specification in serialized fragments.  This also solves the problem of LcForegrounds not really knowing their origins endogenously-- they would be encoded into the fragment definitions.
+
+    Entities still have their origins encoded, because entities don't change origins just because they change locations.  But fragments .. are different?  a fragment's origin is whatever reference will tell you about the fragment- which means whatever reference deserializes the fragment- which means
+
+Sun 2017-11-26 15:27:14 -0800
+
+I'm getting sketched out about this, making design decisions in the middle of a refactor that is historically long to complete and against a non-working master branch.
+
+There's lots of things going on here- de-emphasizing uuids in favor of links, of external refs; changing norms and protocols for local and remote fragment terminations; without any spec document to speak of.
+
+What's the problem we're encountering? Let's spell it out.
+
+1. AUOMA foreground fragment terminates in a CalRecycle UO-LCA fragment.
+2. Recursively asks fragment ref for a unit_inventory()
+3. CalRecycle fragment traverses; prepares unit inventory.
+   3a. Per unit_inventory, adds fragment's reference flow as another I/O flow
+   3b. Because this is being done remotely, using the fragment ref, the flow is a flow ref constructed with the same origin as fragment. This ignores the actual origin of the flow entity.
+   3c. THIS MEANS THAT THE FLOW HAS CHANGED ORIGINS during the referencing process
+   3d. Essentially, this means the remote archive is masquerading as the origin of the flow.
+   3e. Therefore, had this fragment ref been constructed using the modern protocol, the reference and the de-reference would be self-consistent
+4. Because the fragment reference was constructed in the old-skool, it made reference to the flow's literal origin, rather than its masqueraded origin
+5. Therefore there is an origin mismatch and the equality test fails.
+
+From this, IF we are okay with remote archives masquerading fragments' flows' origins, then the correct thing to do is to update the termination flows to have the same origins as the remote fragment refs
+
+But there's a snag-- it's not the termination that's the basis of comparison-- it's the local fragment's flow itself.  THAT flow was collected from a search and would NOT have gotten masqueraded.
+
+Interesting.... I don't have index access to calrecycle.uolca.core. That means I could not have gotten the flow from a search against calrecycle.uolca.core.  
+
+No, there's some other logic that is failing here. I think the failure is 
+
+
+Sun 2017-11-26 21:32:00 -0800
+
+Some serious progress AND cleanup.
+
+The failure in logic from above was indeed with the flow references:: the fragment's set_config() method knew its captive flow's true origin but was misrepresenting it.  Fix: use CatalogQuery.cascade() to set the proper origin for the flow ref.
+
+THEN-- ran into troubles because fragments didn't know how to do LCIA, only fragment_refs.  But of course it turns out that the reason for this is that do_lcia() ultimately needed qdb as an argument.  But do_lcia() doesn't need qdb as an explicit argument if it's given a quantity ref-- quantity refs already have a query object, and therefore a catalog, and therefore a qdb.  The rather elegant solution was to make do_lcia() a quantity_ref method, with a pass-through to the query that invokes it on the Qdb.
+
+This is tremendously freeing-- suddenly we don't need qdb exposed ANYWHERE! suddenly frag_flow_lcia is once again a self-contained recursive function and can be located anywhere (so-- back to fragment_flows).  LcProcess.lcia() also no longer needs a qdb if it has a quantity_ref.  And as mentioned- score_cache and compute_unit_score no longer need a qdb around.  This is very much closer to realizing the original objective of the catalog.
+
+The only remaining hiccup is, with the new change, we no longer have a terminate() method on all LcArchives, which means that the background engine no longer works.  Need to have a think about this, but we are now very close to reproducing AUOMA. (there is also a minor matter of stage names that don't seem to be working quite properly)
+
+And it looks like there is a double counting issue with sub fragment aggregation.
+
+
+
 
 
 ==========

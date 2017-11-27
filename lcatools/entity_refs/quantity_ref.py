@@ -33,5 +33,8 @@ class QuantityRef(EntityRef):
     def factors(self, **kwargs):
         return self._query.factors(self.external_ref, **kwargs)
 
+    def ensure_lcia(self):
+        self._query.ensure_lcia_factors(self)
 
-
+    def do_lcia(self, inventory, **kwargs):
+        return self._query.do_lcia(inventory, self, **kwargs)

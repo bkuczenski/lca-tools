@@ -151,7 +151,7 @@ class LcCatalog(object):
         return self._qdb.quantities(**kwargs)
 
     def _find_single_source(self, origin, interface, source=None):
-        ress = [r for r in self._resolver.resolve(origin, interfaces=interface)]
+        ress = [r for r in self._resolver.resolve(origin, interfaces=interface, strict=True)]
         sources = set(r.source for r in ress)
         if len(sources) > 1:
             if source in sources:
@@ -177,7 +177,7 @@ class LcCatalog(object):
         res = self._resolver.new_resource(*args, store=store, **kwargs)  # explicit store= for doc purposes
 
         if not store:
-            if len([i for i in self._resolver.resolve(res.reference, 'index')]) == 0:  # if no index is resolvable
+            if len([i for i in self._resolver.resolve(res.reference, 'index', strict=True)]) == 0:  # if no index is resolvable
                 self._register_index(res.source, 10)  # register indices if they exist and are not stored
 
             # self._ensure_resource(res)
@@ -204,11 +204,12 @@ class LcCatalog(object):
         res = LcResource.from_archive(archive, interfaces, **kwargs)
         self._resolver.add_resource(res, store=store)
 
-    def get_resource(self, name):
+    def get_resource(self, name, strict=False):
         """
         Retrieve a physical archive by nickname or ref:interface
         :param name: takes the form of ref:interface.  If the exact name is not specified, the catalog will find a
         source whose ref and interface start with name.
+        :param strict:
         :return: an LcArchive subclass
         """
         if name in self._nicknames:
@@ -219,7 +220,7 @@ class LcCatalog(object):
             iface = None
             if len(parts) > 1:
                 iface = parts[1]
-            _gen_rs = self._resolver.resolve(ref, interfaces=iface)
+            _gen_rs = self._resolver.resolve(ref, interfaces=iface, strict=strict)
         rs = [r for r in _gen_rs]
         if len(rs) == 1:
             return rs[0]
@@ -231,16 +232,16 @@ class LcCatalog(object):
         elif len(rs) == 0:
             raise KeyError('%s not found.' % name)
 
-    def get_archive(self, ref, interface=None):
+    def get_archive(self, ref, interface=None, strict=False):
         if interface in INTERFACE_TYPES:
-            rc = self.get_resource(':'.join([ref, interface]))
+            rc = self.get_resource(':'.join([ref, interface]), strict=strict)
         else:
-            rc = self.get_resource(ref)
+            rc = self.get_resource(ref, strict=strict)
         rc.check(self)
         return rc.archive
 
-    def privacy(self, ref, interfaces=None):
-        res = next(r for r in self._resolver.resolve(ref, interfaces=interfaces))
+    def privacy(self, ref, interfaces=None, strict=False):
+        res = next(r for r in self._resolver.resolve(ref, interfaces=interfaces, strict=strict))
         return res.privacy
 
     def flows_table(self, *args, **kwargs):
@@ -388,15 +389,16 @@ class LcCatalog(object):
                               store=store,
                               static=True)
 
-    def gen_interfaces(self, origin, itype):
+    def gen_interfaces(self, origin, itype, strict=False):
         """
         :param origin:
         :param itype: single interface or iterable of interfaces
+        :param strict: passed to resolver
         :return:
         """
         if itype is None:
             itype = 'basic'  # fetch, get properties, uuid, reference
-        for res in sorted(self._resolver.resolve(origin, interfaces=itype),
+        for res in sorted(self._resolver.resolve(origin, interfaces=itype, strict=strict),
                           key=lambda x: (not x.is_loaded, x.reference != origin, x.priority)):
             res.check(self)
             for iface in res.interfaces:
@@ -411,8 +413,8 @@ class LcCatalog(object):
     """
     public functions -- should these operate directly on a catalog ref instead? I think so but let's see about usage
     """
-    def query(self, origin, **kwargs):
-        next(self._resolver.resolve(origin))  # raises UnknownOrigin
+    def query(self, origin, strict=False, **kwargs):
+        next(self._resolver.resolve(origin, strict=strict))  # raises UnknownOrigin
         return CatalogQuery(origin, catalog=self, **kwargs)
 
     def lookup(self, origin, external_ref):

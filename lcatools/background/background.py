@@ -129,7 +129,7 @@ class BackgroundEngine(object):
         self._a_matrix = None  # includes only interior exchanges -- dependencies in _interior
         self._b_matrix = None  # SciPy.csc_matrix for bg only
 
-        self._rec_limit = len([p for p in self.fg.entities_by_type('process')])
+        self._rec_limit = len([p for p in self.fg.processes()])
         if self.required_recursion_limit > MAX_SAFE_RECURSION_LIMIT:
             raise EnvironmentError('This database may require too high a recursion limit-- time to learn lisp.')
 
@@ -243,7 +243,8 @@ class BackgroundEngine(object):
                 elif strategy == 'cutoff':
                     return None
                 elif strategy == 'mix':
-                    return self.fg.mix(exch.flow, exch.direction)
+                    raise NotImplementedError('MIX not presently supported (for some reason)')
+                    # return self.fg.mix(exch.flow, exch.direction)
                 else:
                     raise KeyError('Unknown multi-termination strategy %s' % strategy)
             return self.fg.get(term.external_ref)  # required to get full exchange list
@@ -468,7 +469,7 @@ class BackgroundEngine(object):
         # self.make_foreground()
 
     def add_all_ref_products(self, multi_term='first', default_allocation=None, net_coproducts=False):
-        for p in self.fg.entities_by_type('process'):
+        for p in self.fg.processes():
             for x in p.references():
                 j = self.check_product_flow(x.flow, p)
                 if j is None:
@@ -516,11 +517,11 @@ class BackgroundEngine(object):
         :param net_coproducts:
         :return:
         """
-        rx = parent.process.find_reference(parent.flow)
+        rx = parent.process.reference(parent.flow)
         no_alloc = False
         cutoff_refs = False
-        if not parent.process.is_allocated(rx):
-            if len(parent.process.reference_entity) > 1:
+        if len(parent.process.reference_entity) > 1:
+            if not parent.process.is_allocated(rx):
                 if default_allocation is not None:
                     parent.process.allocate_by_quantity(default_allocation)
                 else:
@@ -582,7 +583,7 @@ class BackgroundEngine(object):
                 # not visited -- need to visit
                 i = self._create_product_flow(exch.flow, term)
                 if i is None:
-                    print('Cutting off at Parent process: %s\n%s\n' % (parent.process.uuid, parent))
+                    print('Cutting off at Parent process: %s\n%s\n' % (parent.process.external_ref, parent))
                     continue
                 self._traverse_term_exchanges(i, multi_term, default_allocation, net_coproducts)
                 # carry back lowlink, if lower

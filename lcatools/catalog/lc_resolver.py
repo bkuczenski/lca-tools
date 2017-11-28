@@ -92,18 +92,22 @@ class LcCatalogResolver(object):
     def is_permanent(self, resource):
         return resource.exists(self._resource_dir)
 
-    def resolve(self, req, interfaces=None):
+    def resolve(self, req, interfaces=None, strict=False):
         """
         Fuzzy resolver returns all references that match the request and have equal or greater specificity.
         'uslci.clean' will match queries for 'uslci' but not for 'uslci.original' or 'uslci.clean.allocated'.
         However, 'uslci.clean.allocated' will match a query for 'uslci.clean'
         :param req:
         :param interfaces: could be a single interface specification or a list
+        :param strict: [False] if true, only yields interface for which req matches ref
         :return:
         """
         terms = req.split('.')
         origin_found = False
         for ref, res_list in self._resources.items():
+            if strict:
+                if ref != req:
+                    continue
             if ref.split('.')[:len(terms)] == terms:
                 origin_found = True
                 for res in res_list:

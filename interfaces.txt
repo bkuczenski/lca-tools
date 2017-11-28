@@ -102,7 +102,18 @@ OK, taken care of in terminations.py
 
 Sun 2017-11-26 22:34:44 -0800
 
+==========
+Mon Nov 27 12:49:41 -0800 2017
 
+Now the issue is with the background engine, which was always a bit of a sloppy mess.  But it is clearly trying to do too much.  Since its implementation we have removed mix() from the index interface, and also we do not provide the capability for process refs to allocate (though: why not?).
+
+In the rejiggering, we pass an index interface instead of an archive-- and then the index interface provides process refs instead of processes themselves.  They should function identically (although who knows whether performance will suffer).  But now that we are getting process refs we can't do allocation on the fly.
+
+Presently we are not allocating on the fly, I believe.  But if we go the index interface route, then we can't go back unless we provide allocation capabilities in the process refs.
+
+Mon 2017-11-27 16:48:47 -0800
+
+Fuck all. we're in allocation hell.
 
 
 

@@ -71,12 +71,7 @@ class CatalogQuery(IndexInterface, BackgroundInterface, ForegroundInterface, Inv
             print('Origin: %s' % self.origin)
         if self._catalog is None:
             raise NoCatalog
-        for i in self._catalog.gen_interfaces(self._origin, itype):
-            if strict:
-                if i.origin != self.origin:
-                    if self._debug:
-                        print('strict skipping %s' % i)
-                    continue
+        for i in self._catalog.gen_interfaces(self._origin, itype, strict=strict):
             if self._debug:
                 print('yielding %s' % i)
             yield i

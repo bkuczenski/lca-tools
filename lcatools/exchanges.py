@@ -65,7 +65,8 @@ class Exchange(object):
         self._termination = None
         if termination is not None:
             self._termination = str(termination)
-        self._hash = (process.external_ref, flow.external_ref, direction, self._termination)
+        self._hash = (process.uuid, flow.external_ref, direction, self._termination)  # have to use uuid because
+        # process's external_ref is not set until after exchanges are populated!
         self._is_reference = False
 
     @property
@@ -140,7 +141,9 @@ class Exchange(object):
     def __eq__(self, other):
         if other is None:
             return False
-        if not isinstance(other, Exchange):
+        if not hasattr(other, 'entity_type'):
+            return False
+        if other.entity_type != 'exchange':
             return False
         return self.key == other.key
 

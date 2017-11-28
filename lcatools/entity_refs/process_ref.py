@@ -59,6 +59,15 @@ class ProcessRef(EntityRef):
                 if x.flow == flow:
                     yield x
 
+    def is_allocated(self, rx):
+        """
+        For process refs, assume
+        :param rx:
+        :return:
+        """
+        if rx in self.reference_entity:
+            return rx.is_alloc
+
     def _use_ref_exch(self, ref_flow):
         if ref_flow is None and self._default_rx is not None:
             ref_flow = self._default_rx

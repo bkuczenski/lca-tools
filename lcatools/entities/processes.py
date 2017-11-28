@@ -2,7 +2,7 @@ from __future__ import print_function, unicode_literals
 
 import uuid
 
-from collections import namedtuple
+# from collections import namedtuple
 
 from lcatools.entities.entities import LcEntity
 # from lcatools.entities.flows import LcFlow
@@ -27,7 +27,57 @@ class ReferenceSettingFailed(Exception):
 
 
 # a shorthand for storing operable reference exchanges in a process ref. maybe this will need to be a class, we'll see.
-RxRef = namedtuple('RxRef', ['flow', 'direction', 'value'])
+# on second thought, why not just use exchanges? The main reason is that the process ref....
+# RxRef = namedtuple('RxRef', ['flow', 'direction', 'value'])
+class RxRef(object):
+    """
+    A placeholder object to store reference exchange info for process_refs.  It can be modified to interoperate in
+    places where exchanges are expected, e.g by having equivalent equality tests, hashes, etc., as needed.
+    """
+    def __init__(self, process, flow, direction, value=1.0):
+        self._origin = process.origin
+        self._process = process.external_ref
+        self._flow_ref = flow
+        self._direction = direction
+        self._value = value
+        self._hash = (process.uuid, flow.external_ref, direction, None)
+        self._is_alloc = process.is_allocated(self)
+
+    @property
+    def flow(self):
+        return self._flow_ref
+
+    @property
+    def direction(self):
+        return self._direction
+
+    @property
+    def value(self):
+        return self._value
+
+    @property
+    def entity_type(self):
+        return 'exchange'
+
+    @property
+    def is_alloc(self):
+        return self._is_alloc
+
+    @property
+    def key(self):
+        return self._hash
+
+    def __hash__(self):
+        return hash(self._hash)
+
+    def __eq__(self, other):
+        if other is None:
+            return False
+        if not hasattr(other, 'entity_type'):
+            return False
+        if other.entity_type != 'exchange':
+            return False
+        return self.key == other.key
 
 
 class LcProcess(LcEntity):
@@ -73,7 +123,7 @@ class LcProcess(LcEntity):
             self._d['TemporalScope'] = '0'
 
     def _make_ref_ref(self, query):
-        return [RxRef(x.flow.make_ref(query), x.direction, x.value) for x in self.references()]
+        return [RxRef(self, x.flow.make_ref(query), x.direction, value=x.value) for x in self.references()]
 
     def __str__(self):
         return '%s [%s]' % (self._d['Name'], self._d['SpatialScope'])
@@ -114,7 +164,9 @@ class LcProcess(LcEntity):
         """
         hits = [None] * len(self.reference_entity)
         for i, e in enumerate(self.reference_entity):
-            if e.flow.get_uuid().startswith(term):
+            if e.flow.external_ref == term:
+                hits[i] = e
+            elif e.flow.get_uuid().startswith(term):
                 hits[i] = e
             elif e.flow['Name'].lower().find(term.lower()) >= 0:
                 hits[i] = e

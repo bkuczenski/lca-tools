@@ -1,6 +1,7 @@
 import re
 
 from .basic import BasicImplementation
+from .index import IndexImplementation
 from lcatools.background.background_manager import BackgroundManager
 from lcatools.background.product_flow import ProductFlow
 from lcatools.background.proxy import BackgroundProxy
@@ -35,7 +36,8 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
             if self._archive.static:
                 # perform costly operations only when/if required
                 if not hasattr(self._archive, 'bm'):
-                    self._archive.bm = BackgroundManager(self._archive)
+                    index = IndexImplementation(self._catalog, self._archive, privacy=0)
+                    self._archive.bm = BackgroundManager(index)
                 self._bm = self._archive.bm
             else:
                 # non-static interfaces implement foreground-as-background

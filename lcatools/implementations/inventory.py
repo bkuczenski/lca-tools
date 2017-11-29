@@ -42,8 +42,7 @@ class InventoryImplementation(BasicImplementation, InventoryInterface):
                 raise PrivateArchive('Exchange values are protected')
             p = self._archive.retrieve_or_fetch_entity(process)
             if p.entity_type == 'process':
-                rf = self._archive.retrieve_or_fetch_entity(ref_flow)
-                for x in sorted(p.inventory(reference=rf),
+                for x in sorted(p.inventory(reference=ref_flow),
                                 key=lambda t: (not t.is_reference, t.direction, t.value or 0.0)):
                     yield x
             elif p.entity_type == 'fragment':

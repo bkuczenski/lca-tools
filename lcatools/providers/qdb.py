@@ -43,6 +43,10 @@ F_SYNS = os.path.join(os.path.dirname(__file__), 'data', 'flowable_synlist.json'
 biogenic = re.compile('(biotic|biogenic|non-fossil)', flags=re.IGNORECASE)
 
 
+class NotAQuantity(Exception):
+    pass
+
+
 class QuantityNotKnown(Exception):
     pass
 
@@ -211,7 +215,7 @@ class Qdb(LcArchive, QuantityInterface):
         :return:
         """
         if q.entity_type != 'quantity':
-            raise TypeError('Not adding non-quantity to Qdb: %s' % q)
+            raise NotAQuantity('Not adding non-quantity to Qdb: %s' % q)
         if q.is_lcia_method():
             ind = self._q.add_set(self._q_terms(q), merge=False)  # allow different versions of the same LCIA method
             if ind is None:  # major design flaw in SynList- add_set should not return None
@@ -253,6 +257,8 @@ class Qdb(LcArchive, QuantityInterface):
             if i is not None:
                 return self._q.entity(i)
         except QuantityNotKnown:
+            pass
+        except NotAQuantity:
             pass
         return super(Qdb, self).__getitem__(item)
 

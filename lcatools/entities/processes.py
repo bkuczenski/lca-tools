@@ -56,6 +56,12 @@ class RxRef(object):
         return self._value
 
     @property
+    def value_string(self):
+        if self._value is None:
+            return ' --- '
+        return '%.3g' % self._value
+
+    @property
     def entity_type(self):
         return 'exchange'
 
@@ -78,6 +84,11 @@ class RxRef(object):
         if other.entity_type != 'exchange':
             return False
         return self.key == other.key
+
+    def __str__(self):
+        ref = '(*)'
+        return '%6.6s: %s [%s %s] %s' % (self.direction, ref, self.value_string, self.flow.unit(), self.flow)
+
 
 
 class LcProcess(LcEntity):

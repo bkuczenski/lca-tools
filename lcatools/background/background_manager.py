@@ -21,13 +21,13 @@ class BackgroundManager(object):
         :param index_interface: passed thru to background engine
         """
         self._be = BackgroundEngine(index_interface)
-        self._be.add_all_ref_products()
 
     def _get_product_flow(self, process, ref_flow):
         rx = process.reference(flow=ref_flow)
-        pf = self._be.check_product_flow(rx.flow, process)
+        pf = self._be.add_ref_product(rx.flow, process)
         if pf is None:
-            raise TerminationNotFound
+            raise TerminationNotFound('Background Engine could not match ref_flow %s\nwith process %s' %
+                                      (ref_flow, process))
         return pf
 
     @property
@@ -45,9 +45,9 @@ class BackgroundManager(object):
         for k in self._be.emissions:
             yield k
 
-    def is_background(self, process, ref_flow=None):
+    def is_in_background(self, process, ref_flow=None):
         product_flow = self._get_product_flow(process, ref_flow=ref_flow)
-        return self._be.is_background(product_flow)
+        return self._be.is_in_background(product_flow)
 
     def foreground(self, process, ref_flow=None):
         """
@@ -107,7 +107,7 @@ class BackgroundManager(object):
         ref_ex.set_ref(product_flow.process)
         interior = [ref_ex]
         exterior = []
-        if self._be.is_background(product_flow):
+        if self._be.is_in_background(product_flow):
             # need to index into background matrix
             _af, _ad, _bf = self._be.make_foreground(product_flow)
             for i, row in enumerate(_ad.nonzero()[0]):

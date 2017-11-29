@@ -99,7 +99,7 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
     def is_in_background(self, process, ref_flow=None, **kwargs):
         p = self._archive.retrieve_or_fetch_entity(process)
         ref_flow = self._ensure_ref_flow(ref_flow)
-        return self._bg.is_background(p, ref_flow=ref_flow)
+        return self._bg.is_in_background(p, ref_flow=ref_flow)
 
     def foreground_flows(self, search=None, **kwargs):
         for k in self._bg.foreground_flows:

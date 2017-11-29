@@ -314,7 +314,7 @@ class LcProcess(LcEntity):
             flow = flow.flow
         ref = [rf for rf in self.references(flow)]
         if len(ref) == 0:
-            raise NoReferenceFound
+            raise NoReferenceFound('Process: %s\nFlow: %s' % (self.external_ref, flow))
         elif len(ref) > 1:
             raise AmbiguousReferenceError('Multiple matching references found')
         return ref[0]
@@ -405,7 +405,7 @@ class LcProcess(LcEntity):
         :param add_dups: (False) set to true to handle "duplicate exchange" errors by cumulating their values
         :return:
         """
-        _x = (self.external_ref, flow.external_ref, dirn, termination)
+        _x = (self.uuid, flow.external_ref, dirn, termination)
         if _x in self._exchanges:
             if value is None or value == 0:
                 return None

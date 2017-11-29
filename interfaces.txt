@@ -1,4 +1,27 @@
 ==========
+Mon Nov 27 23:04:41 -0800 2017
+
+We ARE progressing. We just need to get sorted the whole reference() references() find_reference() nonsense.
+
+What is it we want to accomplish?
+
+ - We need to know whether a given flow is listed in a reference exchange for a process
+ - we need to know whether a given exchange is a reference exchange
+ - we need to know whether a given exchange shows up as an allocation key
+
+What is the architecture?
+
+An Exchange is distinguished by its key == hash == (process.uuid, flow.external_ref, direction, termination.external_ref or None)
+
+A process has:
+ a dict of _exchanges that maps key to ExchangeValue
+ a set of reference exchange keys, which is a subset of the keys in _exchanges
+
+
+
+
+
+==========
 Wed Nov 22 13:54:38 -0800 2017
 
 Fragment interface
@@ -115,6 +138,17 @@ Mon 2017-11-27 16:48:47 -0800
 
 Fuck all. we're in allocation hell.
 
+You know what the problem is here? a complete lack of a specification.  No testing.  Nothing that works for certain.
+
+I think the next thing to do is to focus on testing, 100%.  Get USLCI up to snuff, get background up to snuff, WITHOUT bothering with any interfaces.
+
+Mon 2017-11-27 17:18:53 -0800
+
+Well- some consolation (ish)- it doesn't work on master either :(
+
+Mon 2017-11-27 23:04:26 -0800
+
+rejiggering process reference machinery at the top of this file.
 
 
 ==========

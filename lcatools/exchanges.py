@@ -168,12 +168,12 @@ class Exchange(object):
         return '%s of %s' % (self.direction, self.process)
 
     def get_external_ref(self):
-        return '%s: %s' % (self.direction, self.flow.get_uuid())
+        return '%s: %s' % (self.direction, self.flow.uuid)
 
     def serialize(self, **kwargs):
         j = {
             'entityType': self.entity_type,
-            'flow': self.flow.get_uuid(),
+            'flow': self.flow.uuid,
             'direction': self.direction,
         }
         if self.termination is not None:

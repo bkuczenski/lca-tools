@@ -9,7 +9,7 @@ from collections import defaultdict
 
 import six
 
-from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcUnit, entity_types
+from lcatools.entities import LcEntity, LcFlow, LcProcess, LcQuantity, LcUnit, entity_types
 from lcatools.providers.interfaces import ArchiveInterface, to_uuid
 
 if six.PY2:
@@ -78,10 +78,37 @@ class LcArchive(ArchiveInterface):
     method-- which itself should be offloaded to the entities wherever possible.
 
     """
+    @classmethod
+    def from_dict(cls, j):
+        """
+        LcArchive factory from minimal dictionary.  Must include at least one of 'dataSource' or 'dataReference' fields
+        and 0 or more processes, flows, or quantities; but note that any flow present must have its reference quantities
+        included, and any process must have its exchanged flows included.
+        :param j:
+        :return:
+        """
+        source = j.pop('dataSource', None)
+        try:
+            ref = j.pop('dataReference')
+        except KeyError:
+            if source is None:
+                print('Dictionary must contain at least a dataSource or a dataReference specification.')
+                return None
+            else:
+                ref = None
+        ar = cls(source, ref=ref)
+        ar.load_json(j)
+        return ar
+
     def __init__(self, source, **kwargs):
         self._upstream_hash = dict()  # for lookup use later
         super(LcArchive, self).__init__(source, **kwargs)
         self._terminations = defaultdict(set)
+
+    def __getitem__(self, item):
+        if isinstance(item, LcEntity):
+            return self._get_entity(item.external_ref)
+        return super(LcArchive, self).__getitem__(item)
 
     @classmethod
     def _create_unit(cls, unitstring):
@@ -162,12 +189,15 @@ class LcArchive(ArchiveInterface):
         :param j:
         :return:
         """
-        for e in j['quantities']:
-            self.entity_from_json(e)
-        for e in j['flows']:
-            self.entity_from_json(e)
-        for e in j['processes']:
-            self.entity_from_json(e)
+        if 'quantities' in j:
+            for e in j['quantities']:
+                self.entity_from_json(e)
+        if 'flows' in j:
+            for e in j['flows']:
+                self.entity_from_json(e)
+        if 'processes' in j:
+            for e in j['processes']:
+                self.entity_from_json(e)
         self.check_counter()
 
     def _quantity_from_json(self, entity_j, uid):

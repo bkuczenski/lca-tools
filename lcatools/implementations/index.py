@@ -31,10 +31,15 @@ class IndexImplementation(BasicImplementation, IndexInterface):
     CatalogInterface core methods
     These are the main tools for describing information about the contents of the archive
     """
+    def count(self, entity_type, **kwargs):
+        return self._archive.count_by_type(entity_type)
 
-    def processes(self, **kwargs):
+    def processes(self, literal=False, **kwargs):
         for p in self._archive.search('process', **kwargs):
-            yield self.make_ref(p)
+            if literal:
+                yield p
+            else:
+                yield self.make_ref(p)
 
     def flows(self, **kwargs):
         for f in self._archive.search('flow', **kwargs):

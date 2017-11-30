@@ -13,6 +13,15 @@ class IndexInterface(AbstractQuery):
     CatalogInterface core methods
     These are the main tools for describing information about the contents of the archive
     """
+    def count(self, entity_type, **kwargs):
+        """
+        Return a count of the number of entities of the named type
+        :param entity_type:
+        :param kwargs:
+        :return: int
+        """
+        return self._perform_query(_interface, 'count', IndexRequired('Index access required'), **kwargs)
+
     def processes(self, **kwargs):
         """
         Generate process entities (reference exchanges only)

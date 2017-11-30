@@ -454,6 +454,9 @@ class ArchiveInterface(object):
         for u in self._ents_by_type[entity_type]:
             yield self._entities[u]
 
+    def count_by_type(self, entity_type):
+        return len(self._ents_by_type[entity_type])
+
     @property
     def init_args(self):
         return self._serialize_dict

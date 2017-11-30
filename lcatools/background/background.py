@@ -103,10 +103,11 @@ class BackgroundEngine(object):
     """
     Class for converting a collection of linked processes into a coherent technology matrix.
     """
-    def __init__(self, static_archive):
+    def __init__(self, index_interface, quiet=True):
         """
         """
-        self.fg = static_archive
+        self.fg = index_interface
+        self._quiet = quiet
         self._lowlinks = dict()  # dict mapping product_flow key to lowlink -- which is a key into TarjanStack.sccs
 
         self.tstack = TarjanStack()  # ordering of sccs
@@ -129,12 +130,16 @@ class BackgroundEngine(object):
         self._a_matrix = None  # includes only interior exchanges -- dependencies in _interior
         self._b_matrix = None  # SciPy.csc_matrix for bg only
 
-        self._rec_limit = len([p for p in self.fg.processes()])
+        self._rec_limit = self.fg.count('process')
         if self.required_recursion_limit > MAX_SAFE_RECURSION_LIMIT:
             raise EnvironmentError('This database may require too high a recursion limit-- time to learn lisp.')
 
         self._emissions = dict()  # maps emission key to index
         self._ef_index = []  # maps index to emission
+
+    def _print(self, *args):
+        if not self._quiet:
+            print(*args)
 
     @property
     def surplus_coproducts(self):
@@ -228,7 +233,7 @@ class BackgroundEngine(object):
         :return:
         """
         if exch.termination is not None:
-            return self.fg.get(exch.termination)
+            return self.fg.get(exch.termination, literal=True)
         else:
             terms = [t for t in self.fg.terminate(exch.flow, direction=exch.direction)]
             if len(terms) == 0:
@@ -247,7 +252,7 @@ class BackgroundEngine(object):
                     # return self.fg.mix(exch.flow, exch.direction)
                 else:
                     raise KeyError('Unknown multi-termination strategy %s' % strategy)
-            return self.fg.get(term.external_ref)  # required to get full exchange list
+            return self.fg.get(term.external_ref, literal=True)  # required to get full exchange list
 
     @staticmethod
     def construct_sparse(nums, nrows, ncols):
@@ -469,7 +474,7 @@ class BackgroundEngine(object):
         # self.make_foreground()
 
     def add_all_ref_products(self, multi_term='first', default_allocation=None, net_coproducts=False):
-        for p in self.fg.processes():
+        for p in self.fg.processes(literal=True):
             for x in p.references():
                 j = self.check_product_flow(x.flow, p)
                 if j is None:
@@ -532,7 +537,7 @@ class BackgroundEngine(object):
                 exchs = [x for x in parent.process.inventory(rx)]
                 cutoff_refs = True
             else:
-                print('Cutting off at un-allocated multi-output process:\n %s\n %s' % (parent.process, rx))
+                self._print('Cutting off at un-allocated multi-output process:\n %s\n %s' % (parent.process, rx))
                 exchs = []
         else:
             exchs = [x for x in parent.process.inventory(rx)]
@@ -621,7 +626,7 @@ class BackgroundEngine(object):
         :return:
         """
         if parent is term:
-            print('self-dependency detected! %s' % parent.process)
+            self._print('self-dependency detected! %s' % parent.process)
             parent.adjust_ev(val)
         else:
             self._interior_incoming.append(MatrixEntry(parent, term, val))

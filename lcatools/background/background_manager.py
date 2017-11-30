@@ -16,11 +16,11 @@ class BackgroundManager(object):
     BackgroundEngine needs to figure out the following:
      - list of foreground and background ProductFlows (terminations), and cutoff exterior flows (flow + direction)
     """
-    def __init__(self, index_interface):
+    def __init__(self, index_interface, quiet=True):
         """
         :param index_interface: passed thru to background engine
         """
-        self._be = BackgroundEngine(index_interface)
+        self._be = BackgroundEngine(index_interface, quiet=quiet)
 
     def _get_product_flow(self, process, ref_flow):
         rx = process.reference(flow=ref_flow)

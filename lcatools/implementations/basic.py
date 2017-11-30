@@ -72,5 +72,8 @@ class BasicImplementation(object):
             return True
         return False
 
-    def get(self, external_ref, **kwargs):
-        return self.make_ref(self._fetch(external_ref, **kwargs))
+    def get(self, external_ref, literal=False, **kwargs):
+        if literal:
+            return self._fetch(external_ref, **kwargs)
+        else:
+            return self.make_ref(self._fetch(external_ref, **kwargs))

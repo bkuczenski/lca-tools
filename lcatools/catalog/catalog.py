@@ -204,11 +204,12 @@ class LcCatalog(object):
         res = LcResource.from_archive(archive, interfaces, **kwargs)
         self._resolver.add_resource(res, store=store)
 
-    def get_resource(self, name, strict=False):
+    def get_resource(self, name, iface=None, strict=False):
         """
         Retrieve a physical archive by nickname or ref:interface
         :param name: takes the form of ref:interface.  If the exact name is not specified, the catalog will find a
         source whose ref and interface start with name.
+        :param iface: interfaces can also be specified explicitly
         :param strict:
         :return: an LcArchive subclass
         """
@@ -217,8 +218,7 @@ class LcCatalog(object):
         else:
             parts = name.split(':')
             ref = parts[0]
-            iface = None
-            if len(parts) > 1:
+            if len(parts) > 1 and iface is None:
                 iface = parts[1]
             _gen_rs = self._resolver.resolve(ref, interfaces=iface, strict=strict)
         rs = [r for r in _gen_rs]

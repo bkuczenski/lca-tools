@@ -28,15 +28,15 @@ uuid_regex = re.compile('([0-9a-f]{8}.?([0-9a-f]{4}.?){3}[0-9a-f]{12})')
 
 
 def to_uuid(_in):
-    if isinstance(_in, uuid.UUID):
-        return str(_in)
     if _in is None:
         return _in
     if isinstance(_in, int):
         return None
     try:
-        g = uuid_regex.search(_in)
+        g = uuid_regex.search(_in)  # using the regexp test is 50% faster than asking the UUID library
     except TypeError:
+        if isinstance(_in, uuid.UUID):
+            return str(_in)
         g = None
     if g is not None:
         return g.groups()[0]

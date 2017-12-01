@@ -106,6 +106,13 @@ class LcArchive(ArchiveInterface):
         self._terminations = defaultdict(set)
 
     def __getitem__(self, item):
+        """
+        Note: this user-friendliness check adds 20% to the execution time of getitem-- so avoid it if possible
+        (use _get_entity directly -- especially now that upstream is now deprecated)
+
+        :param item:
+        :return:
+        """
         if isinstance(item, LcEntity):
             return self._get_entity(item.external_ref)
         return super(LcArchive, self).__getitem__(item)
@@ -214,7 +221,7 @@ class LcArchive(ArchiveInterface):
         flow = LcFlow(uid, **entity_j)
         for c in chars:
             v = None
-            q = self[c['quantity']]
+            q = self._get_entity(c['quantity'])
             if q is None:
                 continue
                 # import json
@@ -249,7 +256,7 @@ class LcArchive(ArchiveInterface):
         for x in refs:
             # eventually move this to an exchange classmethod - which is why I'm repeating myself for now
             v = None
-            f = self[x['flow']]
+            f = self._get_entity(x['flow'])
             d = x['direction']
             if 'value' in x:
                 v = x['value']
@@ -259,7 +266,7 @@ class LcArchive(ArchiveInterface):
         for x in nonrefs:
             t = None
             # is_ref = False
-            f = self[x['flow']]
+            f = self._get_entity([x['flow']])
             d = x['direction']
             if 'termination' in x:
                 t = x['termination']

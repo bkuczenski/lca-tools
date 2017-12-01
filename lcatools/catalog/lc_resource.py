@@ -61,7 +61,8 @@ class LcResource(object):
 
     def _instantiate(self, catalog):
         self._archive = create_archive(self.source, self.ds_type, catalog=catalog, ref=self.reference,
-                                       upstream=catalog.qdb, **self.init_args)
+                                       # upstream=catalog.qdb,
+                                       **self.init_args)
         if os.path.exists(catalog.cache_file(self.source)):
             update_archive(self._archive, catalog.cache_file(self.source))
         if self.static and self.ds_type.lower() != 'json':

@@ -266,7 +266,7 @@ class LcArchive(ArchiveInterface):
         for x in nonrefs:
             t = None
             # is_ref = False
-            f = self._get_entity([x['flow']])
+            f = self._get_entity(x['flow'])
             d = x['direction']
             if 'termination' in x:
                 t = x['termination']

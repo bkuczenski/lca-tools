@@ -421,7 +421,7 @@ class LcProcess(LcEntity):
         :param add_dups: (False) set to true to handle "duplicate exchange" errors by cumulating their values
         :return:
         """
-        _x = (self.uuid, flow.external_ref, dirn, termination)
+        _x = hash((self.uuid, flow.external_ref, dirn, termination))
         if _x in self._exchanges:
             if value is None or value == 0:
                 return None

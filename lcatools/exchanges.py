@@ -65,7 +65,8 @@ class Exchange(object):
         self._termination = None
         if termination is not None:
             self._termination = str(termination)
-        self._hash = (process.uuid, flow.external_ref, direction, self._termination)  # have to use uuid because
+        self._hash_tuple = (process.uuid, flow.external_ref, direction, self._termination)
+        self._hash = hash((process.uuid, flow.external_ref, direction, self._termination))  # have to use uuid because
         # process's external_ref is not set until after exchanges are populated!
         self._is_reference = False
 
@@ -127,6 +128,10 @@ class Exchange(object):
     def key(self):
         return self._hash
 
+    @property
+    def lkey(self):
+        return self._hash_tuple
+
     def is_allocated(self, reference):
         """
         Stub for compatibility
@@ -136,7 +141,7 @@ class Exchange(object):
         return False
 
     def __hash__(self):
-        return hash(self._hash)
+        return self._hash
 
     def __eq__(self, other):
         if other is None:
@@ -145,7 +150,7 @@ class Exchange(object):
             return False
         if other.entity_type != 'exchange':
             return False
-        return self.key == other.key
+        return self.lkey == other.lkey
 
     @property
     def comp_dir(self):

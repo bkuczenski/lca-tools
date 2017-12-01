@@ -40,7 +40,8 @@ class RxRef(object):
         self._flow_ref = flow
         self._direction = direction
         self._value = value
-        self._hash = (process.uuid, flow.external_ref, direction, None)
+        self._hash_tuple = (process.uuid, flow.external_ref, direction, None)
+        self._hash = hash((process.uuid, flow.external_ref, direction, None))
         self._is_alloc = process.is_allocated(self)
 
     @property
@@ -73,8 +74,12 @@ class RxRef(object):
     def key(self):
         return self._hash
 
+    @property
+    def lkey(self):
+        return self._hash_tuple
+
     def __hash__(self):
-        return hash(self._hash)
+        return self._hash
 
     def __eq__(self, other):
         if other is None:
@@ -83,7 +88,7 @@ class RxRef(object):
             return False
         if other.entity_type != 'exchange':
             return False
-        return self.key == other.key
+        return self.lkey == other.lkey
 
     def __str__(self):
         ref = '(*)'
@@ -416,7 +421,7 @@ class LcProcess(LcEntity):
         :param add_dups: (False) set to true to handle "duplicate exchange" errors by cumulating their values
         :return:
         """
-        _x = (self.uuid, flow.external_ref, dirn, termination)
+        _x = hash((self.uuid, flow.external_ref, dirn, termination))
         if _x in self._exchanges:
             if value is None or value == 0:
                 return None

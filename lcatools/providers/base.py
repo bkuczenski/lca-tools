@@ -114,7 +114,7 @@ class LcArchive(ArchiveInterface):
         :return:
         """
         if isinstance(item, LcEntity):
-            return self._get_entity(item.external_ref)
+            return self._get_entity(item.uuid)
         return super(LcArchive, self).__getitem__(item)
 
     @classmethod
@@ -314,7 +314,7 @@ class LcArchive(ArchiveInterface):
 
         entity.origin = origin
         self.add(entity)
-        if self._get_entity(ext_ref) is entity:
+        if self[ext_ref] is entity:
             entity.set_external_ref(ext_ref)
         else:
             print('## skipping bad external ref %s for uuid %s' % (ext_ref, uid))
@@ -395,7 +395,7 @@ class NsUuidArchive(LcArchive):
         :return:
         """
         if isinstance(item, int):
-            return self._get_entity(item)
+            return self._get_entity(self._key_to_id(item))
         return super(NsUuidArchive, self).__getitem__(item)
 
 

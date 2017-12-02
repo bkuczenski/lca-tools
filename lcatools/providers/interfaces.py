@@ -248,26 +248,27 @@ class ArchiveInterface(object):
 
     def _get_entity(self, key):
         """
-        the fundamental method- retrieve an entity from LOCAL collection by ID- either a uuid.UUID or a key that can
-        be converted to a valid UUID from self.key_to_id()
+        the fundamental method- retrieve an entity from LOCAL collection by key, nominally a UUID string.
 
-        If the UUID is not found, returns None. handle this case in client code/subclass.
-        :param key: something that maps to a literal UUID via _key_to_id
+        If the string is not found, raises KeyError.
+        :param key: a uuid
         :return: the LcEntity or None
         """
-        entity = self._key_to_id(key)
-        if entity in self._entities:
-            e = self._entities[entity]
+        if key in self._entities:
+            e = self._entities[key]
             if e.origin is None:
                 e.origin = self.ref
             return e
-        return None
+        raise KeyError(key)
 
     def __getitem__(self, item):
         """
-        CLient-facing entity retrieval.
+        CLient-facing entity retrieval.  item is a key that can be converted to a valid UUID from self._key_to_id()--
+         either a literal UUID, or a string containing something matching a naive UUID regex.
 
         First checks upstream, then local.
+
+        Returns None if nothing is found
 
         :param item:
         :return:
@@ -278,7 +279,10 @@ class ArchiveInterface(object):
             e = self._upstream[item]
             if e is not None:
                 return e
-        return self._get_entity(item)
+        try:
+            return self._get_entity(self._key_to_id(item))
+        except KeyError:
+            return None
 
     def _add(self, entity):
         u = to_uuid(entity.uuid)

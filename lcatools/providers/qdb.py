@@ -256,6 +256,8 @@ class Qdb(LcArchive, QuantityInterface):
             i = self._get_q_ind(item)
             if i is not None:
                 return self._q.entity(i)
+        except IndexError:
+            pass
         except QuantityNotKnown:
             pass
         except NotAQuantity:

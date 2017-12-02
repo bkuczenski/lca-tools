@@ -265,10 +265,11 @@ class LcProcess(LcEntity):
         :param strict: [False] whether to use strict flow name matching [default- first regex match]
         :return:
         """
-        try:
-            reference = self.find_reference(reference, strict=strict)
-        except NoReferenceFound:
-            reference = None
+        if reference is not None:
+            try:
+                reference = self.find_reference(reference, strict=strict)
+            except NoReferenceFound:
+                reference = None
         for i in self._exchanges.values():
             if reference is None:
                 yield i

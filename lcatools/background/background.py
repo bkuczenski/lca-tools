@@ -235,6 +235,8 @@ class BackgroundEngine(object):
         if exch.termination is not None:
             return self.fg.get(exch.termination, literal=True)
         else:
+            if (exch.flow.external_ref, exch.direction) in self._emissions:
+                return None
             terms = [t for t in self.fg.terminate(exch.flow, direction=exch.direction)]
             if len(terms) == 0:
                 return None
@@ -540,16 +542,13 @@ class BackgroundEngine(object):
                 self._print('Cutting off at un-allocated multi-output process:\n %s\n %s' % (parent.process, rx))
                 exchs = []
         else:
-            exchs = [x for x in parent.process.inventory(rx)]
+            exchs = parent.process.inventory()
 
         for exch in exchs:  # unallocated exchanges
             if cutoff_refs:
                 val = pval = exch.value
             else:
-                try:
-                    val = pval = exch[rx]
-                except TypeError:
-                    continue
+                val = pval = exch[rx]
             if val is None or val == 0:
                 # don't add zero entries (or descendants) to sparse matrix
                 continue

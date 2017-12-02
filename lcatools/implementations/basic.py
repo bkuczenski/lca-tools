@@ -45,13 +45,13 @@ class BasicImplementation(object):
             return entity  # already a ref
 
     def get_item(self, external_ref, item):
-        entity = self._archive.retrieve_or_fetch_entity(external_ref)
+        entity = self._fetch(external_ref)
         if entity and entity.has_property(item):
             return entity[item]
         return ''
 
     def get_reference(self, key):
-        entity = self._archive.retrieve_or_fetch_entity(key)
+        entity = self._fetch(key)
         if entity is None:
             return None
         if entity.entity_type == 'process':
@@ -65,6 +65,8 @@ class BasicImplementation(object):
     def _fetch(self, external_ref, **kwargs):
         if external_ref is None:
             return None
+        if self._archive.static:
+            return self._archive[external_ref]
         return self._archive.retrieve_or_fetch_entity(external_ref, **kwargs)
 
     def lookup(self, external_ref, **kwargs):

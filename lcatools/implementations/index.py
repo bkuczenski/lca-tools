@@ -75,19 +75,18 @@ class IndexImplementation(BasicImplementation, IndexInterface):
             for x in self._archive.terminate(flow_ref, direction=direction, **kwargs):
                 yield x
         else:
+            cdir = comp_dir(direction)
             if not isinstance(flow_ref, str):
                 flow_ref = flow_ref.external_ref
             for x in self._terminations[flow_ref]:  # defaultdict, so no KeyError
                 if direction is None:
                     yield self.make_ref(x[1])
                 else:
-                    if comp_dir(direction) == x[0]:
+                    if cdir == x[0]:
                         yield self.make_ref(x[1])
 
     def originate(self, flow_ref, direction=None, **kwargs):
-        if direction is not None:
-            direction = comp_dir(direction)
-        return self.terminate(flow_ref, direction)
+        return self.terminate(flow_ref, comp_dir(direction))  # just gets flipped back again in terminate()
 
     '''
     def mix(self, flow_ref, direction):

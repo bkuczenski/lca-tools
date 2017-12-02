@@ -1,4 +1,5 @@
 from __future__ import print_function, unicode_literals
+from numbers import Number
 
 import uuid
 
@@ -40,7 +41,7 @@ class RxRef(object):
         self._flow_ref = flow
         self._direction = direction
         self._value = value
-        self._hash_tuple = (process.uuid, flow.external_ref, direction, None)
+        # self._hash_tuple = (process.uuid, flow.external_ref, direction, None)
         self._hash = hash((process.uuid, flow.external_ref, direction, None))
         self._is_alloc = process.is_allocated(self)
 
@@ -76,7 +77,7 @@ class RxRef(object):
 
     @property
     def lkey(self):
-        return self._hash_tuple
+        return self.flow.external_ref, self._direction, None
 
     def __hash__(self):
         return self._hash
@@ -93,7 +94,6 @@ class RxRef(object):
     def __str__(self):
         ref = '(*)'
         return '%6.6s: %s [%s %s] %s' % (self.direction, ref, self.value_string, self.flow.unit(), self.flow)
-
 
 
 class LcProcess(LcEntity):
@@ -426,15 +426,6 @@ class LcProcess(LcEntity):
             if value is None or value == 0:
                 return None
             e = self._exchanges[_x]
-            if not isinstance(e, ExchangeValue):
-                # upgrade to ExchangeValue
-                new = ExchangeValue(self, flow, dirn, termination=termination)
-                if e.is_reference:
-                    new.set_ref(self)
-                e = new
-                assert _x == e.key
-                self._exchanges[e.key] = e
-                # assert self._exchanges[_x] is self._exchanges[e]  # silly me, always skeptical of hashing
             if reference is None:
                 if isinstance(value, dict):
                     e.update(value)
@@ -466,9 +457,7 @@ class LcProcess(LcEntity):
                 return e
 
         else:
-            if value is None or value == 0:
-                e = Exchange(self, flow, dirn, termination=termination)
-            elif isinstance(value, float):
+            if isinstance(value, Number) or value is None:
                 if reference is None:
                     e = ExchangeValue(self, flow, dirn, value=value, termination=termination)
                 else:

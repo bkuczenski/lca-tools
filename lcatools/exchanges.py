@@ -65,7 +65,7 @@ class Exchange(object):
         self._termination = None
         if termination is not None:
             self._termination = str(termination)
-        self._hash_tuple = (process.uuid, flow.external_ref, direction, self._termination)
+        # self._hash_tuple =
         self._hash = hash((process.uuid, flow.external_ref, direction, self._termination))  # have to use uuid because
         # process's external_ref is not set until after exchanges are populated!
         self._is_reference = False
@@ -130,7 +130,7 @@ class Exchange(object):
 
     @property
     def lkey(self):
-        return self._hash_tuple
+        return self.flow.external_ref, self._direction, self._termination  # self._hash_tuple
 
     def is_allocated(self, reference):
         """
@@ -150,7 +150,9 @@ class Exchange(object):
             return False
         if other.entity_type != 'exchange':
             return False
-        return self.lkey == other.lkey
+        # if self.key == other.key and self.lkey != other.lkey:
+        #     raise DuplicateExchangeError('Hash collision!')
+        return self.key == other.key
 
     @property
     def comp_dir(self):
@@ -302,7 +304,7 @@ class ExchangeValue(Exchange):
             # unallocated exchanges always read the same
             return self._value
         if self.is_reference:  # if self is a reference entity, the allocation is either .value or 0
-            if item.flow == self.flow and item.direction == self.direction:
+            if item.lkey == self.lkey:  # and item.direction == self.direction:
                 return self.value
             return 0.0
         # elif len(self.process.reference_entity) == 1:

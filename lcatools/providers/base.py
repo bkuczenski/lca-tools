@@ -247,13 +247,14 @@ class LcArchive(ArchiveInterface):
         process = LcProcess(uid, **entity_j)
         refs, nonrefs = [], []
         ref_x = dict()
-        for x in exchs:
+        for i, x in enumerate(exchs):
             if 'isReference' in x and x['isReference'] is True:
-                refs.append(x)
+                refs.append(i)
             else:
-                nonrefs.append(x)
+                nonrefs.append(i)
         # first add reference exchanges
-        for x in refs:
+        for i in refs:
+            x = exchs[i]
             # eventually move this to an exchange classmethod - which is why I'm repeating myself for now
             v = None
             f = self._get_entity(x['flow'])
@@ -263,7 +264,8 @@ class LcArchive(ArchiveInterface):
             ref_x[x['flow']] = process.add_exchange(f, d, value=v)
             process.add_reference(f, d)
         # then add ordinary [allocated] exchanges
-        for x in nonrefs:
+        for i in nonrefs:
+            x = exchs[i]
             t = None
             # is_ref = False
             f = self._get_entity(x['flow'])
@@ -283,7 +285,7 @@ class LcArchive(ArchiveInterface):
                         print('key: %s' % k)
                         print('flow: %s' % self[fuu])
                         raise
-                    assert rx.direction == drr
+                    # assert rx.direction == drr
                     process.add_exchange(f, d, reference=rx, value=val, termination=t)
 
         return process

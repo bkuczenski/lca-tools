@@ -287,7 +287,7 @@ class BackgroundEngine(object):
             ad_tilde = ad * x_tilde
             x, bx = self.compute_bg_lci(ad_tilde, **kwargs)
             bf_tilde = csc_matrix(bf * x_tilde)
-        return bx + bf_tilde
+            return bx + bf_tilde
 
     def compute_bg_lci(self, ad, threshold=1e-8, count=100):
         """
@@ -329,6 +329,12 @@ class BackgroundEngine(object):
         num_bg = sp.array([[co.emission.index, self.tstack.bg_dict(co.parent.index), co.value]
                            for co in self._bg_emission])
         self._b_matrix = self.construct_sparse(num_bg, self.mdim, self.tstack.ndim)
+
+    def _pad_b_matrix(self):
+        print('Growing B matrix from %d to %d rows' % (self._b_matrix.shape[0], self.mdim))
+        bx_coo = self._b_matrix.tocoo()
+        self._b_matrix = csr_matrix((bx_coo.data, (bx_coo.row, bx_coo.col)),
+                                    shape=(self.mdim, self.tstack.ndim))
 
     def _construct_a_matrix(self):
         ndim = self.tstack.ndim
@@ -472,6 +478,9 @@ class BackgroundEngine(object):
         if self._a_matrix is None and self.tstack.background is not None:
             self._construct_a_matrix()
             self._construct_b_matrix()
+
+        if self.mdim > self._b_matrix.shape[0]:
+            self._pad_b_matrix()
 
         # self.make_foreground()
 

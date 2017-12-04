@@ -52,26 +52,28 @@ class FlowTermination(object):
         else:
             origin = j['source']
         external_ref = j['externalId']
-        term_flow = j.pop('termFlow', None)
-        inbound_ev = j.pop('inboundExchangeValue', None)
+
+        # handle term flow
+        tf_ref = j.pop('termFlow', None)
+        if tf_ref is None:
+            term_flow = fragment.flow
+        elif isinstance(tf_ref, dict):
+            term_flow = fg.catalog_ref(tf_ref['origin'], tf_ref['externalId'], entity_type='flow')
+        else:
+            if origin == fg.ref:
+                term_flow = fg[tf_ref]
+            else:
+                term_flow = fg.catalog_ref(origin, tf_ref, entity_type='flow')
+
+        # handle term_node
         if origin == fg.ref:
             term_node = fg[external_ref]
-            if term_flow is not None:
-                term_flow = fg[term_flow]
-        # elif origin.split('.')[0] == 'foreground':
-        #     term_node = fg.foreground_ref(origin, external_ref)
-        #     if term_flow is not None:
-        #         term_flow = fg.foreground_ref(origin, term_flow)
         else:
-            # TODO: handle fragments from non-self origins
             term_node = fg.catalog_ref(origin, external_ref, entity_type='process')
-            if term_flow is not None:
-                term_flow = fg.catalog_ref(origin, term_flow, entity_type='flow')
-        if term_flow is None:
-            term_flow = fragment.flow
 
         direction = j.pop('direction', None)
         descend = j.pop('descend', None)
+        inbound_ev = j.pop('inboundExchangeValue', None)
         term = cls(fragment, term_node, direction=direction, term_flow=term_flow, descend=descend,
                    inbound_ev=inbound_ev)
         if 'scoreCache' in j.keys():
@@ -508,7 +510,13 @@ class FlowTermination(object):
             'externalId': self._term.external_ref
         }
         if self.term_flow != self._parent.flow:
-            j['termFlow'] = self.term_flow.external_ref
+            if self.term_flow.origin == self.term_node.origin:
+                j['termFlow'] = self.term_flow.external_ref
+            else:
+                j['termFlow'] = {
+                    'origin': self.term_flow.origin,
+                    'externalId': self.term_flow.external_ref
+                }
         if self.direction != comp_dir(self._parent.direction):
             j['direction'] = self.direction
         if self._descend is False:

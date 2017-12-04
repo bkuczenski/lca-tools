@@ -367,11 +367,12 @@ class Qdb(LcArchive, QuantityInterface):
             if len(unmatched) == 0:
                 ind = None
             else:
-                print('Inconsistent Indices; adding to highest index:')
-                print('None %.100s' % '; '.join(unmatched))
                 inds = sorted(k.keys())
-                for i in inds:
-                    print('%4d %.100s' % (i, '; '.join(k[i])))
+                if not self._quiet:
+                    self._print('Inconsistent Indices; adding to highest index:')
+                    self._print('None %.100s' % '; '.join(unmatched))
+                    for i in inds:
+                        self._print('%4d %.100s' % (i, '; '.join(k[i])))
                 ind = inds[-1]
                 self._f.add_synonyms(ind, *unmatched)
         return ind

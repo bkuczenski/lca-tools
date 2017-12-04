@@ -188,9 +188,9 @@ class LcFragment(LcEntity):
     def set_debug_threshold(self, level):
         self.__dbg_threshold = level
 
-    def _print(self, qwer, level=1):
+    def dbg_print(self, qwer, level=1):
         if level < self.__dbg_threshold:
-                print(qwer)
+            print(qwer)
 
     def make_ref(self, query):
         ref = super(LcFragment, self).make_ref(query)
@@ -419,10 +419,10 @@ class LcFragment(LcEntity):
         if self.reference_entity is None:
             return True
         elif self.balance_flow:
-            self._print('observability: value set by balance.')
+            self.dbg_print('observability: value set by balance.')
             return False
         elif self.reference_entity.termination(scenario).is_subfrag:
-            self._print('observability: value set during traversal')
+            self.dbg_print('observability: value set during traversal')
             return False
         else:
             return True
@@ -622,7 +622,7 @@ class LcFragment(LcEntity):
             print('%.5s conserving %s' % (self.uuid, self._conserved_quantity))
             raise BalanceAlreadySet
         self._conserved_quantity = child.flow.reference_entity
-        print('%.5s setting balance from %.5s: %s' % (self.uuid, child.uuid, self._conserved_quantity))
+        self.dbg_print('%.5s setting balance from %.5s: %s' % (self.uuid, child.uuid, self._conserved_quantity))
 
     @property
     def is_conserved_parent(self):
@@ -799,7 +799,7 @@ class LcFragment(LcEntity):
 
         for x in term.term_node.inventory(ref_flow=term.term_flow):
             if x.value is None:
-                self._print('skipping None-valued exchange: %s' % x)
+                self.dbg_print('skipping None-valued exchange: %s' % x)
                 continue
 
             key = (x.flow.external_ref, x.direction)
@@ -812,7 +812,7 @@ class LcFragment(LcEntity):
                 except StopIteration:
                     continue
 
-                self._print('setting %s [%10.3g]' % (child, x.value))
+                self.dbg_print('setting %s [%10.3g]' % (child, x.value))
                 if scenario is None:
                     if reset_cache:
                         child.reset_cache()
@@ -1027,7 +1027,7 @@ class LcFragment(LcEntity):
             stock *= self.flow.cf(self._conserved_quantity)
             if self.direction == 'Input':  # convention: inputs to self are positive
                 stock *= -1
-            self._print('%.3s %g inbound-balance' % (self.uuid, stock), level=2)
+            self.dbg_print('%.3s %g inbound-balance' % (self.uuid, stock), level=2)
 
         for f in self.child_flows:
             try:
@@ -1107,33 +1107,33 @@ class LcFragment(LcEntity):
         # then we add the results of the subfragment, either in aggregated or disaggregated form
         if term.descend:
             # if appending, we are traversing in situ, so do scale
-            self._print('descending', level=0)
+            self.dbg_print('descending', level=0)
             for i in subfrags:
                 i.scale(downstream_nw)
             ffs.extend(subfrags)
         else:
             # if aggregating, we are only setting unit scores- so don't scale
-            self._print('aggregating', level=0)
+            self.dbg_print('aggregating', level=0)
             ffs[0].aggregate_subfragments(subfrags)
             ffs[0].node_weight = downstream_nw
 
         # next we traverse our own child flows, determining the exchange values from the subfrag traversal
         for f in self.child_flows:
-            self._print('Handling child flow %s' % f, 4)
+            self.dbg_print('Handling child flow %s' % f, 4)
             ev = 0.0
             try:
                 m = next(j for j in unit_inv if j.fragment.flow == f.flow)
                 if m.fragment.direction == f.direction:
-                    self._print('  ev += %g' % m.magnitude, 4)
+                    self.dbg_print('  ev += %g' % m.magnitude, 4)
                     ev += m.magnitude
                 else:
-                    self._print('  ev -= %g' % m.magnitude, 4)
+                    self.dbg_print('  ev -= %g' % m.magnitude, 4)
                     ev -= m.magnitude
                 unit_inv.remove(m)
             except StopIteration:
                 continue
 
-            self._print('traversing with ev = %g' % ev, 4)
+            self.dbg_print('traversing with ev = %g' % ev, 4)
             child_ff, _ = f.traverse_node(downstream_nw, scenario, observed=observed,
                                           frags_seen=frags_seen, _balance=ev)
             ffs.extend(child_ff)
@@ -1179,7 +1179,7 @@ class LcFragment(LcEntity):
         if _balance is None:
             ev = self.exchange_value(scenario, observed=observed)
         else:
-            self._print('%.3s %g balance' % (self.uuid, _balance), level=2)
+            self.dbg_print('%.3s %g balance' % (self.uuid, _balance), level=2)
             ev = _balance
             if self._check_observability(scenario):
                 self._cache_balance_ev(_balance, scenario, observed)
@@ -1196,7 +1196,7 @@ class LcFragment(LcEntity):
                 conserved = True
             if self.direction == 'Output':  # convention: inputs to parent are positive
                 conserved_val *= -1
-            self._print('%.3s conserved_val %g' % (self.uuid, conserved_val), level=2)
+            self.dbg_print('%.3s conserved_val %g' % (self.uuid, conserved_val), level=2)
 
         node_weight = self._node_weight(magnitude, scenario, observed)
         term = self.termination(scenario)
@@ -1209,15 +1209,15 @@ class LcFragment(LcEntity):
         '''
         if term.is_null or self.is_background or magnitude == 0:
             # cutoff and background both end traversal
-            self._print('%.3s cutoff or bg' % self.uuid)
+            self.dbg_print('%.3s cutoff or bg' % self.uuid)
             return [ff], conserved_val
 
         if term.is_fg or term.term_node.entity_type == 'process':
-            self._print('%.3s fg' % self.uuid)
+            self.dbg_print('%.3s fg' % self.uuid)
             ffs = self._traverse_fg_node(ff, scenario, observed, frags_seen)
 
         else:
-            self._print('%.3s subfrag' % self.uuid)
+            self.dbg_print('%.3s subfrag' % self.uuid)
             ffs = self._traverse_subfragment(ff, scenario, observed, frags_seen)
 
         # if descend is true- we give back everything- otherwise we aggregate

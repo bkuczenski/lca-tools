@@ -370,7 +370,7 @@ class FlowTermination(object):
                     try:
                         r_e = [r for r in self._term.exchange_values(term_flow, self.direction)]
                     except (PrivateArchive, InventoryRequired):
-                        print('%s\nprivate... falling back to reference exchanges' % self._term)
+                        self._parent.dbg_print('%s\nprivate... falling back to reference exchanges' % self._term)
                         r_e = [r for r in self._term.references()]
                 if len(r_e) > 1:
                     raise AmbiguousReferenceError('%s\n%s' % (self._term, r_e))

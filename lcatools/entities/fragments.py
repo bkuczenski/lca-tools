@@ -1078,7 +1078,7 @@ class LcFragment(LcEntity):
             bg_ff[0].fragment = self
             return bg_ff
 
-        unit_inv, subfrags = term.term_node.unit_inventory(scenario, observed=observed)
+        unit_inv, subfrags = term.term_node.unit_inventory(scenario=scenario, observed=observed)
 
         # find the inventory flow that matches us
         # use term_flow over term_node.flow because that allows client code to specify inverse traversal knowing

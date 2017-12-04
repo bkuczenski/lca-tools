@@ -17,6 +17,17 @@ A process has:
  a dict of _exchanges that maps key to ExchangeValue
  a set of reference exchange keys, which is a subset of the keys in _exchanges
 
+==========
+Wed Nov 29 12:08:05 -0800 2017
+
+Thinking strictly from the interfaces perspective: we want to accept the following reference specifications:
+ * an exchange-like entity (Exchange or subclass or RxRef) (( maybe those should have a common ancestor ?? )) that matches a reference
+ * an external ID for a flow that is present in a reference
+ * None
+ * a literal flow or flow_ref that matches a flow in a reference
+
+There is also the terribly fuzzy _find_reference_by_string that also does regexp comparisons against name, UUID, and external_ref.  This may well be a case of "too nice to the user" but it's hard to say.
+
 
 
 

@@ -52,7 +52,7 @@ class LcFlow(LcEntity):
             self['CasNumber'] = ''
 
         if self.reference_entity is not None:
-            if self.reference_entity.link not in self._characterizations.keys():
+            if self.reference_entity.uuid not in self._characterizations.keys():
                 self.add_characterization(self.reference_entity, reference=True)
 
         if local_unit is not None:
@@ -186,7 +186,7 @@ class LcFlow(LcEntity):
             value = 1.0
             self._set_reference(quantity)
 
-        q = quantity.link
+        q = quantity.uuid
         if q in self._characterizations.keys():
             if value is None:
                 return
@@ -208,25 +208,25 @@ class LcFlow(LcEntity):
         :param location:
         :return:
         """
-        if quantity.link in self._characterizations.keys():
+        if quantity.uuid in self._characterizations.keys():
             if location == 'GLO' or location is None:
                 return True
-            if location in self._characterizations[quantity.link].locations():
+            if location in self._characterizations[quantity.uuid].locations():
                 return True
         return False
 
     def del_characterization(self, quantity):
         if quantity is self.reference_entity:
             raise DeleteReference('Cannot delete reference quantity')
-        self._characterizations.pop(quantity.link)
+        self._characterizations.pop(quantity.uuid)
 
     def characterizations(self):
         for i in self._characterizations.values():
             yield i
 
     def factor(self, quantity):
-        if quantity.link in self._characterizations:
-            return self._characterizations[quantity.link]
+        if quantity.uuid in self._characterizations:
+            return self._characterizations[quantity.uuid]
         return Characterization(self, quantity)
 
     def cf(self, quantity, location='GLO'):
@@ -237,11 +237,11 @@ class LcFlow(LcEntity):
         :param location: ['GLO']
         :return: value of quantity per unit of reference, or 0.0
         """
-        if quantity.link in self._characterizations:
+        if quantity.uuid in self._characterizations:
             try:
-                return self._characterizations[quantity.link][location]
+                return self._characterizations[quantity.uuid][location]
             except KeyError:
-                return self._characterizations[quantity.link].value
+                return self._characterizations[quantity.uuid].value
         return 0.0
 
     def convert(self, val, to=None, fr=None, location='GLO'):

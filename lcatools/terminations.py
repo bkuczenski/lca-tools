@@ -292,10 +292,11 @@ class FlowTermination(object):
                 print('\nfragment flow %s' % self._parent)
                 self._parent.flow.show()
                 self._parent.flow.profile()
-                raise FlowConversionError('Missing cf\nfrom: %s\n  to: %s' % (parent_qty, tgt_qty))
+                raise FlowConversionError('Missing cf\nfrom: %s %s\n  to: %s %s' % (parent_qty.uuid, parent_qty,
+                                                                                    tgt_qty.uuid, tgt_qty))
             else:
                 return 1.0 / self.term_flow.cf(parent_qty)
-        return self._parent.flow.cf(to=tgt_qty)
+        return self._parent.flow.cf(tgt_qty)
 
     def validate_flow_conversion(self):
         return self.flow_conversion  # deal with it when an error comes up

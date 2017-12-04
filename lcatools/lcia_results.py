@@ -67,18 +67,22 @@ class DetailedLciaResult(object):
     @property
     def _dirn_adjust(self):
         """
-        Memoized direction correction for "Outputs" "from ground" and "Inputs" "to environment"
+        Memoized direction correction for "Outputs" "from ground" and "Inputs" "to environment".
+        'fac' temporary variable created to silence an IDE warning
         :return:
         """
         if self._dirn_mod is None:
             natural_direction = self.factor.natural_direction
             if natural_direction is None or natural_direction is False:
-                self._dirn_mod = 1.0
+                fac = 1.0
             elif self.exchange.direction == natural_direction:
-                self._dirn_mod = 1.0
+                fac = 1.0
             else:
-                self._dirn_mod = -1.0
-        return self._dirn_mod
+                fac = -1.0
+            self._dirn_mod = fac
+        else:
+            fac = self._dirn_mod
+        return fac
 
     @property
     def flow(self):
@@ -98,13 +102,13 @@ class DetailedLciaResult(object):
     def value(self):
         if self.exchange.value is None:
             return 0.0
-        return self.exchange.value * self._lc.scale * self._dirn_adjust
+        return self.exchange.value * self._lc.scale
 
     @property
     def result(self):
         if self.factor.is_null:
             return 0.0
-        return self.value * (self.factor[self.location] or 0.0)
+        return self.value * self._dirn_adjust * (self.factor[self.location] or 0.0)
 
     def __hash__(self):
         return hash((self.exchange.process.uuid, self.exchange.direction, self.factor.flow.uuid))
@@ -263,7 +267,7 @@ class AggregateLciaScore(object):
     def __init__(self, lc_result, entity):
         self.entity = entity
         self._lc = lc_result
-        self.LciaDetails = set()
+        self.LciaDetails = []  # what exactly was having unique membership protecting us from??
 
     def update_parent(self, lc_result):
         self._lc = lc_result
@@ -283,7 +287,8 @@ class AggregateLciaScore(object):
 
     def add_detailed_result(self, exchange, factor, location):
         d = DetailedLciaResult(self._lc, exchange, factor, location)
-        if d in self.LciaDetails:
+        '''
+        if d in self.LciaDetails:  # process.uuid, direction, flow.uuid are the same
             if factor[location] != 0:
                 other = next(k for k in self.LciaDetails if k == d)
                 raise DuplicateResult('exchange: %s\n  factor: %s\nlocation: %s\nconflicts with %s' %
@@ -291,7 +296,8 @@ class AggregateLciaScore(object):
             else:
                 # do nothing
                 return
-        self.LciaDetails.add(d)
+        '''
+        self.LciaDetails.append(d)
 
     def show(self, **kwargs):
         self.show_detailed_result(**kwargs)
@@ -446,23 +452,25 @@ class LciaResult(object):
             return
     '''
 
-    def aggregate(self, key=lambda x: x.fragment['StageName'], entity=None):
+    def aggregate(self, key=lambda x: x.fragment['StageName'], entity_id=None):
         """
         returns a new LciaResult object in which the components of the original LciaResult object are aggregated into
         static values according to a key.  The key is a lambda expression that is applied to each AggregateLciaScore
         component's entity property (components where the lambda fails will all be grouped together).
 
-        The special key '*' will aggregate all components together.
+        The special key '*' will aggregate all components together.  'entity' argument is required in this case to
+        provide a distinguishing key for the result.
 
         :param key: default: lambda x: x.fragment['StageName'] -- assuming the payload is a FragmentFlow
-        :param entity: if obfuscating aggregation is being performed (key = '*'), this logs the agg entity for reference
+        :param entity_id: a descriptive string for the entity, to allow the aggregation to be distinguished in
+         subsequent aggregations.  Use 'None' at your peril
         :return:
         """
         agg_result = LciaResult(self.quantity, scenario=self.scenario, private=self._private, scale=self._scale)
         if key == '*':
-            if entity is None:
-                entity = 'aggregated process'
-            agg_result.add_summary('result', entity, 1.0, self.total())
+            if entity_id is None:
+                entity_id = 'aggregated result'
+            agg_result.add_summary(entity_id, entity_id, 1.0, self.total())
         else:
             for v in self._LciaScores.values():
                 keystring = 'other'
@@ -501,15 +509,27 @@ class LciaResult(object):
         for r in recurse:
             for k in r.keys():
                 c = r[k]
-                flat.add_component(k, c.entity)
-                for d in c.details():
-                    exch = ExchangeValue(d.exchange.process, d.flow, d.exchange.direction, value=d.value * _apply_scale)
-                    flat.add_score(k, exch, d.factor, d.location)
+                if isinstance(c, SummaryLciaResult):
+                    # guaranteed to be static since r is a flattened LciaResult
+                    if not c.static:
+                        raise InconsistentSummaries(c)
+                    try:
+                        flat.add_summary(k, c.entity, c.node_weight * _apply_scale, c.unit_score)
+                    except InconsistentScores:
+                        print('for key %s' % k)
+                        raise
+                else:
+                    for d in c.details():
+                        flat.add_component(d.flow.uuid, d.flow)
+                        exch = ExchangeValue(d.exchange.process, d.flow, d.exchange.direction,
+                                             value=d.value * _apply_scale)
+                        flat.add_score(k, exch, d.factor, d.location)
 
         scaled_total = self.total() * _apply_scale
         if not isclose(scaled_total, flat.total(), rel_tol=1e-10):
             print(' LciaResult: %10.4g' % scaled_total)
             print('Flat result: %10.4g' % flat.total())
+            print('Difference: %10.4g @ %10.4g' % (flat.total() - scaled_total, _apply_scale))
             if not isclose(scaled_total, flat.total(), rel_tol=1e-6):
                 raise ValueError('Total differs by greater than 1e-6! (applied scaling=%10.4g)' % _apply_scale)
         return flat

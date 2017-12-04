@@ -175,5 +175,5 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
         lci = self._bg.lci(p, ref_flow=ref_flow)
         res = query_qty.do_lcia(lci, locale=p['SpatialScope'], **kwargs)
         if self.privacy > 0:
-            return res.aggregate('*')
+            return res.aggregate('*', entity_id=p.link)
         return res

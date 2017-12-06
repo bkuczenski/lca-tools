@@ -58,8 +58,8 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         :return: quantity entity
         """
         if hasattr(self._archive, 'get_quantity'):
-            return self.make_ref(self._archive.get_quantity(quantity))
-        return self.make_ref(self._archive[quantity])
+            return self._archive.get_quantity(quantity)
+        return self._archive[quantity]
 
     def profile(self, flow, **kwargs):
         """

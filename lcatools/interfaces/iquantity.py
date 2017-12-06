@@ -36,8 +36,9 @@ class QuantityInterface(AbstractQuery):
         :param quantity: external_id of quantity
         :return: quantity CatalogRef
         """
-        return self._perform_query(_interface, 'get_quantity', QuantityRequired('Quantity interface required'),
-                                   quantity, **kwargs)
+        return self.make_ref(self._perform_query(_interface, 'get_quantity',
+                                                 QuantityRequired('Quantity interface required'),
+                                                 quantity, **kwargs))
 
     def synonyms(self, item, **kwargs):
         """

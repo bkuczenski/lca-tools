@@ -34,6 +34,35 @@ Well look.
 is_elementary is only used by the background manager to parse elementary flows from cutoffs among the exterior flows... that could reasonably be relocated to the query mechanism.  And the find_matching thing is really only used to enforce a harmonization between a given archive's compartments and the reference list of compartments-- but again-- from a strict implementation standpoint that's not necessary either.  let that step happen when LCIA is done- e.g. when the Qdb is truly invoked.  No need for it. strip it out! strip it out!
 
 
+Wed 2017-12-06 00:00:09 -0800
+
+OK, that's done.  Now--- let's have a look to see if there are now ways to simplify the basic archive interface...
+
+well, for one thing we now have two different weird apparatuses that have been deprecated: catalog_names, which isn't used for anything except getting serialized and deserialized; and the whole upstreaming thing, which is currently left in only for legacy reasons.
+
+between those we could probably hack out 100 lines of code from interfaces. (and another 100 lines of spurious upstreaming in subclasses)
+
+base.py is actually tested now, and isn't too long.
+
+How does this new change impact the antelope_v1 client?
+ - well, instead of all those methods going into the ArchiveInterface subclass, they could go into implementation subclasses that are invoked instead of the standard ones.
+ - Qdb should also subclass the QuantityImplementation instead of replacing it
+ - this means that generally these things should be packages instead of modules
+ 
+But forget that.  THe point is, the code is actually in pretty good shape now.
+
+Let's think about plans for the future:
+
+We need:
+
+ * an Antelope node server: basically, a wrapper for an LcResource that translates the query results into JSON for transmission over the Web
+ * an Antelope v2 client: LcArchive subclass and a new set of implementations that translates query requests into http requests to pass to the above node server; and deserializes the responses into references
+ * An Antelope Builder, to be used to build Antelope v1 foregrounds by query
+ * an http wrapper for that that allows us to put an LcCatalog into a docker container and build foregrounds with POST requests
+
+shit man. this is starting to come into shape.
+
+
 ==========
 Mon Oct 30 10:09:46 -0700 2017
 

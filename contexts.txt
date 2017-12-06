@@ -1,0 +1,39 @@
+==========
+Wed 2017-12-06 11:26:00 -0800
+
+OK, so here's where we're at.  And keep in mind, this is going to be another thoroughgoing refactor.
+
+Contexts are a new type of LcEntity, whose defining property is its NATURAL DIRECTION or status as an 'origin' or 'sink'.  LcFlows are attenuated to just flowables; 'Compartment' is no longer used for anything and is maybe even reserved / disallowed.
+
+Flows still have a reference quantity, but compartments are meaningless except in the context of exchanges.  An exchange is now: an LcProcess, an LcFlow, a Direction, and a termination which is either: None, a process external_ref, or a context external_ref.  All contexts are elementary. let's see if this is consistent with Edelen...
+
+aYup. "The flow context, which are a set of categories typically describing an environmental context of the flow origin or destination..."
+
+So then the context manager is a harmonization service for contexts, but even in the absence of that we can create contexts on a source-specific basis and collect them in an archive.
+
+Importantly, there is no need for contexts to be explicitly hierarchical, anymore than there is a need for process classifications to be hierarchical.  Extracting a hierarchy or typology of contexts is left for semantic application software.
+
+SO-- we refactor the code to create contexts as needed, and use their uuids or external refs as terminations for elementary exchanges.  Then the question is_elementary is asked of an exchange, and is answered simply by discerning whether the termination is a process or a context.  (termination=None is either a reference exchange or a cutoff)
+
+Contexts then have to be added to the index interface (though not inventory, since they're already present in exchanges)
+
+Background.Emission needs to be modified to be flowable and context (with direction implicit), rather than flow and direction.  That may require some work.
+
+Quantity will see the greatest changes, with compartment being carved out of the quantity interface entirely.
+
+Characterizations-- currently made up of a flow + quantity and spatially defined dict of factors, will now be flowable + context + quantity and value.  This will make them more like EXCHANGES, which are process + flow[able] + direction + termination; value dict
+
+Characterization will be:
+
+quantity + flowable + context; value dict
+
+What about characterizations for intermediate flows?  just substitute the originating process UUID as the context.  This allows us to have origin-specific properties (as in ecoinvent)
+
+what about process-generic intermediate flows with properties? perhaps there is no such thing. For a flowable to have a property, it must be a nonreference flow of a process.
+
+How does that work with fragment termination conversions and/or scenarios?
+
+characterization is still the locus of scenario info
+
+this is too far down the line.  For right now, we need to get antelope working without a fundamental refactor.
+

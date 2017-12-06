@@ -1,0 +1,46 @@
+==========
+Wed Dec 06 10:03:19 -0800 2017
+
+I have come up with at least five different things that "Antelope" means:
+
+ * the existing antelope v1 CLIENT interface for a finite set of integer-enumerated entities included in a collection of fragments
+
+ * the SERVER for that, which may or may not be the same as the fragment builder
+
+ * the antelope v2 server, which is meant to be a data clearinghouse that sits on top of an LcCatalog and can translate semantic.ref/entity/query into serialized results
+
+ * the antelope v2 CLIENT, which allows me to talk to a remotely stashed ecoinvent so that I don't need it on my local machine
+
+ * the antelope node server, which acts like an antelope v2 server for a single semantic endpoint and MAY or MAY NOT include Qdb capabilities.
+
+On top of that, there are two persistent issues that are causing me anxiety moving forward:
+
+ - is_elementary and the compartment manager in general was always a stopgap (written in the West Branch library one morning in 2016?) and could be either (a) better aligned with synlist or (b) part of a newly reimagined graph-based Qdb
+
+ - flows properly being flowables, compartments being shifted to EXCHANGE TERMINATIONS, which would be a radical reimagining of pretty much everything.
+
+I'm really excited about reducing flows to flowables, but it would break compatibility with just about everything, starting with the existing antelope v1 (not to mention the J Cleaner paper) which steadfastly applied a category to every flow / declared all flows have compartments. [J Cleaner fairly situated compartments as distinct semantic entities]
+
+So-- if compartments are distinct semantic entities-- do we need to store them in archives?  If compartments are terminations, does that mean they are really processes??
+
+NO, they are not processes, or if they are they are the mothers of all multifunctional processes.
+
+It wouldn't be meaningful to call a compartment a process, because in order to do LCIA on it the process would have to be allocated (by CF) across all flows into that compartment that have impacts, and suddenly we are right back to having an exploded set of entities.
+
+How would this even work? everything would have to get reimagined.  Background emissions, which are presently flow + direction, would need to be flow + termination (with direction implicit??? )
+
+right? there's a deeper problem- the implicit natural directionality of compartments, of contexts. we've already had to start dealing with that in characterization.set_natural_direction() [which must be supplied a compartment manager] -- well so we've already acknowledged it. that's not to say we've solved it.
+
+I think I need to spend some time thinking about how Qdb is supposed to work in this brave new world
+
+
+Wed 2017-12-06 11:59:40 -0800
+
+Back to antelope servers.  We're going to keep the current system of having flows be about paired flowable + context, but we want the antelope interface to be forward thinking.  So let's go through the API and make sure that it makes sense.
+
+Well.. api.md is rather hopelessly out of date.  It can be simplified a lot.
+
+Wed 2017-12-06 13:18:06 -0800
+
+Worked on this for too long... FWIW I really need to get going on Swagger.  I am putting this down, eating some food, and then doing my important TODO for the day.
+

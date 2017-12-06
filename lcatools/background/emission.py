@@ -35,6 +35,10 @@ class Emission(object):
         return hash(self._hash)
 
     @property
+    def entity_type(self):
+        return 'emission'
+
+    @property
     def index(self):
         return self._index
 

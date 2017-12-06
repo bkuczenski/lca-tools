@@ -16,6 +16,7 @@ import json
 import gzip as gz
 
 from collections import defaultdict
+from lcatools.implementations import *
 
 
 LD_CONTEXT = 'https://bkuczenski.github.io/lca-tools-datafiles/context.jsonld'
@@ -168,6 +169,18 @@ class ArchiveInterface(object):
 
         self._serialize_dict['dataReference'] = ref
         self.catalog_names[ref] = source
+
+    def make_interface(self, iface, privacy=None):
+        if iface == 'basic':
+            return BasicImplementation(self, privacy=privacy)
+        elif iface == 'quantity':
+            return QuantityImplementation(self, privacy=privacy)
+        elif iface == 'index':
+            return IndexImplementation(self, privacy=privacy)
+        elif iface == 'inventory':
+            return InventoryImplementation(self, privacy=privacy)
+        elif iface == 'background':
+            return BackgroundImplementation(self, privacy=privacy)
 
     @property
     def ref(self):

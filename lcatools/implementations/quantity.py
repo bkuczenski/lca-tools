@@ -14,11 +14,9 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
     The interface works normally on normally-constituted archives, but also allows the archives to override the default
     implementations (which require load_all)
     """
-    def __init__(self, catalog, archive, **kwargs):
-        super(QuantityImplementation, self).__init__(catalog, archive, **kwargs)
-        self._cm = catalog.qdb.c_mgr
+    def __init__(self, *args, **kwargs):
+        super(QuantityImplementation, self).__init__(*args, **kwargs)
         self._flowables = None
-        self._compartments = dict()
 
     def _init_flowables(self):
         fb = Flowables()
@@ -47,22 +45,11 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
 
     def quantities(self, **kwargs):
         for q_e in self._archive.quantities(**kwargs):
-            q_ref = self.make_ref(q_e)
-            yield q_ref
+            yield q_e
 
     def lcia_methods(self, **kwargs):
         for l in self._archive.lcia_methods(**kwargs):
-            l_ref = self.make_ref(l)
-            yield l_ref
-
-    def _check_compartment(self, string):
-        if string is None:
-            return None
-        if string in self._compartments:
-            return self._compartments[string]
-        c = self._cm.find_matching(string)
-        self._compartments[string] = c
-        return c
+            yield l
 
     def get_quantity(self, quantity, **kwargs):
         """
@@ -111,13 +98,12 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
             for n in self._archive.flowables(quantity=quantity, compartment=compartment):
                 yield n
         else:
-            compartment = self._check_compartment(compartment)
             if quantity is not None:
                 quantity = self._archive[quantity]
             fb = set()
             for f in self._archive.flows():
                 if compartment is not None:
-                    if self._check_compartment(f['Compartment']) is not compartment:
+                    if f['Compartment'] != compartment:
                         continue
                 if quantity is not None:
                     if not f.has_characterization(quantity):
@@ -140,7 +126,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         else:
             comps = set()
             for f in self._archive.flows():
-                comps.add(self._check_compartment(f['Compartment']))
+                comps.add(f['Compartment'])
             for n in comps:
                 yield str(n)
 
@@ -166,7 +152,6 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
             int_q = self._archive[quantity.external_ref]  # the truly local quantity
             if flowable is not None:
                 flowable = self._fb.index(flowable)
-            compartment = self._cm.find_matching(compartment)
             for f in self._archive.flows():
                 if not f.has_characterization(int_q):
                     continue
@@ -174,7 +159,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
                     if self._fb.index(f.link) != flowable:
                         continue
                 if compartment is not None:
-                    if self._cm.find_matching(f['Compartment']) != compartment:
+                    if f['Compartment'] != compartment:
                         continue
                 yield f.factor(int_q)
 

@@ -4,7 +4,6 @@ import os
 from lcatools.interfaces.iquery import INTERFACE_TYPES
 from lcatools.providers.interfaces import local_ref
 from lcatools.tools import create_archive, update_archive
-from lcatools.implementations import *
 
 
 class LcResource(object):
@@ -87,17 +86,8 @@ class LcResource(object):
         print('Created archive of %s containing:' % self._archive)
         self._archive.check_counter()
 
-    def make_interface(self, catalog, iface):
-        if iface == 'basic':
-            return BasicImplementation(catalog, self._archive, privacy=self.privacy)
-        elif iface == 'quantity':
-            return QuantityImplementation(catalog, self._archive, privacy=self.privacy)
-        elif iface == 'index':
-            return IndexImplementation(catalog, self._archive, privacy=self.privacy)
-        elif iface == 'inventory':
-            return InventoryImplementation(catalog, self._archive, privacy=self.privacy)
-        elif iface == 'background':
-            return BackgroundImplementation(catalog, self._archive, privacy=self.privacy)
+    def make_interface(self, iface):
+        return self._archive.make_interface(iface, privacy=self.privacy)
 
     def __init__(self, reference, source, ds_type, interfaces=None, privacy=0, priority=0, static=False, **kwargs):
         """

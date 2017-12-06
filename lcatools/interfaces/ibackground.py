@@ -18,7 +18,7 @@ class BackgroundInterface(AbstractQuery):
           direction.
 
         :param search:
-        :return: ProductFlows
+        :return: ProductFlows (should be ref-ized somehow)
         """
         return self._perform_query(_interface, 'foreground_flows', BackgroundRequired('No knowledge of background'),
                                    search=search, **kwargs)
@@ -29,7 +29,7 @@ class BackgroundInterface(AbstractQuery):
           direction.
 
         :param search:
-        :return: ProductFlows
+        :return: ProductFlows (should be ref-ized somehow)
         """
         return self._perform_query(_interface, 'background_flows', BackgroundRequired('No knowledge of background'),
                                    search=search, **kwargs)
@@ -53,8 +53,9 @@ class BackgroundInterface(AbstractQuery):
         :param search:
         :return:
         """
-        return self._perform_query(_interface, 'cutoffs', BackgroundRequired('No knowledge of background'),
-                                   search=search, **kwargs)
+        for i in self.exterior_flows(direction=direction, search=search, **kwargs):
+            if not self.is_elementary(i):
+                yield i
 
     def emissions(self, direction=None, search=None, **kwargs):
         """
@@ -64,8 +65,9 @@ class BackgroundInterface(AbstractQuery):
         :param search:
         :return:
         """
-        return self._perform_query(_interface, 'emissions', BackgroundRequired('No knowledge of background'),
-                                   search=search, **kwargs)
+        for i in self.exterior_flows(direction=direction, search=search, **kwargs):
+            if self.is_elementary(i):
+                yield i
 
     def foreground(self, process, ref_flow=None, **kwargs):
         """

@@ -233,7 +233,7 @@ class BackgroundEngine(object):
         :return:
         """
         if exch.termination is not None:
-            return self.fg.get(exch.termination, literal=True)
+            return self.fg.get(exch.termination)
         else:
             if (exch.flow.external_ref, exch.direction) in self._emissions:
                 return None
@@ -254,7 +254,7 @@ class BackgroundEngine(object):
                     # return self.fg.mix(exch.flow, exch.direction)
                 else:
                     raise KeyError('Unknown multi-termination strategy %s' % strategy)
-            return self.fg.get(term.external_ref, literal=True)  # required to get full exchange list
+            return self.fg.get(term.external_ref)  # required to get full exchange list
 
     @staticmethod
     def construct_sparse(nums, nrows, ncols):
@@ -485,7 +485,7 @@ class BackgroundEngine(object):
         # self.make_foreground()
 
     def add_all_ref_products(self, multi_term='first', default_allocation=None, net_coproducts=False):
-        for p in self.fg.processes(literal=True):
+        for p in self.fg.processes():
             for x in p.references():
                 j = self.check_product_flow(x.flow, p)
                 if j is None:

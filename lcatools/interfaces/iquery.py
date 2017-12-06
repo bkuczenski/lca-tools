@@ -55,6 +55,9 @@ class CatalogQuery(IndexInterface, BackgroundInterface, ForegroundInterface, Inv
             return self
         return self._catalog.query(origin)
 
+    def _grounded_query(self):
+        return self._catalog.query(self.origin)
+
     def ensure_lcia_factors(self, quantity_ref):
         self._catalog.load_lcia_factors(quantity_ref)
 
@@ -123,7 +126,8 @@ class CatalogQuery(IndexInterface, BackgroundInterface, ForegroundInterface, Inv
         :param eid: an external Id
         :return:
         """
-        return self._perform_query(None, 'get', EntityNotFound('%s/%s' % (self.origin, eid)), eid, **kwargs)
+        return self.make_ref(self._perform_query(None, 'get', EntityNotFound('%s/%s' % (self.origin, eid)), eid,
+                                                 **kwargs))
 
     def cf(self, flow, query_quantity, locale='GLO', **kwargs):
         """

@@ -1,5 +1,5 @@
 class BasicImplementation(object):
-    def __init__(self, catalog, archive, privacy=None, **kwargs):
+    def __init__(self, archive, privacy=None, **kwargs):
         """
         Provides common features for an interface implementation: namely, an archive and a privacy setting. Also
         provides access to certain common methods of the archive.  This should be the base class for interface-specific
@@ -11,7 +11,6 @@ class BasicImplementation(object):
          1 - exchange lists are public, but exchange values are private
          2 - exchange lists and exchange values are private
         """
-        self._catalog = catalog
         self._archive = archive
         self._privacy = privacy or 0
 
@@ -35,14 +34,6 @@ class BasicImplementation(object):
 
     def __getitem__(self, item):
         return self._archive[item]
-
-    def make_ref(self, entity):
-        if entity is None:
-            return None
-        if entity.is_entity:
-            return entity.make_ref(self._catalog.query(self.origin))
-        else:
-            return entity  # already a ref
 
     def get_item(self, external_ref, item):
         entity = self._fetch(external_ref)
@@ -74,8 +65,5 @@ class BasicImplementation(object):
             return True
         return False
 
-    def get(self, external_ref, literal=False, **kwargs):
-        if literal:
-            return self._fetch(external_ref, **kwargs)
-        else:
-            return self.make_ref(self._fetch(external_ref, **kwargs))
+    def get(self, external_ref, **kwargs):
+        return self._fetch(external_ref, **kwargs)

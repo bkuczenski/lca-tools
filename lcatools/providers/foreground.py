@@ -67,6 +67,12 @@ class LcForeground(LcArchive):
         self._ext_ref_mapping = dict()
         if not os.path.isdir(self.source):
             os.makedirs(self.source)
+        self.load_all()
+
+    def _fetch(self, entity, **kwargs):
+        return self.__getitem__(entity)
+
+    def _load_all(self):
         if os.path.exists(self._archive_file):
             self._load_json_file(self._archive_file)
             self._load_fragments()

@@ -36,29 +36,26 @@ class IndexImplementation(BasicImplementation, IndexInterface):
 
     def processes(self, literal=False, **kwargs):
         for p in self._archive.search('process', **kwargs):
-            if literal:
-                yield p
-            else:
-                yield self.make_ref(p)
+            yield p
 
     def flows(self, **kwargs):
         for f in self._archive.search('flow', **kwargs):
-            yield self.make_ref(f)
+            yield f
 
     def quantities(self, **kwargs):
         for q in self._archive.search('quantity', **kwargs):
-            yield self.make_ref(q)
+            yield q
 
     def lcia_methods(self, **kwargs):
         for q in self._archive.search('quantity', **kwargs):
             if q.is_lcia_method():
-                yield self.make_ref(q)
+                yield q
 
     def fragments(self, **kwargs):
         if hasattr(self._archive, 'fragments'):
             # we only want reference fragments
             for f in self._archive.fragments(show_all=False, **kwargs):
-                yield self.make_ref(f)
+                yield f
         else:
             raise NotForeground('The resource does not contain fragments: %s' % self._archive.ref)
 
@@ -80,10 +77,10 @@ class IndexImplementation(BasicImplementation, IndexInterface):
                 flow_ref = flow_ref.external_ref
             for x in self._terminations[flow_ref]:  # defaultdict, so no KeyError
                 if direction is None:
-                    yield self.make_ref(x[1])
+                    yield x[1]
                 else:
                     if cdir == x[0]:
-                        yield self.make_ref(x[1])
+                        yield x[1]
 
     def originate(self, flow_ref, direction=None, **kwargs):
         return self.terminate(flow_ref, comp_dir(direction))  # just gets flipped back again in terminate()

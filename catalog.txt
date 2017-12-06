@@ -1,4 +1,40 @@
 ==========
+Tue Dec 05 22:00:20 -0800 2017
+
+OK so the refactor is more or less complete... or is it?
+
+Two things jump out. first off, the interface/query/implementation arrangement is too complex by half, as evidenced by the fact that it's not clear how to go about adding a web transport layer to allow remote resource implementations (the whole point).
+
+Investigating that is the rather clever idea of moving get_interface (which was once an LcCatalog method and is now an LcResource method) all the way down into the ArchiveInterface.
+
+Biggest argument against that is that the implementations all require a catalog as an argument.  But here's the thing-- the only reason a catalog is required at all is for make_ref() (and _make_pf_ref()) in background.  Through and through.
+
+Those methods should really be done BY the catalog query, which is the thing that mediates indirect access to resources, and already KNOWS the catalog.  Then we can pull catalog out of the implementations, then we can relocate the implementations, then we can properly overload the implementations instead of what we're currently doing which is kind of underloading them.
+
+Tue 2017-12-05 22:27:45 -0800
+
+OK, let's do it.
+
+Tue 2017-12-05 22:32:44 -0800
+
+Hmm. We also use the catalog to distinguish exterior flows between cutoffs and emissions.
+
+And you know what? the QuantityImplementation also requires a compartment manager, which it gets from the catalog.  It's only used to find_matching(string).  But it is used.
+
+Let's look forward- how do we handle this in the future? in the future, the Qdb is a standalone thing that tells us these things.
+
+In one imagining, the flows themselves (and thus all entities) have access to a compartment manager... but that is too much.
+
+shit. shit shit shit.
+
+find_matching and is_elementary. Two indisputable functions of the compartment manager.
+
+Well look.
+
+is_elementary is only used by the background manager to parse elementary flows from cutoffs among the exterior flows... that could reasonably be relocated to the query mechanism.  And the find_matching thing is really only used to enforce a harmonization between a given archive's compartments and the reference list of compartments-- but again-- from a strict implementation standpoint that's not necessary either.  let that step happen when LCIA is done- e.g. when the Qdb is truly invoked.  No need for it. strip it out! strip it out!
+
+
+==========
 Mon Oct 30 10:09:46 -0700 2017
 
 Debugging the work... I've come across a problematic situation which is the FlowTermination.is_subfrag property.

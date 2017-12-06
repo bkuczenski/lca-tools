@@ -403,7 +403,7 @@ class LcCatalog(object):
             res.check(self)
             for iface in res.interfaces:
                 if iface == itype:
-                    yield res.make_interface(self, itype)
+                    yield res.make_interface(itype)
         '''
         # no need for this because qdb is (a) listed in the resolver and (b) upstream of everything
         if 'quantity' in itype:

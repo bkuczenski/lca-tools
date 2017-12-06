@@ -28,7 +28,8 @@ class IndexInterface(AbstractQuery):
         :param kwargs: keyword search
         :return:
         """
-        return self._perform_query(_interface, 'processes', IndexRequired('Index access required'), **kwargs)
+        for i in self._perform_query(_interface, 'processes', IndexRequired('Index access required'), **kwargs):
+            yield self.make_ref(i)
 
     def flows(self, **kwargs):
         """
@@ -36,7 +37,8 @@ class IndexInterface(AbstractQuery):
         :param kwargs: keyword search
         :return:
         """
-        return self._perform_query(_interface, 'flows', IndexRequired('Index access required'), **kwargs)
+        for i in self._perform_query(_interface, 'flows', IndexRequired('Index access required'), **kwargs):
+            yield self.make_ref(i)
 
     def quantities(self, **kwargs):
         """
@@ -53,12 +55,14 @@ class IndexInterface(AbstractQuery):
             return self._perform_query('quantity', 'quantities', CatalogRequired('Catalog or Quantity access required'),
                                        **kwargs)
         '''
-        return self._perform_query(_interface, 'quantities', IndexRequired('Index access required'), **kwargs)
+        for i in self._perform_query(_interface, 'quantities', IndexRequired('Index access required'), **kwargs):
+            yield self.make_ref(i)
 
     def fragments(self, show_all=False, **kwargs):
         if show_all:
             raise ValueError('Cannot retrieve non-parent fragments via interface')
-        return self._perform_query(_interface, 'fragments', IndexRequired('Index access required'), **kwargs)
+        for i in self._perform_query(_interface, 'fragments', IndexRequired('Index access required'), **kwargs):
+            yield self.make_ref(i)
 
     """
     API functions- entity-specific -- get accessed by catalog ref
@@ -71,8 +75,9 @@ class IndexInterface(AbstractQuery):
         :param direction: if omitted, return all processes having the given flow as reference, regardless of direction
         :return:
         """
-        return self._perform_query(_interface, 'terminate', IndexRequired('Index access required'),
-                                   flow, direction=direction, **kwargs)
+        for i in self._perform_query(_interface, 'terminate', IndexRequired('Index access required'),
+                                     flow, direction=direction, **kwargs):
+            yield self.make_ref(i)
 
     def originate(self, flow, direction=None, **kwargs):
         """
@@ -81,8 +86,9 @@ class IndexInterface(AbstractQuery):
         :param direction: if omitted, return all processes having the given flow as reference, regardless of direction
         :return:
         """
-        return self._perform_query(_interface, 'originate', IndexRequired('Index access required'),
-                                   flow, direction=direction, **kwargs)
+        for i in self._perform_query(_interface, 'originate', IndexRequired('Index access required'),
+                                     flow, direction=direction, **kwargs):
+            yield self.make_ref(i)
 
     '''
     def mix(self, flow, direction, **kwargs):

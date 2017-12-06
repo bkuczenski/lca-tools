@@ -763,6 +763,11 @@ class Qdb(LcArchive, QuantityInterface):
     '''
     Quantity Interface
     '''
+    def _check_compartment(self, string):
+        if string is None:
+            return None
+        return self.c_mgr.find_matching(string)
+
     def get_quantity(self, synonym, **kwargs):
         """
         return a quantity by its synonym

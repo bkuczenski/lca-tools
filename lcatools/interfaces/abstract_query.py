@@ -37,6 +37,20 @@ class AbstractQuery(object):
                 return result
         raise exc
 
+    def _grounded_query(self):
+        return self
+
+    def is_elementary(self, f):
+        return None
+
+    def make_ref(self, entity):
+        if entity is None:
+            return None
+        if entity.is_entity:
+            return entity.make_ref(self._grounded_query())
+        else:
+            return entity  # already a ref
+
     def validate(self):
         try:
             self._perform_query(None, 'validate', ValidationError)

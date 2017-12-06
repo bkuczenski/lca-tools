@@ -3,7 +3,6 @@ import re
 from .basic import BasicImplementation
 from .index import IndexImplementation
 from lcatools.background.background_manager import BackgroundManager
-from lcatools.background.product_flow import ProductFlow
 from lcatools.background.proxy import BackgroundProxy
 from lcatools.interfaces import BackgroundInterface, PrivateArchive
 
@@ -17,13 +16,10 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
     The BackgroundInterface exposes LCI computation with matrix ordering and inversion, and LCIA computation with
     enclosed private access to a quantity db.
     """
-    def __init__(self, catalog, archive, **kwargs):
-        super(BackgroundImplementation, self).__init__(catalog, archive, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super(BackgroundImplementation, self).__init__(*args, **kwargs)
 
         self._bm = None
-
-    def _make_pf_ref(self, product_flow):
-        return ProductFlow(None, self.make_ref(product_flow.process), product_flow.flow)
 
     @property
     def _bg(self):
@@ -36,7 +32,7 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
             if self._archive.static:
                 # perform costly operations only when/if required
                 if not hasattr(self._archive, 'bm'):
-                    index = IndexImplementation(self._catalog, self._archive, privacy=0)
+                    index = IndexImplementation(self._archive, privacy=0)
                     self._archive.bm = BackgroundManager(index)
                 self._bm = self._archive.bm
             else:
@@ -104,45 +100,21 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
     def foreground_flows(self, search=None, **kwargs):
         for k in self._bg.foreground_flows:
             if search is None:
-                yield self._make_pf_ref(k)
+                yield k
             else:
                 if bool(re.search(search, str(k), flags=re.IGNORECASE)):
-                    yield self._make_pf_ref(k)
+                    yield k
 
     def background_flows(self, search=None, **kwargs):
         for k in self._bg.background_flows:
             if search is None:
-                yield self._make_pf_ref(k)
+                yield k
             else:
                 if bool(re.search(search, str(k), flags=re.IGNORECASE)):
-                    yield self._make_pf_ref(k)
+                    yield k
 
     def exterior_flows(self, direction=None, search=None, **kwargs):
         for k in self._bg.exterior_flows:
-            if direction is not None:
-                if k.direction != direction:
-                    continue
-            if search is not None:
-                if not bool(re.search(search, str(k), flags=re.IGNORECASE)):
-                    continue
-            yield k
-
-    def cutoffs(self, direction=None, search=None, **kwargs):
-        for k in self._bg.exterior_flows:
-            if self._catalog.is_elementary(k):
-                continue
-            if direction is not None:
-                if k.direction != direction:
-                    continue
-            if search is not None:
-                if not bool(re.search(search, str(k), flags=re.IGNORECASE)):
-                    continue
-            yield k
-
-    def emissions(self, direction=None, search=None, **kwargs):
-        for k in self._bg.exterior_flows:
-            if not self._catalog.is_elementary(k):
-                continue
             if direction is not None:
                 if k.direction != direction:
                     continue

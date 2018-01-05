@@ -44,3 +44,120 @@ Wed 2017-12-06 13:18:06 -0800
 
 Worked on this for too long... FWIW I really need to get going on Swagger.  I am putting this down, eating some food, and then doing my important TODO for the day.
 
+
+==========
+Fri Jan 05 09:33:43 -0800 2018
+
+Long month...
+
+Swagger spec for antelope v2 is coming along great--
+
+reading about JWT right now as the most likely form of authentication for the resource to use
+
+Good discussion of shortcomings, mainly that there is a single secret key (in our case per resource) that can be compromised:
+https://medium.com/@rahulgolwalkar/pros-and-cons-in-using-jwt-json-web-tokens-196ac6d41fb4
+
+Also helpful comparison of JWT and OAuth, which are totally different:
+http://www.seedbox.com/en/blog/2015/06/05/oauth-2-vs-json-web-tokens-comment-securiser-un-api/
+
+lots of discussion etc etc:
+https://auth0.com/blog/ten-things-you-should-know-about-tokens-and-cookies/
+http://www.bubblecode.net/en/2016/01/22/understanding-oauth2/
+
+https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries/
+
+These people are (a) self-styled crypto badasses and (b) dead-set against all things JOSE
+https://paragonie.com/blog/2017/03/jwt-json-web-tokens-is-bad-standard-that-everyone-should-avoid
+
+All that said, JWTs seem like a perfect (at least near-term) solution to our particular security problem, particularly public-key-based JWTs, because they allow the resources to autonomously validate requests without any communication with the server.
+
+The problem: if the tokens are ever supposed to be limited-use, then EITHER the resource has to check with the auth server OR the resource has to become stateful. There is no third option. the TOKEN can't be stateful.
+
+Since we're adamant about resources being stateless, and since we ALREADY operate an auth server, I think we should just go that route.
+
+The JWTs should have three different types:
+
+ - unrestricted access with a privacy level (integer?)-- strong expiry-- server may still need to be contacted for revocation checks
+ - metered access (notifies auth server per query for billing-- server returns 200 OK or 401 if revoked)
+ - limited access (asks auth server per query for sufficiency-- server returns 200 OK or 401 insufficient)
+
+Both of the latter two do away with the "federated" benefit of the JWT, but they preserve query privacy.
+
+Here's how the system will work:
+
+PLAYERS:
+
+AS Authentication server: vault.lc
+RP Resource Provider: ecoinvent.org
+RR Resource: eiv3.2.apos
+UU User: Ralph Fishnet
+CA Client application: antelope container
+
+STAGES:
+
+Stage 1. Initialize resource
+Stage 2. Authenticate session
+Stage 3. Query resource
+
+STEPS:
+
+Stage 1: Initialize Resource
+
+ * RP approaches AS with data to be made available as a resource
+ * AS creates public+private key pair for RR
+ $ AS creates RR and seeds it with the "public" key which remains secret
+ * AS deploys RR
+
+Stage 2: Authenticate session
+
+(mode a: user is already an ecoinvent licensee)
+
+ * UU approaches AS and logs in to RP via OAuth2
+ * OAuth2 grant establishes UU's account status
+ * AS generates an unrestricted JWT with a 1-day expiry
+ * AS provides a resource file to grant CA data access to RR using JWT
+
+(mode b: user is a vault.lc user with pay-per-use for protected resources)
+
+ * UU logs into account and invokes CA
+ * AS provides resource file supporting index interface to RR
+ * AS provides resource file supporting data proxy interface to RR
+
+(mode c: user is a vault.lc user with an ecoinvent limited-use)
+
+ $ during monthly billing, AS generates a limit JWT with a 1-month expiry and a query limit
+ * UU logs into account and invokes CA
+ * AS provides resource file supporting index interface to RR
+ * AS provides resource file to grant CA data access to RR using limit JWT
+ * AS provides resource file supporting data proxy interface to RR
+
+Stage 3: Query Resource
+
+(mode a: user is already an ecoinvent licensee)
+
+ * UU submits query
+ * CA performs query to RR, using unlimited-use JWT (DWR! not revocable!)
+ * RR receives query; decodes JWT; validates permission; [optionally increments auth server]; answers query
+ * CA receives query
+ * UU is happy
+ 
+(mode b: user is a vault.lc user with an ecoinvent pay-per-use)
+
+ * UU submits query
+ $ CA performs query; proxy negotiates payment
+ * proxy returns a JWT
+ * CA forwards query with JWT to RR
+ * RR receives query; decodes JWT; consumes token [notifies auth server]; answers query
+ * CA receives query
+ * UU is happy
+
+(mode c: user is a vault.lc user with an ecoinvent limited-use)
+
+ * UU submits query
+ * CA performs query
+ * RR receives query; decodes JWT; validates permission; increments auth server; answers query
+ * CA receives query
+ * UU is happy
+ - if limit is exhausted, CA removes resource containing limit JWT; go to mode b
+
+

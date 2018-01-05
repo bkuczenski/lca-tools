@@ -105,12 +105,12 @@ Stage 1: Initialize Resource
 
  * RP approaches AS with data to be made available as a resource
  * AS creates public+private key pair for RR
- $ AS creates RR and seeds it with the "public" key which remains secret
+ $ AS creates stateless RR and seeds it with the "public" key which remains secret
  * AS deploys RR
 
 Stage 2: Authenticate session
 
-(mode a: user is already an ecoinvent licensee)
+(mode a: user is already an RP licensee)
 
  * UU approaches AS and logs in to RP via OAuth2
  * OAuth2 grant establishes UU's account status
@@ -119,6 +119,7 @@ Stage 2: Authenticate session
 
 (mode b: user is a vault.lc user with pay-per-use for protected resources)
 
+ $ monthly billing
  * UU logs into account and invokes CA
  * AS provides resource file supporting index interface to RR
  * AS provides resource file supporting data proxy interface to RR

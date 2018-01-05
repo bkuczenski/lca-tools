@@ -157,6 +157,8 @@ class EntityRef(BaseRef):
     """
     An EntityRef is a CatalogRef that has been provided a valid catalog query.  the EntityRef is still semi-abstract
     since there is no meaningful reference to an entity that is not typed.
+
+    Must provide a uuid kwarg to avoid a query lookup, though the uuid need not be valid.
     """
     def __init__(self, external_ref, query, reference_entity, uuid=None, **kwargs):
         """
@@ -188,13 +190,6 @@ class EntityRef(BaseRef):
     @property
     def reference_entity(self):
         return self._reference_entity
-
-    def get_uuid(self):
-        """
-        DEPRECATED
-        :return:
-        """
-        return self.uuid
 
     def elementary(self, iterable):
         """

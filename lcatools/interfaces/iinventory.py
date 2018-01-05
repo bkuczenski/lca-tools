@@ -87,7 +87,7 @@ class InventoryInterface(AbstractQuery):
         return self._perform_query(_interface, 'traverse', InventoryRequired('No access to fragment data'),
                                    fragment, scenario, **kwargs)
 
-    def fragment_lcia(self, fragment, quantity_ref, scenario=None, refresh=False, **kwargs):
+    def fragment_lcia(self, fragment, quantity_ref, scenario=None, **kwargs):
         """
         Perform fragment LCIA by first traversing the fragment to determine node weights, and then combining with
         unit scores.
@@ -98,4 +98,4 @@ class InventoryInterface(AbstractQuery):
         :return:
         """
         return self._perform_query(_interface, 'fragment_lcia', InventoryRequired('No access to fragment data'),
-                                   fragment, quantity_ref, scenario, refresh=refresh, **kwargs)
+                                   fragment, quantity_ref, scenario, **kwargs)

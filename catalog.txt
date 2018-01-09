@@ -33,7 +33,54 @@ _find_single_source is used twice-
 
 get_resource() is callable and also invoked from get_archive()
 
+Tue 2018-01-09 00:06:25 -0800
 
+ok, so that's done.
+the next thing that needs to happen is to test the dl mechanism from github--  programmatically clean up + publish USLCI using the catalog
+
+Tue 2018-01-09 09:55:14 -0800
+
+Hard question here is: where to put archive-specific information (e.g. flow characterization configs) for different archives?  I guess in another repo
+
+Tue 2018-01-09 10:16:31 -0800
+
+Interruption: USLCI is now distributed in JSON-LD format (all that work on ecospold!) which means I need to write a new provider.
+
+Some changes:
+
+ - prefix nonsense should be moved into Archive instead of being redundantly implemented in ilcd, ecospold, and ecospold2.  That's the first task when we get back from VV.
+
+review:
+
+prefix is used in ilcd, ecospold, and ecospold2. The same 3 places Archive is used.
+
+let's audit how each of those modules uses the prefix and how it uses the archive.
+
+ilcd.py:
+  prefix: assigned to internal_prefix
+    internal_prefix: used only in _build_prefix()
+    _build_prefix():  6 uses
+     In list_objects(self, dtype=None):
+     - 1x _de_prefix() (used to remove prefix-- should also get folded into archive)
+     - list_objects
+     
+     - _path_from_parts
+     - _path_from_ref
+     - _path_from_search
+     - _path_from_uri
+  _archive: 10 uses
+   - 4x check OK
+   - 3x check remote
+   - 1x check compressed
+   
+   - 1x listfiles(in_prefix=...)... in list_objects
+     	
+   - 1x readfile(filename) 
+
+
+Tue 2018-01-09 15:02:32 -0800
+
+Well, that wasn't so bad.
 
 
 

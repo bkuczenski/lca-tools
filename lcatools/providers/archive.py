@@ -2,6 +2,9 @@ from __future__ import print_function, unicode_literals
 
 import os
 import re
+import posixpath
+
+
 from py7zlib import Archive7z
 from zipfile import ZipFile
 try:
@@ -12,7 +15,7 @@ except ImportError:
     from urllib2 import urlopen
 
 _ext = re.compile('\.([^.]+)$')
-_protocol = re.compile('^(\w+)://')
+protocol = re.compile('^(\w+)://')
 
 
 def get_ext(fname):
@@ -26,7 +29,7 @@ class Archive(object):
 
     @staticmethod
     def _create_cache_dir(path):
-        d = os.path.join(os.path.dirname(__file__), 'web_cache', _protocol.sub('', path))
+        d = os.path.join(os.path.dirname(__file__), 'web_cache', protocol.sub('', path))
         if not os.path.isdir(d):
             os.makedirs(d)
         return d
@@ -48,7 +51,7 @@ class Archive(object):
             archive = False
         return archive
 
-    def __init__(self, path, query_string=None, cache=True):
+    def __init__(self, path, internal_prefix=None, query_string=None, cache=True):
         """
         Create an Archive object from a path.  Basically encapsulates the compression algorithm and presents
         a common interface to client code:
@@ -63,28 +66,30 @@ class Archive(object):
         .readfile(..., force_download=True)
 
         :param path:
+        :param internal_prefix: if present, silently absorb / conceal the specified prefix (prepend to requests, trim
+         from responses).
         :param query_string: for remote repositories, append the supplied string after '?' in the URL
         :param cache: (True) for remote repositories, cache downloaded files locally and use first
         :return: an archive object
         """
 
         self.path = path
-        self._numfiles = None
+        self._internal_prefix = internal_prefix
 
-        if bool(_protocol.search(path)):
-            self.ext = _protocol.search(path).groups()[0]
+        if bool(protocol.search(path)):
+            self.ext = protocol.search(path).groups()[0]
             self.remote = True
             self.compressed = False
             self._archive = None
             self.OK = True
-            self.prefixes = []
+            self._internal_subfolders = []
             print('Archive refers to a web address using protocol %s' % self.ext)
             self.query_string = query_string
             if self.query_string is not None:
                 print(' with query string %s' % self.query_string)
             self.cache = cache
             if self.cache:
-                self._cache = Archive(self._create_cache_dir(self.path))
+                self._cache = Archive(self._create_cache_dir(self.path), internal_prefix=internal_prefix)
                 print(' caching files locally in %s' % self._cache.path)
             return
 
@@ -95,7 +100,7 @@ class Archive(object):
             self.compressed = False
             self._archive = None
             self.OK = False
-            self.prefixes = []
+            self._internal_subfolders = []
             self.ext = None
             return
 
@@ -105,7 +110,7 @@ class Archive(object):
             self.compressed = False
             self._archive = None
             self.OK = os.access(path, os.R_OK)
-            self.prefixes = [x[0][len(self.path):] for x in os.walk(path) if x[0] != path]
+            self._internal_subfolders = [x[0][len(self.path):] for x in os.walk(path) if x[0] != path]
         else:
             self.compressed = True
             self.ext = get_ext(path)
@@ -116,65 +121,101 @@ class Archive(object):
             }[self.ext](path)
             self.OK = self._archive is not False
             if self.OK:
-                self.prefixes = {
-                    '7z': self._prefix_7z,
-                    'zip': self._prefix_zip
+                self._internal_subfolders = {
+                    '7z': self._int_dirs_7z,
+                    'zip': self._int_dirs_zip
                 }[self.ext]()
 
-    def _prefix_7z(self):
+    @property
+    def internal_prefix(self):
+        return self._internal_prefix
+
+    @internal_prefix.setter
+    def internal_prefix(self, value):
+        """
+        incrementally add to prefix
+        :param value:
+        :return:
+        """
+        if self._internal_prefix is None:
+            self._internal_prefix = value
+        else:
+            self._internal_prefix = self.pathtype.join(self._internal_prefix, value)
+
+    @property
+    def pathtype(self):
+        if self.compressed or self.remote:
+            return posixpath
+        else:
+            return os.path
+
+    def _int_dirs_7z(self):
         s = set()
         for f in self._archive.files:
             s.add(os.path.split(f.filename)[0])
         return list(s)
 
-    def _prefix_zip(self):
+    def _int_dirs_zip(self):
         s = set()
         for f in self._archive.namelist():
             s.add(os.path.split(f)[0])
         return list(s)
 
+    def _prefix(self, file):
+        if self._internal_prefix is None:
+            return file
+        return self.pathtype.join(self._internal_prefix, file)
+
+    def _de_prefix(self, file):
+        if self._internal_prefix is None:
+            return file
+        return re.sub('^' + self.pathtype.join(self._internal_prefix, ''), '', file)
+
+    def _gen_files(self):
+        """
+        Generate files in the archive, removing the internal prefix
+        :return:
+        """
+        if self.remote:
+            raise AttributeError('Unable to list files for remote archives')
+
+        if self.compressed:
+            if self.ext == '7z':
+                lg = (q.filename for q in self._archive.files)
+            elif self.ext == 'zip':
+                # filter out directory entries
+                lg = (q for q in self._archive.namelist() if q[:-1] not in self._internal_subfolders)
+            else:
+                lg = []
+        else:
+            w = os.walk(self.path)
+            lg = []
+            for i in w:
+                if len(i[2]) > 0:
+                    prefix = i[0][len(self.path):]
+                    lg.extend([os.path.join(prefix, z) for z in i[2]])
+        for l in lg:
+            yield self._de_prefix(l)
+
     def listfiles(self, in_prefix=''):
         """
-        List files in the archive.
+        generate files in the archive, removing internal prefix, optionally filtering to specified prefix.
         :param in_prefix: optional prefix to limit
         :return:
         """
         if self.remote:
             if self.cache:
-                print('Listing cached files:')
-                return self._cache.listfiles(in_prefix=in_prefix)
-            print('List files not supported for remote archives.')
-            return []
-
-        if self.compressed:
-            if self.ext == '7z':
-                l = [q.filename for q in self._archive.files]
-            elif self.ext == 'zip':
-                l = [q for q in self._archive.namelist() if q[:-1] not in self.prefixes]
+                g = (l for l in self._cache.listfiles(in_prefix=in_prefix))
             else:
-                l = []
+                g = []
         else:
-            w = os.walk(self.path)
-            l = []
-            for i in w:
-                if len(i[2]) > 0:
-                    prefix = i[0][len(self.path):]
-                    l.extend([os.path.join(prefix, z) for z in i[2]])
-        self._numfiles = len(l)
-        if in_prefix is not None:
-            return [i for i in l if re.match('^' + in_prefix, i)]
-        return l
+            g = self._gen_files()
 
-    def countfiles(self):
-        if self.remote:
-            if self.cache:
-                return self._cache.countfiles()
-            print('List files not supported for remote archives.')
-            return 0
-
-        if self._numfiles is None:
-            self.listfiles()
-        return self._numfiles
+        for l in g:
+            if in_prefix is not None:
+                if not bool(re.match('^' + in_prefix, l)):
+                    continue
+            yield l
 
     def writefile(self, fname, file, mode='wb'):
         if self.remote:
@@ -225,14 +266,14 @@ class Archive(object):
             file = {
                 '7z': lambda x: self._archive.getmember(x),
                 'zip': lambda x: self._archive.open(x)
-            }[self.ext](fname)
+            }[self.ext](self._prefix(fname))
             if file is None:
                 return file
             else:
                 return file.read()
 
         else:
-            file = open(os.path.join(self.path, fname), 'rb')
+            file = open(os.path.join(self.path, self._prefix(fname)), 'rb')
             data = file.read()
             file.close()
             return data

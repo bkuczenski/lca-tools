@@ -18,13 +18,11 @@ except ImportError:  # python2
 
 
 from lcatools.providers.base import LcArchive
-from lcatools.providers.archive import Archive
+from lcatools.providers.archive import Archive, protocol
 from lcatools.providers.xml_widgets import *
 from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcUnit
 from lcatools.providers.interfaces import uuid_regex
 from lcatools.characterizations import DuplicateCharacterizationError
-
-import posixpath
 
 typeDirs = {'Process': 'processes',
             'Flow': 'flows',
@@ -157,7 +155,7 @@ class IlcdArchive(LcArchive):
         if prefix is not None:
             self._serialize_dict['prefix'] = prefix
 
-        self._archive = Archive(self.source)
+        self._archive = Archive(self.source, internal_prefix=prefix)
 
         if not self._archive.OK:
             print('Trying local ELCD reference')
@@ -169,40 +167,31 @@ class IlcdArchive(LcArchive):
             self._archive = Archive(elcd3_remote_fallback, query_string='format=xml')
             if self._archive.OK:
                 self._source = elcd3_remote_fallback
+        if not self._archive.remote:
+            self._archive.internal_prefix = 'ILCD'  # appends
 
-        if self._archive.compressed or self._archive.remote:
-            self._pathtype = posixpath
-        else:
-            self._pathtype = os.path
+    @property
+    def _pathtype(self):
+        return self._archive.pathtype
 
-    def _build_prefix(self):
-        if self._archive.remote:
-            path = ''
-        else:
-            path = 'ILCD'
-        if self.internal_prefix is not None:
-            path = self._pathtype.join(self.internal_prefix, path)
-        return path
-
-    def _de_prefix(self, file):
-        return re.sub('^' + self._pathtype.join(self._build_prefix(), ''), '', file)
-
-    def _path_from_ref(self, ref):
+    @staticmethod
+    def _path_from_ref(ref):
         """
         This fails if the filename has a version specification
         :param ref:
         :return:
         """
-        return self._pathtype.join(self._build_prefix(), ref + '.xml')
+        return ref + '.xml'
 
-    def _path_from_uri(self, uri):
+    @staticmethod
+    def _path_from_uri(uri):
         """
         just need to strip any leading '../' from the uri
         :param uri:
         :return:
         """
         uri = re.sub('^(\.\./)*', '', uri)
-        return self._pathtype.join(self._build_prefix(), uri)
+        return uri
 
     def _path_from_parts(self, dtype, uid, version=None):
         """
@@ -213,24 +202,21 @@ class IlcdArchive(LcArchive):
         :return: a single (prefixed) path
         """
         assert _check_dtype(dtype)
-        postpath = self._pathtype.join(self._build_prefix(), typeDirs[dtype], uid)
+        postpath = self._pathtype.join(typeDirs[dtype], uid)
         if version is not None:
             postpath += '_' + version
         return postpath + '.xml'
-
-    def _path_from_search(self, search_result):
-        return self._pathtype.join(self._build_prefix(), search_result)
 
     def search_by_id(self, uid, dtype=None):
         return [i for i in self.list_objects(dtype=dtype) if re.search(uid, i, flags=re.IGNORECASE)]
 
     def list_objects(self, dtype=None):
         assert self._archive.remote is False, "Cannot list objects for remote archives"
-        in_prefix = self._build_prefix()
+        in_prefix = None
         if dtype is not None:
-            assert _check_dtype(dtype)
-            in_prefix = self._pathtype.join(in_prefix, typeDirs[dtype])
-        return [self._de_prefix(f) for f in self._archive.listfiles(in_prefix=in_prefix)]
+            in_prefix = typeDirs[dtype]
+        for f in self._archive.listfiles(in_prefix=in_prefix):
+            yield f
 
     def _fetch_filename(self, filename):
         return self._archive.readfile(filename)
@@ -252,7 +238,7 @@ class IlcdArchive(LcArchive):
             if len(search_results) > 1:
                 print('Please refine search')
                 return None
-            result = self._path_from_search(search_results[0])
+            result = search_results[0]
             dtype = _extract_dtype(result, self._pathtype)
             if dtype is None:
                 raise ValueError('Search result with no matching dtype')
@@ -281,7 +267,7 @@ class IlcdArchive(LcArchive):
 
         try:
             # if we are a search result, this will succeed
-            o = self._get_objectified_entity(self._path_from_search(term))
+            o = self._get_objectified_entity(term)
         except (KeyError, FileNotFoundError):
             # we are not a search result-- let's build the entity path
             try:

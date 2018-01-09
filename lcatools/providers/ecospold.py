@@ -12,15 +12,14 @@ from __future__ import print_function, unicode_literals
 
 import eight
 import re
-import os
 
 from lxml import objectify
-from lxml.etree import tostring
+# from lxml.etree import tostring
 
 from lcatools.providers.base import NsUuidArchive
 from lcatools.providers.archive import Archive
 from lcatools.entities import LcQuantity, LcFlow, LcProcess
-from lcatools.exchanges import DirectionlessExchangeError
+# from lcatools.exchanges import DirectionlessExchangeError
 
 from lcatools.providers import tail
 from lcatools.providers.xml_widgets import find_tag
@@ -80,25 +79,15 @@ class EcospoldV1Archive(NsUuidArchive):
         :return:
         """
         super(EcospoldV1Archive, self).__init__(source, **kwargs)
-        self._internal_prefix = prefix
         if prefix is not None:
             self._serialize_dict['prefix'] = prefix
         self._q_dict = dict()
-        self._archive = Archive(self.source)
-
-    @property
-    def internal_prefix(self):
-        return self._internal_prefix
-
-    def _build_prefix(self):
-        path = ''
-        if self.internal_prefix is not None:
-            path = os.path.join(self.internal_prefix, path)
-        return path
+        self._archive = Archive(self.source, internal_prefix=prefix)
 
     def list_datasets(self):
         assert self._archive.remote is False, "Cannot list objects for remote archives"
-        return self._archive.listfiles(in_prefix=self._build_prefix())
+        for f in self._archive.listfiles():
+            yield f
 
     def _fetch_filename(self, filename):
         return self._archive.readfile(filename)
@@ -237,18 +226,15 @@ class EcospoldV1Archive(NsUuidArchive):
 
         return p
 
-    def retrieve_or_fetch_entity(self, key, **kwargs):
+    def _fetch(self, key, **kwargs):
         """
         If the argument is an external reference for a process, try loading the file
         :param key:
         :param kwargs:
         :return:
         """
-        entity = self[key]
-        if entity is not None:
-            return entity
         try:
-            self._create_process(os.path.join(self._build_prefix(), key + '.xml'))
+            self._create_process(key + '.xml')
             return self[key]
         except KeyError:
             print('No way to fetch that key. try load_all()')

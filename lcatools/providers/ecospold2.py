@@ -67,11 +67,10 @@ class EcospoldV2Archive(LcArchive):
         :return:
         """
         super(EcospoldV2Archive, self).__init__(source, **kwargs)
-        self.internal_prefix = prefix
-        if self.internal_prefix is not None:
-            self._serialize_dict['prefix'] = self.internal_prefix
+        if prefix is not None:
+            self._serialize_dict['prefix'] = prefix
 
-        self._archive = Archive(self.source)
+        self._archive = Archive(self.source, internal_prefix=prefix)
         self._linked = linked
 
     def fg_proxy(self, proxy):
@@ -83,29 +82,16 @@ class EcospoldV2Archive(LcArchive):
         return self.fg_proxy(proxy)
 
     # no need for _key_to_id - keys in ecospold are uuids
-    def _prefix(self, filename):
-        if self.internal_prefix is not None:
-            try:
-                filename = os.path.join(self.internal_prefix, filename)
-            except TypeError:  # None filename
-                filename = self.internal_prefix
-        return filename
-
-    def _de_prefix(self, string):
-        if self.internal_prefix is None:
-            return string
-        else:
-            return re.sub('^' + os.path.join(self.internal_prefix, ''), '', string)
-
     def _fetch_filename(self, filename):
-        st = self._archive.readfile(self._prefix(filename))
+        st = self._archive.readfile(filename)
         if st is None:
             raise FileNotFoundError
         return st
 
     def list_datasets(self, startswith=None):
         assert self._archive.remote is False, "Cannot list objects for remote archives"
-        return [self._de_prefix(x) for x in self._archive.listfiles(in_prefix=self._prefix(startswith))]
+        for x in self._archive.listfiles(in_prefix=startswith):
+            yield x
 
     def _get_objectified_entity(self, filename):
         try:
@@ -291,7 +277,8 @@ class EcospoldV2Archive(LcArchive):
             flowlist.append(EcospoldExchange(f, d, v, t, is_ref))
         return flowlist
 
-    def _collect_impact_scores(self, o, process, flow):
+    @staticmethod
+    def _collect_impact_scores(o):  # , process, flow):
         """
         the old "1115"
         :param o:
@@ -299,7 +286,7 @@ class EcospoldV2Archive(LcArchive):
         """
 
         scores = []
-        exch = ExchangeValue(process, flow, 'Output', value=1.0)
+        # exch = ExchangeValue(process, flow, 'Output', value=1.0)
 
         for cf in find_tag(o, 'flowData').getchildren():
             if 'impactIndicator' in cf.tag:
@@ -411,7 +398,7 @@ class EcospoldV2Archive(LcArchive):
         return self._create_process(files[0])
     '''
 
-    def retrieve_or_fetch_entity(self, ext_ref, **kwargs):
+    def _fetch(self, ext_ref, **kwargs):
         """
         We want to handle two different kinds of external references: spold filenames (uuid_uuid.spold) and simple
         entity uuids.
@@ -420,22 +407,13 @@ class EcospoldV2Archive(LcArchive):
         :return:
         """
 
-        entity = self.__getitem__(ext_ref)  # this checks upstream if it exists
-        if entity is not None:
-            rx = spold_reference_flow(ext_ref)
-            if rx is not None:
-                if rx in [x.flow.get_uuid() for x in entity.reference_entity]:
-                    # if we found a reference spec and the reference spec is already loaded, great!
-                    return entity
-            else:
-                # the regex didn't give us a reference flow- so presume the user didn't ask for one
-                return entity
         try:
             return self._create_process(ext_ref, **kwargs)
         except FileNotFoundError:
+            p = None
             for f in self.list_datasets(ext_ref):
-                self._create_process(f, **kwargs)
-            return self[ext_ref]
+                p = self._create_process(f, **kwargs)
+            return p
 
     def retrieve_lcia_scores(self, filename, quantities=None):
         """

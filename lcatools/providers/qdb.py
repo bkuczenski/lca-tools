@@ -181,9 +181,11 @@ class Qdb(LcArchive, QuantityInterface):
         self._q = SynList.from_json(from_json(quantities))
 
         super(Qdb, self).__init__(source, ref=ref, **kwargs)
+        ''' # why is this twice?
         if not os.path.exists(source):
             print('Using default reference quantities')
             source = REF_QTYS
+        '''
         self.load_json(from_json(source))
 
         if isinstance(compartments, CompartmentManager):

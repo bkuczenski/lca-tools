@@ -4,57 +4,43 @@ access to physical data.
 
 It is made up of the following components:
 
-  * A resolver, which translates semantic references into resources.  Input: semantic ref. output: CatalogInterface.
-  * an archive factory, which creates static archives on demand based on resource information from the resolver
-  * An internal cache of entities retrieved, by full reference
+  * built on an LciaEngine
+  + local, persistent storage of resources, indexes, cache data + etc
+  + A resolver, which translates semantic references into resources.  Input: semantic ref. output: CatalogInterface.
+  + an interface generator, which creates archive accessors on demand based on resource information from the resolver
+  x An internal cache of entities retrieved, by full reference-- this has been cut
 
 From the catalog_ref file, the catalog should meet the following spec:
           Automatic - entity information
-           catalog.lookup(origin, external_ref) - returns [bool, bool, bool] -> catalog, fg, bg avail.
-           catalog.entity_type(origin, external_ref) - returns entity type
-           catalog.fetch(origin, external_ref) - return catalog entity (fg preferred; fallback to entity)
+           catalog.query(origin) - returns a query interface
+           catalog.lookup(origin, external_ref) - returns the origin of the lowest-priority resource resolving the ref
+           catalog.fetch(origin, external_ref) - return a reference to the object that can be queried + handled
 
           LC Queries:
-           catalog.terminate(origin, external_ref, direction)
-           catalog.originate(origin, external_ref, direction)
-           catalog.mix(origin, external_ref, direction)
-           catalog.exchanges(origin, external_ref)
-           catalog.exchange_values(origin, external_ref, flow, direction, termination=termination)
-           catalog.exchange_values(origin, external_ref, ref_flow, exch_flow, direction,
-                        termination=termination)
-           catalog.ad(origin, external_ref, ref_flow)
-           catalog.bf(origin, external_ref, ref_flow)
-           catalog.lci(origin, external_ref, ref_flow)
-           catalog.lcia(origin, external_ref, ref_flow, lcia_qty)
+           see lcatools.interfaces.*
 
-For each one, the first thing the catalog must do is resolve the origin to a static archive and determine whether the
-entity is available.
 """
 
-import re
 import os
 from shutil import copy2
 import requests
 import hashlib
 # from collections import defaultdict
 
+from lcatools.catalog.lcia_engine import LciaEngine
+
 from lcatools.interfaces.iquery import CatalogQuery, EntityNotFound, INTERFACE_TYPES
 from .lc_resolver import LcCatalogResolver
 from .lc_resource import LcResource
-from lcatools.providers.qdb import Qdb
+from lcatools.providers.qdb import REF_QTYS
 from lcatools.flowdb.compartments import REFERENCE_INT  # reference intermediate flows
-from lcatools.tables.flowables import FlowablesGrid
-from lcatools.entities.editor import FragmentEditor
-
-
-_protocol = re.compile('^(\w+)://')
 
 
 class DuplicateEntries(Exception):
     pass
 
 
-class LcCatalog(object):
+class LcCatalog(LciaEngine):
     """
     Provides REST-style access to LCI information (exclusive of the flow-quantity relation)
 
@@ -137,40 +123,80 @@ class LcCatalog(object):
     def _make_rootdir(self):
         for x in (self._cache_dir, self._index_dir, self._resource_dir, self._archive_dir):
             os.makedirs(x, exist_ok=True)
+        if not os.path.exists(self._compartments):
+            copy2(REFERENCE_INT, self._compartments)
+        if not os.path.exists(self._reference_qtys):
+            copy2(REF_QTYS, self._reference_qtys)
 
-    def __init__(self, rootdir, qdb=None):
+    def __init__(self, rootdir, **kwargs):
         """
         Instantiates a catalog based on the resources provided in resource_dir
         :param rootdir: directory storing LcResource files.
-        :param qdb: quantity database (default is the old FlowDB)
+        :param kwargs: passed to Qdb
         """
         self._rootdir = rootdir
-        self._make_rootdir()
+        self._make_rootdir()  # this will be a git clone / fork
         self._resolver = LcCatalogResolver(self._resource_dir)
-        if not os.path.exists(self._compartments):
-            copy2(REFERENCE_INT, self._compartments)
-        if qdb is None:
-            qdb = Qdb(source=self._reference_qtys, compartments=self._compartments)
-        self._qdb = qdb
+        super(LcCatalog, self).__init__(source=self._reference_qtys, compartments=self._compartments, **kwargs)
         """
         _archives := source -> archive
         _names :=  ref:interface -> source
         _nicknames := nickname -> source
         """
-        self.ed = FragmentEditor(qdb=self._qdb, interactive=False)
-
         self._nicknames = dict()  # keep a collection of shorthands for sources
 
-        self.add_existing_archive(qdb, interfaces=('index', 'quantity'), store=False)
-
-        self._lcia_methods = set()
+        self.add_existing_archive(self._qdb, interfaces=('index', 'quantity'), store=False)
 
     @property
-    def qdb(self):
-        return self._qdb
+    def sources(self):
+        for k in self._resolver.sources:
+            yield k
 
-    def quantities(self, **kwargs):
-        return self._qdb.quantities(**kwargs)
+    @property
+    def references(self):
+        for ref, ints in self._resolver.references:
+            yield ref
+
+    @property
+    def interfaces(self):
+        for ref, ints in self._resolver.references:
+            for i in ints:
+                yield ':'.join([ref, i])
+
+    def show_interfaces(self):
+        for ref, ints in self._resolver.references:
+            print('%s [%s]' % (ref, ', '.join(ints)))
+
+    '''
+    Nicknames
+    '''
+    @property
+    def names(self):
+        """
+        List known references.
+        :return:
+        """
+        for k, ifaces in self._resolver.references:
+            for iface in ifaces:
+                yield ':'.join([k, iface])
+        for k in self._nicknames.keys():
+            yield k
+
+    def add_nickname(self, source, nickname):
+        """
+        quickly refer to a specific data source already present in the archive
+        :param source:
+        :param nickname:
+        :return:
+        """
+        if self._resolver.known_source(source):
+            self._nicknames[nickname] = source
+        else:
+            raise KeyError('Source %s not found' % source)
+
+    '''
+    Create + Add data resources
+    '''
 
     def new_resource(self, *args, store=True, **kwargs):
         """
@@ -183,7 +209,9 @@ class LcCatalog(object):
         res = self._resolver.new_resource(*args, store=store, **kwargs)  # explicit store= for doc purposes
 
         if not store:
-            if len([i for i in self._resolver.resolve(res.reference, 'index', strict=True)]) == 0:  # if no index is resolvable
+            try:
+                next(i for i in self._resolver.resolve(res.reference, 'index', strict=True))
+            except StopIteration:  # if no index is resolvable
                 self._register_index(res.source, 10)  # register indices if they exist and are not stored
 
             # self._ensure_resource(res)
@@ -210,6 +238,9 @@ class LcCatalog(object):
         res = LcResource.from_archive(archive, interfaces, **kwargs)
         self._resolver.add_resource(res, store=store)
 
+    '''
+    Retrieve resources
+    '''
     def _find_single_source(self, origin, interface, source=None):
         r = self._resolver.get_resource(ref=origin, iface=interface, source=source)
         return r.source
@@ -242,58 +273,9 @@ class LcCatalog(object):
         res = next(r for r in self._resolver.resolve(ref, interfaces=interfaces, strict=strict))
         return res.privacy
 
-    def flows_table(self, *args, **kwargs):
-        """
-        Creates a new flowables grid using the local Qdb and gives it to the user.
-        :param args:
-        :param kwargs:
-        :return:
-        """
-        return FlowablesGrid(self._qdb, *args, **kwargs)
-
-    @property
-    def names(self):
-        """
-        List known references.
-        :return:
-        """
-        for k, ifaces in self._resolver.references:
-            for iface in ifaces:
-                yield ':'.join([k, iface])
-        for k in self._nicknames.keys():
-            yield k
-
-    def add_nickname(self, source, nickname):
-        """
-        quickly refer to a specific data source already present in the archive
-        :param source:
-        :param nickname:
-        :return:
-        """
-        if self._resolver.known_source(source):
-            self._nicknames[nickname] = source
-        else:
-            raise KeyError('Source %s not found' % source)
-
-    @property
-    def sources(self):
-        for k in self._resolver.sources:
-            yield k
-
-    @property
-    def references(self):
-        for ref, ints in self._resolver.references:
-            yield ref
-
-    @property
-    def interfaces(self):
-        for ref, ints in self._resolver.references:
-            for i in ints:
-                yield ':'.join([ref, i])
-
-    def show_interfaces(self):
-        for ref, ints in self._resolver.references:
-            print('%s [%s]' % (ref, ', '.join(ints)))
+    '''
+    Manage resources locally
+    '''
 
     def _index_source(self, source, force=False):
         inx_file = self._index_file(source)
@@ -395,8 +377,14 @@ class LcCatalog(object):
                               _internal=True,
                               static=True)
 
-    def gen_interfaces(self, origin, itype, strict=False):
+    '''
+    Main data accessor
+    '''
+
+    def gen_interfaces(self, origin, itype=None, strict=False):
         """
+        Generator of interfaces by spec
+
         :param origin:
         :param itype: single interface or iterable of interfaces
         :param strict: passed to resolver
@@ -420,6 +408,13 @@ class LcCatalog(object):
     public functions -- should these operate directly on a catalog ref instead? I think so but let's see about usage
     """
     def query(self, origin, strict=False, **kwargs):
+        """
+        Returns a query using the first interface to match the origin.
+        :param origin:
+        :param strict:
+        :param kwargs:
+        :return:
+        """
         next(self._resolver.resolve(origin, strict=strict))  # raises UnknownOrigin
         return CatalogQuery(origin, catalog=self, **kwargs)
 
@@ -438,51 +433,3 @@ class LcCatalog(object):
     def fetch(self, origin, external_ref):
         org = self.lookup(origin, external_ref)
         return self.query(org).get(external_ref)
-
-    """
-    Qdb interaction
-    """
-    def is_elementary(self, flow):
-        return self._qdb.c_mgr.is_elementary(flow)
-
-    def load_lcia_factors(self, ref):
-        if ref.link not in self._lcia_methods:
-            for fb in ref.flowables():
-                self._qdb.add_new_flowable(*filter(None, fb))
-            for cf in ref.factors():
-                self._qdb.add_cf(cf)
-            self._lcia_methods.add(ref.link)
-
-    def annotate(self, flow, quantity=None, factor=None, value=None, locale=None):
-        """
-        Adds a flow annotation to the Qdb.
-        Two steps:
-         - adds a characterization to the flow using the given data. Provide either a
-         factor=Characterization, or qty + value + location.
-         If locale is provided with factor, it only applies the factor applying to the given locale. (otherwise, all
-         locations in the CF are applied to the flow)
-         - adds the flow to the local qdb and saves to disk.
-        """
-        if factor is None:
-            if locale is None:
-                locale = 'GLO'
-            if value is None:
-                value = self._qdb.convert(flow, query=quantity, locale=locale)
-            flow.add_characterization(quantity, value=value, origin=self._qdb.ref, location=locale)
-        else:
-            ref_conversion = self._qdb.convert_reference(flow, factor.flow.reference_entity, locale=locale)
-            if locale is None:
-                for l in factor.locations():
-                    flow.add_characterization(factor.quantity, location=l, value=factor[l] * ref_conversion,
-                                              origin=factor.origin(l))
-            else:
-                flow.add_characterization(factor.quantity, location=locale, value=factor[locale] * ref_conversion,
-                                          origin=factor.origin(locale))
-
-        self._qdb.add_entity_and_children(flow)
-        for cf in flow.characterizations():
-            self._qdb.add_cf(cf)
-        self._qdb.save()
-
-    def quantify(self, flowable, quantity, compartment=None):
-        return [c for c in self._qdb.quantify(flowable, quantity, compartment=compartment)]

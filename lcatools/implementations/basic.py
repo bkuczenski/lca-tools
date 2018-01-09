@@ -10,6 +10,7 @@ class BasicImplementation(object):
          0 - no restrictions, fully public
          1 - exchange lists are public, but exchange values are private
          2 - exchange lists and exchange values are private
+         obv this needs to change
         """
         self._archive = archive
         self._privacy = privacy or 0

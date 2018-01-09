@@ -21,14 +21,11 @@ class EntityEditor(object):
         else:
             print('Not updating.')
 
-    def __init__(self, qdb=None, interactive=False):
+    def __init__(self, interactive=False):
         """
-        The class needs a quantity database to give the user access to properly defined quantities and compartments.
-        :param qdb: [None] if None, uses the old FlowDB
+
+        :param interactive: whether to prompt the user for omitted data
         """
-        if qdb is None:
-            qdb = Qdb()
-        self._qdb = qdb
         self._interactive = interactive
 
     def set_interactive(self):
@@ -58,6 +55,16 @@ class FlowEditor(EntityEditor):
     I suppose it needs an instantiation so that it can store customization info. But really these are orphan
     functions and this class is just created to give them a home.
     """
+    def __init__(self, qdb=None, **kwargs):
+        """
+        This class needs a quantity database to give the user access to properly defined quantities and compartments.
+        :param qdb: [None] if None, uses the old FlowDB
+        """
+        super(FlowEditor, self).__init__(**kwargs)
+        if qdb is None:
+            qdb = Qdb()
+        self._qdb = qdb
+
     def new_quantity(self, name=None, unit=None, comment=None):
         name = name or self.input('Enter quantity name: ', 'New Quantity')
         unit = unit or self.input('Unit by string: ', 'unit')
@@ -130,7 +137,7 @@ class FlowEditor(EntityEditor):
         char.value = val
 
 
-class FragmentEditor(FlowEditor):
+class FragmentEditor(EntityEditor):
     def create_fragment(self, flow, direction, uuid=None, parent=None, comment=None, value=None, balance=False,
                         **kwargs):
         """
@@ -193,8 +200,10 @@ class FragmentEditor(FlowEditor):
             # traverse -- may not need to do this anymore if we switch to live traversals for everything
             parent.traverse(None)
 
+        """ # can't hack this without a qdb
         if self._qdb.is_elementary(frag.flow):
             frag.terminate(frag.flow)
+        """
         return frag
 
     @staticmethod

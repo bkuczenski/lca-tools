@@ -34,13 +34,15 @@ class LcResource(object):
     @classmethod
     def from_dict(cls, ref, d):
         """
-        Returns a single LcResource loaded from a dict.  only required fields are 'dataSource' and 'dataSourceType';
+        Returns a single LcResource loaded from a dict.  only required field is 'dataSourceType'.
         other fields are passed to the constructor and either interpreted directly or added as supplemental args
+
+        If 'dataSource' is not present
         :param ref:
         :param d:
         :return:
         """
-        source = d.pop('dataSource')
+        source = d.pop('dataSource', None)
         ds_type = d.pop('dataSourceType')
         return cls(ref, source, ds_type, **d)
 
@@ -59,6 +61,11 @@ class LcResource(object):
         return sorted([cls.from_dict(ref, d) for d in j[ref]], key=lambda x: x.priority)
 
     def _instantiate(self, catalog):
+        if self.source is None:
+            if 'download' in self._args:
+                self._source = catalog.download_file(**self._args['download'])
+            else:
+                raise AttributeError('Resource has no source specified and no download information')
         self._archive = create_archive(self.source, self.ds_type, catalog=catalog, ref=self.reference,
                                        # upstream=catalog.qdb,
                                        **self.init_args)
@@ -93,13 +100,17 @@ class LcResource(object):
         """
 
         :param reference: semantic reference
-        :param source: physical data source
+        :param source: physical data source; 'None' allowed if 'downloadLink' argument provided
         :param ds_type: data source type
         :param interfaces: list which can include 'entity', 'foreground', or 'background'. Default 'foreground'
         :param privacy: privacy level... TBD... 0 = public, 1 = exchange values private, 2 = all exchanges private
         :param priority: priority level.. 0-100 scale, lowest priority resource is loaded first
         :param static: [False] if True, load_all() after initializing
-        :param kwargs: additional keyword arguments to constructor
+        :param kwargs: additional keyword arguments to constructor. Some interesting ones:
+          download: a dict containing 'url' and optional 'md5sum' fields
+          prefix: often used when accessing zipped archives
+
+
         """
         '''
         if not os.path.exists(source):
@@ -109,6 +120,9 @@ class LcResource(object):
         self._archive = None
 
         self._ref = reference
+        if source is None:
+            if 'download' not in kwargs:
+                raise KeyError('Resource must be initialized with either source or download')
         self._source = source
         self._type = ds_type
         self._static = static
@@ -128,6 +142,9 @@ class LcResource(object):
         self._interfaces = interfaces
         self._privacy = int(privacy)
         self._priority = int(priority)
+
+        self._internal = kwargs.pop('_internal', False)
+
         self._args = kwargs
 
     def exists(self, path):
@@ -158,6 +175,10 @@ class LcResource(object):
         yield 'basic'
         for k in self._interfaces:
             yield k
+
+    @property
+    def internal(self):
+        return self._internal
 
     @property
     def privacy(self):
@@ -197,6 +218,8 @@ class LcResource(object):
             "static": self.static
         }
         j.update(self._args)
+        if self.internal:
+            j['_internal'] = True
         return j
 
     def write_to_file(self, path):

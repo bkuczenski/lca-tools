@@ -1,4 +1,44 @@
 ==========
+Fri Jan 05 15:05:07 -0800 2018
+
+New year, new goals:
+
+ - we need to get these tools to demonstration-scale immediately, for USDA
+ - we also finally have a model for authentication that we can implement
+ - it requires an additional API specification, for interaction with the auth/billing server
+
+What I want to do going forward is:
+
+ - come up with walkthroughs using the tool from scratch data
+   * this means being able to procure source files over the web
+   - ok, done (not tested) Sat 2018-01-06 11:27:26 -0800
+
+Another problem / separate problem but one that would probably be interesting to NAL is the preparation of background databases, i.e. US LCI allocations.  Currently that is semi-automated but not fully automated.
+
+And we have all these "porcelain" issues: how to tell the software to create new resources and so on. I should make an LcCatalog that uses the git-python API explicitly; I should create a new git repo for a master catalog.
+
+I need to separate self-generated 'archive' and 'index' resources from authoritative resources, not least because they violate the 'uniqueness' requirement imposed by get_resource-- although that itself is probably broken-- but more concretely because they currently share the same file.
+
+I think the proper thing to do is to enhance the resolver to store a live list of self-created indexes and static archives, instead of shoehorning them into the resource list. That does lose the 'priority/fallback' functionality that we currently have... dunno, maybe it's good to have all the state managed as it currently is, and the only thing we need to change is the get_resource functionality to ignore indexes and static archives.
+
+I think the thing to do is simply flag it with an '_internal' field
+
+Also, there is code duplication around get_resource and _find_single_source--> mechanics of both should be moved into LcResolver I think... with a flag about whether to ignore_internal
+
+Mon 2018-01-08 14:23:21 -0800
+
+_find_single_source is used twice-
+ * in index_resource()
+ * in create_static_archive()
+
+get_resource() is callable and also invoked from get_archive()
+
+
+
+
+
+
+==========
 Tue Dec 05 22:00:20 -0800 2017
 
 OK so the refactor is more or less complete... or is it?

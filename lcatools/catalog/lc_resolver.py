@@ -116,6 +116,33 @@ class LcCatalogResolver(object):
         if not origin_found:
             raise UnknownOrigin(req)
 
+    def get_resource(self, ref=None, iface=None, source=None, strict=True):
+        """
+        The purpose of this function is to allow a user to retrieve a resource by providing enough information to
+        identify it uniquely.  If strict is True (default), then parameters are matched exactly and more than one
+        match raises an exception. If strict is False, then origins are matched approximately and the first
+        (lowest-priority) match is returned.
+
+        The convention is that no two resources should have the same source, so if a source is provided then the
+        output of resources_with_source() is used.  Otherwise, the output of resolve() is used.  Internal resources
+        (indexes and archives) are never returned.
+        :return: a single LcResource
+        """
+        if source is not None:
+            _gen = self.resources_with_source(source)
+        else:
+            _gen = self.resolve(ref, interfaces=iface, strict=strict)
+        matches = sorted([r for r in _gen if not r.internal], key=lambda x: x.priority)
+        if len(matches) > 1:
+            if strict:
+                for k in matches:
+                    for i in k.interfaces:
+                        print('%s:%s [priority %d]' % (k.reference, i, k.priority))
+                raise ValueError('Ambiguous matches for supplied parameters')
+        elif len(matches) == 0:
+            raise KeyError('no resource found')
+        return matches[0]
+
     def write_resource_files(self):
         for ref, resources in self._resources.items():
             j = [k.serialize() for k in resources]

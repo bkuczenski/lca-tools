@@ -34,6 +34,7 @@ entity is available.
 import re
 import os
 from shutil import copy2
+import requests
 import hashlib
 # from collections import defaultdict
 
@@ -91,6 +92,27 @@ class LcCatalog(object):
 
     def cache_file(self, source):
         return os.path.join(self._cache_dir, self._source_hash_file(source))
+
+    def download_file(self, url=None, md5sum=None):
+        """
+        Download a file from a remote location into the catalog and return its local path.  Optionally validate the
+        download with an MD5 digest.
+        :param url:
+        :param md5sum:
+        :return:
+        """
+        local_file = os.path.join(self._download_dir, self._source_hash_file(url))
+        r = requests.get(url, stream=True)
+        md5check = hashlib.md5()
+        with open(local_file, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=1024):
+                if chunk:  # filter out keep-alive new chunks
+                    f.write(chunk)
+                    md5check.update(chunk)
+                    # f.flush() commented by recommendation from J.F.Sebastian
+        if md5sum is not None:
+            assert md5check.hexdigest() == md5sum, 'MD5 checksum does not match'
+        return local_file
 
     @property
     def _archive_dir(self):
@@ -150,22 +172,6 @@ class LcCatalog(object):
     def quantities(self, **kwargs):
         return self._qdb.quantities(**kwargs)
 
-    def _find_single_source(self, origin, interface, source=None):
-        ress = [r for r in self._resolver.resolve(origin, interfaces=interface, strict=True)]
-        sources = set(r.source for r in ress)
-        if len(sources) > 1:
-            if source in sources:
-                return source
-            raise ValueError('Ambiguous resource specification %s:%s' % (origin, interface))
-        if len(sources) == 0:
-            raise KeyError('No source found.')
-        found_source = sources.pop()
-        if source is not None:
-            if found_source == source:
-                return source
-            raise ValueError('Sources do not match:\n%s (provided)\n%s (found)' % (source, found_source))
-        return found_source
-
     def new_resource(self, *args, store=True, **kwargs):
         """
         Create a new data resource by specifying its properties directly to the constructor
@@ -204,33 +210,25 @@ class LcCatalog(object):
         res = LcResource.from_archive(archive, interfaces, **kwargs)
         self._resolver.add_resource(res, store=store)
 
-    def get_resource(self, name, iface=None, strict=False):
+    def _find_single_source(self, origin, interface, source=None):
+        r = self._resolver.get_resource(ref=origin, iface=interface, source=source)
+        return r.source
+
+    def get_resource(self, name, iface=None, source=None, strict=True):
         """
-        Retrieve a physical archive by nickname or ref:interface
-        :param name: takes the form of ref:interface.  If the exact name is not specified, the catalog will find a
-        source whose ref and interface start with name.
-        :param iface: interfaces can also be specified explicitly
+        retrieve a resource by providing enough information to identify it uniquely.  If strict is True (default),
+        then parameters are matched exactly and more than one match raises an exception. If strict is False, then
+        origins are matched approximately and the first (lowest-priority) match is returned.
+
+        :param name: nickname or origin
+        :param iface:
+        :param source:
         :param strict:
-        :return: an LcArchive subclass
+        :return:
         """
         if name in self._nicknames:
-            _gen_rs = self._resolver.resources_with_source(self._nicknames[name])
-        else:
-            parts = name.split(':')
-            ref = parts[0]
-            if len(parts) > 1 and iface is None:
-                iface = parts[1]
-            _gen_rs = self._resolver.resolve(ref, interfaces=iface, strict=strict)
-        rs = [r for r in _gen_rs]
-        if len(rs) == 1:
-            return rs[0]
-        elif len(rs) > 1:
-            for k in rs:
-                for i in k.interfaces:
-                    print('%s:%s' % (k.reference, i))
-            raise ValueError('Ambiguous reference %s refers to multiple sources' % name)
-        elif len(rs) == 0:
-            raise KeyError('%s not found.' % name)
+            return self._resolver.get_resource(source=self._nicknames[name], strict=strict)
+        return self._resolver.get_resource(ref=name, iface=iface, source=source, strict=strict)
 
     def get_archive(self, ref, interface=None, strict=False):
         if interface in INTERFACE_TYPES:
@@ -309,6 +307,12 @@ class LcCatalog(object):
         res.make_index(inx_file)
 
     def _register_index(self, source, priority):
+        """
+        creates a resource entry for an index file, if it exists
+        :param source:
+        :param priority:
+        :return:
+        """
         inx_file = self._index_file(source)
         if os.path.exists(inx_file):
             print('Registering index for %s' % source)
@@ -316,6 +320,7 @@ class LcCatalog(object):
                 store = self._resolver.is_permanent(r)
                 self.new_resource(r.reference, inx_file, 'json', interfaces='index', priority=priority,
                                   store=store,
+                                  _internal=True,
                                   static=True)
 
     def index_resource(self, origin, interface=None, source=None, priority=10, force=False):
@@ -387,6 +392,7 @@ class LcCatalog(object):
             store = self._resolver.is_permanent(res)
             self.new_resource(res.reference, archive_file, 'JSON', interfaces=ifaces, priority=priority,
                               store=store,
+                              _internal=True,
                               static=True)
 
     def gen_interfaces(self, origin, itype, strict=False):

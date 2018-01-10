@@ -26,9 +26,9 @@ class AbstractQuery(object):
     def _perform_query(self, itype, attrname, exc, *args, strict=False, **kwargs):
         if self._debug:
             print('Performing %s query, iface %s' % (attrname, itype))
-        for arch in self._iface(itype, strict=strict):
+        for iface in self._iface(itype, strict=strict):
             try:
-                result = getattr(arch, attrname)(*args, **kwargs)
+                result = getattr(iface, attrname)(*args, **kwargs)
             except NotImplementedError:
                 continue
             except type(exc):

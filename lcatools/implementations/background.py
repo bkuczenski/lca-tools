@@ -41,8 +41,7 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
         return self._bm
 
     '''
-    foreground compat methods
-    '''
+    foreground compat methods -- removed
 
     def exchange_values(self, process, flow, direction, termination=None, **kwargs):
         """
@@ -76,6 +75,7 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
             if x.flow.external_ref == flow and x.direction == direction and x not in sent:
                 sent.add(x)
                 yield x
+    '''
 
     def _ensure_ref_flow(self, ref_flow):
         if ref_flow is not None:

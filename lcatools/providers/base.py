@@ -117,8 +117,21 @@ class LcArchive(ArchiveInterface):
             return self._get_entity(item.uuid)
         return super(LcArchive, self).__getitem__(item)
 
-    @classmethod
-    def _create_unit(cls, unitstring):
+    def _create_unit(self, unitstring):
+        """
+        This returns two things: an LcUnit having the given unit string, and a dict of conversion factors
+        (or None if the class doesn't support it).  The dict should have unit strings as keys, and the values should
+        have the property that each key-value pair has the same real magnitude.  In other words, the [numeric] values
+        should report the number of [keys] that is equal to the reference unit.  e.g. for a reference unit of 'kg',
+        the UnitConversion entry for 'lb' should have the value 2.2046... because 2.2046 lb = 1 kg
+
+        In many cases, this will require the supplied conversion value to be inverted.
+
+        The conversion dict should be stored in the Quantity's UnitConversion property.  See IlcdArchive for an
+        example implementation.
+        :param unitstring:
+        :return:
+        """
         return LcUnit(unitstring), None
 
     def set_upstream(self, upstream):

@@ -275,6 +275,9 @@ class LcCatalog(LciaEngine):
 
     '''
     Manage resources locally
+     - index
+     - cache
+     - static archive (performs load_all())
     '''
 
     def _index_source(self, source, force=False):

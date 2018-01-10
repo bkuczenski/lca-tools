@@ -82,6 +82,25 @@ Tue 2018-01-09 15:02:32 -0800
 
 Well, that wasn't so bad.
 
+Tue 2018-01-09 17:20:20 -0800
+
+Class is implemented, and of COURSE they are doing things that are incompatible: duplicate  entries of the same flow that differ only in their text description.
+
+I will think on this for awhile.  But for now I will use add_dups.
+
+Tue 2018-01-09 20:33:58 -0800
+
+The OLCA file has other problems.  It uses a very naive allocation in which one product (seemingly at random?) is selected to receive all burdens, and the others are unmarked.  This is because the boneheaded data format only expects a single reference exchange per process.
+
+This means we will have to monkey with these processes just as much as we would have had to monkey with the other set: except here we are assigning new reference flows instead of removing them; and then assigning flow properties; and then performing allocations.
+
+There should be an additional repo for data-collection-specific hacks (or maybe one repo per collection) (or maybe the Catalog should know how -- or maybe the RESOURCE should list the name of a supplemental repo! yesssssss.  and that gets handled locally.)
+
+so the resource does a lot-- it needs to store supplemental repos; it needs to store an auth server; it needs to store whatever additional information is required.
+
+Anyway, I don't have the patience to deal with this right now.  It's been almost 6 hours of work today, time to call it off.
+
+
 
 
 

@@ -153,3 +153,36 @@ convert():
 So they are weirdly duplicative, but convert is a bit more thorough-going and flexible; convert_reference only works with flows (or flow_refs) but not flowables.  They could probably be refactored a bit.
 
 
+==========
+Thu Jan 11 10:04:50 -0800 2018
+
+Thinking forward to (almost) stateless Antelope v2 servers-- the thing that makes them not completely stateless is their dependency on an external Qdb.
+
+(1) Antelope containers cANNOT and SHOULD NOT have their own private Qdb-- that perpetuates the problem we have in every LCA software where LCIA computations are performed in secret.
+
+(2) Antelope containers should connect to a centralized Qdb to implement the quantity relation.
+
+(3) The Qdb should accept origin-less quantity specifications (i.e. should have a single namespace) and should be permitted to learn new quantities if a semantic ref is POSTed, returning the newly created quantity's (single-nmamespace) uuid.
+
+(4) Antelope containers themselves can only query LCIA factors; cannot set them.
+
+(5) the reference Qdb is another variable required at init.
+
+So if containers don't have a Qdb, then what do they have?  specifically, where does the flow compatibilization happen?  I think containers need an LciaEngine, INCLUDING a Qdb, even if that Qdb is just a client-wrapper for a remote graph database.  The implication is that
+
+(6) containers need flowable and context synlists.  Of course, these are public, so they can simply be downloaded when the container is created.
+
+So we're back to the original question-- what are the functions of the Qdb?
+
+++ flowable and context harmonization: parse_flow(), c_mgr.find_matching(); find_flowables()
+++ flow-quantity relation: convert(), convert_reference()
+++ lcia:
+--> for static containers:
+ ++ characterize() local flows for autonomous LCIA [not implemented]
+--> for catalogs:
+ ++ add_cf() to import LCIA methods
+ ++ do_lcia() on exchange iterables
+ 
+That's ... pretty much it. That's beautiful.
+
+

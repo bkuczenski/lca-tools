@@ -1,4 +1,73 @@
 ==========
+Thu Jan 11 10:26:15 -0800 2018
+
+Since last September, we have considerably reworked [simplified] the interfaces system, but we are NOT DONE YET.
+
+The following two major changes need to be made, both of which strongly affect LCIA:
+
+ (1) 'flow' as a base entity needs to be abandoned in favor of 'flowable'-- reduce by 10x the number of entities in the db-- and 'context' needs to be added as a new entity.  Flow['Compartment'] is no longer A Thing; instead, an exchange terminates in a context:
+ process-flowable-direction-context for elementary flows;
+ process-flowable-direction-process for terminated intermediate flows;
+ process-flowable-direction-None for cutoff flows (and reference flows)
+
+This vastly simplifies the QuantityInterface implementation.
+
+Moreover-- we have been talking about abandoning Qdb but I think the thing to do is retain Qdb-- and YES, give every antelope container its own private Qdb that it POPULATES by querying a public Qdb-- and have the DetailedLciaResult LOOKUP the factor in the Qdb when the exchange is specified.
+
+Well, maybe that's a bridge too far. But it would be kind of neat if LciaResults were spun out by LciaEngines.
+
+I wonder- let's enumerate all the places LciaResult()s are created, and see if a Qdb is accessible to (m)any of them:
+
+* in LciaResult:
++  - add() 
++  - aggregate()
++  - flatten()
+* in LciaResults:
+  - __getitem__ [for null]
+  - apply_weighting()
+* in fragment_flows:
+  - frag_flow_lcia() --> replaces traversal_to_lcia(); should be part of LciaEngine?
+* in FlowTermination:
+  - compute_unit_score [for null]
+  - _deserialize_score_cache
+* in LcProcess:
+  - lcia()
+* in EcospoldV2Archive:
+  - retrieve_lcia_scores()
+* in Qdb:
+  - do_lcia()
+* in AntelopeV1Client:
+  - fragment_lcia()
+  - lcia()
+  
+
+X in traversal_to_lcia() ==> moved to fragment_flows; unused
+
+OK... we'll look that over a bit later and see if we can shrink that down.  But remember: in cases where the quantity arg is a catalog ref, the Qdb is available via the catalog.
+
+Thu 2018-01-11 13:14:50 -0800
+
+Thinking about this further.... giving the antelope container a Qdb causes problems as well: does it provide a quantity interface? I guess it does- to validate that its factors are the same as a reference.
+
+The whole function of the Qdb is to abstract flow and container descriptors into "flowable" and "context" objects with synonyms.  If we give up the Qdb then we have to re-implement that functionality.
+
+Instead, when we receive a quantity spec- we check to see if it's in our local set of lcia methods- and if not, we retrieve it from our reference Qdb- over the web via the antelope 2.0 interface.  So an antelope client is required to implement the antelope server? that seems dangerous.
+
+They will be different subclasses of LciaEngine-- one for static archives and one for catalogs.  That's the part for me to work on right now.  
+
+The only difference is in load_lcia_factors(). The Static Archive version implements load_lcia_factors(qid) by querying a stored remote Qdb resource.  The Catalog version works as currently written.
+
+
+
+
+
+----------
+==========
+----------
+
+BELOW IS OUT OF DATE
+
+==========
 Tue Sep 19 16:42:04 -0700 2017
 
 Complete mess right about now.

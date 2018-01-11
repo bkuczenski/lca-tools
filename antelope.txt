@@ -169,4 +169,26 @@ Stage 3: Query Resource
 
 RC Constructor:
 
-To create an RC, I need: a one-time key, an auth server
+To create an RC, I need: a one-time key, an auth server...
+Thu 2018-01-11 10:01:04 -0800
+see notes in spiral notebook.
+
+
+==========
+Thu Jan 11 13:34:46 -0800 2018
+
+Components required for an Antelope V2 Server:
+
+ - AntelopeV2Server - main constructor
+   :param auth_server:
+   :param auth_pubkey:
+   :param privacy:
+   :param qdb_server:
+   :param archive_init_args:
+ - AntelopeQuery - replaces CatalogQuery
+   - new QuantityKey - replaces QuantityRef - drop-in as argument in call to load_lcia_factors()
+     :param qdb_server:
+ - flask config + route-to-query mapping
+
+I think that could be more or less it.
+

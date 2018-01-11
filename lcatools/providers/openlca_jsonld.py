@@ -17,10 +17,8 @@ class OpenLcaJsonLdArchive(LcArchive):
     """
     Opens JSON-LD archives formatted according to the OpenLCA schema
     """
-    def __init__(self, source, prefix=None, **kwargs):
-        super(OpenLcaJsonLdArchive, self).__init__(source, **kwargs)
-        self._archive = Archive(source, internal_prefix=prefix)
-
+    def _gen_index(self):
+        self._print('Generating index')
         self._type_index = dict()
         for f in self._archive.listfiles():
             if f == 'context.json':
@@ -28,6 +26,14 @@ class OpenLcaJsonLdArchive(LcArchive):
             ff = f.split('/')
             fg = ff[1].split('.')
             self._type_index[fg[0]] = ff[0]
+
+    def __init__(self, source, prefix=None, skip_index=False, **kwargs):
+        super(OpenLcaJsonLdArchive, self).__init__(source, **kwargs)
+        self._archive = Archive(source, internal_prefix=prefix)
+
+        self._type_index = None
+        if not skip_index:
+            self._gen_index()
 
     def _create_object(self, typ, key):
         return json.loads(self._archive.readfile(os.path.join(typ, key + '.json')))
@@ -93,7 +99,7 @@ class OpenLcaJsonLdArchive(LcArchive):
         ref_q = None
 
         for fp in fps:
-            q = self.retrieve_or_fetch_entity(fp['flowProperty']['@id'])
+            q = self.retrieve_or_fetch_entity(fp['flowProperty']['@id'], typ='flow_properties')
             ref = fp.pop('referenceFlowProperty', False)
             fac = fp.pop('conversionFactor')
             if ref:
@@ -114,11 +120,11 @@ class OpenLcaJsonLdArchive(LcArchive):
         return f
 
     def _add_exchange(self, p, ex):
-        flow = self.retrieve_or_fetch_entity(ex['flow']['@id'])
+        flow = self.retrieve_or_fetch_entity(ex['flow']['@id'], typ='flows')
         value = ex['amount']
         dirn = 'Input' if ex['input'] else 'Output'
 
-        fp = self.retrieve_or_fetch_entity(ex['flowProperty']['@id'])
+        fp = self.retrieve_or_fetch_entity(ex['flowProperty']['@id'], typ='flow_properties')
 
         try:
             v_unit = ex['unit']['name']
@@ -161,14 +167,17 @@ class OpenLcaJsonLdArchive(LcArchive):
         for ex in exch:
             ref = ex.pop('quantitativeReference', False)
             if ref:
-                flow = self.retrieve_or_fetch_entity(ex['flow']['@id'])
+                flow = self.retrieve_or_fetch_entity(ex['flow']['@id'], typ='flows')
                 dirn = 'Input' if ex['input'] else 'Output'
                 p.add_reference(flow, dirn)
 
         return p
 
-    def _fetch(self, key, **kwargs):
-        typ = self._type_index[key]
+    def _fetch(self, key, typ=None, **kwargs):
+        if typ is None:
+            if self._type_index is None:
+                self._gen_index()
+            typ = self._type_index[key]
         try:
             ent = {'processes': self._create_process,
                    'flows': self._create_flow,

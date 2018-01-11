@@ -89,7 +89,7 @@ PLAYERS:
 
 AS Authentication server: vault.lc
 RP Resource Provider: ecoinvent.org
-RR Resource: eiv3.2.apos
+RC Resource Container: stateless Antelope V2 server: eiv3.2.apos
 UU User: Ralph Fishnet
 CA Client application: antelope container
 
@@ -104,9 +104,13 @@ STEPS:
 Stage 1: Initialize Resource
 
  * RP approaches AS with data to be made available as a resource
- * AS creates public+private key pair for RR
- $ AS creates stateless RR and seeds it with the "public" key which remains secret
- * AS deploys RR
+ * AS creates RC with one-time session key
+ * RC creates asymmetric keypair
+ * RC transmits public key with session key to AS
+
+public+private key pair for RC
+ $ AS creates stateless RC and seeds it with the "public" key which remains secret
+ * AS deploys RC
 
 Stage 2: Authenticate session
 
@@ -115,30 +119,30 @@ Stage 2: Authenticate session
  * UU approaches AS and logs in to RP via OAuth2
  * OAuth2 grant establishes UU's account status
  * AS generates an unrestricted JWT with a 1-day expiry
- * AS provides a resource file to grant CA data access to RR using JWT
+ * AS provides a resource file to grant CA data access to RC using JWT
 
 (mode b: user is a vault.lc user with pay-per-use for protected resources)
 
  $ monthly billing
  * UU logs into account and invokes CA
- * AS provides resource file supporting index interface to RR
- * AS provides resource file supporting data proxy interface to RR
+ * AS provides resource file supporting index interface to RC
+ * AS provides resource file supporting data proxy interface to RC
 
 (mode c: user is a vault.lc user with an ecoinvent limited-use)
 
  $ during monthly billing, AS generates a limit JWT with a 1-month expiry and a query limit
  * UU logs into account and invokes CA
- * AS provides resource file supporting index interface to RR
- * AS provides resource file to grant CA data access to RR using limit JWT
- * AS provides resource file supporting data proxy interface to RR
+ * AS provides resource file supporting index interface to RC
+ * AS provides resource file to grant CA data access to RC using limit JWT
+ * AS provides resource file supporting data proxy interface to RC
 
 Stage 3: Query Resource
 
 (mode a: user is already an ecoinvent licensee)
 
  * UU submits query
- * CA performs query to RR, using unlimited-use JWT (DWR! not revocable!)
- * RR receives query; decodes JWT; validates permission; [optionally increments auth server]; answers query
+ * CA performs query to RC, using unlimited-use JWT (DWR! not revocable!)
+ * RC receives query; decodes JWT; validates permission; [optionally increments auth server]; answers query
  * CA receives query
  * UU is happy
  
@@ -147,8 +151,8 @@ Stage 3: Query Resource
  * UU submits query
  $ CA performs query; proxy negotiates payment
  * proxy returns a JWT
- * CA forwards query with JWT to RR
- * RR receives query; decodes JWT; consumes token [notifies auth server]; answers query
+ * CA forwards query with JWT to RC
+ * RC receives query; decodes JWT; consumes token [notifies auth server]; answers query
  * CA receives query
  * UU is happy
 
@@ -156,9 +160,13 @@ Stage 3: Query Resource
 
  * UU submits query
  * CA performs query
- * RR receives query; decodes JWT; validates permission; increments auth server; answers query
+ * RC receives query; decodes JWT; validates permission; increments auth server; answers query
  * CA receives query
  * UU is happy
  - if limit is exhausted, CA removes resource containing limit JWT; go to mode b
 
 
+
+RC Constructor:
+
+To create an RC, I need: a one-time key, an auth server

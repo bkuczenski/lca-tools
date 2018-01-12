@@ -67,9 +67,7 @@ class LcCatalogResolver(object):
         """
         if store:
             resource.write_to_file(self._resource_dir)
-            self._update_semantic_ref(resource.reference)
-        else:
-            self._resources[resource.reference].append(resource)
+        self._resources[resource.reference].append(resource)
 
     def new_resource(self, ref, source, ds_type, store=True, **kwargs):
         new_res = LcResource(ref, source, ds_type, **kwargs)

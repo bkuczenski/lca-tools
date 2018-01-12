@@ -46,7 +46,7 @@ class LcCatalog(LciaEngine):
 
     """
     @property
-    def _resource_dir(self):
+    def resource_dir(self):
         return os.path.join(self._rootdir, 'resources')
 
     @property
@@ -63,31 +63,39 @@ class LcCatalog(LciaEngine):
         """
         h = hashlib.sha1()
         h.update(source.encode('utf-8'))
-        return '%s.json.gz' % h.hexdigest()
+        return h.hexdigest()
 
     @property
     def _index_dir(self):
         return os.path.join(self._rootdir, 'index')
 
     def _index_file(self, source):
-        return os.path.join(self._index_dir, self._source_hash_file(source))
+        return os.path.join(self._index_dir, self._source_hash_file(source) + '.json.gz')
 
     @property
     def _cache_dir(self):
         return os.path.join(self._rootdir, 'cache')
 
     def cache_file(self, source):
-        return os.path.join(self._cache_dir, self._source_hash_file(source))
+        return os.path.join(self._cache_dir, self._source_hash_file(source) + '.json.gz')
 
-    def download_file(self, url=None, md5sum=None):
+    def download_file(self, url=None, md5sum=None, force=False):
         """
         Download a file from a remote location into the catalog and return its local path.  Optionally validate the
         download with an MD5 digest.
         :param url:
         :param md5sum:
+        :param force:
         :return:
         """
         local_file = os.path.join(self._download_dir, self._source_hash_file(url))
+        if os.path.exists(local_file):
+            if force:
+                print('File exists.. re-downloading.')
+            else:
+                print('File already downloaded.  Force=True to re-download.')
+                return local_file
+
         r = requests.get(url, stream=True)
         md5check = hashlib.md5()
         with open(local_file, 'wb') as f:
@@ -121,7 +129,7 @@ class LcCatalog(LciaEngine):
         return self._rootdir
 
     def _make_rootdir(self):
-        for x in (self._cache_dir, self._index_dir, self._resource_dir, self._archive_dir):
+        for x in (self._cache_dir, self._index_dir, self.resource_dir, self._archive_dir, self._download_dir):
             os.makedirs(x, exist_ok=True)
         if not os.path.exists(self._compartments):
             copy2(REFERENCE_INT, self._compartments)
@@ -136,7 +144,7 @@ class LcCatalog(LciaEngine):
         """
         self._rootdir = rootdir
         self._make_rootdir()  # this will be a git clone / fork
-        self._resolver = LcCatalogResolver(self._resource_dir)
+        self._resolver = LcCatalogResolver(self.resource_dir)
         super(LcCatalog, self).__init__(source=self._reference_qtys, compartments=self._compartments, **kwargs)
         """
         _archives := source -> archive
@@ -209,6 +217,12 @@ class LcCatalog(LciaEngine):
         res = self._resolver.new_resource(*args, store=store, **kwargs)  # explicit store= for doc purposes
 
         if not store:
+            '''
+            # WHY are we calling _register_index?
+            if we add a new resource that is NOT stored and does NOT have an index, then _register_index looks for
+            one and registers it if found.  But the way it registers it is via new_resource--
+            so there may be a recursion loop risk here.  This smells like a hack. Is there a better way?
+            '''
             try:
                 next(i for i in self._resolver.resolve(res.reference, 'index', strict=True))
             except StopIteration:  # if no index is resolvable
@@ -243,6 +257,7 @@ class LcCatalog(LciaEngine):
     '''
     def _find_single_source(self, origin, interface, source=None):
         r = self._resolver.get_resource(ref=origin, iface=interface, source=source)
+        r.check(self)
         return r.source
 
     def get_resource(self, name, iface=None, source=None, strict=True):
@@ -300,8 +315,8 @@ class LcCatalog(LciaEngine):
         """
         inx_file = self._index_file(source)
         if os.path.exists(inx_file):
-            print('Registering index for %s' % source)
             for r in self._resolver.resources_with_source(source):
+                print('Registering index %s for %s' % (inx_file, r.source))
                 store = self._resolver.is_permanent(r)
                 self.new_resource(r.reference, inx_file, 'json', interfaces='index', priority=priority,
                                   store=store,

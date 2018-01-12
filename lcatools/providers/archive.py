@@ -3,6 +3,7 @@ from __future__ import print_function, unicode_literals
 import os
 import re
 import posixpath
+import magic
 
 
 from py7zlib import Archive7z
@@ -19,7 +20,16 @@ protocol = re.compile('^(\w+)://')
 
 
 def get_ext(fname):
-    return _ext.search(fname).groups()[0].lower()
+    if bool(_ext.search(fname)):
+        return _ext.search(fname).groups()[0].lower()
+    else:
+        typ = magic.from_file(fname)
+        if typ.startswith('Zip archive'):
+            return 'zip'
+        elif typ.startswith('7-zip archive'):
+            return '7z'
+        else:
+            raise ValueError('No filename extension and unsupported file type %s' % typ)
 
 
 class Archive(object):

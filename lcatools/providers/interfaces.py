@@ -87,7 +87,7 @@ class ArchiveInterface(object):
         """
         return to_uuid(key)
 
-    def __init__(self, source, ref=None, quiet=True, upstream=None, static=False, dataReference=None):
+    def __init__(self, source, ref=None, quiet=True, upstream=None, static=False, dataReference=None, **kwargs):
         """
         An archive is a provenance structure for a collection of entities.  Ostensibly, an archive has a single
         source from which entities are collected.  However, archives can also collect entities from multiple sources,
@@ -141,6 +141,7 @@ class ArchiveInterface(object):
         :param upstream:
         :param static: [False] whether archive is expected to be unchanging.
         :param dataReference: alternative to ref
+        :param kwargs: any other information that should be serialized with the archive
         """
 
         self._source = source
@@ -148,7 +149,7 @@ class ArchiveInterface(object):
 
         self._quiet = quiet  # whether to print out a message every time a new entity is added / deleted / modified
 
-        self._serialize_dict = dict()  # this gets added to
+        self._serialize_dict = kwargs  # this gets added to
 
         self._counter = defaultdict(int)
         self._ents_by_type = defaultdict(set)

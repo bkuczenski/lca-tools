@@ -63,7 +63,9 @@ class LcResource(object):
     def _instantiate(self, catalog):
         if self.source is None:
             if 'download' in self._args:
+                print('Downloading from %s' % self._args['download']['url'])
                 self._source = catalog.download_file(**self._args['download'])
+                self.write_to_file(catalog.resource_dir)  # update resource file
             else:
                 raise AttributeError('Resource has no source specified and no download information')
         self._archive = create_archive(self.source, self.ds_type, catalog=catalog, ref=self.reference,
@@ -95,6 +97,24 @@ class LcResource(object):
 
     def make_interface(self, iface):
         return self._archive.make_interface(iface, privacy=self.privacy)
+
+    @staticmethod
+    def _normalize_interfaces(interfaces):
+        """
+        Ensures that:
+         - interfaces is a list
+         - 'basic' appears
+         - all entries are valid according to INTERFACE_TYPES
+         - no entry appears more than once
+         - appear in order
+        :param interfaces:
+        :return:
+        """
+        if interfaces is None:
+            return ['basic']
+        if isinstance(interfaces, str):
+            interfaces = [interfaces]
+        return [k for k in INTERFACE_TYPES if k == 'basic' or k in interfaces]
 
     def __init__(self, reference, source, ds_type, interfaces=None, privacy=0, priority=0, static=False, **kwargs):
         """
@@ -129,17 +149,7 @@ class LcResource(object):
 
         self._issaved = False
 
-        if interfaces is None:
-            interfaces = ['basic']
-
-        if isinstance(interfaces, str):
-            interfaces = [interfaces]
-
-        for k in interfaces:
-            if k not in INTERFACE_TYPES:
-                raise ValueError('Unknown interface type %s' % k)
-
-        self._interfaces = interfaces
+        self._interfaces = self._normalize_interfaces(interfaces)
         self._privacy = int(privacy)
         self._priority = int(priority)
 
@@ -148,7 +158,14 @@ class LcResource(object):
         self._args = kwargs
 
     def exists(self, path):
-        return os.path.exists(os.path.join(path, self.reference))
+        filename = os.path.join(path, self.reference)
+        if os.path.exists(filename):
+            with open(filename, 'r') as fp:
+                j = json.load(fp)
+
+            if any([self._matches(k) for k in j[self.reference]]):
+                return True
+        return False
 
     @property
     def archive(self):
@@ -172,7 +189,6 @@ class LcResource(object):
 
     @property
     def interfaces(self):
-        yield 'basic'
         for k in self._interfaces:
             yield k
 
@@ -222,6 +238,19 @@ class LcResource(object):
             j['_internal'] = True
         return j
 
+    def _matches(self, k):
+        """
+        Pretty cheesy.  When we serialize a set of resources, we need to make sure not to include self twice.
+        We were using dataSource as a unique identifier for resource entries; but the introduction of download links
+         breaks that because a downloadable resource has no source until it's been downloaded.
+         The solution is to fallback to download.url ONLY IF the resource has no source specified.
+        :param k:
+        :return:
+        """
+        if 'dataSource' in k and 'dataSource' is not None:
+            return k['dataSource'] == self.source
+        return k['download']['url'] == self._args['download']['url']
+
     def write_to_file(self, path):
         """
         Adds the resource to a file whose name is the resource's semantic reference. If the same datasource is
@@ -239,7 +268,7 @@ class LcResource(object):
             with open(filename, 'r') as fp:
                 j = json.load(fp)
 
-            resources = [k for k in j[self.reference] if k['dataSource'] != self.source]
+            resources = [k for k in j[self.reference] if not self._matches(k)]
             resources.append(self.serialize())
         else:
             resources = [self.serialize()]

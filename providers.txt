@@ -1,0 +1,51 @@
+==========
+Tue Jan 09 10:16:59 -0800 2018
+
+The classes in the 'providers' subdirectory all function to open different data sources and extract information into the archive format (or into the interface specification)
+
+This helps me clarify what exactly is required to subclass an LcArchive-- I think it's mainly two things:
+
+ - _fetch(uid)
+ - _load_all()
+
+_load_all() is easy-- just list the processes and load them.
+
+_fetch() is where all the complexity is: need to recursively fetch quantities for flows for exchanges, just like others.
+
+
+Thu 2018-01-11 15:34:51 -0800
+
+Now that we've [finally] gotten the resource generation working right, we need to think about a couple things:
+
+ 1- modifying archives.  It would be really slick if making alterations to an archive automatically assigned it a new semantic reference.  We could do that with archive tools, but there is no real way for an archive-- let alone a resource-- to detect when entities stored within it are modified.  What we can do is create an export function that spins out a new archive by appending a new semantic tag or by incrementing / modding the trailing tag.
+
+ right now we can create archives, with arbitrary names, and they get stored in the catalog directory.  This is just a wrapper around create_source_cache() which is a bit indirect.
+
+ To do above, what we want to do is essentially change the resource's reference-- which means relocating it in the resolver's index.
+
+ THe problem is: non-JSON-type resources should not be writable.  The only kinds of things you should be able to save from a non-writable resource are indices and archives.  (but the save function needs to still be enabled for these resources for that reason).  When you want to make a new archive, you should do so explicitly.
+
+We should somehow log the provenance of the archive? I guess by enforcing similarity in the semantic ref.
+
+So what should we be allowed to do? only append.  And the append
+
+When we create a NEW resource, we should append an 8-character date code to it; spinoff references should have the date removed, additional sgment appended, new date appended.
+
+Just to recap-- what we are doing to local.uslci.ecospold is creating local.uslci.ecospold.clean.20180112, which we do by the following steps:
+ + user supplies new semantic name segment
+ * construct new semantic name
+ * load_all()
+ * alter archive's source
+ * make_cache(_archive_dir/new.semantic.name.json.gz)
+ * resource from existing archive (source = cache, ref = new.semantic.name, dstype = json; interfaces, privacy, priority, args kept)
+ *
+
+Fri 2018-01-12 13:16:11 -0800
+In fact, almost all of this should happen inside the archive itself.  [done]
+
+Now, what we must do is:
+ + user supplies new semantic name segment
+ * archive creates descendant
+ * resource from existing archive
+ * remove archive from old resource
+

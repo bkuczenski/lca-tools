@@ -395,6 +395,27 @@ class LcCatalog(LciaEngine):
                               _internal=True,
                               static=True)
 
+    def create_descendant(self, origin, interface=None, source=None, force=False, signifier=None, strict=True,
+                          privacy=None, priority=None, **kwargs):
+        """
+
+        :param origin:
+        :param interface:
+        :param source:
+        :param force: overwrite if exists
+        :param signifier: semantic descriptor for the new descendant (optional)
+        :param kwargs:
+        :return:
+        """
+        res = self.get_resource(origin, iface=interface, source=source, strict=strict)
+        new_ref = res.archive.create_descendant(self._archive_dir, signifier=signifier, force=force)
+        print('Created archive with reference %s' % new_ref)
+        ar = res.archive
+        priv = privacy or res.privacy
+        prio = priority or res.priority
+        self.add_existing_archive(ar, interfaces=res.interfaces, privacy=priv, priority=prio, **kwargs)
+        res.remove_archive()
+
     '''
     Main data accessor
     '''

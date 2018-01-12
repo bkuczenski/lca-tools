@@ -80,6 +80,9 @@ class LcResource(object):
     def is_loaded(self):
         return self._archive is not None
 
+    def remove_archive(self):
+        self._archive = None
+
     def check(self, catalog):
         if self._archive is None:
             # TODO: try/catch exceptions or return false
@@ -98,23 +101,26 @@ class LcResource(object):
     def make_interface(self, iface):
         return self._archive.make_interface(iface, privacy=self.privacy)
 
-    @staticmethod
-    def _normalize_interfaces(interfaces):
+    def add_interface(self, iface):
+        if iface in INTERFACE_TYPES:
+            self._interfaces.add(iface)
+
+    def _normalize_interfaces(self, interfaces):
         """
         Ensures that:
-         - interfaces is a list
+         - interfaces spec can be string or list
          - 'basic' appears
-         - all entries are valid according to INTERFACE_TYPES
-         - no entry appears more than once
-         - appear in order
         :param interfaces:
         :return:
         """
+        self.add_interface('basic')
         if interfaces is None:
-            return ['basic']
+            return
         if isinstance(interfaces, str):
-            interfaces = [interfaces]
-        return [k for k in INTERFACE_TYPES if k == 'basic' or k in interfaces]
+            self.add_interface(interfaces)
+        else:
+            for k in interfaces:
+                self.add_interface(k)
 
     def __init__(self, reference, source, ds_type, interfaces=None, privacy=0, priority=0, static=False, **kwargs):
         """
@@ -149,7 +155,9 @@ class LcResource(object):
 
         self._issaved = False
 
-        self._interfaces = self._normalize_interfaces(interfaces)
+        self._interfaces = set()
+        self._normalize_interfaces(interfaces)
+
         self._privacy = int(privacy)
         self._priority = int(priority)
 

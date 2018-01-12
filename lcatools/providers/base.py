@@ -363,6 +363,9 @@ class LcArchive(ArchiveInterface):
                                  key=lambda x: x['entityId'])
         return j
 
+    def _serialize_all(self, **kwargs):
+        return self.serialize(exchanges=True, characterizations=True, values=True)
+
 
 class NsUuidArchive(LcArchive):
     """

@@ -14,6 +14,8 @@ from os.path import splitext
 import re
 import json
 import gzip as gz
+import os
+from datetime import datetime
 
 from collections import defaultdict
 from lcatools.implementations import *
@@ -182,6 +184,68 @@ class ArchiveInterface(object):
             return InventoryImplementation(self, privacy=privacy)
         elif iface == 'background':
             return BackgroundImplementation(self, privacy=privacy)
+
+    def _construct_new_ref(self, signifier):
+        new_date = datetime.now().strftime('%Y%m%d')
+        old_tail = self.ref.split('.')[-1]
+        if signifier is None:
+            if old_tail == new_date:
+                new_tail = datetime.now().strftime('%Y%m%d-%H%M')
+            else:
+                new_tail = new_date
+        else:
+            if not bool(re.match('[A-Za-z0-9_-]+', signifier)):
+                raise ValueError('Invalid signifier %s' % signifier)
+            new_tail = '.'.join([signifier, new_date])
+
+        if bool(re.match('[0-9-]{6,}', old_tail)):
+            # strip trailing date
+            new_ref = '.'.join(self.ref.split('.')[:-1])
+        else:
+            # use current if no date found
+            new_ref = self.ref
+        new_ref = '.'.join([new_ref, new_tail])
+        return new_ref
+
+    def create_descendant(self, archive_path, signifier=None, force=False):
+        """
+        Saves the archive to a new source with a new semantic reference.  The new semantic ref is derived by
+         (a) first removing any trailing ref that matches [0-9]{8+}
+         (b) appending the descendant signifier
+         (c) appending the current date in YYYYMMDD format
+
+        After that:
+         1. The new semantic ref is added to catalog_names,
+         2. the source is set to archive_path/semantic.ref.json.gz,
+         3. load_all() is executed,
+         4. the archive is saved to the new source.
+
+        :param archive_path: where to store the archive
+        :param signifier: A nonzero-length string matching [A-Za-z0-9_-]+.  If not supplied, then the semantic ref is
+        unchanged except for the date tag.
+        :param force: overwrite if file exists
+        :return: new semantic ref.
+        """
+        if not os.path.exists(archive_path):
+            os.makedirs(archive_path)
+
+        new_ref = self._construct_new_ref(signifier)
+        if new_ref == self.ref:
+            raise KeyError('Refs are the same!')  # KeyError bc it's a key in catalog_names
+
+        new_filename = new_ref + '.json.gz'
+        new_source = os.path.join(archive_path, new_filename)
+        if os.path.exists(new_source):
+            if force:
+                print('Overwriting existing archive')
+            else:
+                raise EnvironmentError('File %s exists: force=True to overwrite' % new_source)
+
+        self.catalog_names[new_ref] = new_source
+        self._source = new_source
+        self.load_all()
+        self.write_to_file(new_source, gzip=True, complete=True)
+        return new_ref
 
     @property
     def ref(self):
@@ -489,8 +553,19 @@ class ArchiveInterface(object):
         j.update(self._serialize_dict)
         return j
 
-    def write_to_file(self, filename, gzip=False, **kwargs):
-        s = self.serialize(**kwargs)
+    def _serialize_all(self, **kwargs):
+        """
+        To be overridden-- specify args necessary to make a complete copy
+        :param kwargs:
+        :return:
+        """
+        return self.serialize(**kwargs)
+
+    def write_to_file(self, filename, gzip=False, complete=False, **kwargs):
+        if complete:
+            s = self._serialize_all(**kwargs)
+        else:
+            s = self.serialize(**kwargs)
         if gzip is True:
             if not bool(re.search('\.gz$', filename)):
                 filename += '.gz'

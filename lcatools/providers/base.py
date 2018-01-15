@@ -5,11 +5,12 @@ Interim classes with useful building blocks
 from __future__ import print_function, unicode_literals
 
 import uuid
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 
 import six
 
-from lcatools.entities import LcEntity, LcFlow, LcProcess, LcQuantity, LcUnit, entity_types
+from lcatools.entities import LcEntity, LcFlow, LcProcess, LcQuantity, LcUnit, entity_types, MissingAllocation
+from lcatools.exchanges import Exchange
 from lcatools.providers.interfaces import ArchiveInterface, to_uuid
 
 if six.PY2:
@@ -19,6 +20,18 @@ if six.PY2:
 
 class OldJson(Exception):
     pass
+
+
+'''
+LcArchive Stored Configuration.
+
+add these objects with archive.add_config()
+applied in sequence with archive.apply_config()
+'''
+ConfigSetReference = namedtuple("ConfigSetReference", ('process_ref', 'flow_ref', 'direction'))
+ConfigBadReference = namedtuple("ConfigBadReference", ('process_ref', 'flow_ref', 'direction'))
+ConfigFlowCharacterization = namedtuple("ConfigFlowCharacterization", ('flow_ref', 'quantity_ref', 'value'))
+ConfigAllocation = namedtuple("ConfigAllocation", ('process_ref', 'quantity_ref'))
 
 
 class LcArchive(ArchiveInterface):
@@ -54,6 +67,11 @@ class LcArchive(ArchiveInterface):
         return ar
 
     def __init__(self, source, **kwargs):
+        """
+        gotta get rid of that upstream cruft at some point
+        :param source:
+        :param kwargs:
+        """
         self._upstream_hash = dict()  # for lookup use later
         super(LcArchive, self).__init__(source, **kwargs)
         self._config = defaultdict(set)
@@ -126,6 +144,128 @@ class LcArchive(ArchiveInterface):
             for x in entity.exchanges():
                 self.add_entity_and_children(x.flow)
 
+    def add_config(self, config):
+        """
+        Add the supplied config object to the archive's stored configuration. No checking is performed; but only
+        supported config types are applied in apply_config()
+        :param config:
+        :return:
+        """
+        self._config[type(config).__name__].add(config)
+
+    def _config_set_reference(self, set_reference):
+        """
+        A ConfigSetReference indicates that a particular exchange should be marked a reference exchange.  All terms are
+        required.  The flow and direction must uniquely identify an exchange.
+        :param set_reference: a ConfigSetReference
+        :return:
+        """
+        fl = self[set_reference.flow_ref]
+        pr = self[set_reference.process_ref]
+        pr.add_reference(fl, set_reference.direction)
+
+    def _config_bad_reference(self, bad_reference):
+        """
+        A ConfigBadReference provides a procedural mechanism for removing automatically-tagged reference flows, or for
+        marking a byproduct as non-reference or non-allocatable.  The parts are 'process_ref', 'flow_ref', and
+        'direction', but if process_ref is None, then all instances of the flow_ref and direction will be marked
+        non-reference.
+
+        :param bad_reference: a ConfigBadReference
+        :return:
+        """
+        fl = self[bad_reference.flow_ref]
+        if bad_reference.process_ref is None:
+            for p in self.entities_by_type('process'):
+                for x in p.references():
+                    if x.flow is fl and x.direction == bad_reference.direction:
+                        x.process.remove_reference(x)
+        else:
+            pr = self[bad_reference.process_ref]
+            pr.remove_reference(Exchange(pr, fl, bad_reference.direction))
+
+    def _config_flow_characterization(self, flow_char, overwrite=False):
+        """
+        A ConfigFlowCharacterization provides a procedural mechanism for specifying flow quantity characterizations
+        after loading an archive.  The 'flow_ref' and 'quantity_ref' have to lookup successfully in the archive.
+
+        :param flow_char: a ConfigFlowCharacterization
+        :param overwrite:
+        :return:
+        """
+        flow = self[flow_char.flow_ref]
+        qty = self[flow_char.quantity_ref]
+        if flow.has_characterization(qty):
+            if overwrite:
+                flow.del_characterization(qty)
+            else:
+                print('Flow %s already characterized for %s. Skipping.' % (flow, qty))
+                pass
+        flow.add_characterization(qty, value=flow_char.value)
+
+    def _config_allocation(self, allocation, overwrite=False):
+        """
+        A ConfigAllocation provides a procedural mechanism for specifying quantity-wise allocations of processes at
+        load time.  All that is required is a quantity; the process knows how to perform the allocation.  Note that
+        reference flows not characterized with respect to the quantity will receive zero allocation.  So apply flow
+        config first.
+
+        :param allocation: a ConfigAllocation
+        :param overwrite:
+        :return:
+        """
+        p = self[allocation.process_ref]
+        qty = self[allocation.quantity_ref]
+        is_alloc = False
+        if overwrite:
+            for rf in p.reference_entity:
+                p.remove_allocation(rf)
+        else:
+            for rf in p.reference_entity:
+                try:
+                    is_alloc |= p.is_allocated(rf)
+                except MissingAllocation:
+                    is_alloc = True
+                    break
+
+        # now apply the allocation
+        if is_alloc:
+            print('Allocation already detected for %s. Skipping this configuration.' % p)
+        else:
+            p.allocate_by_quantity(qty)
+
+    def apply_config(self):
+        """
+        Apply stored configuration objects to the archive.
+
+        Configuration options should be idempotent; applying them several times should have the same effect as
+        applying them once.
+        :return:
+        """
+        for k in self._config[ConfigSetReference]:
+            self._config_set_reference(k)
+        for k in self._config[ConfigBadReference]:
+            self._config_bad_reference(k)
+        for k in self._config[ConfigFlowCharacterization]:
+            self._config_flow_characterization(k)
+        for k in self._config[ConfigAllocation]:
+            self._config_allocation(k)
+
+    def _serialize_config(self):
+        j = dict()
+        for k, v in self._config.items():
+            j[k] = sorted([list(g) for g in v], key=lambda x: x[0])
+        return j
+
+    def config_from_json(self, j):
+        for k, v in j:
+            typ = {'ConfigSetReference': ConfigSetReference,
+                   'ConfigBadReference': ConfigBadReference,
+                   'ConfigFlowCharacterization': ConfigFlowCharacterization,
+                   'ConfigAllocation': ConfigAllocation}[k]
+            for t in v:
+                self.add_config(typ(*t))
+
     @staticmethod
     def _upstream_key(entity):
         if entity.entity_type == 'quantity':
@@ -172,6 +312,9 @@ class LcArchive(ArchiveInterface):
             for e in j['processes']:
                 self.entity_from_json(e)
         self.check_counter()
+        if 'config' in j:
+            self.config_from_json(j['config'])
+            self.apply_config()
 
     def _quantity_from_json(self, entity_j, uid):
         # can't move this to entity because we need _create_unit- so we wouldn't gain anything
@@ -314,6 +457,7 @@ class LcArchive(ArchiveInterface):
         j['quantities'] = sorted([q.serialize()
                                   for q in self.entities_by_type('quantity')],
                                  key=lambda x: x['entityId'])
+        j['config'] = self._serialize_config()
         return j
 
     def _serialize_all(self, **kwargs):

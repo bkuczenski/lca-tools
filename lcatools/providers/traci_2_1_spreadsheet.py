@@ -5,7 +5,8 @@ This implements a quantity interface
 import re
 from collections import namedtuple
 import xlrd
-from lcatools.providers.base import NsUuidArchive, XlDict
+from lcatools.providers.base import NsUuidArchive
+from lcatools.providers.xl_dict import XlDict
 from lcatools.entities import LcQuantity, LcFlow
 # from lcatools.catalog.quantity import QuantityInterface
 from lcatools.characterizations import Characterization, DuplicateCharacterizationError

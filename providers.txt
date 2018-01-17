@@ -49,3 +49,29 @@ Now, what we must do is:
  * resource from existing archive
  * remove archive from old resource
 
+==========
+Mon Jan 15 15:22:59 -0800 2018
+
+That's all done-- now the problem is persistent configuration.  How should this work?
+
+ - configuration options are established by the archive providers that are being configured.
+
+ - The four core configuration options, established in LcArchive, are:
+    - ConfigSetReference -- specify a reference exchange for a process
+    - ConfigBadReference -- remove the reference designation for an exchange
+    - ConfigFlowCharacterization -- specify a quantity + value (and optional location) for a flow
+      	: note: this will get complicated, requiring context + quantity + value + optional location after refactor
+    - ConfigAllocation -- specify a quantity to be used for partitioning allocation
+ 
+ - a resource author has to manually configure the resource-- this should be done interactively with something that knows all the various config options available.
+
+ - config options are:
+   = named tuples? just sequences of values to be assigned to a particular config method
+   = subclasses? hold their own serialization + validation checking properties
+
+The usage I want to demonstrate is:
+ - configuration is already set and stored in the resource
+ - configuration gets deserialized + added by the archive
+ - resource must be saved manually
+ 
+

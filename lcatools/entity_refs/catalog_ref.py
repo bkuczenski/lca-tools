@@ -10,7 +10,7 @@ from .fragment_ref import FragmentRef
 
 from .base import BaseRef
 
-from lcatools.interfaces.iquery import EntityNotFound
+from lcatools.interfaces.catalog_query import EntityNotFound
 
 
 class CatalogRef(BaseRef):

@@ -19,7 +19,7 @@ from lcatools.providers.ecoinvent_spreadsheet import EcoinventSpreadsheet
 from lcatools.providers.ecospold import EcospoldV1Archive
 from lcatools.providers.ecoinvent_lcia import EcoinventLcia
 from lcatools.providers.foreground import LcForeground
-from lcatools.providers.traci_2_1_spreadsheet import Traci21Factors
+from lcatools.providers.traci import Traci21Factors
 from lcatools.providers.antelope.antelope_v1 import AntelopeV1Client
 # from lcatools.foreground.foreground import ForegroundArchive
 
@@ -95,7 +95,7 @@ def archive_factory(source, ds_type, **kwargs):
         'foreground': LcForeground,
         'lcforeground': LcForeground,
         'traci2': Traci21Factors,
-        'traci21': Traci21Factors,
+        'traci': Traci21Factors,
         'traci21factors': Traci21Factors
     }[ds_type.lower()]
     try:

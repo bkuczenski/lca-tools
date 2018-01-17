@@ -89,6 +89,14 @@ class ArchiveInterface(object):
         """
         return to_uuid(key)
 
+    def get_uuid(self, key):
+        """
+        Deprecated.
+        :param key:
+        :return:
+        """
+        return self._key_to_id(key)
+
     def __init__(self, source, ref=None, quiet=True, upstream=None, static=False, dataReference=None, **kwargs):
         """
         An archive is a provenance structure for a collection of entities.  Ostensibly, an archive has a single

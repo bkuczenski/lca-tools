@@ -4,6 +4,18 @@ class BasicImplementation(object):
         Provides common features for an interface implementation: namely, an archive and a privacy setting. Also
         provides access to certain common methods of the archive.  This should be the base class for interface-specific
         implementations.
+
+        Requires an archive with the following attributes:
+         - ref - report semantic reference
+         - source - report physical data source
+         - static - a boolean indicating whether the full contents of the archive are loaded into memory
+         - get_uuid() - deprecated - only present for compatibility reasons
+         - __getitem__ - retrieve already-loaded entity
+         - retrieve_or_fetch_entity() - _fetch abstract method must be implemented
+
+        All of these requirements are met by the standard ArchiveImplementation, with the exception of the _fetch
+        abstract method.
+
         :param archive: an LcArchive
         :param privacy: [None] Numeric scale indicating the level of privacy protection.  This is TBD... for now the
         scale has the following meaning:

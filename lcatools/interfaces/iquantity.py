@@ -12,15 +12,6 @@ class QuantityInterface(AbstractQuery):
     """
     QuantityInterface
     """
-    def lcia_methods(self, **kwargs):
-        """
-        Retrieve a list of known LCIA methods.  This is going to be implementation-dependent
-        :return:
-        """
-        for i in self._perform_query(_interface, 'lcia_methods', QuantityRequired('Must have quantity interface'),
-                                     **kwargs):
-            yield self.make_ref(i)
-
     def profile(self, flow, **kwargs):
         """
         Generate characterizations for the named flow, with the reference quantity noted

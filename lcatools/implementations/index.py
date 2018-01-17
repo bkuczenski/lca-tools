@@ -12,6 +12,14 @@ class NotForeground(Exception):
 class IndexImplementation(BasicImplementation, IndexInterface):
     """
     A CatalogInterface provides basic-level semantic data about entities
+
+    Only requires the abstract ArchiveImplementation
+
+    Attribute requirements for the archive:
+     - everything required by BasicImplementation
+     - entities_by_type()
+     - count_by_type()
+     - search(), including implicitly _narrow_search()
     """
     def __init__(self, *args, **kwargs):
         super(IndexImplementation, self).__init__(*args, **kwargs)

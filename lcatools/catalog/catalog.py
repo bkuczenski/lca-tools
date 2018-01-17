@@ -29,7 +29,7 @@ import hashlib
 
 from lcatools.catalog.lcia_engine import LciaEngine
 
-from lcatools.interfaces.iquery import CatalogQuery, EntityNotFound, INTERFACE_TYPES
+from lcatools.interfaces.catalog_query import CatalogQuery, EntityNotFound, INTERFACE_TYPES
 from .lc_resolver import LcCatalogResolver
 from .lc_resource import LcResource
 from lcatools.providers.qdb import REF_QTYS

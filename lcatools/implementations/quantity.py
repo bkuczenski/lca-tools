@@ -9,8 +9,6 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
     Unlike entity, foreground, and background interfaces, a quantity interface does not require a static archive
     (since there are no terminations to index) or a background manager (since there are no processes)
 
-    The quantity interface requires a compartment manager to function.
-
     The interface works normally on normally-constituted archives, but also allows the archives to override the default
     implementations (which require load_all)
     """
@@ -44,12 +42,8 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         return self._flowables
 
     def quantities(self, **kwargs):
-        for q_e in self._archive.quantities(**kwargs):
+        for q_e in self._archive.search('quantity', **kwargs):
             yield q_e
-
-    def lcia_methods(self, **kwargs):
-        for l in self._archive.lcia_methods(**kwargs):
-            yield l
 
     def get_quantity(self, quantity, **kwargs):
         """
@@ -57,8 +51,6 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         :param quantity: external_id of quantity
         :return: quantity entity
         """
-        if hasattr(self._archive, 'get_quantity'):
-            return self._archive.get_quantity(quantity)
         return self._archive[quantity]
 
     def profile(self, flow, **kwargs):

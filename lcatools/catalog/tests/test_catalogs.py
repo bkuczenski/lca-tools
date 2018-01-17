@@ -1,7 +1,7 @@
 
 from lcatools.catalog.catalog import LcCatalog
 from lcatools.catalog.lc_resource import LcResource
-from lcatools.interfaces.iquery import CatalogQuery, READONLY_INTERFACE_TYPES
+from lcatools.interfaces.catalog_query import CatalogQuery, READONLY_INTERFACE_TYPES
 
 
 import os

@@ -1,6 +1,5 @@
-
-from lcatools.providers.qdb import Qdb
 from lcatools.tables.flowables import FlowablesGrid
+from lcatools.qdb import Qdb
 
 
 class LciaEngine(object):

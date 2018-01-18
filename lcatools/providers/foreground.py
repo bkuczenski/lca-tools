@@ -5,8 +5,8 @@ import json
 import os
 import re
 
-from lcatools.providers.base import LcArchive, to_uuid, entity_types
-from lcatools.entities import LcFragment
+from lcatools.providers.base import LcArchive, to_uuid
+from lcatools.entities import LcFragment, entity_types
 from lcatools.entity_refs import CatalogRef
 from lcatools.implementations import ForegroundImplementation
 
@@ -33,6 +33,8 @@ class LcForeground(LcArchive):
 
     Foreground models can be constructed flow by flow (observed from unit process inventories
     """
+    _entity_types = entity_types
+
     def _load_json_file(self, filename):
         with open(filename, 'r') as fp:
             self.load_json(json.load(fp))
@@ -63,14 +65,17 @@ class LcForeground(LcArchive):
     def _fragment_dir(self):
         return os.path.join(self.source, 'fragments')
 
-    def __init__(self, fg_path, catalog=None, **kwargs):
+    def __init__(self, fg_path, catalog=None, ns_uuid=None, **kwargs):
         """
 
         :param fg_path:
         :param catalog: A foreground archive requires a catalog to deserialize saved fragments. If None, archive will
         still initialize (and will even be able to save fragments) but loading fragments will fail.
+        :param ns_uuid: Foreground archives may not be nsuuid archives
         :param kwargs:
         """
+        if ns_uuid is not None:
+            print('Ignoring ns_uuid specification')
         super(LcForeground, self).__init__(fg_path, **kwargs)
         self._catalog = catalog
         self._ext_ref_mapping = dict()
@@ -113,14 +118,13 @@ class LcForeground(LcArchive):
             current = self[entity.get_uuid()]
             current.merge(entity)
 
-    def add_entity_and_children(self, entity):
+    def _add_children(self, entity):
         if entity.entity_type == 'fragment':
-            self.add(entity)
             self.add_entity_and_children(entity.flow)
             for c in entity.child_flows:
                 self.add_entity_and_children(c)
         else:
-            super(LcForeground, self).add_entity_and_children(entity)
+            super(LcForeground, self)._add_children(entity)
 
     def check_counter(self, entity_type=None):
         super(LcForeground, self).check_counter(entity_type=entity_type)

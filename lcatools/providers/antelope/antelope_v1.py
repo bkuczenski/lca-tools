@@ -1,13 +1,14 @@
-from lcatools.providers.interfaces import ArchiveInterface
-from lcatools.interfaces import IndexInterface, InventoryInterface, QuantityInterface, EntityNotFound
-from lcatools.entity_refs import CatalogRef
-from lcatools.fragment_flows import FragmentFlow
-from lcatools.lcia_results import LciaResult
-from lcatools.exchanges import ExchangeValue
-from lcatools.characterizations import Characterization
 import json
 from collections import defaultdict, namedtuple
-from math import isclose
+
+from lcatools.providers.interfaces import ArchiveInterface
+from lcatools.interfaces import IndexInterface, InventoryInterface, QuantityInterface
+from lcatools.entity_refs import CatalogRef
+from lcatools.fragment_flows import FragmentFlow
+
+from .inventory import AntelopeInventoryImplementation
+from .quantity import AntelopeQuantityImplementation
+from .exceptions import AntelopeV1Error
 
 try:
     from urllib.request import urlopen, urljoin
@@ -15,27 +16,6 @@ try:
 except ImportError:
     from urllib2 import urlopen
     from urlparse import urlparse, urljoin
-
-
-class AntelopeV1Error(Exception):
-    pass
-
-
-class FragmentFlowProxy(object):
-    def __init__(self, entity_type, external_ref):
-        self._etype = entity_type
-        self._eref = external_ref
-
-    @property
-    def entity_type(self):
-        return self._etype
-
-    @property
-    def external_ref(self):
-        return self._eref
-
-    def __str__(self):
-        return '%s %s' % (self.external_ref, self.entity_type)
 
 
 def remote_ref(url):
@@ -80,6 +60,14 @@ class AntelopeV1Client(ArchiveInterface, IndexInterface, InventoryInterface, Qua
             'fragment': False
         }
 
+    def make_interface(self, iface, privacy=None):
+        if iface == 'inventory':
+            return AntelopeInventoryImplementation(self, privacy=privacy)
+        elif iface == 'quantity':
+            return AntelopeQuantityImplementation(self, privacy=privacy)
+        else:
+            return super(AntelopeV1Client, self).make_interface(iface, privacy=privacy)
+
     def _make_ref(self, external_ref, entity_type, reference_entity, **kwargs):
         return CatalogRef.from_query(external_ref, self._query, entity_type, reference_entity, **kwargs)
 
@@ -107,7 +95,7 @@ class AntelopeV1Client(ArchiveInterface, IndexInterface, InventoryInterface, Qua
                         continue
                 yield v
         else:
-            for j in self._get_endpoint(endp, cache=False):
+            for j in self.get_endpoint(endp, cache=False):
                 yield self._parse_and_save_entity(j)
             self._fetched_all[entity_type] = True
 
@@ -118,7 +106,7 @@ class AntelopeV1Client(ArchiveInterface, IndexInterface, InventoryInterface, Qua
     def _load_all(self, **kwargs):
         raise AntelopeV1Error('Cannot load all entities from remote Antelope server')
 
-    def _get_endpoint(self, endpoint, cache=True):
+    def get_endpoint(self, endpoint, cache=True):
         """
         Generally we do not want to cache responses that get parsed_and_saved because that process pop()s
         all the relevant information out of them.
@@ -136,16 +124,16 @@ class AntelopeV1Client(ArchiveInterface, IndexInterface, InventoryInterface, Qua
         return j
 
     def _fetch(self, entity, **kwargs):
-        j = self._get_endpoint(entity, cache=False)[0]
+        j = self.get_endpoint(entity, cache=False)[0]
         return self._parse_and_save_entity(j)
 
     def _get_comment(self, processId):
         target = '/'.join(['processes', processId, 'comment'])
-        j = self._get_endpoint(target)
+        j = self.get_endpoint(target)
         return j['comment']
 
     def _get_impact_category(self, cat_id):
-        cats = self._get_endpoint('impactcategories')
+        cats = self.get_endpoint('impactcategories')
         cat_id = int(cat_id)
         if cats[cat_id - 1]['impactCategoryID'] == cat_id:
             return cats[cat_id - 1]['name']
@@ -154,15 +142,13 @@ class AntelopeV1Client(ArchiveInterface, IndexInterface, InventoryInterface, Qua
         except StopIteration:
             raise ValueError('Unknown impact category ID %d' % cat_id)
 
-    def _get_stage_name(self, stage_id):
-        stgs = self._get_endpoint('stages')
-        stage_id = int(stage_id)
-        if stgs[stage_id - 1]['fragmentStageID'] == stage_id:
-            return stgs[stage_id - 1]['name']
-        try:
-            return next(j['name'] for j in stgs if j['fragmentStageID'] == stage_id)
-        except StopIteration:
-            raise ValueError('Unknown fragment stage ID %d' % stage_id)
+    def make_fragment_flow(self, ff):
+        """
+        This needs to be in-house because it uses the query mechanism
+        :param ff:
+        :return:
+        """
+        return FragmentFlow.from_antelope_v1(ff, self._make_ref)
 
     '''
     Entity handling
@@ -258,144 +244,3 @@ class AntelopeV1Client(ArchiveInterface, IndexInterface, InventoryInterface, Qua
         ref.set_config(flow, dirn)
         self._cached['fragments'][frag_id] = ref
         return ref
-
-    '''
-    LCIA handling
-    '''
-    def _get_lcia_quantity(self, quantity_ref):
-        if isinstance(quantity_ref, str):
-            return self.retrieve_or_fetch_entity(quantity_ref)
-        elif quantity_ref.origin == self.ref:
-            return self.retrieve_or_fetch_entity(quantity_ref.external_ref)
-        else:
-            raise EntityNotFound
-
-    def _add_lcia_component(self, res, component):
-        if 'processID' in component:
-            entity = self.retrieve_or_fetch_entity('processes/%s' % component['processID'])
-            loc = entity['SpatialScope']
-        elif 'fragmentFlowID' in component:  # not currently implemented
-            entity = FragmentFlowProxy('FragmentFlow', 'fragmentflows/%s' % component['fragmentFlowID'])
-            loc = 'GLO'
-        elif 'fragmentStageID' in component:  # currently the default
-            entity = FragmentFlowProxy('Stage', self._get_stage_name(component['fragmentStageID']))
-            loc = 'GLO'
-        else:
-            raise ValueError('Unable to handle unrecognized LCIA Result Type\n%s' % component)
-
-        if len(component['lciaDetail']) == 0:
-            res.add_summary(entity.external_ref, entity, 1.0, component['cumulativeResult'])
-        else:
-            if entity.entity_type != 'process':
-                raise TypeError('Antelope v1 should not have details for non-process entities\n%s' % entity)
-            res.add_component(entity.external_ref, entity)
-            for d in component['lciaDetail']:
-                self._add_lcia_detail(res, entity, d, loc=loc)
-
-    def _add_lcia_detail(self, res, entity, detail, loc='GLO'):
-        flow = self.retrieve_or_fetch_entity('flows/%s' % detail['flowID'])
-        exch = ExchangeValue(entity, flow, detail['direction'], value=detail['quantity'])
-        fact = Characterization(flow, res.quantity, value=detail['factor'], location=loc)
-        res.add_score(entity.external_ref, exch, fact, loc)
-
-    @staticmethod
-    def _check_total(res, check):
-        if not isclose(res, check, rel_tol=1e-8):
-            raise AntelopeV1Error('Total and Check do not match! %g / %g' % (res, check))
-
-    '''
-    Interface implementations
-    '''
-    def exchanges(self, process, **kwargs):
-        pass
-
-    def exchange_values(self, process, flow, direction, termination=None, **kwargs):
-        pass
-
-    def inventory(self, process, ref_flow=None, **kwargs):
-        pass
-
-    def traverse(self, fragment, scenario=None, **kwargs):
-        if scenario is not None:
-            endpoint = 'scenarios/%s/%s/fragmentflows' % (scenario, fragment)
-        else:
-            endpoint = '%s/fragmentflows' % fragment
-        ffs = self._get_endpoint(endpoint)
-        for ff in ffs:
-            if 'fragmentStageID' in ff:
-                ff['StageName'] = self._get_stage_name(ff['fragmentStageID'])
-        return [FragmentFlow.from_antelope_v1(ff, self._make_ref) for ff in ffs]
-
-    def lcia(self, process, ref_flow, quantity_ref, refresh=False, **kwargs):
-        """
-        Antelope v1 doesn't support or even have any knowledge of process reference-flows. this is a somewhat
-        significant design flaw.  well, no matter.  each antelope process must therefore represent an allocated single
-        operation process that has an unambiguous reference flow.  This is a problem to solve on the server side;
-        for now we just ignore the ref_flow argument.
-
-        If the quantity ref is one of the ones natively known by the antelope server-- i.e. if it is a catalog ref whose
-        origin matches the origin of the current archive-- then it is trivially used.  Otherwise, the lcia call reduces
-        to obtaining the inventory and computing LCIA locally.
-        :param process:
-        :param ref_flow:
-        :param quantity_ref:
-        :param refresh:
-        :param kwargs:
-        :return:
-        """
-        lcia_q = self._get_lcia_quantity(quantity_ref)
-        endpoint = '%s/%s/lciaresults' % (process, lcia_q.external_ref)
-        lcia_r = self._get_endpoint(endpoint, cache=False)
-
-        res = LciaResult(lcia_q, scenario=lcia_r.pop('scenarioID'))
-        total = lcia_r.pop('total')
-
-        if len(lcia_r['lciaScore']) > 1:
-            raise AntelopeV1Error('Process LCIA result contains too many components\n%s' % process)
-
-        component = lcia_r['lciaScore'][0]
-        cum = component['cumulativeResult']
-        self._check_total(cum, total)
-
-        if 'processes/%s' % component['processID'] != process:
-            raise AntelopeV1Error('Reference mismatch: %s begat %s' % (process, component['processID']))
-
-        self._add_lcia_component(res, component)
-
-        self._check_total(res.total(), total)
-        return res
-
-    def fragment_lcia(self, fragment, quantity_ref, scenario=None, refresh=False, **kwargs):
-        if scenario is None:
-            scenario = '1'
-        lcia_q = self._get_lcia_quantity(quantity_ref)
-        endpoint = 'scenarios/%s/%s/%s/lciaresults' % (scenario, fragment, lcia_q.external_ref)
-        lcia_r = self._get_endpoint(endpoint, cache=False)
-
-        res = LciaResult(lcia_q, scenario=lcia_r.pop('scenarioID'))
-        total = lcia_r.pop('total')
-
-        for component in lcia_r['lciaScore']:
-            self._add_lcia_component(res, component)
-
-        self._check_total(res.total(), total)
-
-        return res
-
-    def factors(self, quantity, flowable=None, compartment=None, **kwargs):
-        pass
-
-    def profile(self, flow, **kwargs):
-        f = self.retrieve_or_fetch_entity(flow)
-        endpoint = '%s/flowpropertymagnitudes' % flow
-        fpms = self._get_endpoint(endpoint)
-        for cf in fpms:
-            q = self.retrieve_or_fetch_entity('flowproperties/%s' % cf['flowProperty']['flowPropertyID'])
-            if 'location' in cf:
-                location = cf['location']
-            else:
-                location = 'GLO'
-            if not f.has_characterization(q):
-                f.add_characterization(q, value=cf['magnitude'], location=location)
-        for cf in f.characterizations():
-            yield cf

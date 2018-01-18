@@ -11,12 +11,13 @@ web paper, to a collection of process data, to wit:
 from __future__ import print_function, unicode_literals
 
 import eight
+import uuid
 import re
 
 from lxml import objectify
 # from lxml.etree import tostring
 
-from lcatools.providers.base import NsUuidArchive
+from lcatools.providers.base import LcArchive
 from lcatools.providers.archive import Archive
 from lcatools.entities import LcQuantity, LcFlow, LcProcess
 # from lcatools.exchanges import DirectionlessExchangeError
@@ -61,7 +62,7 @@ class EcospoldVersionError(Exception):
     pass
 
 
-class EcospoldV1Archive(NsUuidArchive):
+class EcospoldV1Archive(LcArchive):
     """
     Create an Ecospold Archive object from a path.  By default, assumes the path points to a literal
     .7z file, of the type that one can download from the ecoinvent website.  Creates an accessor for
@@ -71,14 +72,17 @@ class EcospoldV1Archive(NsUuidArchive):
     nsmap = 'http://www.EcoInvent.org/EcoSpold01'  # only valid for v1 ecospold files
     spold_version = tail.search(nsmap).groups()[0]
 
-    def __init__(self, source, prefix=None, **kwargs):
+    def __init__(self, source, prefix=None, ns_uuid=None, **kwargs):
         """
         Just instantiates the parent class.
         :param source: physical data source
         :param prefix: difference between the internal path (ref) and the ILCD base
+        :param ns_uuid: NS UUID not allowed for ecospold ve
         :return:
         """
-        super(EcospoldV1Archive, self).__init__(source, **kwargs)
+        if ns_uuid is None:
+            ns_uuid = uuid.uuid4()
+        super(EcospoldV1Archive, self).__init__(source, ns_uuid=ns_uuid, **kwargs)
         if prefix is not None:
             self._serialize_dict['prefix'] = prefix
         self._q_dict = dict()
@@ -108,7 +112,7 @@ class EcospoldV1Archive(NsUuidArchive):
             q = self._q_dict[unitstring]
         else:
             ref_unit, _ = self._create_unit(unitstring)
-            uid = self._key_to_id(unitstring)
+            uid = self._key_to_nsuuid(unitstring)
 
             q = LcQuantity(uid, Name='EcoSpold Quantity %s' % unitstring,
                            ReferenceUnit=ref_unit, Comment=self.spold_version)
@@ -129,7 +133,7 @@ class EcospoldV1Archive(NsUuidArchive):
         :return:
         """
         number = int(exch.get('number'))
-        uid = self._key_to_id(number)
+        uid = self._key_to_nsuuid(number)
         try_f = self[uid]
         if try_f is not None:
             f = try_f
@@ -197,7 +201,7 @@ class EcospoldV1Archive(NsUuidArchive):
         p_meta = o.dataset.metaInformation.processInformation
         n = p_meta.referenceFunction.get('name')
 
-        u = self._key_to_id(n)
+        u = self._key_to_nsuuid(n)
 
         try_p = self[u]
         if try_p is not None:

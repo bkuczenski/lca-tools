@@ -1,6 +1,6 @@
 from __future__ import print_function, unicode_literals
 
-from lcatools.providers.base import LcArchive, NsUuidArchive
+from lcatools.providers.base import LcArchive, LcArchive
 from lcatools.providers.xl_dict import XlDict
 from lcatools.entities import LcProcess, LcFlow, LcQuantity
 from lcatools.providers.ecospold2 import EcospoldV2Archive
@@ -14,7 +14,7 @@ import uuid
 import os
 
 
-class EcoinventSpreadsheet(NsUuidArchive):
+class EcoinventSpreadsheet(LcArchive):
     """
     A class for implementing the basic interface based on the contents of an ecoinvent
     "activity overview" spreadsheet. Note the lack of specification for such a spreadsheet.
@@ -27,17 +27,21 @@ class EcoinventSpreadsheet(NsUuidArchive):
         print('Reading %s ...' % sheetname)
         return XlDict.from_sheetname(self._xl, sheetname)
 
-    def __init__(self, source, ref=None, version='Unspecified', internal=False, data_dir=None, model=None, **kwargs):
+    def __init__(self, source, ref=None, version='Unspecified', internal=False, data_dir=None, model=None,
+                 ns_uuid=None, **kwargs):
         """
         :param source:
         :param ref: hard-coded 'local.ecoinvent.[version].[model].spreadsheet'; specify at instantiation to override
         :param version:
         :param internal:
+        :param ns_uuid: required
         :param kwargs: quiet, upstream
         """
+        if ns_uuid is None:
+            ns_uuid = uuid.uuid4()
         if ref is None:
             ref = '.'.join(['local', 'ecoinvent', version, model, 'spreadsheet'])
-        super(EcoinventSpreadsheet, self).__init__(source, ref=ref, **kwargs)
+        super(EcoinventSpreadsheet, self).__init__(source, ref=ref, ns_uuid=ns_uuid, **kwargs)
         self.version = version
         self.internal = internal
         self._xl = None
@@ -241,7 +245,7 @@ class EcoinventSpreadsheet(NsUuidArchive):
         :param unitstring:
         :return:
         """
-        u = self._key_to_id(unitstring)
+        u = self._key_to_nsuuid(unitstring)
         try_q = self[u]
         if try_q is None:
             ref_unit, _ = self._create_unit(unitstring)
@@ -292,7 +296,7 @@ class EcoinventSpreadsheet(NsUuidArchive):
         print('Handling intermediate exchanges [public spreadsheet]')
         for index, row in _intermediate.iterrows():
             n = row['name']
-            u = self._key_to_id(n)
+            u = self._key_to_nsuuid(n)
             self._create_flow(u, row['unitName'], n, Name=n, CasNumber=row['CAS'],
                               Compartment=['Intermediate flow'], Comment=row['comment'],
                               Synonyms=row['synonyms'])
@@ -304,7 +308,7 @@ class EcoinventSpreadsheet(NsUuidArchive):
         print('Handling elementary exchanges [public spreadsheet]')
         for index, row in _elementary.iterrows():
             key = self._elementary_key(row)
-            u = self._key_to_id(key)
+            u = self._key_to_nsuuid(key)
             cat = [row['compartment'], row['subcompartment']]
             self._create_flow(u, row['unitName'], key, Name=row['name'], CasNumber=row['casNumber'],
                               Compartment=cat, Comment='', Formula=row['formula'],
@@ -320,7 +324,7 @@ class EcoinventSpreadsheet(NsUuidArchive):
         # inter = _intermediate[_intermediate[:2]].drop_duplicates()
         for index, row in _intermediate.iterrows():
             n = row['name']
-            u = self._key_to_id(n)
+            u = self._key_to_nsuuid(n)
             self._create_flow(u, row['unit'], n, Name=n, Compartment=['Intermediate flow'],
                               CasNumber='', Comment='')
 
@@ -335,7 +339,7 @@ class EcoinventSpreadsheet(NsUuidArchive):
 
         for index, row in _elementary.iterrows():
             key = self._elementary_key(row)
-            u = self._key_to_id(key)
+            u = self._key_to_nsuuid(key)
             n = row['name']
             cat = [row['compartment'], row['subcompartment']]
             self._create_flow(u, row['unit'], key, Name=n, Compartment=cat,
@@ -395,7 +399,7 @@ class EcoinventSpreadsheet(NsUuidArchive):
                 exch_name = row['product name']
                 ref_check = 'group'
 
-            exch_flow = self[self._key_to_id(exch_name)]
+            exch_flow = self[self._key_to_nsuuid(exch_name)]
 
             p.add_exchange(exch_flow, 'Output')
 

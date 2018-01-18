@@ -186,3 +186,68 @@ So we're back to the original question-- what are the functions of the Qdb?
 That's ... pretty much it. That's beautiful.
 
 
+==========
+Thu Jan 18 11:33:20 -0800 2018
+
+The Qdb fully implements the quantity interface, but the quantity interface is radically changing as we pull contexts out, and it isn't left with much.  However, thinking about antelope v1 and the problems with its LCIA references is clarifying:
+
+Antelope V1 implements standard LCIA methods, but it gives them arbitrary names:
+
+antelope.v1.semantic.origin/lciamethods/x
+
+where x is an integer.
+
+As per above, the point of the [master] Qdb is to store a CANONICAL set of quantities, and the thing that makes each one canonical (this is the discovery of this morning) is its UUID.  Each quantity can have many UUIDs associated with it as synonyms, but only one of those is its canonical identifier.
+
+Why is this useful? For a number of reasons:
+ - a single [hyper-]list can be maintained of all LCIA methods
+   = every distinct method+version has a distinct, persistent UUID
+   = every method should also have a "latest" version that also has a persistent UUID (i.e. the contents change but the identifier stays the same)
+   
+ - when clients want to specify an LCIA method, they can use any identifier that is a synonym for it
+   = the Qdb will determine the canonical one
+ - but when antelope v1 or v2 servers want to host an LCIA method, they must know the canonical UUID
+ - this way, clients can keep a list of an antelope v1 server's UUIDs and locally map them to canonical quantities.
+
+This does introduce some challenges:
+ * there needs to be social management of the master list
+ * there needs to be general public access to the master list
+
+What is included in the master Qdb?
+ - a list of flowables + synonyms
+ - a list of contexts + synonyms
+ - a list of quantities + synonyms
+
+With at least contexts, but also flowables and maybe even quantities, there are problems with establishing hierarchical relations between entities.
+
+Typical problems:
+
+Context: 
+
+ - many contexts are implicitly hierarchical (emissions || emissions to air || emissions to urban air)
+ - for regionalized / spatialized LCIA, contexts require geographic richness, but it is unclear how to provide
+ - some relations between contexts are not hierarchical (e.g. emissions from high stacks intersects with emissions to urban air)
+ = intermediate flows are defined by their industrial context
+
+Flowable:
+
+ - A compound which is a mixture (esp. an unspecified mixture) of others; e.g. NOx = NO + NO2 + NO3
+ - lack of primary key for flows with no CAS number (or flows with multiple CAS numbers!!)
+
+Quantity:
+
+ - versioning
+
+Now, if we put all these in a graph database, we could traverse around looking for characterization factors according to fuzzy criteria, but that is nondeterministic and may take a long time to run.
+
+In the meantime, we don't have a graph database up and running and we need to make do with our existing kludge.
+
+Thu 2018-01-18 12:40:39 -0800
+
+Ugh. The whole morning squandered.
+
+What are we supposed to do?
+
+For now, let's limit our refactor to properly situating get_quantity(); renaming quantity_relation() to convert(); and parsing out implementation from framework in Qdb.
+
+

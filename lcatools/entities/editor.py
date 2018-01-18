@@ -1,8 +1,6 @@
 from lcatools.interact import ifinput, pick_one, pick_compartment, cyoa, parse_math, menu_list
 from lcatools.entities import LcQuantity, LcFlow, LcFragment
-from lcatools.providers.qdb import Qdb
 from lcatools.exchanges import directions, comp_dir
-from lcatools.terminations import FlowTermination
 
 
 class EntityEditor(object):
@@ -62,11 +60,11 @@ class FlowEditor(EntityEditor):
     def __init__(self, qdb=None, **kwargs):
         """
         This class needs a quantity database to give the user access to properly defined quantities and compartments.
-        :param qdb: [None] if None, uses the old FlowDB
+        :param qdb: [None] if None, interactive is forced to false
         """
         super(FlowEditor, self).__init__(**kwargs)
         if qdb is None:
-            qdb = Qdb()
+            self.unset_interactive()
         self._qdb = qdb
 
     def new_quantity(self, name=None, unit=None, comment=None):

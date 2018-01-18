@@ -3,7 +3,7 @@ This implements a quantity interface
 """
 
 import xlrd
-from lcatools.providers.base import NsUuidArchive
+from lcatools.providers.base import BasicArchive
 from lcatools.providers.xl_dict import XlDict
 from lcatools.entities import LcQuantity, LcFlow
 from lcatools.characterizations import Characterization, DuplicateCharacterizationError
@@ -16,11 +16,13 @@ def transform_string_cas(string_cas):
     return int(''.join([x for x in filter(lambda y: y != '-', string_cas)]))
 
 
-class Traci21Factors(NsUuidArchive):
+class Traci21Factors(BasicArchive):
 
     def __init__(self, source, ref=None, sheet_name='Substances', mass_quantity=None, ns_uuid=t_uuid, **kwargs):
         if ref is None:
             ref = '.'.join(['local', 'traci', '2', '1', 'spreadsheet'])
+        if ns_uuid is None:
+            raise AttributeError('ns_uuid specification required')
         super(Traci21Factors, self).__init__(source, ref=ref, ns_uuid=ns_uuid, **kwargs)
 
         print('Loading workbook %s' % self.source)
@@ -56,7 +58,7 @@ class Traci21Factors(NsUuidArchive):
         return ', '.join([flowable, compartment])
 
     def _create_quantity(self, name, unitstring):
-        u = self._key_to_id(name)
+        u = self._key_to_nsuuid(name)
         q = self[u]
         if q is None:
             q = LcQuantity(u, external_ref=name, Name=name, ReferenceUnit=self._create_unit(unitstring)[0])
@@ -79,7 +81,7 @@ class Traci21Factors(NsUuidArchive):
         flowable = row['Substance Name'].lower()
         cas = transform_numeric_cas(row['Formatted CAS #'])
         ext_ref = self._flow_key(flowable, compartment)
-        u = self._key_to_id(ext_ref)
+        u = self._key_to_nsuuid(ext_ref)
         f = self[u]
         if f is None:
             f = LcFlow(u, external_ref=ext_ref, Name=flowable, Compartment=[compartment], ReferenceQuantity=self._mass,

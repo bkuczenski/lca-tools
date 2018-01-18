@@ -26,7 +26,7 @@ from collections import defaultdict
 
 from lcatools.from_json import from_json
 from lcatools.lcia_results import LciaResult
-from lcatools.providers.base import LcArchive
+from lcatools.providers.base import BasicArchive
 from lcatools.interfaces import QuantityInterface
 from lcatools.flowdb.compartments import Compartment, CompartmentManager  # load_compartments, save_compartments, traverse_compartments, REFERENCE_EFLOWS
 from lcatools.characterizations import Characterization
@@ -145,7 +145,7 @@ class CLookup(object):
         return results
 
 
-class Qdb(LcArchive, QuantityInterface):
+class Qdb(BasicArchive, QuantityInterface):
     def __init__(self, source=REF_QTYS, quantities=Q_SYNS, flowables=F_SYNS, compartments=None,
                  quell_biogenic_CO2=False,
                  ref=None, **kwargs):

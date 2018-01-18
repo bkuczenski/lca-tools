@@ -4,7 +4,7 @@ At this point I am really straight repeating a lot of Chris's work. but who can 
 
 from __future__ import print_function, unicode_literals
 
-from lcatools.providers.base import NsUuidArchive
+from lcatools.providers.base import BasicArchive
 from lcatools.literate_float import LiterateFloat
 
 from lcatools.entities import LcFlow, LcQuantity
@@ -18,7 +18,7 @@ Ecoinvent_Indicators = os.path.join(os.path.dirname(__file__), 'data',
                                     'list_of_methods_and_indicators_ecoinvent_v3.2.xlsx')
 
 
-class EcoinventLcia(NsUuidArchive):
+class EcoinventLcia(BasicArchive):
     """
     Class to import the Ecoinvent LCIA implementation and construct a flow-cf-quantity catalog.
     The external keys are concatenations of the three
@@ -51,21 +51,23 @@ class EcoinventLcia(NsUuidArchive):
         self._xl_rows = self._sheet_to_rows(b)
 
     def __init__(self, source, ref=None, sheet_name='impact methods', mass_quantity=None,
-                 value_tag='CF ' + EI_LCIA_VERSION, **kwargs):
+                 value_tag='CF ' + EI_LCIA_VERSION, ns_uuid=None, **kwargs):
         """
         EI_LCIA_VERSION is presently 3.1 for the spreadsheet named 'LCIA implementation v3.1 2014_08_13.xlsx'
 
         :param source:
         :param ref: hard-coded 'local.ecoinvent.[EI_LCIA_VERSION].lcia'; specify at instantiation to override
         :param sheet_name: 'impact methods'
-        :param ns_uuid:
         :param mass_quantity:
         :param value_tag: 'CF ' + EI_LCIA_VERSION
+        :param ns_uuid: required
         :param kwargs: quiet, upstream
         """
+        if ns_uuid is None:
+            raise AttributeError('ns_uuid required for LCIA invocation')
         if ref is None:
             ref = '.'.join(['local', 'ecoinvent', EI_LCIA_VERSION, 'lcia'])
-        super(EcoinventLcia, self).__init__(source, ref=ref, **kwargs)
+        super(EcoinventLcia, self).__init__(source, ref=ref, ns_uuid=ns_uuid, **kwargs)
         self._xl_rows = []
         self._sheet_name = sheet_name
         self._value_tag = value_tag
@@ -89,7 +91,7 @@ class EcoinventLcia(NsUuidArchive):
         :return:
         """
         key = self._quantity_key(row)
-        u = self._key_to_id(key)
+        u = self._key_to_nsuuid(key)
         try_q = self[u]
         if try_q is None:
             unit, _ = self._create_unit(row['unit'])
@@ -112,7 +114,7 @@ class EcoinventLcia(NsUuidArchive):
 
     def _create_flow(self, row):
         key = self._flow_key(row)
-        u = self._key_to_id(key)
+        u = self._key_to_nsuuid(key)
         if u in self._entities:
             return self[u]
         f = LcFlow(u, Name=row['name'], CasNumber='', Compartment=[row['compartment'], row['subcompartment']],

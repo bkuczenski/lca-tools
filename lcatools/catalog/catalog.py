@@ -32,7 +32,7 @@ from lcatools.catalog.lcia_engine import LciaEngine
 from lcatools.interfaces.catalog_query import CatalogQuery, EntityNotFound, INTERFACE_TYPES
 from .lc_resolver import LcCatalogResolver
 from .lc_resource import LcResource
-from lcatools.providers.qdb import REF_QTYS
+from lcatools.qdb import REF_QTYS
 from lcatools.flowdb.compartments import REFERENCE_INT  # reference intermediate flows
 
 

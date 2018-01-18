@@ -1,6 +1,3 @@
-from lcatools.providers.base import NsUuidArchive
-
-
 class XlDict(object):
     """
     wrapper class for xlrd that exposes a simple pandas-like interface to access tabular spreadsheet data with iterrows.
@@ -46,10 +43,3 @@ class XlDict(object):
         for index, row in self.iterrows():
             units.add(row[unitname])
         return units
-
-
-class XlsArchive(NsUuidArchive):
-    """
-    A specialization of NsUUID archive that has some nifty spreadsheet tools.
-    """
-    pass

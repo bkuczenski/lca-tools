@@ -246,7 +246,7 @@ class LcArchive(BasicArchive):
         ar.load_json(j)
         return ar
 
-g    def __getitem__(self, item):
+    def __getitem__(self, item):
         """
         Note: this user-friendliness check adds 20% to the execution time of getitem-- so avoid it if possible
         (use _get_entity directly -- especially now that upstream is now deprecated)

@@ -2,7 +2,18 @@ from .basic import BasicImplementation
 from lcatools.interfaces import ForegroundInterface
 from lcatools.exchanges import comp_dir
 
+
 from lcatools.entities.editor import FragmentEditor
+
+
+class FragRecursionError(Exception):
+    """
+    used to cutoff recursive traversals
+    """
+    pass
+
+
+ed = FragmentEditor(interactive=False)
 
 
 class ForegroundImplementation(BasicImplementation, ForegroundInterface):
@@ -48,15 +59,12 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         """
         super(ForegroundImplementation, self).__init__(*args, **kwargs)
 
-        self._ed = FragmentEditor(interactive=False)  # only need Qdb if we want to create/edit flows
-
-    @property
-    def ed(self):
-        return self.ed
+        self._recursion_check = None  # prevent recursive loops on frag-from-node
 
     '''
     Create and modify fragments
     '''
+
     def new_fragment(self, *args, **kwargs):
         """
 
@@ -64,7 +72,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         :param kwargs: uuid=None, parent=None, comment=None, value=None, balance=False; **kwargs passed to LcFragment
         :return:
         """
-        frag = self.ed.create_fragment(*args, **kwargs)
+        frag = ed.create_fragment(*args, **kwargs)
         self._archive.add_entity_and_children(frag)
         return frag
 
@@ -80,40 +88,63 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         except StopIteration:
             if background is None:
                 background = False
-            bg = self.ed.create_fragment(exchange.flow, comp_dir(exchange.direction), background=background)
+            bg = ed.create_fragment(exchange.flow, comp_dir(exchange.direction), background=background)
             bg.terminate(self._archive.catalog_ref(exchange.process.origin, exchange.termination,
                                                    entity_type='process'))
             self._archive.add_entity_and_children(bg)
         return bg
 
     def create_fragment_from_node(self, process, ref_flow=None, include_elementary=False):
+        """
+
+        :param process:
+        :param ref_flow:
+        :param include_elementary:
+        :return:
+        """
+        if self._recursion_check is not None:
+            raise FragRecursionError('We appear to be inside a recursion already')
+        self._recursion_check = set()
+        fragment = self._create_fragment_from_node(process, ref_flow=ref_flow, include_elementary=include_elementary)
+        self._recursion_check = None
+        return fragment
+
+    def _create_fragment_from_node(self, process, ref_flow=None, include_elementary=False):
+        if process.uuid in self._recursion_check:
+            raise FragRecursionError('Encountered the same process!')
+        self._recursion_check.add(process.uuid)
+
         fg_exchs = process.foreground(ref_flow=ref_flow)
         rx = fg_exchs[0]
         comment = 'Created from foreground query to %s' % process.origin
-        top_frag = self.ed.create_fragment(rx.flow, rx.direction,
-                                           comment='Reference fragment; %s ' % comment)
+        top_frag = ed.create_fragment(rx.flow, rx.direction,
+                                      comment='Reference fragment; %s ' % comment)
         top_frag.terminate(process)
 
         if include_elementary:
             for x in process.elementary(fg_exchs[1:]):
-                self.ed.create_fragment(x.flow, x.direction, parent=top_frag, value=x.value,
-                                        comment='FG Emission; %s' % comment)
+                ed.create_fragment(x.flow, x.direction, parent=top_frag, value=x.value,
+                                   comment='FG Emission; %s' % comment)
 
         for x in process.intermediate(fg_exchs[1:]):
             if x.termination is None:
-                self.ed.create_fragment(x.flow, x.direction, parent=top_frag, value=x.value,
-                                        comment='Cut-off; %s' % comment)
+                ed.create_fragment(x.flow, x.direction, parent=top_frag, value=x.value,
+                                   comment='Cut-off; %s' % comment)
 
             else:
-                child_frag = self.ed.create_fragment(x.flow, x.direction, parent=top_frag, value=x.value,
-                                                     comment='Subfragment; %s' % comment)
+                child_frag = ed.create_fragment(x.flow, x.direction, parent=top_frag, value=x.value,
+                                                comment='Subfragment; %s' % comment)
                 if process.is_in_background(termination=x.termination, ref_flow=x.flow):
                     bg = self.find_or_create_term(x, background=True)
                     child_frag.terminate(bg)
                 else:
-                    subfrag = self.ed.create_fragment_from_node(x.termination, ref_flow=x.flow,
-                                                                include_elementary=include_elementary)
-                    child_frag.terminate(subfrag)
+                    try:
+                        subfrag = self._create_fragment_from_node(x.termination, ref_flow=x.flow,
+                                                                  include_elementary=include_elementary)
+                        child_frag.terminate(subfrag)
+                    except FragRecursionError:
+                        bg = self.find_or_create_term(x, background=True)
+                        child_frag.terinate(bg)
         self._archive.add_entity_and_children(top_frag)
         return top_frag
 
@@ -125,6 +156,6 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
                        comment (override existing Comment if present; applied to all)
         :return:
         """
-        clone = self.ed.clone_fragment(frag, **kwargs)
+        clone = ed.clone_fragment(frag, **kwargs)
         self._archive.add_entity_and_children(clone)
         return clone

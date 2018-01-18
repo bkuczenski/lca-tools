@@ -54,6 +54,10 @@ class FlowEditor(EntityEditor):
     Not even much of an object in itself, more like a collection of functions for creating and modifying LcEntities.
     I suppose it needs an instantiation so that it can store customization info. But really these are orphan
     functions and this class is just created to give them a home.
+
+    Generally, the interactive portions should be removed and shifted to new code that uses the foreground interface
+    to query + construct the foreground.  Currently the fragment editor is more programmatic where the flow editor is
+     more interactive.  fragment stuff should probably be moved to the fg interface.
     """
     def __init__(self, qdb=None, **kwargs):
         """
@@ -104,7 +108,6 @@ class FlowEditor(EntityEditor):
 
             flow = LcFlow.new(name, quantity, CasNumber=cas, Compartment=compartment, Comment=comment,
                               local_unit=local_unit)
-            # flow.add_characterization(q, reference=True)
         else:
             quantity = flow.reference_entity
 
@@ -250,24 +253,9 @@ class FragmentEditor(EntityEditor):
             if scen != 0 and scen != 1 and new.observable(scen):
                 new.set_exchange_value(scen, frag.exchange_value(scen))
 
-    def interpose(self, frag):
-        """
-        create a new fragment between the given fragment and its parent. if flow is None, uses the same flow.
-        direction is the same as the given fragment. exchange value is shifted to new frag; given frag's ev is
-        set to 1.
-        given fragment sets the new frag as its parent.
-        """
-        interp = self.create_fragment(parent=frag.reference_entity, flow=frag.flow, direction=frag.direction,
-                                      comment='Interposed flow', value=frag.cached_ev)
-        interp.term.self_terminate()
-        self.transfer_evs(frag, interp)
-        frag.clear_evs()
-        frag.reference_entity = interp
-        return interp
-
     def clone_fragment(self, frag, suffix=' (copy)', comment=None, _parent=None):
         """
-        Creates duplicates of the fragment and its children. returns the reference fragment.
+        Creates duplicates of the fragment and its children. returns the new reference fragment.
         :param frag:
         :param _parent: used internally
         :param suffix: attached to top level fragment
@@ -301,21 +289,49 @@ class FragmentEditor(EntityEditor):
             self.clone_fragment(c, _parent=new, suffix='')
         return new
 
+    def _fork_fragment(self, fragment, comment=None):
+        """
+        create a new fragment between the given fragment and its parent. if flow is None, uses the same flow.
+        direction is the same as the given fragment. exchange value is shifted to new frag; given frag's ev is
+        set to 1.
+
+        :param fragment:
+        :param comment:
+        :return: the new fragment
+        """
+        old_parent = fragment.reference_entity
+        subfrag = self.create_fragment(parent=old_parent, flow=fragment.flow, direction=fragment.direction,
+                                       comment=comment, value=fragment.cached_ev,
+                                       balance=fragment.balance_flow)
+        self.transfer_evs(fragment, subfrag)
+        fragment.clear_evs()
+        return subfrag
+
+    def interpose(self, fragment):
+        """
+        Ins
+        given fragment sets the new frag as its parent.
+        """
+        interp = self._fork_fragment(fragment, comment='Interposed node')
+
+        interp.term.self_terminate()
+        fragment.set_parent(interp)
+
+        return interp
+
     def split_subfragment(self, fragment):
         """
-        This method takes a child fragment and creates a new subfragment with the same termination; then
-        replaces the child with a surrogate that points to the new subfragment.  All terminations move.
-        exchange value stays with parent.
+        This method is like interpose except a new reference fragment is created.  The new node becomes a
+        cutoff w/r/t its parent, and then gets terminated to the new reference fragment.
+
+        Exchange value and balancing status stays with parent.
+
         :param fragment:
         :return:
         """
-        old_parent = fragment.reference_entity
-        fragment.reference_entity = None
-        surrogate = self.create_fragment(parent=old_parent, flow=fragment.flow, direction=fragment.direction,
-                                         comment='Moved to subfragment', value=fragment.cached_ev,
-                                         balance=fragment.balance_flow)
-        self.transfer_evs(fragment, surrogate)
-        fragment.clear_evs()
+        surrogate = self._fork_fragment(fragment, comment='New subfragment')
 
+        fragment.unset_parent()
         surrogate.terminate(fragment)
+
         return surrogate

@@ -8,6 +8,7 @@ import re
 from lcatools.providers.base import LcArchive, to_uuid, entity_types
 from lcatools.entities import LcFragment
 from lcatools.entity_refs import CatalogRef
+from lcatools.implementations import ForegroundImplementation
 
 
 class AmbiguousReference(Exception):
@@ -21,7 +22,16 @@ class FragmentNotFound(Exception):
 class LcForeground(LcArchive):
     """
     An LcForeground is defined by being anchored to a physical directory, which is used to serialize the non-fragment
-    entities.  Also within this directory is a subdirectory called fragments, which is used to store fragments.
+    entities.  Also within this directory is a subdirectory called fragments, which is used to store fragments
+    individually as files.
+
+    Fragments are "observations" of foreground systems. A flow is observed to pass from / into some reference entity
+    and is terminated (other end of the flow) to x, which can either be None (a cutoff), or an entity ID which is
+    dereferenced to a context (=> elementary) or a process (=>intermediate).
+
+    A foreground is then a collection of observations of flows passing through processes.
+
+    Foreground models can be constructed flow by flow (observed from unit process inventories
     """
     def _load_json_file(self, filename):
         with open(filename, 'r') as fp:
@@ -75,6 +85,12 @@ class LcForeground(LcArchive):
         if os.path.exists(self._archive_file):
             self._load_json_file(self._archive_file)
             self._load_fragments()
+
+    def make_interface(self, iface, privacy=None):
+        if iface == 'foreground':
+            return ForegroundImplementation(self, privacy=privacy)
+        else:
+            return super(LcForeground, self).make_interface(iface, privacy=privacy)
 
     def catalog_ref(self, origin, external_ref, entity_type=None):
         ref = self._catalog.fetch(origin, external_ref)

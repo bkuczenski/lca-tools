@@ -26,4 +26,42 @@ _interface = 'foreground'
 
 
 class ForegroundInterface(AbstractQuery):
-    pass
+    def new_fragment(self, *args, **kwargs):
+        """
+
+        :param args: flow, direction
+        :param kwargs: uuid=None, parent=None, comment=None, value=None, balance=False; **kwargs passed to LcFragment
+        :return:
+        """
+        return self._perform_query(_interface, 'new_fragment', ForegroundRequired, *args, **kwargs)
+
+    def find_or_create_term(self, exchange, background=None):
+        """
+        Finds a fragment that terminates the given exchange
+        :param exchange:
+        :param background: [None] - any frag; [True] - background frag; [False] - foreground frag
+        :return:
+        """
+        return self._perform_query(_interface, 'find_or_create_term', ForegroundRequired,
+                                   exchange, background=background)
+
+    def create_fragment_from_node(self, process, ref_flow=None, include_elementary=False):
+        """
+
+        :param process:
+        :param ref_flow:
+        :param include_elementary:
+        :return:
+        """
+        return self._perform_query(_interface, 'create_fragment_from_node', ForegroundRequired,
+                                   process, ref_flow=ref_flow, include_elementary=include_elementary)
+
+    def clone_fragment(self, frag, **kwargs):
+        """
+
+        :param frag: the fragment (and subfragments) to clone
+        :param kwargs: suffix (default: ' (copy)', applied to Name of top-level fragment only)
+                       comment (override existing Comment if present; applied to all)
+        :return:
+        """
+        return self._perform_query(_interface, 'clone_fragment', ForegroundRequired, frag, **kwargs)

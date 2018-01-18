@@ -117,11 +117,8 @@ class EcospoldV1Archive(LcArchive):
             q = LcQuantity(uid, Name='EcoSpold Quantity %s' % unitstring,
                            ReferenceUnit=ref_unit, Comment=self.spold_version)
             q.set_external_ref(unitstring)
-            try_q = self._check_upstream(self._upstream_key(q))
-            if try_q is None:
-                self.add(q)
-            else:
-                q = try_q
+            self.add(q)
+
             self._q_dict[unitstring] = q
 
         return q

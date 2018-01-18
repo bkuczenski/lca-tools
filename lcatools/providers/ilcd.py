@@ -328,9 +328,6 @@ class IlcdArchive(LcArchive):
         refunit, unitconv = self._create_unit(ug_path)
 
         q = LcQuantity(u, Name=n, ReferenceUnit=refunit, UnitConversion=unitconv, Comment=c)
-        try_q = self._check_upstream(self._upstream_key(q))
-        if try_q is not None:
-            return try_q
 
         q.set_external_ref('%s/%s' % (typeDirs['FlowProperty'], u))
 

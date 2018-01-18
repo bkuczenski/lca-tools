@@ -119,7 +119,7 @@ class EcoinventLcia(BasicArchive):
             return self[u]
         f = LcFlow(u, Name=row['name'], CasNumber='', Compartment=[row['compartment'], row['subcompartment']],
                    Comment=row['note'])
-        self._print('Created new flow with %s ' % self._upstream_key(f))
+        self._print('Created new flow with %s ' % key)
         f.add_characterization(self._mass, reference=True)
         f.set_external_ref(key)
         self.add(f)

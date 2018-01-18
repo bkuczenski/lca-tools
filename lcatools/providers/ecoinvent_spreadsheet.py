@@ -260,19 +260,16 @@ class EcoinventSpreadsheet(LcArchive):
         return q
 
     def _create_flow(self, u, unit, ext_ref, Name=None, Compartment=None, **kwargs):
-        upstream_key = ', '.join([Name] + Compartment)
-        f = self._check_upstream(upstream_key)
-        if f is None:
-            if u in self._entities:
-                f = self[u]
-            else:
-                f = LcFlow(u, Name=Name, Compartment=Compartment, **kwargs)
-                f.set_external_ref(ext_ref)
-                q = self._create_quantity(unit)
-                if q is None:
-                    raise ValueError
-                f.add_characterization(quantity=q, reference=True)
-                self.add(f)
+        if u in self._entities:
+            f = self[u]
+        else:
+            f = LcFlow(u, Name=Name, Compartment=Compartment, **kwargs)
+            f.set_external_ref(ext_ref)
+            q = self._create_quantity(unit)
+            if q is None:
+                raise ValueError
+            f.add_characterization(quantity=q, reference=True)
+            self.add(f)
         f.update(kwargs)
 
     def _create_quantities(self, _elementary, _intermediate):

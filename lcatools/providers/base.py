@@ -30,13 +30,15 @@ applied in sequence with archive.apply_config()
 '''
 
 
-class NsUuidArchive(ArchiveInterface):
+class _NsUuidArchive(ArchiveInterface):
     """
     A class that generates UUIDs in a namespace using a supplied key.  Activate this functionality by providing
     an ns_uuid argument during init.
+
+    This class is not mature enough to create a functional archive
     """
     def __init__(self, source, ns_uuid=None, **kwargs):
-        super(NsUuidArchive, self).__init__(source, **kwargs)
+        super(_NsUuidArchive, self).__init__(source, **kwargs)
 
         self._ns_uuid = None
 
@@ -77,12 +79,15 @@ class NsUuidArchive(ArchiveInterface):
         """
         if isinstance(item, int) and self._ns_uuid is not None:
             return self._get_entity(self._key_to_nsuuid(item))
-        return super(NsUuidArchive, self).__getitem__(item)
+        return super(_NsUuidArchive, self).__getitem__(item)
 
 
-class BasicArchive(NsUuidArchive):
+class BasicArchive(_NsUuidArchive):
     """
-    Adds on basic functionality to the archive interface: add new entities; deserialize entities
+    Adds on basic functionality to the archive interface: add new entities; deserialize entities.
+
+    The BasicArchive should be used for all archives that only contain flows and quantities (and contexts in the future)
+
     """
     _entity_types = {'quantity', 'flow'}
 
@@ -106,13 +111,6 @@ class BasicArchive(NsUuidArchive):
         except KeyError:
             return
         self._add_children(entity)
-
-    @staticmethod
-    def _upstream_key(entity):
-        if entity.entity_type == 'quantity':
-            return str(entity)  # needs to be something indexed by the Qdb
-        else:
-            return None
 
     def _create_unit(self, unitstring):
         """
@@ -248,16 +246,7 @@ class LcArchive(BasicArchive):
         ar.load_json(j)
         return ar
 
-    def __init__(self, source, **kwargs):
-        """
-        gotta get rid of that upstream cruft at some point
-        :param source:
-        :param kwargs:
-        """
-        self._upstream_hash = dict()  # deprecated ## for lookup use later
-        super(LcArchive, self).__init__(source, **kwargs)
-
-    def __getitem__(self, item):
+g    def __getitem__(self, item):
         """
         Note: this user-friendliness check adds 20% to the execution time of getitem-- so avoid it if possible
         (use _get_entity directly -- especially now that upstream is now deprecated)
@@ -266,7 +255,7 @@ class LcArchive(BasicArchive):
         :return:
         """
         if isinstance(item, LcEntity):
-            return self._get_entity(item.uuid)
+            item = item.uuid
         return super(LcArchive, self).__getitem__(item)
 
     def make_interface(self, iface, privacy=None):
@@ -279,21 +268,6 @@ class LcArchive(BasicArchive):
         else:
             return super(LcArchive, self).make_interface(iface, privacy=privacy)
 
-    def set_upstream(self, upstream):
-        super(LcArchive, self).set_upstream(upstream)
-        # create a dict of upstream quantities
-        self._upstream_hash = dict()  # clobber old dict
-        for i in self._upstream.entities_by_type('quantity'):
-            if not i.is_entity:
-                continue
-            up_key = self._upstream_key(i)
-            if up_key in self._upstream_hash:
-                print('!!multiple upstream matches for %s!!' % up_key)
-            elif up_key is None:
-                continue
-            else:
-                self._upstream_hash[up_key] = i
-
     def _add_children(self, entity):
         if entity.entity_type == 'process':
             # need to import all the process's flows
@@ -305,22 +279,6 @@ class LcArchive(BasicArchive):
     @staticmethod
     def _lcia_key(quantity):
         return ', '.join([quantity['Method'], quantity['Category'], quantity['Indicator']])
-
-    def _check_upstream(self, key):
-        """
-        Method to check if a primitive entity, not yet distinguished by a UUID, is present in the upstream database.
-        Uses a customized (DANGER!) type-dependent identifier that will have to do for now.
-
-        How to use this: generate a type-dependent check-key that matches the output of _upstream_key.  These will
-        be stored in a hash for flows and quantities (processes should never defer to upstream: the archive will always
-        consider itself authoritative for processes it contains).  If the check-key is found in the hash, the upstream
-        entity will be returned.  Otherwise returns None.
-        :param key:
-        :return:
-        """
-        if key in self._upstream_hash:
-            return self._upstream_hash[key]
-        return None
 
     def load_json(self, j, _check=True):
         """

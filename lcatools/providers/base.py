@@ -94,7 +94,7 @@ class LcArchive(ArchiveInterface):
         elif iface == 'configure':
             return ConfigureImplementation(self, privacy=privacy)
         else:
-            super(LcArchive, self).make_interface(iface, privacy=privacy)
+            return super(LcArchive, self).make_interface(iface, privacy=privacy)
 
     def _create_unit(self, unitstring):
         """

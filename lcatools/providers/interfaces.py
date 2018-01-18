@@ -18,7 +18,7 @@ import os
 from datetime import datetime
 
 from collections import defaultdict
-from lcatools.implementations import *
+from lcatools.implementations import BasicImplementation, IndexImplementation, QuantityImplementation
 
 
 LD_CONTEXT = 'https://bkuczenski.github.io/lca-tools-datafiles/context.jsonld'
@@ -188,10 +188,6 @@ class ArchiveInterface(object):
             return QuantityImplementation(self, privacy=privacy)
         elif iface == 'index':
             return IndexImplementation(self, privacy=privacy)
-        elif iface == 'inventory':
-            return InventoryImplementation(self, privacy=privacy)
-        elif iface == 'background':
-            return BackgroundImplementation(self, privacy=privacy)
 
     def _construct_new_ref(self, signifier):
         new_date = datetime.now().strftime('%Y%m%d')

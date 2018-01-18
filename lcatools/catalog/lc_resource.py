@@ -1,7 +1,9 @@
 import json
 import os
 
-from lcatools.interfaces.iquery import INTERFACE_TYPES
+from collections import defaultdict
+
+from lcatools.interfaces.catalog_query import INTERFACE_TYPES
 from lcatools.providers.interfaces import local_ref
 from lcatools.tools import create_archive, update_archive
 
@@ -101,6 +103,9 @@ class LcResource(object):
     def make_interface(self, iface):
         return self._archive.make_interface(iface, privacy=self.privacy)
 
+    def apply_config(self):
+        self._archive.make_interface('configure').apply_config(self._config)
+
     def add_interface(self, iface):
         if iface in INTERFACE_TYPES:
             self._interfaces.add(iface)
@@ -162,6 +167,8 @@ class LcResource(object):
         self._priority = int(priority)
 
         self._internal = kwargs.pop('_internal', False)
+
+        self._config = defaultdict(set)
 
         self._args = kwargs
 
@@ -232,6 +239,21 @@ class LcResource(object):
                 return True
         return False
 
+    def add_config(self, config, *args):
+        """
+        Add a configuration option
+        :param config:
+        :param args: the arguments, in the proper sequence
+        :return:
+        """
+        self._config[config].add(args)
+
+    def _serialize_config(self):
+        j = dict()
+        for k, v in self._config.items():
+            j[k] = sorted([list(g) for g in v], key=lambda x: x[0])
+        return j
+
     def serialize(self):
         j = {
             "dataSource": self.source,
@@ -244,6 +266,7 @@ class LcResource(object):
         j.update(self._args)
         if self.internal:
             j['_internal'] = True
+        j['config'] = self._serialize_config()
         return j
 
     def _matches(self, k):

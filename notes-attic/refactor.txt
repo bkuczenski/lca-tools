@@ -1,7 +1,7 @@
 LciaResults:
 
- * need __add__ method for AggregateLciaScore and SummaryLciaResult
- * aggregate method should preserve content
+ x need __add__ method for AggregateLciaScore and SummaryLciaResult
+ x? aggregate method should preserve content
  X need a "deep aggregation" that would combine components and generate fragment LCI - flatten()
 
 Fragments use:
@@ -38,7 +38,7 @@ General Issues:
    = it's already an entity; take out stuff that it doesn't need to own
    X! the big question being: can we avoid passing a child_flows lambda as an initialization parameter? (answer: YES!)
  X FlowTermination-- a top-level entry? I think so.
- - termination - flow conversions - move into LcFlow
+ 0 termination - flow conversions - move into LcFlow
  - exchanges: need tests
  - characterizations: need tests
  - terminations: need tests

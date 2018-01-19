@@ -1,4 +1,107 @@
 ==========
+Fri Jan 19 10:13:42 -0800 2018
+
+The New Face of LcResource Providers, after the Great Context Refactor:
+
+0. Archives have a source, reference, and namespace uuid
+
+A central authority ties reference to namespace uuid, and delivers these out to clients after authentication (or for free, in the case of public resources).  Knowing the namespace uuid allows a client to correctly map a key to a UUID and retrieve information about the entity.  Alternately, clients that simply know the UUID can query for it but may not have access to retrieve the entity.
+
+An LcResource-- contained in the interfaces package-- is a spec for creating an archive.
+
+The interfaces package also contains a factory for creating a small subset of archives-- those that do not require the resources package-- to wit, anything that only depends on the BasicArchive: Qdb, Antelope clients, and Foregrounds.
+
+0.1 Foregrounds
+
+The purpose of a foreground is to collect (or create) observations from both the real world and from catalogued resources.
+
+Contents of a foreground:
+ - flows
+ - contexts
+ - quantities
+ - fragments
+
+LcForeground inherits from BasicArchive and adds fragments and ForegroundImplementation; cannot store processes.  Foregrounds do not have an nsuuid ((??))-- they require a catalog and use UUIDs from catalog references. However, they have a bespoke list of fragment names that allow users to give non-uuid external refs to their fragments. AND they have the Qdb upstream so the user can still __getitem__ using canonical names.
+
+When new flows are created, they may be renamed in the foreground- which is why nsuuid should not be used to generate uuids; instead uuid4 should be used.
+
+0.2 Archives
+
+LcArchive is contained in the resources package-- it provides the ability to handle reference processes, allocations, and compute background systems (with partial ordering and foreground generation).  The main purpose of an archive is to extract tagged entities from a data source, and to store and make available two composite data types:
+
+ = Exchange
+   - relates one process to one flowable in one direction, with an optional termination
+   - Exchange value is a proportionality between the magnitude of the one flow and the process's reference
+
+ = Characterization
+   - relates one flowable to one quantity in one context, with an optional locale
+   - Characterization factor is a proportionality between the magnitude of the quantity and the flow's reference 
+
+Concisely, foregrounds are for collecting observed exchanges; the Qdb is for collecting observed characterizations.
+
+LcArchive inherits from BasicArchive and adds Inventory, Background, and Configure; cannot store fragments.
+
+LcArchives (with background) can produce exchange lists that can be used to generate fragments in foreground systems; similarly, foreground systems (once constructed) can be "archived" into JSON archives in which fragment systems (under a given scenario specification) are hardened into unit processes. (this still TODO)
+
+
+I. Archives store contexts, flowables, quantities, and processes (and sometimes fragments)
+
+All entities have a UUID. 
+
+Entity uuids are either supplied directly via LcEntity(), or computed from the namespace via LcArchive.new(etype, name).  Do away with LcEntity.new()
+
+In the ILCD (and ecospold2) case, UUIDs identify flows (or intermediate or elementary exchanges), which are flowable + context.  We want to store these too, right? so ILCD archives (and maybe ecoinvent archives too) have a _flow_list dict, which maps uuid to a flow+context pair for quick retrieval.  We can investigate whether this should be a more general purpose feature, but I think it should only be used in instances where archives already have stable UUIDs that we want to preserve-- but these will not be serialized.
+
+I.1 Characteristics of Entity Types:
+
+Context:
+ - Name is unique ID
+ - Reference is nominal direction. Not sure how to figure this out. One idea:
+   = _sink: +1 for every time the context is observed at the end of an output flow;
+   = _source: +1 for every time the context is observed at the end of an input flow;
+   = direction: Input if (_sink - _source) < 0 else Output
+   = this works fine as long as an archive has 0 or few inverted processes
+ - optional parent (Adding a parent will update parent's internal list of children)
+
+Quantity: (no changes)
+ - Name or unitstring is unique ID (unitstring only in deficient data systems e.g. ecospold v1)
+ - Reference Unit
+ - optional UnitConversion property as implemented
+
+Flowable: (deprecate Compartment property in favor of context entity)
+ - Name is unique ID
+ - reference quantity-- has characterization factor 1 in all contexts
+ - required CasNumber (may be blank)
+ - optional Classification (e.g. 'halogenated organic compound')
+ - Characterizations: unordered set of
+    (quantity, flowable, context) tuples with an included dict of [location]->factor
+
+Process: (no changes) (only permitted in LcArchive subclasses)
+ - UUID is unique ID (could be derived from name)
+ - required SpatialScope, TemporalScope
+ - optional Classification (e.g. 'plastics and rubber manufacturing')
+ - Exchanges: unordered set of
+    (process, flowable, direction, termination) tuples, as implemented
+ 
+Fragment: (no changes) (only permitted in LcForeground / subclasses)
+ - UUID4 or user-set name is unique ID
+ - required flowable + direction
+ - optional parent fragment is reference entity
+ - optional balance setting, background setting, exchange_value
+ - constructed exchange values + terminations by scenario
+
+
+I.2 
+
+
+
+
+
+
+Below is crufty-- or already implemented
+
+
+==========
 Tue Jan 09 10:16:59 -0800 2018
 
 The classes in the 'providers' subdirectory all function to open different data sources and extract information into the archive format (or into the interface specification)

@@ -1,9 +1,8 @@
 import os
-import re
 
-from lcatools.providers.ilcd_lcia import IlcdLcia
-from lcatools.providers.ilcd import grab_flow_name
+from .ilcd import grab_flow_name
 from lcatools.providers.xml_widgets import *
+from providers.ilcd.ilcd_lcia import IlcdLcia
 
 ELCD = os.path.join('/data', 'LCI', 'ELCD', 'ELCD3.2.zip')
 
@@ -15,10 +14,10 @@ def ilcd_flow_generator(archive=ELCD, **kwargs):
     :param kwargs:
     :return:
     """
-    I = IlcdLcia(archive, **kwargs)
+    i = IlcdLcia(archive, **kwargs)
     count = 0
-    for f in I.list_objects('Flow'):
-        o = I.objectify(f, dtype='Flow')
+    for f in i.list_objects('Flow'):
+        o = i.objectify(f, dtype='Flow')
         if o is not None:
             yield o
             count += 1

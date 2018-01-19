@@ -1,8 +1,8 @@
-from lcatools.providers.ilcd import IlcdArchive, typeDirs, get_flow_ref, uuid_regex, \
-    dtype_from_nsmap
+from .ilcd import IlcdArchive, typeDirs, get_flow_ref, uuid_regex, dtype_from_nsmap
 from lcatools.providers.xml_widgets import *
 from lcatools.entities import LcEntity, LcQuantity, LcUnit
-from lcatools.interfaces.iquantity import QuantityInterface
+from .quantity import IlcdQuantityImplementation
+from .index import IlcdIndexImplementation
 
 
 def get_cf_value(exch, ns=None):
@@ -13,11 +13,18 @@ def get_cf_value(exch, ns=None):
     return v
 
 
-class IlcdLcia(IlcdArchive, QuantityInterface):
+class IlcdLcia(IlcdArchive):
     """
     Slightly extends the IlcdArchive with a set of functions for loading LCIA factors and adding them as
     quantities + charaterizations
     """
+    def make_interface(self, iface, privacy=None):
+        if iface == 'index':
+            return IlcdIndexImplementation(self, privacy=privacy)
+        elif iface == 'quantity':
+            return IlcdQuantityImplementation(self, privacy=privacy)
+        else:
+            return super(IlcdLcia, self).make_interface(iface, privacy=privacy)
 
     def _make_reference_unit(self, o, ns=None):
         """
@@ -108,7 +115,7 @@ class IlcdLcia(IlcdArchive, QuantityInterface):
                 self._load_factor(ns, factor, lcia, load_all_flows=load_all_flows)
         return lcia
 
-    def _load_lcia(self, **kwargs):
+    def load_lcia(self, **kwargs):
         for f in self.list_objects('LCIAMethod'):
             u = uuid_regex.search(f).groups()[0]
             if self._get_entity(u) is not None:  # we want to look strictly locally
@@ -116,29 +123,7 @@ class IlcdLcia(IlcdArchive, QuantityInterface):
 
             self.load_lcia_method(u, **kwargs)
 
-    def load_lcia(self, **kwargs):
-        self._load_lcia(**kwargs)
-        self.check_counter()
-
-    '''
-    Quantity Interface
-    '''
-    def lcia_methods(self, **kwargs):
-        self._load_lcia(load_all_flows=None)
-        for l in self.search('quantity', **kwargs):
-            if l.is_lcia_method():
-                yield l
-
-    def get_canonical(self, quantity, **kwargs):
-        """
-        Retrieve a canonical quantity from a qdb
-        :param quantity: external_id of quantity
-        :return: quantity entity
-        """
-        u = uuid_regex.search(quantity).groups()[0]
-        return self.load_lcia_method(u, load_all_flows=False)
-
-    def _generate_factors(self, quantity):
+    def generate_factors(self, quantity):
         o = self._get_objectified_entity(self._path_from_ref(quantity))
         ns = find_ns(o.nsmap, 'LCIAMethod')
 
@@ -146,74 +131,3 @@ class IlcdLcia(IlcdArchive, QuantityInterface):
 
         for factor in o['characterisationFactors'].getchildren():
             yield self._load_factor(ns, factor, lcia, load_all_flows=True)
-
-    def synonyms(self, item, **kwargs):
-        """
-        Return a list of synonyms for the object -- quantity, flowable, or compartment
-
-        :param item:
-        :return: list of strings
-        """
-        pass
-
-    def flowables(self, quantity=None, compartment=None, **kwargs):
-        """
-        Return a list of flowable strings. Use quantity and compartment parameters to narrow the result
-        set to those characterized by a specific quantity, those exchanged with a specific compartment, or both
-        :param quantity:
-        :param compartment: filter by compartment not implemented
-        :return: list of pairs: CAS number, name
-        """
-        fbs = set()
-        if quantity is not None:
-            for factor in self._generate_factors(quantity):
-                fb = factor.flow['CasNumber'], factor.flow['Name']
-                if fb not in fbs:
-                    fbs.add(fb)
-                    yield fb
-        else:
-            for f in self.entities_by_type('flow'):
-                fb = f['CasNumber'], f['Name']
-                if fb not in fbs:
-                    fbs.add(fb)
-                    yield fb
-
-    def compartments(self, quantity=None, flowable=None, **kwargs):
-        """
-        Return a list of compartment strings. Use quantity and flowable parameters to narrow the result
-        set to those characterized for a specific quantity, those with a specific flowable, or both
-        :param quantity:
-        :param flowable:
-        :return: list of strings
-        """
-        pass
-
-    def factors(self, quantity, flowable=None, compartment=None, **kwargs):
-        """
-        Return characterization factors for the given quantity, subject to optional flowable and compartment
-        filter constraints. This is ill-defined because the reference unit is not explicitly reported in current
-        serialization for characterizations (it is implicit in the flow)-- but it can be added to a web service layer.
-        :param quantity:
-        :param flowable:
-        :param compartment: not implemented
-        :return:
-        """
-        for factor in self._generate_factors(quantity):
-            if flowable is not None:
-                if factor.flow['Name'] != flowable and factor.flow['CasNumber'] != flowable:
-                    continue
-            yield factor
-
-    def quantity_relation(self, ref_quantity, flowable, compartment, query_quantity, locale='GLO', **kwargs):
-        """
-        Return a single number that converts the a unit of the reference quantity into the query quantity for the
-        given flowable, compartment, and locale (default 'GLO').  If no locale is found, this would be a great place
-        to run a spatial best-match algorithm.
-        :param ref_quantity:
-        :param flowable:
-        :param compartment:
-        :param query_quantity:
-        :param locale:
-        :return:
-        """
-        pass

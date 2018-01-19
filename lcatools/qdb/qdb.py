@@ -24,10 +24,11 @@ import os
 import re
 from collections import defaultdict
 
+from .quantity import QdbQuantityImplementation
+
 from lcatools.from_json import from_json
 from lcatools.lcia_results import LciaResult
 from lcatools.providers.base import BasicArchive
-from lcatools.interfaces import QuantityInterface
 from lcatools.flowdb.compartments import Compartment, CompartmentManager
 from lcatools.characterizations import Characterization
 from lcatools.dynamic_grid import dynamic_grid
@@ -204,6 +205,12 @@ class Qdb(BasicArchive):
             for cf in f.characterizations():
                 if cf.quantity is not f.reference_entity:
                     self.add_cf(cf)
+
+    def make_interface(self, iface, privacy=None):
+        if iface == 'quantity':
+            return QdbQuantityImplementation(self, privacy=privacy)
+        else:
+            return super(Qdb, self).make_interface(iface, privacy=privacy)
 
     def _add_or_merge_quantity(self, q):
         """

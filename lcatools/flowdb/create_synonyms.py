@@ -3,8 +3,7 @@ import json
 import re
 
 from lcatools.providers.ecospold2 import EcospoldV2Archive
-from lcatools.providers.ilcd_lcia import IlcdLcia
-from lcatools.providers.ilcd import grab_flow_name
+from lcatools.providers.ilcd import grab_flow_name, IlcdLcia
 from lcatools.providers.xml_widgets import find_tag, find_tags, find_common, find_ns
 from lcatools.flowdb.synlist import Flowables, InconsistentIndices, ConflictingCas
 

@@ -21,18 +21,18 @@ def transform_numeric_cas(numeric_cas):
 
 class Traci21QuantityImplementation(QuantityImplementation):
 
-    def get_quantity(self, name, **kwargs):
+    def get_canonical(self, name, **kwargs):
         if hasattr(name, 'entity_type'):
             if name.entity_type == 'quantity':
-                return name
+                return self[name]
         for qi in self._archive.lcia_method_iter():
             if qi['Category'] == name:
                 return qi
-        return super(Traci21QuantityImplementation, self).get_quantity(name, **kwargs)
+        return super(Traci21QuantityImplementation, self).get_canonical(name, **kwargs)
 
     def flowables(self, quantity=None, compartment=None, **kwargs):
         if quantity is not None:
-            quantity = self.get_quantity(quantity)
+            quantity = self.get_canonical(quantity)
         for i, row in self._archive.iterrows():
             try:
                 next(self._archive.cf_for_method_and_compartment(row, method=quantity, compartment=compartment))
@@ -42,7 +42,7 @@ class Traci21QuantityImplementation(QuantityImplementation):
 
     def compartments(self, quantity=None, flowable=None, **kwargs):
         if quantity is not None:
-            quantity = self.get_quantity(quantity)
+            quantity = self.get_canonical(quantity)
         if flowable is not None:
             flowable = next(self._archive.row_for_key(flowable))
         comps = set()
@@ -61,7 +61,7 @@ class Traci21QuantityImplementation(QuantityImplementation):
             yield c
 
     def factors(self, quantity, flowable=None, compartment=None, **kwargs):
-        q = self.get_quantity(quantity)
+        q = self.get_canonical(quantity)
         if q is not None:
             if flowable is not None:
                 for row in self._archive.row_for_key(flowable):

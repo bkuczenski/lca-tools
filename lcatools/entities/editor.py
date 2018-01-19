@@ -87,7 +87,7 @@ class FlowEditor(EntityEditor):
                     quantity = q
                 else:
                     print('Using mass as reference quantity')
-                    quantity = self._qdb.get_quantity('mass')
+                    quantity = self._qdb.get_canonical('mass')
             comment = comment or self.input('Enter flow comment: ', '')
             if compartment is None:
                 if self._interactive:

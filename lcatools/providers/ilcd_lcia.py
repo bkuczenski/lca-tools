@@ -129,7 +129,7 @@ class IlcdLcia(IlcdArchive, QuantityInterface):
             if l.is_lcia_method():
                 yield l
 
-    def get_quantity(self, quantity, **kwargs):
+    def get_canonical(self, quantity, **kwargs):
         """
         Retrieve a canonical quantity from a qdb
         :param quantity: external_id of quantity

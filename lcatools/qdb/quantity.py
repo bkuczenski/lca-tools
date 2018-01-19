@@ -1,36 +1,17 @@
-from .abstract_query import AbstractQuery
+from lcatools.implementations import QuantityImplementation
 
 
-class QuantityRequired(Exception):
-    pass
-
-
-_interface = 'quantity'
-
-
-class QuantityInterface(AbstractQuery):
+class QdbQuantityImplementation(QuantityImplementation):
     """
-    QuantityInterface
+    Quantity Interface
     """
-    def profile(self, flow, **kwargs):
+    def get_canonical(self, synonym, **kwargs):
         """
-        Generate characterizations for the named flow, with the reference quantity noted
-        :param flow:
+        return a quantity by its synonym
+        :param synonym:
         :return:
         """
-        return self._perform_query(_interface, 'profile', QuantityRequired('Must have quantity interface'),
-                                   flow, **kwargs)
-
-    def get_canonical(self, quantity, **kwargs):
-        """
-        Retrieve a canonical quantity based on a synonym or other distinguishable term.  In future this should be
-        expanded to flows and contexts.
-        :param quantity: external_id of quantity
-        :return: quantity CatalogRef
-        """
-        return self.make_ref(self._perform_query(_interface, 'get_canonical',
-                                                 QuantityRequired('Quantity interface required'),
-                                                 quantity, **kwargs))
+        return self._archive[synonym]  # __getitem__ returns canonical quantity entity
 
     def synonyms(self, item, **kwargs):
         """
@@ -38,19 +19,32 @@ class QuantityInterface(AbstractQuery):
         :param item:
         :return: list of strings
         """
-        return self._perform_query(_interface, 'synonyms', QuantityRequired('Quantity interface required'), item,
-                                   ** kwargs)
+        if self._archive.f_index(item) is not None:
+            for k in self._archive.f_syns(item):
+                yield k
+        elif self.get_canonical(item) is not None:
+            for k in self._archive.q.syns(item):
+                yield k
+        else:
+            comp = self._archive.c_mgr.find_matching(item, interact=False)
+            if comp is not None:
+                for k in comp.synonyms:
+                    yield k
 
     def flowables(self, quantity=None, compartment=None, **kwargs):
         """
         Return a list of flowable strings. Use quantity and compartment parameters to narrow the result
         set to those characterized by a specific quantity, those exchanged with a specific compartment, or both
         :param quantity:
-        :param compartment:
+        :param compartment: not implemented
         :return: list of pairs: CAS number, name
         """
-        return self._perform_query(_interface, 'flowables', QuantityRequired('Quantity interface required'),
-                                   quantity=quantity, compartment=compartment, **kwargs)
+        if quantity is not None:
+            for k in self._archive.flows_for_quantity(quantity):
+                yield self._archive.f_cas(k), self._archive.f_name(k)
+        else:
+            for cas, name in self._archive.flowables():
+                yield cas, name
 
     def compartments(self, quantity=None, flowable=None, **kwargs):
         """
@@ -60,8 +54,7 @@ class QuantityInterface(AbstractQuery):
         :param flowable:
         :return: list of strings
         """
-        return self._perform_query(_interface, 'compartments', QuantityRequired('Quantity interface required'),
-                                   quantity=quantity, flowable=flowable, **kwargs)
+        pass
 
     def factors(self, quantity, flowable=None, compartment=None, **kwargs):
         """
@@ -73,8 +66,15 @@ class QuantityInterface(AbstractQuery):
         :param compartment:
         :return:
         """
-        return self._perform_query(_interface, 'factors', QuantityRequired('Quantity interface required'),
-                                   quantity, flowable=flowable, compartment=compartment, **kwargs)
+        if flowable is not None:
+            flowable = self._archive.f_index(flowable)
+        if compartment is not None:
+            compartment = self._archive.c_mgr.find_matching(compartment)
+        for cf in self._archive.cfs_for_quantity(quantity, compartment=compartment):
+            if flowable is not None:
+                if self._archive.f_index(cf.flow['Name']) != flowable:
+                    continue
+            yield cf
 
     def quantity_relation(self, ref_quantity, flowable, compartment, query_quantity, locale='GLO', **kwargs):
         """
@@ -88,5 +88,5 @@ class QuantityInterface(AbstractQuery):
         :param locale:
         :return:
         """
-        return self._perform_query(_interface, 'quantity_relation', QuantityRequired('Quantity interface required'),
-                                   ref_quantity, flowable, compartment, query_quantity, locale=locale, **kwargs)
+        return self._archive.convert(flowable=flowable, compartment=compartment, reference=ref_quantity,
+                                     query=query_quantity, locale=locale, **kwargs)

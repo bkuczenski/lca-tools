@@ -28,7 +28,7 @@ from lcatools.from_json import from_json
 from lcatools.lcia_results import LciaResult
 from lcatools.providers.base import BasicArchive
 from lcatools.interfaces import QuantityInterface
-from lcatools.flowdb.compartments import Compartment, CompartmentManager  # load_compartments, save_compartments, traverse_compartments, REFERENCE_EFLOWS
+from lcatools.flowdb.compartments import Compartment, CompartmentManager
 from lcatools.characterizations import Characterization
 from lcatools.dynamic_grid import dynamic_grid
 # from lcatools.interact import pick_one
@@ -145,7 +145,7 @@ class CLookup(object):
         return results
 
 
-class Qdb(BasicArchive, QuantityInterface):
+class Qdb(BasicArchive):
     def __init__(self, source=REF_QTYS, quantities=Q_SYNS, flowables=F_SYNS, compartments=None,
                  quell_biogenic_CO2=False,
                  ref=None, **kwargs):
@@ -181,11 +181,6 @@ class Qdb(BasicArchive, QuantityInterface):
         self._q = SynList.from_json(from_json(quantities))
 
         super(Qdb, self).__init__(source, ref=ref, **kwargs)
-        ''' # why is this twice?
-        if not os.path.exists(source):
-            print('Using default reference quantities')
-            source = REF_QTYS
-        '''
         self.load_json(from_json(source))
 
         if isinstance(compartments, CompartmentManager):
@@ -345,16 +340,35 @@ class Qdb(BasicArchive, QuantityInterface):
                      ('Flowable', lambda x: self._f.name(x)),
                      returns_sets=True)
 
-    def cfs_for_quantity(self, q_ref):
+    def flows_for_quantity(self, q_ref):
+        try:
+            q_ind = self._get_q_ind(q_ref)
+            for f in sorted(self._q_dict[q_ind]):
+                yield f
+        except QuantityNotKnown:
+            for f in []:
+                yield f
+
+    def cfs_for_quantity(self, q_ref, compartment=None):
         """
         generator. Yields CFs associated with a quantity, ordered by flowable index.
         :param q_ref:
+        :param compartment
         :return:
         """
-        q_ind = self._get_q_ind(q_ref)
-        for f in sorted(self._q_dict[q_ind]):
-            for k in self._fq_dict[f, q_ind].cfs():
-                yield k
+        try:
+            q_ind = self._get_q_ind(q_ref)
+            for f in sorted(self._q_dict[q_ind]):
+                if compartment is None:
+                    for k in self._fq_dict[f, q_ind].cfs():
+                        yield k
+                else:
+                    for k in self._fq_dict[f, q_ind][compartment]:
+                        yield k
+
+        except QuantityNotKnown:
+            for f in []:
+                yield f
 
     def add_new_flowable(self, *terms):
         try:
@@ -406,6 +420,10 @@ class Qdb(BasicArchive, QuantityInterface):
         comp = self.c_mgr.find_matching(flow['Compartment'])
         return fn, comp
 
+    def flowables(self):
+        for k in range(len(self._f)):
+            yield self._f.cas(k), self._f.name(k)
+
     def f_index(self, term):
         """
         Wrapper to expose flowable index
@@ -433,6 +451,14 @@ class Qdb(BasicArchive, QuantityInterface):
         except KeyError:
             fn = term
         return fn
+
+    def f_syns(self, term):
+        for s in self._f.synonyms_for(term):
+            yield s
+
+    def q_syns(self, term):
+        for s in self._q.synonyms_for(term):
+            yield s
 
     def _find_flowables(self, *terms):
         """
@@ -732,10 +758,11 @@ class Qdb(BasicArchive, QuantityInterface):
         :param inventory: generates exchanges
         :param locale: ['GLO']
         :param refresh: [False] whether to rewrite characterization factors from the database
+        :param debug: [False] print extra information to screen
         :param kwargs: just quell_biogenic_co2 for the moment
         :return: an LciaResult whose components are the flows of the exchanges
         """
-        q = self.get_quantity(quantity.link)
+        q = self[quantity.link]
         q_ind = self._get_q_ind(q)
         if debug:
             print('q_ind: %d' % q_ind)
@@ -762,114 +789,12 @@ class Qdb(BasicArchive, QuantityInterface):
                 r.add_score(x.flow.external_ref, x, fac, locale)
         return r
 
-    '''
-    Quantity Interface
-    '''
-    def _check_compartment(self, string):
-        if string is None:
-            return None
-        return self.c_mgr.find_matching(string)
-
-    def get_quantity(self, synonym, **kwargs):
-        """
-        return a quantity by its synonym
-        :param synonym:
-        :return:
-        """
-        return self._q.entity(synonym)
-
-    def synonyms(self, item, **kwargs):
-        """
-        Return a list of synonyms for the object -- quantity, flowable, or compartment
-        :param item:
-        :return: list of strings
-        """
-        if self._f.index(item) is not None:
-            for k in self._f.synonyms_for(item):
-                yield k
-        elif self._q.index(item) is not None:
-            for k in self._q.synonyms_for(item):
-                yield k
-        else:
-            comp = self.c_mgr.find_matching(item, interact=False)
-            if comp is not None:
-                for k in comp.synonyms:
-                    yield k
-
-    def flowables(self, quantity=None, compartment=None, **kwargs):
-        """
-        Return a list of flowable strings. Use quantity and compartment parameters to narrow the result
-        set to those characterized by a specific quantity, those exchanged with a specific compartment, or both
-        :param quantity:
-        :param compartment: not implemented
-        :return: list of pairs: CAS number, name
-        """
-        if quantity is not None:
-            q_ind = self._q.index(quantity)
-            for k in self._q_dict[q_ind]:
-                yield self._f.cas(k), self._f.name(k)
-        else:
-            for k in range(len(self._f)):
-                yield self._f.cas(k), self._f.name(k)
-
-    def compartments(self, quantity=None, flowable=None, **kwargs):
-        """
-        Return a list of compartment strings. Use quantity and flowable parameters to narrow the result
-        set to those characterized for a specific quantity, those with a specific flowable, or both
-        :param quantity:
-        :param flowable:
-        :return: list of strings
-        """
-        pass
-
-    def factors(self, quantity, flowable=None, compartment=None, **kwargs):
-        """
-        Return characterization factors for the given quantity, subject to optional flowable and compartment
-        filter constraints. This is ill-defined because the reference unit is not explicitly reported in current
-        serialization for characterizations (it is implicit in the flow)-- but it can be added to a web service layer.
-        :param quantity:
-        :param flowable:
-        :param compartment:
-        :return:
-        """
-        if flowable is not None:
-            flowable = self._f.index(flowable)
-        if compartment is not None:
-            compartment = self.c_mgr.find_matching(compartment)
-        q_ind = self._get_q_ind(quantity)
-        for f_ind in self._q_dict[q_ind]:
-            if flowable is not None and flowable != f_ind:
-                continue
-            c_lookup = self._fq_dict[f_ind, q_ind]
-            if compartment is not None:
-                for cf in c_lookup[compartment]:
-                    yield cf
-            else:
-                for cf in c_lookup.cfs():
-                    yield cf
-
-    def cf(self, flow, query_quantity, locale='GLO', **kwargs):
+    def cf(self, flow, query_quantity, locale='GLO'):
         """
 
         :param flow:
         :param query_quantity:
         :param locale:
-        :param kwargs:
         :return:
         """
         return self.convert_reference(flow, query_quantity, locale=locale)
-
-    def quantity_relation(self, ref_quantity, flowable, compartment, query_quantity, locale='GLO', **kwargs):
-        """
-        Return a single number that converts the a unit of the reference quantity into the query quantity for the
-        given flowable, compartment, and locale (default 'GLO').  If no locale is found, this would be a great place
-        to run a spatial best-match algorithm.
-        :param ref_quantity:
-        :param flowable:
-        :param compartment:
-        :param query_quantity:
-        :param locale:
-        :return:
-        """
-        return self.convert(flowable=flowable, compartment=compartment, reference=ref_quantity,
-                            query=query_quantity, locale=locale, **kwargs)

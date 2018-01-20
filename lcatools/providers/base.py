@@ -8,12 +8,10 @@ import re
 
 import six
 
+from lcatools.entity_store import EntityStore
 from lcatools.entities import LcEntity, LcFlow, LcProcess, LcQuantity, LcUnit
 from lcatools.implementations import BasicImplementation, IndexImplementation, QuantityImplementation
-
 from lcatools.implementations import InventoryImplementation, BackgroundImplementation, ConfigureImplementation
-
-from lcatools.providers.interfaces import ArchiveInterface
 
 if six.PY2:
     bytes = str
@@ -35,7 +33,7 @@ applied in sequence with archive.apply_config()
 '''
 
 
-class BasicArchive(ArchiveInterface):
+class BasicArchive(EntityStore):
     """
     Adds on basic functionality to the archive interface: add new entities; deserialize entities.
 

@@ -1,10 +1,9 @@
 import json
 import os
-
 from collections import defaultdict
 
+from lcatools.entity_store import local_ref
 from lcatools.interfaces.catalog_query import INTERFACE_TYPES
-from lcatools.providers.interfaces import local_ref
 from lcatools.tools import create_archive, update_archive
 
 

@@ -1,7 +1,7 @@
-from lcatools.providers.interfaces import ArchiveInterface
-
-from datetime import datetime
 import unittest
+from datetime import datetime
+
+from lcatools.entity_store import EntityStore
 
 
 phony_source = '/path/to/phony/source.gz'
@@ -12,7 +12,7 @@ phony_ref_bumped = 'local.path.to.phony.source.bumped'
 class ArchiveInterfaceTest(unittest.TestCase):
     @classmethod
     def setUp(cls):
-        cls._ar = ArchiveInterface(phony_source)
+        cls._ar = EntityStore(phony_source)
 
     def test_ref(self):
         self.assertEqual(self._ar.ref, phony_ref)

@@ -18,10 +18,10 @@ except ImportError:  # python2
 
 
 from lcatools.providers.base import LcArchive
-from lcatools.providers.archive import Archive, protocol
+from lcatools.providers.archive import Archive
 from lcatools.providers.xml_widgets import *
 from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcUnit
-from lcatools.providers.interfaces import uuid_regex
+from lcatools.entity_store import uuid_regex
 from lcatools.characterizations import DuplicateCharacterizationError
 
 typeDirs = {'Process': 'processes',

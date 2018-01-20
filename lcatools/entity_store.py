@@ -74,7 +74,7 @@ def local_ref(source):
     return '.'.join(['local', xf])
 
 
-class ArchiveInterface(object):
+class EntityStore(object):
     """
     An abstract interface has nothing but a reference
 
@@ -316,7 +316,7 @@ class ArchiveInterface(object):
             yield v
 
     def set_upstream(self, upstream):
-        assert isinstance(upstream, ArchiveInterface)
+        assert isinstance(upstream, EntityStore)
         if upstream.source != self.source:
             self._serialize_dict['upstreamReference'] = upstream.ref
         self._upstream = upstream

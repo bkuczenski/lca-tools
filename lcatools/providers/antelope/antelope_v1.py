@@ -1,7 +1,7 @@
 import json
-from collections import defaultdict, namedtuple
+from collections import defaultdict
 
-from lcatools.providers.interfaces import ArchiveInterface
+from lcatools.providers.base import BasicArchive
 from lcatools.interfaces import IndexInterface, InventoryInterface, QuantityInterface
 from lcatools.entity_refs import CatalogRef
 from lcatools.fragment_flows import FragmentFlow
@@ -27,7 +27,7 @@ def remote_ref(url):
     return ref
 
 
-class AntelopeV1Client(ArchiveInterface, IndexInterface, InventoryInterface, QuantityInterface):
+class AntelopeV1Client(BasicArchive, IndexInterface, InventoryInterface, QuantityInterface):
     """
     Provider class for .NET-era Antelope servers.  The basic function is to rely on the interface whenever possible
     but also to cache inventory and LCIA results locally as catalog refs.

@@ -15,10 +15,10 @@ import re
 import json
 import gzip as gz
 import os
+import six
 from datetime import datetime
 
 from collections import defaultdict
-from lcatools.implementations import BasicImplementation, IndexImplementation, QuantityImplementation
 
 
 LD_CONTEXT = 'https://bkuczenski.github.io/lca-tools-datafiles/context.jsonld'
@@ -79,6 +79,16 @@ class ArchiveInterface(object):
     An abstract interface has nothing but a reference
 
     """
+    _entity_types = ()
+    '''
+    _ns_uuid_required: specifies whether the archive must be supplied an ns_uuid (generally, archives that are
+    expected to generate persistent, deterministic IDs must have an externally specified ns_uuid)
+     If False: random ns_uuid generated
+     If True: ns_uuid must be supplied as an argument
+     If None: ns_uuid forced to None
+    '''
+    _ns_uuid_required = False
+
     def _key_to_id(self, key):
         """
         in the base class, the key is the uuid-- this can get overridden
@@ -87,7 +97,20 @@ class ArchiveInterface(object):
         :param key:
         :return:
         """
-        return to_uuid(key)
+        u = to_uuid(key)  # check if key is already a uuid
+        if u is None:
+            return self._key_to_nsuuid(key)
+        return u
+
+    def _key_to_nsuuid(self, key):
+        if self._ns_uuid is None:
+            return None
+        if isinstance(key, int):
+            key = str(key)
+        if six.PY2:
+            return str(uuid.uuid3(self._ns_uuid, key.encode('utf-8')))
+        else:
+            return str(uuid.uuid3(self._ns_uuid, key))
 
     def get_uuid(self, key):
         """
@@ -97,7 +120,24 @@ class ArchiveInterface(object):
         """
         return self._key_to_id(key)
 
-    def __init__(self, source, ref=None, quiet=True, upstream=None, static=False, dataReference=None, **kwargs):
+    def _set_ns_uuid(self, ns_uuid):
+        if self._ns_uuid_required is None:
+            if ns_uuid is not None:
+                print('Ignoring ns_uuid specification')
+            return None
+        else:
+            if ns_uuid is None:
+                if self._ns_uuid_required is True:
+                    raise AttributeError('ns_uuid specification required')
+                elif self._ns_uuid_required is False:
+                    return uuid.uuid4()
+            else:
+                if isinstance(ns_uuid, uuid.UUID):
+                    return ns_uuid
+                return uuid.UUID(ns_uuid)
+
+    def __init__(self, source, ref=None, quiet=True, upstream=None, static=False, dataReference=None, ns_uuid=None,
+                 **kwargs):
         """
         An archive is a provenance structure for a collection of entities.  Ostensibly, an archive has a single
         source from which entities are collected.  However, archives can also collect entities from multiple sources,
@@ -151,6 +191,7 @@ class ArchiveInterface(object):
         :param upstream:
         :param static: [False] whether archive is expected to be unchanging.
         :param dataReference: alternative to ref
+        :param ns_uuid: required to store entities by common name.  Used to generate uuid3 from string inputs.
         :param kwargs: any other information that should be serialized with the archive
         """
 
@@ -168,6 +209,8 @@ class ArchiveInterface(object):
         self._loaded = False
         self._static = static
 
+        self._ns_uuid = self._set_ns_uuid(ns_uuid)
+
         if upstream is not None:
             self.set_upstream(upstream)
 
@@ -179,15 +222,10 @@ class ArchiveInterface(object):
                 ref = dataReference
 
         self._serialize_dict['dataReference'] = ref
-        self.catalog_names[ref] = source
+        if self._ns_uuid is not None:
+            self._serialize_dict['nsUuid'] = str(self._ns_uuid)
 
-    def make_interface(self, iface, privacy=None):
-        if iface == 'basic':
-            return BasicImplementation(self, privacy=privacy)
-        elif iface == 'quantity':
-            return QuantityImplementation(self, privacy=privacy)
-        elif iface == 'index':
-            return IndexImplementation(self, privacy=privacy)
+        self.catalog_names[ref] = source
 
     def _construct_new_ref(self, signifier):
         new_date = datetime.now().strftime('%Y%m%d')
@@ -362,6 +400,8 @@ class ArchiveInterface(object):
             if e is not None:
                 return e
         try:
+            if isinstance(item, int) and self._ns_uuid is not None:
+                return self._get_entity(self._key_to_nsuuid(item))
             return self._get_entity(self._key_to_id(item))
         except KeyError:
             return None
@@ -389,36 +429,11 @@ class ArchiveInterface(object):
 
     def check_counter(self, entity_type=None):
         if entity_type is None:
-            [self.check_counter(entity_type=k) for k in ('process', 'flow', 'quantity')]
+            [self.check_counter(entity_type=k) for k in self._entity_types]
         else:
             print('%d new %s entities added (%d total)' % (self._counter[entity_type], entity_type,
-                                                           len([e for e in self.entities_by_type(entity_type)])))
+                                                           self.count_by_type(entity_type)))
             self._counter[entity_type] = 0
-
-    @staticmethod
-    def _narrow_search(entity, **kwargs):
-        """
-        Narrows a result set using sequential keyword filtering
-        :param entity:
-        :param kwargs:
-        :return: bool
-        """
-        def _recurse_expand_subtag(tag):
-            if tag is None:
-                return ''
-            elif isinstance(tag, str):
-                return tag
-            else:
-                return ' '.join([_recurse_expand_subtag(t) for t in tag])
-        keep = True
-        for k, v in kwargs.items():
-            if k not in entity.keys():
-                return False
-            if isinstance(v, str):
-                v = [v]
-            for vv in v:
-                keep = keep and bool(re.search(vv, _recurse_expand_subtag(entity[k]), flags=re.IGNORECASE))
-        return keep
 
     def find_partial_id(self, uid, upstream=False, startswith=True):
         """
@@ -437,29 +452,6 @@ class ArchiveInterface(object):
         if upstream and self._upstream is not None:
             result_set += self._upstream.find_partial_id(uid, upstream=upstream, startswith=startswith)
         return result_set
-
-    def search(self, etype=None, upstream=False, **kwargs):
-        """
-        Find entities by search term, either full or partial uuid or entity property like 'Name', 'CasNumber',
-        or so on.
-        :param etype: optional first argument is entity type
-        :param upstream: (False) if upstream archive exists, search there too
-        :param kwargs: regex search through entities' properties as named in the kw arguments
-        :return: result set
-        """
-        if etype is None:
-            if 'entity_type' in kwargs.keys():
-                etype = kwargs.pop('entity_type')
-        if etype is not None:
-            for ent in self.entities_by_type(etype):
-                if self._narrow_search(ent, **kwargs):
-                    yield ent
-        else:
-            for ent in self._entities.values():
-                if self._narrow_search(ent, **kwargs):
-                    yield ent
-        if upstream and self._upstream is not None:
-            self._upstream.search(etype, upstream=upstream, **kwargs)
 
     def _fetch(self, entity, **kwargs):
         """

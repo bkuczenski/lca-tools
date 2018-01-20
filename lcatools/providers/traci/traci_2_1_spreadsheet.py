@@ -17,12 +17,11 @@ def transform_string_cas(string_cas):
 
 
 class Traci21Factors(BasicArchive):
+    _ns_uuid_required = True
 
     def __init__(self, source, ref=None, sheet_name='Substances', mass_quantity=None, ns_uuid=t_uuid, **kwargs):
         if ref is None:
             ref = '.'.join(['local', 'traci', '2', '1', 'spreadsheet'])
-        if ns_uuid is None:
-            raise AttributeError('ns_uuid specification required')
         super(Traci21Factors, self).__init__(source, ref=ref, ns_uuid=ns_uuid, **kwargs)
 
         print('Loading workbook %s' % self.source)

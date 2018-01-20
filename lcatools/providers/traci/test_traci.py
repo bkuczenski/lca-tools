@@ -3,7 +3,7 @@ from math import isclose
 
 from .traci_2_1_spreadsheet import Traci21Factors
 
-TRACI_2_1 = '/data/LCI/TRACI/traci_2_1_2014_dec_10_0.xlsx'
+TRACI_2_1 = '/data/LCI/TRACI/traci_2_1_2014_dec_10_0_test.xlsx'  # note test file
 
 NUM_METHODS = 10
 

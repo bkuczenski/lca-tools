@@ -27,7 +27,7 @@ import requests
 import hashlib
 # from collections import defaultdict
 
-from lcatools.catalog.lcia_engine import LciaEngine
+from lcatools.qdb import LciaEngine
 
 from lcatools.interfaces.catalog_query import CatalogQuery, EntityNotFound, INTERFACE_TYPES
 from .lc_resolver import LcCatalogResolver

@@ -1,4 +1,51 @@
 ==========
+Fri Jan 19 15:29:56 -0800 2018
+
+This is a bit misplaced... but the 'interfaces.py' file for ArchiveInterface needs to be moved to an EntityStore.  The NsUuidArchive functionality needs to be integrated, and some of the basic functionality needs to be subclassed to BasicArchive.
+
+
+
+ArchiveInterface:
+    _key_to_id <- get_uuid, __getitem__, _add, validate_entity_list
+    	       <- Basic.entity_from_json
+	       <- Foreground.name_fragment
+    get_uuid [deprecated]
+
+    make_interface [overloads]
+
+    _construct_new_ref <- create_descendant
+
+    entities [0]
+
+    set_upstream <- __init__
+    get_names <- LcResource
+
+    _print
+
+    _get_entity
+    __getitem__
+
+    _add [overloads]
+
+    check_counter [many]
+
+    _narrow_search <- search
+
+    find_partial_id [0]
+
+    
+
+    @properties
+    ref
+    static
+    source
+
+
+
+
+
+
+==========
 Mon Nov 27 23:04:41 -0800 2017
 
 We ARE progressing. We just need to get sorted the whole reference() references() find_reference() nonsense.

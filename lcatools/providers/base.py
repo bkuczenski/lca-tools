@@ -4,14 +4,16 @@ Interim classes with useful building blocks
 
 from __future__ import print_function, unicode_literals
 
-import uuid
+import re
 
 import six
 
 from lcatools.entities import LcEntity, LcFlow, LcProcess, LcQuantity, LcUnit
+from lcatools.implementations import BasicImplementation, IndexImplementation, QuantityImplementation
+
 from lcatools.implementations import InventoryImplementation, BackgroundImplementation, ConfigureImplementation
 
-from lcatools.providers.interfaces import ArchiveInterface, to_uuid
+from lcatools.providers.interfaces import ArchiveInterface
 
 if six.PY2:
     bytes = str
@@ -22,6 +24,9 @@ class OldJson(Exception):
     pass
 
 
+class EntityExists(Exception):
+    pass
+
 '''
 LcArchive Stored Configuration.
 
@@ -30,59 +35,7 @@ applied in sequence with archive.apply_config()
 '''
 
 
-class _NsUuidArchive(ArchiveInterface):
-    """
-    A class that generates UUIDs in a namespace using a supplied key.  Activate this functionality by providing
-    an ns_uuid argument during init.
-
-    This class is not mature enough to create a functional archive
-    """
-    def __init__(self, source, ns_uuid=None, **kwargs):
-        super(_NsUuidArchive, self).__init__(source, **kwargs)
-
-        self._ns_uuid = None
-
-        # internal namespace UUID for generating keys
-        if ns_uuid is not None:
-            if not isinstance(ns_uuid, uuid.UUID):
-                ns_uuid = uuid.UUID(ns_uuid)
-
-            self._ns_uuid = ns_uuid
-            self._serialize_dict['nsUuid'] = str(self._ns_uuid)
-
-    def _key_to_nsuuid(self, key):
-        if self._ns_uuid is None:
-            return None
-        if isinstance(key, int):
-            key = str(key)
-        if six.PY2:
-            return str(uuid.uuid3(self._ns_uuid, key.encode('utf-8')))
-        else:
-            return str(uuid.uuid3(self._ns_uuid, key))
-
-    def _key_to_id(self, key):
-        """
-        If the supplied key matches a uuid string, returns it.  Otherwise, creates a uuid3 using the internal namespace.
-        :param key:
-        :return:
-        """
-        u = to_uuid(key)
-        if u is None:
-            return self._key_to_nsuuid(key)
-        return u
-
-    def __getitem__(self, item):
-        """
-        Override base to skip upstream lookup if a numeric key is being requested
-        :param item:
-        :return:
-        """
-        if isinstance(item, int) and self._ns_uuid is not None:
-            return self._get_entity(self._key_to_nsuuid(item))
-        return super(_NsUuidArchive, self).__getitem__(item)
-
-
-class BasicArchive(_NsUuidArchive):
+class BasicArchive(ArchiveInterface):
     """
     Adds on basic functionality to the archive interface: add new entities; deserialize entities.
 
@@ -90,6 +43,40 @@ class BasicArchive(_NsUuidArchive):
 
     """
     _entity_types = {'quantity', 'flow'}
+
+    def _check_key_unused(self, key):
+        """
+        If the key is unused, return the UUID. Else raise EntityExists
+        :param key:
+        :return:
+        """
+        u = self._key_to_nsuuid(key)
+        try:
+            e = self._get_entity(u)
+        except KeyError:
+            return u
+        raise EntityExists(str(e))
+
+    def new_quantity(self, name, ref_unit, **kwargs):
+        u = self._check_key_unused(name)
+        q = LcQuantity(u, ref_unit=LcUnit(ref_unit), Name=name, origin=self.ref, external_ref=name, **kwargs)
+        self.add(q)
+        return q
+
+    def new_flow(self, name, ref_qty, CasNumber='', **kwargs):
+        u = self._check_key_unused(name)
+        f = LcFlow(u, Name=name, ReferenceQuantity=ref_qty, CasNumber=CasNumber, origin=self.ref, external_ref=name,
+                   **kwargs)
+        self.add_entity_and_children(f)
+        return f
+
+    def make_interface(self, iface, privacy=None):
+        if iface == 'basic':
+            return BasicImplementation(self, privacy=privacy)
+        elif iface == 'quantity':
+            return QuantityImplementation(self, privacy=privacy)
+        elif iface == 'index':
+            return IndexImplementation(self, privacy=privacy)
 
     def add(self, entity):
         if entity.entity_type not in self._entity_types:
@@ -210,6 +197,73 @@ class BasicArchive(_NsUuidArchive):
                 self.entity_from_json(e)
         if _check:
             self.check_counter()
+
+    @staticmethod
+    def _narrow_search(entity, **kwargs):
+        """
+        Narrows a result set using sequential keyword filtering
+        :param entity:
+        :param kwargs:
+        :return: bool
+        """
+        def _recurse_expand_subtag(tag):
+            if tag is None:
+                return ''
+            elif isinstance(tag, str):
+                return tag
+            else:
+                return ' '.join([_recurse_expand_subtag(t) for t in tag])
+        keep = True
+        for k, v in kwargs.items():
+            if k not in entity.keys():
+                return False
+            if isinstance(v, str):
+                v = [v]
+            for vv in v:
+                keep = keep and bool(re.search(vv, _recurse_expand_subtag(entity[k]), flags=re.IGNORECASE))
+        return keep
+
+    def search(self, etype=None, upstream=False, **kwargs):
+        """
+        Find entities by search term, either full or partial uuid or entity property like 'Name', 'CasNumber',
+        or so on.
+        :param etype: optional first argument is entity type
+        :param upstream: (False) if upstream archive exists, search there too
+        :param kwargs: regex search through entities' properties as named in the kw arguments
+        :return: result set
+        """
+        if etype is None:
+            if 'entity_type' in kwargs.keys():
+                etype = kwargs.pop('entity_type')
+        if etype is not None:
+            for ent in self.entities_by_type(etype):
+                if self._narrow_search(ent, **kwargs):
+                    yield ent
+        else:
+            for ent in self._entities.values():
+                if self._narrow_search(ent, **kwargs):
+                    yield ent
+        if upstream and self._upstream is not None:
+            self._upstream.search(etype, upstream=upstream, **kwargs)
+
+    def serialize(self, characterizations=False, values=False):
+        """
+
+        :param characterizations:
+        :param values:
+        :return:
+        """
+        j = super(BasicArchive, self).serialize()
+        j['flows'] = sorted([f.serialize(characterizations=characterizations, values=values)
+                             for f in self.entities_by_type('flow')],
+                            key=lambda x: x['entityId'])
+        j['quantities'] = sorted([q.serialize()
+                                  for q in self.entities_by_type('quantity')],
+                                 key=lambda x: x['entityId'])
+        return j
+
+    def _serialize_all(self, **kwargs):
+        return self.serialize(characterizations=True, values=True)
 
 
 class LcArchive(BasicArchive):
@@ -371,12 +425,6 @@ class LcArchive(BasicArchive):
         j['processes'] = sorted([p.serialize(exchanges=exchanges, values=values)
                                  for p in self.entities_by_type('process')],
                                 key=lambda x: x['entityId'])
-        j['flows'] = sorted([f.serialize(characterizations=characterizations, values=values)
-                             for f in self.entities_by_type('flow')],
-                            key=lambda x: x['entityId'])
-        j['quantities'] = sorted([q.serialize()
-                                  for q in self.entities_by_type('quantity')],
-                                 key=lambda x: x['entityId'])
         return j
 
     def _serialize_all(self, **kwargs):

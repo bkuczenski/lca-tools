@@ -18,7 +18,7 @@ from lcatools.exchanges import ExchangeValue, DirectionlessExchangeError
 from lcatools.lcia_results import LciaResult, LciaResults
 from lcatools.providers import tail
 from lcatools.providers.archive import Archive
-from lcatools.providers.base import LcArchive
+from lcatools.providers.lc_archive import LcArchive
 from lcatools.providers.xml_widgets import *
 
 if six.PY2:

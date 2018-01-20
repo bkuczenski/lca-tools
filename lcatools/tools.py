@@ -11,7 +11,7 @@ from collections import defaultdict, Counter
 
 from lcatools.from_json import from_json
 
-from lcatools.providers.base import LcArchive
+from lcatools.providers.lc_archive import LcArchive
 from lcatools.providers.ilcd import IlcdArchive, IlcdLcia
 from lcatools.providers.ecospold2 import EcospoldV2Archive
 from lcatools.providers.ecoinvent_spreadsheet import EcoinventSpreadsheet
@@ -27,6 +27,7 @@ from lcatools.providers.antelope.antelope_v1 import AntelopeV1Client
 # TODO: re-implement these tools to work directly on json catalogs; put them in lca-tools-datafiles
 
 catalog_dir = '/data/GitHub/lca-tools-datafiles/catalogs'
+
 
 class ArchiveError(Exception):
     pass

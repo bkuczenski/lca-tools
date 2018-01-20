@@ -3,9 +3,8 @@ This implements a quantity interface
 """
 
 import xlrd
-from lcatools.providers.base import BasicArchive
 from lcatools.providers.xl_dict import XlDict
-from lcatools.entities import LcQuantity, LcFlow
+from lcatools.entities import LcQuantity, LcFlow, BasicArchive
 from lcatools.characterizations import Characterization, DuplicateCharacterizationError
 
 from .q_info import ns_uuid_21 as t_uuid

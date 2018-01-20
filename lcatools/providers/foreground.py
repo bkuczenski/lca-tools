@@ -9,7 +9,7 @@ from lcatools.entity_store import to_uuid
 from lcatools.entities import LcFragment, entity_types
 from lcatools.entity_refs import CatalogRef
 from lcatools.implementations import ForegroundImplementation
-from lcatools.providers.base import LcArchive
+from lcatools.providers.lc_archive import LcArchive
 
 
 class AmbiguousReference(Exception):

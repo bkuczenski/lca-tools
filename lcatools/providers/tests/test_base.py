@@ -1,4 +1,4 @@
-from lcatools.providers.base import LcArchive
+from lcatools.providers.lc_archive import LcArchive
 
 import os
 import unittest

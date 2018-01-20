@@ -17,7 +17,7 @@ except ImportError:  # python2
     str = unicode
 
 
-from lcatools.providers.base import LcArchive
+from lcatools.providers.lc_archive import LcArchive
 from lcatools.providers.archive import Archive
 from lcatools.providers.xml_widgets import *
 from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcUnit

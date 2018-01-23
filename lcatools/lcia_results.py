@@ -551,10 +551,10 @@ class LciaResult(object):
             self._LciaScores[key] = AggregateLciaScore(self, entity)
 
     def add_score(self, key, exchange, factor, location):
-        if factor.quantity.get_uuid() != self.quantity.get_uuid():
+        if factor.quantity.uuid != self.quantity.uuid:
             raise InconsistentQuantity('%s\nfactor.quantity: %s\nself.quantity: %s' % (factor,
-                                                                                       factor.quantity.get_uuid(),
-                                                                                       self.quantity.get_uuid()))
+                                                                                       factor.quantity.uuid,
+                                                                                       self.quantity.uuid))
         if key not in self._LciaScores.keys():
             self.add_component(key)
         self._LciaScores[key].add_detailed_result(exchange, factor, location)

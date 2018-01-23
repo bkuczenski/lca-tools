@@ -55,8 +55,8 @@ class CatalogQuery(IndexInterface, BackgroundInterface, ForegroundInterface, Inv
             return self
         return self._catalog.query(origin)
 
-    def _grounded_query(self):
-        return self._catalog.query(self.origin)
+    def _grounded_query(self, origin):
+        return self._catalog.query(origin)
 
     def ensure_lcia_factors(self, quantity_ref):
         self._catalog.load_lcia_factors(quantity_ref)

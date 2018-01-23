@@ -37,7 +37,7 @@ class AbstractQuery(object):
                 return result
         raise exc
 
-    def _grounded_query(self):
+    def _grounded_query(self, origin):
         return self
 
     def is_elementary(self, f):
@@ -47,7 +47,7 @@ class AbstractQuery(object):
         if entity is None:
             return None
         if entity.is_entity:
-            return entity.make_ref(self._grounded_query())
+            return entity.make_ref(self._grounded_query(entity.origin))
         else:
             return entity  # already a ref
 

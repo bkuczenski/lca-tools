@@ -1,5 +1,5 @@
 from .base import EntityRef
-from lcatools.interfaces import IndexInterface, QuantityInterface
+from lcatools.interfaces import IndexInterface, QuantityInterface, trim_cas
 from lcatools.characterizations import Characterization
 
 '''
@@ -21,6 +21,17 @@ class FlowRef(EntityRef, IndexInterface, QuantityInterface):
 
     def unit(self):
         return self.reference_entity.reference_entity
+
+    def match(self, other):
+        """
+        Re-implement flow match method
+        :param other:
+        :return:
+        """
+        return (self.uuid == other.uuid or
+                self['Name'].lower() == other['Name'].lower() or
+                (trim_cas(self['CasNumber']) == trim_cas(other['CasNumber']) and len(self['CasNumber']) > 4) or
+                self.external_ref == other.external_ref)  # not sure about this last one! we should check origin too
 
     @property
     def _addl(self):

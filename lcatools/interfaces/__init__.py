@@ -6,3 +6,13 @@ from .iindex import IndexInterface
 from .ibackground import BackgroundInterface
 from .iquantity import QuantityInterface
 from .iforeground import ForegroundInterface, ForegroundRequired
+
+import re
+
+
+def trim_cas(cas):
+    try:
+        return re.sub('^(0*)', '', cas)
+    except TypeError:
+        print('%s %s' % (cas, type(cas)))
+        return ''

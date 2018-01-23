@@ -432,11 +432,10 @@ class LcFragment(LcEntity):
         if self._check_observability(None):
             self._exchange_values[1] = value
 
-    def _observe(self, scenario=None, accept_all=False):
+    def _observe(self, scenario=None):
         """
-        observe engine
+        interactive observe engine
         :param scenario:
-        :param accept_all:
         :return:
         """
         if scenario is None:
@@ -452,10 +451,8 @@ class LcFragment(LcEntity):
             string_ev = '%10g' % self.exchange_value(scenario)
             print(' Scenario EV: %s [%s]' % (string_ev,
                                              self.flow.unit()))
-        if accept_all:
-            val = '='
-        else:
-            val = ifinput('%s ("=" to use cached): ' % prompt, string_ev)
+
+        val = ifinput('%s ("=" to use cached): ' % prompt, string_ev)
 
         if val != string_ev:
             if val == '=':
@@ -466,6 +463,12 @@ class LcFragment(LcEntity):
                 self.observed_ev = new_val
             else:
                 self.set_exchange_value(scenario, new_val)
+
+    def _auto_observe(self, scenario=None):
+        if scenario is None:
+            self.observed_ev = self.cached_ev
+        else:
+            self.set_exchange_value(scenario, self.cached_ev)
 
     def observe(self, scenario=None, accept_all=False, recurse=True, _traverse=True):
         """
@@ -480,7 +483,10 @@ class LcFragment(LcEntity):
         :return:
         """
         if self._check_observability(scenario=scenario):
-            self._observe(scenario=scenario, accept_all=accept_all)
+            if accept_all:
+                self._auto_observe(scenario=scenario)
+            else:
+                self._observe(scenario=scenario)
 
         if recurse:
             for c in self.child_flows:
@@ -725,7 +731,8 @@ class LcFragment(LcEntity):
     def to_foreground(self, scenario=None):
         """
         make the fragment a foreground node. This is done by setting the termination to self.  A foreground node
-        may not be a background node (obv.)  Also, a foreground node has no LCIA scores.
+        may not be a background node (obv.)  Also, a foreground node will act as an emission during traversal and
+        fragment LCIA, but will not show up as a cutoff.
         :param scenario:
         :return:
         """

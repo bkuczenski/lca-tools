@@ -90,26 +90,31 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
                 background = False
             bg = ed.create_fragment(exchange.flow, comp_dir(exchange.direction), background=background)
             bg.terminate(self._archive.catalog_ref(exchange.process.origin, exchange.termination,
-                                                   entity_type='process'))
+                                                   entity_type='process'), term_flow=exchange.flow)
             self._archive.add_entity_and_children(bg)
         return bg
 
-    def create_fragment_from_node(self, process, ref_flow=None, include_elementary=False):
+    def create_fragment_from_node(self, process_ref, ref_flow=None, include_elementary=False, observe=True):
         """
 
-        :param process:
+        :param process_ref:
         :param ref_flow:
         :param include_elementary:
+        :param observe: whether to "observe" the fragments with the process's exchange values (default is yes
+         via the API-- unobserved exchanges will not show up in an API traversal)
         :return:
         """
         if self._recursion_check is not None:
             raise FragRecursionError('We appear to be inside a recursion already')
-        self._recursion_check = set()
-        fragment = self._create_fragment_from_node(process, ref_flow=ref_flow, include_elementary=include_elementary)
-        self._recursion_check = None
-        return fragment
+        try:
+            self._recursion_check = set()
+            frag = self._create_fragment_from_node(process_ref, ref_flow=ref_flow,
+                                                   include_elementary=include_elementary, observe=observe)
+        finally:
+            self._recursion_check = None
+        return frag
 
-    def _create_fragment_from_node(self, process, ref_flow=None, include_elementary=False):
+    def _create_fragment_from_node(self, process, ref_flow=None, include_elementary=False, observe=True):
         if process.uuid in self._recursion_check:
             raise FragRecursionError('Encountered the same process!')
         self._recursion_check.add(process.uuid)
@@ -123,8 +128,10 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
 
         if include_elementary:
             for x in process.elementary(fg_exchs[1:]):
-                ed.create_fragment(x.flow, x.direction, parent=top_frag, value=x.value,
-                                   comment='FG Emission; %s' % comment)
+                elem = ed.create_fragment(x.flow, x.direction, parent=top_frag, value=x.value,
+                                          comment='FG Emission; %s' % comment,
+                                          StageName='Foreground Emissions')
+                elem.to_foreground()
 
         for x in process.intermediate(fg_exchs[1:]):
             if x.termination is None:
@@ -138,14 +145,25 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
                     bg = self.find_or_create_term(x, background=True)
                     child_frag.terminate(bg)
                 else:
+                    # definitely some code duplication here with find_or_create_term--- but can't exactly use because
+                    # in the event of 'create', we want the subfragment to also be recursively traversed.
                     try:
-                        subfrag = self._create_fragment_from_node(x.termination, ref_flow=x.flow,
-                                                                  include_elementary=include_elementary)
-                        child_frag.terminate(subfrag)
-                    except FragRecursionError:
-                        bg = self.find_or_create_term(x, background=True)
-                        child_frag.terinate(bg)
+                        subfrag = next(f for f in self._archive.fragments(background=False) if
+                                       f.term.terminates(x))
+                    except StopIteration:
+
+                        try:
+                            term_ref = self._archive.catalog_ref(process.origin, x.termination, entity_type='process')
+                            subfrag = self._create_fragment_from_node(term_ref, ref_flow=x.flow,
+                                                                      include_elementary=include_elementary,
+                                                                      observe=observe)
+                        except FragRecursionError:
+                            subfrag = self.find_or_create_term(x, background=True)
+
+                    child_frag.terminate(subfrag)
         self._archive.add_entity_and_children(top_frag)
+        if observe:
+            top_frag.observe(accept_all=True)
         return top_frag
 
     def clone_fragment(self, frag, **kwargs):

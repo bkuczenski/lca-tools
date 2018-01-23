@@ -1,18 +1,10 @@
 from __future__ import print_function, unicode_literals
 import uuid
-import re
 
 from lcatools.characterizations import Characterization
 from lcatools.entities.entities import LcEntity
 # from lcatools.entities.quantities import LcQuantity
-
-
-def trim_cas(cas):
-    try:
-        return re.sub('^(0*)', '', cas)
-    except TypeError:
-        print('%s %s' % (cas, type(cas)))
-        return ''
+from lcatools.interfaces import trim_cas
 
 
 class MissingFactor(Exception):

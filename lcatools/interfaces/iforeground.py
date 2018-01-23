@@ -45,16 +45,16 @@ class ForegroundInterface(AbstractQuery):
         return self._perform_query(_interface, 'find_or_create_term', ForegroundRequired,
                                    exchange, background=background)
 
-    def create_fragment_from_node(self, process, ref_flow=None, include_elementary=False):
+    def create_fragment_from_node(self, process_ref, ref_flow=None, include_elementary=False):
         """
 
-        :param process:
+        :param process_ref: a ProcessRef
         :param ref_flow:
         :param include_elementary:
         :return:
         """
         return self._perform_query(_interface, 'create_fragment_from_node', ForegroundRequired,
-                                   process, ref_flow=ref_flow, include_elementary=include_elementary)
+                                   process_ref, ref_flow=ref_flow, include_elementary=include_elementary)
 
     def clone_fragment(self, frag, **kwargs):
         """

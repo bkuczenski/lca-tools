@@ -221,10 +221,14 @@ class FlowTermination(object):
     @property
     def is_subfrag(self):
         """
-        Termination is a non-background, non-self fragment
+        Termination is a non-background, non-self fragment.
+        Controversy around whether expression should be:
+        self.is_frag and not (self.is_fg or self.is_bg or self.term_is_bg)  [current] or
+        self.is_frag and (not self.is_fg) and (not self.is_bg)  [old; seems wrong]
+
         :return:
         """
-        return self.is_frag and (not self.is_fg) and (not self.is_bg)
+        return self.is_frag and not (self.is_fg or self.is_bg or self.term_is_bg)
 
     @property
     def is_null(self):
@@ -419,7 +423,8 @@ class FlowTermination(object):
         :return:
         """
         if self.is_fg:
-            x = ExchangeValue(self._parent, self._parent.flow, self._parent.direction)
+            x = ExchangeValue(self._parent, self._parent.flow, self._parent.direction,
+                              value=self.node_weight_multiplier)
             yield x
         # elif self.is_frag:  # fragments can have unobserved exchanges too!
         #     for x in []:

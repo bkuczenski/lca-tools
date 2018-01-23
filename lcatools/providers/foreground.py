@@ -183,7 +183,7 @@ class LcForeground(LcArchive):
             frags.extend(self._recurse_frags(x))
         return frags
 
-    def save_fragments(self, save_unit_scores=True):
+    def save_fragments(self, save_unit_scores=False):
         current_files = os.listdir(self._fragment_dir)
         for r in self._fragments():
             frags = [t.serialize(save_unit_scores=save_unit_scores) for t in self._recurse_frags(r)]
@@ -198,7 +198,7 @@ class LcForeground(LcArchive):
                 print('deleting %s' % leftover)
                 os.remove(os.path.join(self._fragment_dir, leftover))
 
-    def save(self, save_unit_scores=True):
+    def save(self, save_unit_scores=False):
         self.write_to_file(self._archive_file, gzip=False, exchanges=True, characterizations=True, values=True)
         if not os.path.isdir(self._fragment_dir):
             os.makedirs(self._fragment_dir)

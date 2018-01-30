@@ -65,3 +65,62 @@ class ForegroundInterface(AbstractQuery):
         :return:
         """
         return self._perform_query(_interface, 'clone_fragment', ForegroundRequired, frag, **kwargs)
+
+    def traverse(self, fragment, scenario=None, **kwargs):
+        """
+        Traverse the fragment (observed) according to the scenario specification and return a list of FragmentFlows
+        :param fragment:
+        :param scenario:
+        :param kwargs:
+        :return:
+        """
+        return self._perform_query(_interface, 'traverse', ForegroundRequired('No access to fragment data'),
+                                   fragment, scenario, **kwargs)
+
+    def fragment_lcia(self, fragment, quantity_ref, scenario=None, **kwargs):
+        """
+        Perform fragment LCIA by first traversing the fragment to determine node weights, and then combining with
+        unit scores.
+        :param fragment:
+        :param quantity_ref:
+        :param scenario:
+        :param kwargs:
+        :return:
+        """
+        return self._perform_query(_interface, 'fragment_lcia', ForegroundRequired('No access to fragment data'),
+                                   fragment, quantity_ref, scenario, **kwargs)
+
+    def observe(self, fragment, exch_value, scenario=None, **kwargs):
+        """
+        Observe a fragment's exchange value with respect to its parent activity level.  Only applicable for
+        non-balancing fragments whose parents are processes or foreground nodes (child flows of subfragments have
+        their exchange values determined at traversal)
+        :param fragment:
+        :param exch_value:
+        :param scenario:
+        :param kwargs:
+        :return:
+        """
+        return self._perform_query(_interface, 'observe', ForegroundRequired('No access to fragment data'),
+                                   fragment, exch_value, scenario=scenario, **kwargs)
+
+    def set_balance_flow(self, fragment, **kwargs):
+        """
+        Specify that a given fragment is a balancing flow for the parent node, with respect to the specified fragment's
+        flow's reference quantity.
+
+        :param fragment:
+        :param kwargs:
+        :return:
+        """
+        return self._perform_query(_interface, 'set_balance_flow', ForegroundRequired, fragment, **kwargs)
+
+    def unset_balance_flow(self, fragment, **kwargs):
+        """
+        Specify that a given fragment's balance status should be removed.  The fragment's observed EV will remain at
+        the most recently observed level.
+        :param fragment:
+        :param kwargs:
+        :return:
+        """
+        return self._perform_query(_interface, 'unset_balance_flow', ForegroundRequired, fragment, **kwargs)

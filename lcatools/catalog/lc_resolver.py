@@ -3,10 +3,7 @@ import os
 import json
 
 from lcatools.catalog.lc_resource import LcResource
-
-
-class UnknownOrigin(Exception):
-    pass
+from lcatools.interfaces.abstract_query import UnknownOrigin
 
 
 class LcCatalogResolver(object):

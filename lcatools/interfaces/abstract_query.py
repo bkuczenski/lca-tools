@@ -3,6 +3,10 @@ Root-level catalog interface
 """
 
 
+class UnknownOrigin(Exception):
+    pass
+
+
 class ValidationError(Exception):
     pass
 
@@ -47,7 +51,11 @@ class AbstractQuery(object):
         if entity is None:
             return None
         if entity.is_entity:
-            return entity.make_ref(self._grounded_query(entity.origin))
+            try:
+                return entity.make_ref(self._grounded_query(entity.origin))
+            except UnknownOrigin:
+                entity.show()
+                raise
         else:
             return entity  # already a ref
 

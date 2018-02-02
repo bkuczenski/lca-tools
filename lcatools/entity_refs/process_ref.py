@@ -89,7 +89,7 @@ class ProcessRef(EntityRef):
 
     def exchange_relation(self, ref_flow, exch_flow, direction, termination=None, **kwargs):
         ref_flow = self._use_ref_exch(ref_flow)
-        return self._query.exchange_relation(self.origin, self.external_ref, ref_flow.external_ref,
+        return self._query.exchange_relation(self.external_ref, ref_flow.external_ref,
                                              exch_flow.external_ref, direction,
                                              termination=termination, **kwargs)
 

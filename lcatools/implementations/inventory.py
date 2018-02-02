@@ -30,7 +30,7 @@ class InventoryImplementation(BasicImplementation, InventoryInterface):
             raise PrivateArchive('Exchange values are protected')
         p = self._archive.retrieve_or_fetch_entity(process)
         if p.entity_type == 'process':
-            for x in sorted(p.inventory(reference=ref_flow),
+            for x in sorted(p.inventory(ref_flow=ref_flow),
                             key=lambda t: (not t.is_reference, t.direction, t.value or 0.0)):
                 yield x
         elif p.entity_type == 'fragment':
@@ -50,7 +50,7 @@ class InventoryImplementation(BasicImplementation, InventoryInterface):
         if self.privacy > 0:
             raise PrivateArchive('Exchange values are protected')
         p = self._archive.retrieve_or_fetch_entity(process)
-        xs = [x for x in p.inventory(reference=ref_flow)
+        xs = [x for x in p.inventory(ref_flow=ref_flow)
               if x.flow.external_ref == exch_flow and x.direction == direction]
         norm = p.reference(ref_flow)
         if termination is not None:

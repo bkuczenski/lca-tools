@@ -253,7 +253,7 @@ class LcProcess(LcEntity):
             return False
         return True
 
-    def inventory(self, reference=None, strict=False):
+    def inventory(self, ref_flow=None, strict=False):
         """
         generate a process's exchanges.  If no reference is supplied, generate unallocated exchanges, including all
         reference exchanges.  If a reference is supplied AND the process is allocated with respect to that reference,
@@ -261,24 +261,24 @@ class LcProcess(LcEntity):
         is supplied but the process is NOT allocated to that reference, generate unallocated ExchangeValues (excluding
         the reference itself).  Reference must be a flow or exchange found in the process's reference entity.
 
-        :param reference:
+        :param ref_flow:
         :param strict: [False] whether to use strict flow name matching [default- first regex match]
         :return:
         """
-        if reference is not None:
+        if ref_flow is not None:
             try:
-                reference = self.find_reference(reference, strict=strict)
+                ref_flow = self.find_reference(ref_flow, strict=strict)
             except NoReferenceFound:
-                reference = None
+                ref_flow = None
         for i in self._exchanges.values():
-            if reference is None:
+            if ref_flow is None:
                 yield i
             else:
                 if i in self.reference_entity:
                     continue
                 else:
                     # this pushes the problem up to ExchangeValue
-                    yield ExchangeValue.from_allocated(i, reference)
+                    yield ExchangeValue.from_allocated(i, ref_flow)
 
     def find_reference(self, reference=None, strict=False):
         """
@@ -484,7 +484,7 @@ class LcProcess(LcEntity):
     def lcia(self, quantity, ref_flow=None):
         if not quantity.is_entity:
             # only works for quantity refs-- in other words, always works
-            return quantity.do_lcia(self.inventory(reference=ref_flow), locale=self['SpatialScope'])
+            return quantity.do_lcia(self.inventory(ref_flow=ref_flow), locale=self['SpatialScope'])
         else:
             result = LciaResult(quantity)
             result.add_component(self.get_uuid(), entity=self)

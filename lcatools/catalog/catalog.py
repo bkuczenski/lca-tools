@@ -278,7 +278,7 @@ class LcCatalog(LciaEngine):
 
     def get_archive(self, ref, interface=None, strict=False):
         if interface in INTERFACE_TYPES:
-            rc = self.get_resource(':'.join([ref, interface]), strict=strict)
+            rc = self.get_resource(ref, iface=interface, strict=strict)
         else:
             rc = self.get_resource(ref, strict=strict)
         rc.check(self)
@@ -304,13 +304,14 @@ class LcCatalog(LciaEngine):
             print('Re-indexing %s' % source)
         res = next(r for r in self._resolver.resources_with_source(source))
         res.check(self)
-        res.make_index(inx_file)
+        return res.make_index(inx_file)
 
-    def _register_index(self, source, priority):
+    def _register_index(self, source, priority, archive=None):
         """
         creates a resource entry for an index file, if it exists
         :param source:
         :param priority:
+        :param archive: [None] if present, pre-load the resource with the specified archive
         :return:
         """
         inx_file = self._index_file(source)
@@ -321,7 +322,8 @@ class LcCatalog(LciaEngine):
                 self.new_resource(r.reference, inx_file, 'json', interfaces='index', priority=priority,
                                   store=store,
                                   _internal=True,
-                                  static=True)
+                                  static=True,
+                                  preload_archive=archive)
 
     def index_resource(self, origin, interface=None, source=None, priority=10, force=False):
         """
@@ -340,8 +342,8 @@ class LcCatalog(LciaEngine):
         :return:
         """
         source = self._find_single_source(origin, interface, source=source)
-        self._index_source(source, force=force)
-        self._register_index(source, priority)
+        ar = self._index_source(source, force=force)
+        self._register_index(source, priority, archive=ar)
 
     def create_source_cache(self, source, static=False):
         """

@@ -26,10 +26,8 @@ class LcResource(object):
             ref = local_ref(source)
         ds_type = archive.__class__.__name__  # static flag indicates whether archive is complete
         kwargs.update(archive.init_args)
-        res = cls(ref, source, ds_type, interfaces=interfaces, static=archive.static, **kwargs)
+        res = cls(ref, source, ds_type, interfaces=interfaces, static=archive.static, preload_archive=archive, **kwargs)
 
-        # install the archive
-        res._archive = archive
         return res
 
     @classmethod
@@ -93,6 +91,7 @@ class LcResource(object):
     def make_index(self, index_file):
         self._archive.load_all()
         self._archive.write_to_file(index_file, gzip=True, exchanges=False, characterizations=False, values=False)
+        return self._archive
 
     def make_cache(self, cache_file):
         self._archive.write_to_file(cache_file, gzip=True, exchanges=True, characterizations=True, values=True)
@@ -126,7 +125,8 @@ class LcResource(object):
             for k in interfaces:
                 self.add_interface(k)
 
-    def __init__(self, reference, source, ds_type, interfaces=None, privacy=0, priority=0, static=False, **kwargs):
+    def __init__(self, reference, source, ds_type, interfaces=None, privacy=0, priority=0, static=False,
+                 preload_archive=None, **kwargs):
         """
 
         :param reference: semantic reference
@@ -136,6 +136,7 @@ class LcResource(object):
         :param privacy: privacy level... TBD... 0 = public, 1 = exchange values private, 2 = all exchanges private
         :param priority: priority level.. 0-100 scale, lowest priority resource is loaded first
         :param static: [False] if True, load_all() after initializing
+        :param preload_archive: [None] use to assign an existing archive
         :param kwargs: additional keyword arguments to constructor. Some interesting ones:
           download: a dict containing 'url' and optional 'md5sum' fields
           prefix: often used when accessing zipped archives
@@ -147,7 +148,7 @@ class LcResource(object):
             raise EnvironmentError('%s not found' % source)
         '''
 
-        self._archive = None
+        self._archive = preload_archive
 
         self._ref = reference
         if source is None:

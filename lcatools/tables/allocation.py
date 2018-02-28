@@ -115,5 +115,10 @@ class AllocationGrid(BaseTableOutput):
                 self._add_alloc_refs(arg, flow=ref.flow)
 
     def __init__(self, archive, *prefs):
+        """
+
+        :param archive:
+        :param prefs: one or more process refs
+        """
         self._ar = archive
         super(AllocationGrid, self).__init__(*prefs)

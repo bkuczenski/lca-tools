@@ -340,38 +340,39 @@ class EcospoldV2Archive(LcArchive):
         if exchanges:
             for exch in self._collect_exchanges(o):
                 """
-                If the dataset is linked, all we do is load non-zero exchanges, ideally all with terminations
-                If the dataset is unlinked, we first test if the exchange is marked with a conflicting termination
-                  (a reference flow with a termination is regarded as an error) and if so, we raise.
-                   if not, we proceed normally.  EXCEPT- we don't want to wind up with a reference exchange
-                   that is not present in the exchange list because it's zero-valued.  There shouldn't be any zero-
-                   valued reference exchanges in unlinked datasets, so we will err on the side of adding zero-valued
-                   exchanges.  The unlinked data should include as much information as possible.
+                If the dataset is linked, all we do is load non-zero exchanges, ideally all with terminations.  Spurious
+                 terminations in reference exchanges are dropped (deprecated EI linker feature)
+                If the dataset is unlinked, we will err on the side of adding zero-valued exchanges.  The unlinked data
+                 should include as much information as possible.  Spurious terminations in reference exchanges are
+                  retained, but the reference status is dropped (in-use EI linker feature)
+
+                We could simplify this function by placing those tests in _collect_exchanges, but I would rather not
+                muck with the data at that stage.
+
                 """
-                if self._linked:
-                    if exch.value != 0:
-                        self._print('## Exch %s [%s] (%g)' % (exch.flow, exch.direction, exch.value))
-                        # still need to sanitize termination on reference flows, lest we get a double entry
-                        if exch.is_ref:
-                            if exch.termination is not None:
-                                print('Squashing bad termination in linked reference exchange, %s\nFlow %s Term %s' % (
-                                    p.get_uuid(), exch.flow.get_uuid(), exch.termination))
-                                p.add_exchange(exch.flow, exch.direction, reference=rx, value=exch.value,
-                                               termination=None)
-                                continue
-                        p.add_exchange(exch.flow, exch.direction, reference=rx, value=exch.value,
-                                       termination=exch.termination)
-                else:
-                    # use exch.is_ref to identify references; store unallocated values (rx already None)
-                    if exch.is_ref:
-                        if exch.termination is not None:
-                            raise EcospoldV2Error('Terminated Reference flow encountered in %s\nFlow %s Term %s' % (
-                                                  p.get_uuid(), exch.flow.get_uuid(), exch.termination))
-                            # suggested resolution: neutralize the is_ref
-                    self._print('## Exch %s [%s] (%g)' % (exch.flow, exch.direction, exch.value))
-                    p.add_exchange(exch.flow, exch.direction, reference=rx, value=exch.value,
-                                   termination=exch.termination)
-                    if exch.is_ref:
+                if exch.value == 0 and self._linked:
+                    continue
+                self._print('## Exch %s [%s] (%g)' % (exch.flow, exch.direction, exch.value))
+
+                term = exch.termination
+                is_ref = exch.is_ref
+
+                if is_ref:
+                    if exch.termination is not None:
+                        if self._linked:
+                            print('Squashing bad termination in linked reference exchange, %s\nFlow %s Term %s' % (
+                                p.get_uuid(), exch.flow.get_uuid(), exch.termination))
+                            term = None
+                        else:
+                            print('Removing reference status from linked reference exchange, %s\nFlow %s Term %s' % (
+                                p.get_uuid(), exch.flow.get_uuid(), exch.termination))
+                            is_ref = False
+
+                p.add_exchange(exch.flow, exch.direction, reference=rx, value=exch.value,
+                               termination=term)
+
+                if not self._linked:
+                    if is_ref:
                         self._print('## ## Exch is reference %s %s' % (exch.flow, exch.direction))
                         p.add_reference(exch.flow, exch.direction)
         return p

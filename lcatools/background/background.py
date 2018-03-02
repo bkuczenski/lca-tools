@@ -25,6 +25,13 @@ class RepeatAdjustment(Exception):
     pass
 
 
+class TerminationError(Exception):
+    """
+    This indicates that an ambiguous termination was encountered, with no valid means to resolve the ambiguity
+    """
+    pass
+
+
 class MatrixProto(object):
     """
     # Exchanges: parent = column; term = row;
@@ -243,7 +250,9 @@ class BackgroundEngine(object):
             elif len(terms) == 1:
                 term = terms[0]
             else:
-                if strategy == 'first':
+                if strategy == 'abort':
+                    raise TerminationError('Ambiguous termination found for %s: %s' % (exch.direction, exch.flow))
+                elif strategy == 'first':
                     term = terms[0]
                 elif strategy == 'last':
                     term = terms[-1]
@@ -475,7 +484,10 @@ class BackgroundEngine(object):
             else:
                 self._cutoff.append(k)
 
-        if self._a_matrix is None and self.tstack.background is not None:
+        if self.tstack.background is None:
+            return
+
+        if self._a_matrix is None:
             self._construct_a_matrix()
             self._construct_b_matrix()
 
@@ -484,7 +496,7 @@ class BackgroundEngine(object):
 
         # self.make_foreground()
 
-    def add_all_ref_products(self, multi_term='first', default_allocation=None, net_coproducts=False):
+    def add_all_ref_products(self, multi_term='abort', default_allocation=None, net_coproducts=False):
         for p in self.fg.processes():
             for x in p.references():
                 j = self.check_product_flow(x.flow, p)
@@ -492,7 +504,7 @@ class BackgroundEngine(object):
                     self._add_ref_product(x.flow, p, multi_term, default_allocation, net_coproducts)
         self._update_component_graph()
 
-    def add_ref_product(self, flow, term, multi_term='first', default_allocation=None, net_coproducts=False):
+    def add_ref_product(self, flow, term, multi_term='abort', default_allocation=None, net_coproducts=False):
         """
         Here we are adding a reference product - column of the A + B matrix.  The termination must be supplied.
         :param flow: a product flow
@@ -502,7 +514,7 @@ class BackgroundEngine(object):
          'mix' - create a new "market" process that mixes the inputs
          'first' - take the first match (alphabetically by process name)
          'last' - take the last match (alphabetically by process name)
-         Not currently implemented.
+         'abort' - the default- do not allow a nondeterministic termination
         :param default_allocation: an LcQuantity to use for allocation if unallocated processes are encountered
         :param net_coproducts: [False] for unallocated multi-output processes, compute net demand of coproducts instead
          of allocating. (Works for USLCI; still buggy for ecoinvent)

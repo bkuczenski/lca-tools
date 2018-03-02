@@ -450,6 +450,8 @@ class Compartment(object):
         return hash(self._id)
 
     def __eq__(self, other):
+        if other is None:
+            return False
         return (self.name in other.synonyms) and (self.parent == other.parent)
 
     def __contains__(self, item):

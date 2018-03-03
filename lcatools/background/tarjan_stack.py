@@ -39,6 +39,11 @@ class TarjanStack(object):
         self._stack.append(product_flow)
         self._stack_hash.add(product_flow)
 
+    def pop_from_stack(self):
+        pf = self._stack.pop()
+        self._stack_hash.remove(pf)
+        return pf
+
     def label_scc(self, index, key):
         """
 

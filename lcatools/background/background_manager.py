@@ -22,6 +22,9 @@ class BackgroundManager(object):
         """
         self._be = BackgroundEngine(index_interface, quiet=quiet)
 
+    def re_index(self):
+        self._be.fg.re_index()
+
     def _get_product_flow(self, process, ref_flow):
         rx = process.reference(flow=ref_flow)
         pf = self._be.add_ref_product(rx.flow, process)
@@ -51,7 +54,8 @@ class BackgroundManager(object):
 
     def foreground(self, process, ref_flow=None):
         """
-        Returns a list of terminated exchanges corresponding to the named process's child exchanges.
+        Returns a list of terminated exchanges beginning with the named process and reference flow, and containing
+        the entire foreground (product system model). Dependencies and emissions are not included.
         :param process:
         :param ref_flow:
         :return:
@@ -62,32 +66,30 @@ class BackgroundManager(object):
 
         exchs = [ExchangeValue(product_flow.process, product_flow.flow, product_flow.direction, value=1.0)]
 
-        node = product_flow
         # first, foregrounds
         rows, cols = _af.nonzero()
         for i in range(len(rows)):
-            if cols[i] != 0:
-                continue
+            node = fg[cols[i]]
             term = fg[rows[i]]
             exchs.append(ExchangeValue(node.process, term.flow, comp_dir(term.direction), value=_af.data[i],
                                        termination=term.process.external_ref))
 
-        # next, dependencies
-        rows, cols = _ad.nonzero()
-        for i in range(len(rows)):
-            if cols[i] != 0:
-                continue
-            term = self._be.tstack.bg_node(rows[i])
-            exchs.append(ExchangeValue(node.process, term.flow, comp_dir(term.direction), value=_ad.data[i],
-                                       termination=term.process.external_ref))
+        if 0:
+            # need to figure this out but for now we just want Af
+            # next, dependencies
+            rows, cols = _ad.nonzero()
+            for i in range(len(rows)):
+                node = fg[cols[i]]
+                term = self._be.tstack.bg_node(rows[i])
+                exchs.append(ExchangeValue(node.process, term.flow, comp_dir(term.direction), value=_ad.data[i],
+                                           termination=term.process.external_ref))
 
-        # last, fg emissions
-        rows, cols = _bf.nonzero()
-        for i in range(len(rows)):
-            if cols[i] != 0:
-                continue
-            emis = self._be.emissions[rows[i]]
-            exchs.append(ExchangeValue(node.process, emis.flow, emis.direction, value=_bf.data[i]))
+            # last, fg emissions
+            rows, cols = _bf.nonzero()
+            for i in range(len(rows)):
+                node = fg[cols[i]]
+                emis = self._be.emissions[rows[i]]
+                exchs.append(ExchangeValue(node.process, emis.flow, emis.direction, value=_bf.data[i]))
 
         return exchs
 

@@ -18,6 +18,7 @@ from lcatools.providers.ecoinvent_spreadsheet import EcoinventSpreadsheet
 from lcatools.providers.ecospold import EcospoldV1Archive
 from lcatools.providers.ecoinvent_lcia import EcoinventLcia
 from lcatools.providers.foreground import LcForeground
+from lcatools.providers.openlca_jsonld import OpenLcaJsonLdArchive
 from lcatools.providers.traci import Traci21Factors
 from lcatools.providers.antelope.antelope_v1 import AntelopeV1Client
 # from lcatools.foreground.foreground import ForegroundArchive
@@ -92,6 +93,11 @@ def archive_factory(source, ds_type, **kwargs):
         'ecoinventspreadsheet': EcoinventSpreadsheet,
         'ecoinventlcia': EcoinventLcia,
         'ecoinvent_lcia': EcoinventLcia,
+        'openlcajsonldarchive': OpenLcaJsonLdArchive,
+        'openlca': OpenLcaJsonLdArchive,
+        'openlca_jsonld': OpenLcaJsonLdArchive,
+        'olca': OpenLcaJsonLdArchive,
+        'olca_jsonld': OpenLcaJsonLdArchive,
         'foreground': LcForeground,
         'lcforeground': LcForeground,
         'traci2': Traci21Factors,

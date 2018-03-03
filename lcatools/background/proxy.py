@@ -6,8 +6,11 @@ class BackgroundProxy(object):
     A stand-in for background manager, assuming the archive data sets are already aggregated and no matrix
     construction / inversion needs to be performed
     """
-    def __init__(self, archive):
-        self._archive = archive
+    def __init__(self, index):
+        self._index = index
+
+    def re_index(self):
+        self._index.re_index()
 
     '''
     Required methods
@@ -23,7 +26,7 @@ class BackgroundProxy(object):
 
     @property
     def background_flows(self):
-        for p in self._archive.processes():
+        for p in self._index.processes():
             for rx in p.reference_entity:
                 yield ProductFlow(None, p, rx.flow)
 

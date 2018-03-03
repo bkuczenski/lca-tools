@@ -183,6 +183,20 @@ class BackgroundEngine(object):
         self._pf_index.append(pf)
         self.tstack.add_to_stack(pf)
 
+    def _rm_product_flow_children(self, bad_pf):
+        while 1:
+            pf = self.tstack.pop_from_stack()
+            self._print('!!!removing %s' % pf)
+            while 1:
+                z = self._pf_index.pop()
+                self._lowlinks.pop(z.key)
+                self._product_flows.pop(z.key)
+                if z is pf:
+                    break
+                self._print('--!removing %s' % z)
+            if pf is bad_pf:
+                break
+
     def _set_lowlink(self, pf, lowlink):
         """
         Sets lowlink to be the lower of the existing lowlink or the supplied lowlink
@@ -251,7 +265,8 @@ class BackgroundEngine(object):
                 term = terms[0]
             else:
                 if strategy == 'abort':
-                    raise TerminationError('Ambiguous termination found for %s: %s' % (exch.direction, exch.flow))
+                    print('Ambiguous termination found for %s: %s' % (exch.direction, exch.flow))
+                    raise TerminationError
                 elif strategy == 'first':
                     term = terms[0]
                 elif strategy == 'last':
@@ -532,7 +547,17 @@ class BackgroundEngine(object):
         sys.setrecursionlimit(self.required_recursion_limit)
 
         j = self._create_product_flow(flow, term)
-        self._traverse_term_exchanges(j, multi_term, default_allocation, net_coproducts)
+        try:
+            self._traverse_term_exchanges(j, multi_term, default_allocation, net_coproducts)
+        except TerminationError:
+            self._rm_product_flow_children(j)
+            print('Termination Error')
+
+            # reset incoming
+            self._interior_incoming = []  # terminated entries -> added to the component graph
+            self._cutoff_incoming = []  # entries with no termination -> emissions
+
+            j = None
 
         sys.setrecursionlimit(old_recursion_limit)
         return j
@@ -610,7 +635,12 @@ class BackgroundEngine(object):
                 if i is None:
                     print('Cutting off at Parent process: %s\n%s\n' % (parent.process.external_ref, parent))
                     continue
-                self._traverse_term_exchanges(i, multi_term, default_allocation, net_coproducts)
+                try:
+                    self._traverse_term_exchanges(i, multi_term, default_allocation, net_coproducts)
+                except TerminationError:
+                    self._rm_product_flow_children(i)
+                    raise
+
                 # carry back lowlink, if lower
                 self._set_lowlink(parent, self._lowlink(i))
             elif self.tstack.check_stack(i):

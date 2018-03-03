@@ -28,15 +28,16 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
         :return:
         """
         if self._bm is None:
-            if self._archive.static:
-                # perform costly operations only when/if required
-                if not hasattr(self._archive, 'bm'):
-                    index = self._archive.make_interface('index', privacy=0)
+            # perform costly operations only when/if required
+            if not hasattr(self._archive, 'bm'):
+                index = self._archive.make_interface('index', privacy=0)
+                try:
                     self._archive.bm = BackgroundManager(index)
-                self._bm = self._archive.bm
-            else:
-                # non-static interfaces implement foreground-as-background
-                self._bm = BackgroundProxy(self._archive)
+                except ImportError:
+                    # if numpy is not available, use the proxy
+                    print('Unable to import background engine. Using the proxy engine: every node as flat background')
+                    self._archive.bm = BackgroundProxy(index)
+            self._bm = self._archive.bm
         return self._bm
 
     '''

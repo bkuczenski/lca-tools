@@ -71,8 +71,9 @@ class BackgroundInterface(AbstractQuery):
 
     def foreground(self, process, ref_flow=None, **kwargs):
         """
-        Returns an ordered list of exchanges- the first being the named process + reference flow, and every successive
-        one having a named termination, so that the exchanges could be linked into a fragment tree.
+        Returns an ordered list of exchanges for the foreground matrix Af for the given process and reference flow-
+        the first being the named process + reference flow, and every successive one having a named termination, so
+        that the exchanges could be linked into a fragment tree.
         :param process:
         :param ref_flow:
         :return:

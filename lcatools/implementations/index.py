@@ -26,6 +26,10 @@ class IndexImplementation(BasicImplementation, IndexInterface):
         self._terminations = defaultdict(set)
         self._index_terminations()
 
+    def re_index(self):
+        self._terminations = defaultdict(set)
+        self._index_terminations()
+
     def _index_terminations(self):
         """
         This can't be done on add because new processes may get stored before their references are setup.

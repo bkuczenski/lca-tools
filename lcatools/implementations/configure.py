@@ -25,6 +25,8 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
             self.characterize_flow(*k, overwrite=overwrite)
         for k in config['allocate_by_quantity']:
             self.allocate_by_quantity(*k, overwrite=overwrite)
+        if hasattr(self._archive, 'bm'):
+            self._archive.bm.re_index()
 
     @staticmethod
     def _check_direction(pr, fl):

@@ -20,7 +20,7 @@ class IndexInterface(AbstractQuery):
         :param kwargs:
         :return: int
         """
-        return self._perform_query(_interface, 'count', IndexRequired('Index access required'), **kwargs)
+        return self._perform_query(_interface, 'count', IndexRequired('Index access required'), entity_type, **kwargs)
 
     def processes(self, **kwargs):
         """

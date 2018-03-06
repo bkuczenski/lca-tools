@@ -2,7 +2,7 @@
 Query Interface -- used to operate catalog refs
 """
 
-from .iindex import IndexInterface
+from .iindex import IndexInterface, IndexRequired
 from .ibackground import BackgroundInterface
 from .iforeground import ForegroundInterface
 from .iinventory import InventoryInterface
@@ -77,6 +77,13 @@ class CatalogQuery(IndexInterface, BackgroundInterface, ForegroundInterface, Inv
         for i in self._catalog.gen_interfaces(self._origin, itype, strict=strict):
             if self._debug:
                 print('yielding %s' % i)
+            if isinstance(i, BackgroundInterface):
+                if self._debug:
+                    print('Setting up background interface')
+                try:
+                    i.setup_bm(self)
+                except StopIteration:
+                    raise IndexRequired('Background engine requires index interface')
             yield i
 
     def is_elementary(self, obj):

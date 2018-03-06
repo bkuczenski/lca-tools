@@ -58,6 +58,10 @@ class RxRef(object):
         return self._value
 
     @property
+    def is_reference(self):
+        return True
+
+    @property
     def value_string(self):
         if self._value is None:
             return ' --- '
@@ -291,19 +295,25 @@ class LcProcess(LcEntity):
             if len(self.reference_entity) > 1:
                 raise NoReferenceFound('Must specify reference!')
             ref = next(x for x in self.reference_entity)
-        elif isinstance(reference, str):
-            ref = self._find_reference_by_string(reference, strict=strict)
-        elif reference.entity_type == 'flow':
-            try:
-                ref = next(rf for rf in self.reference_entity if rf.flow == reference)
-            except StopIteration:
-                raise NoReferenceFound('No reference exchange found with flow %s' % reference)
-        elif reference.entity_type == 'exchange':
-            if reference in self.reference_entity:
-                ref = reference
+        elif hasattr(reference, 'entity_type'):
+            if reference.entity_type == 'flow':
+                try:
+                    ref = next(rf for rf in self.reference_entity if rf.flow == reference)
+                except StopIteration:
+                    raise NoReferenceFound('No reference exchange found with flow %s' % reference)
+            elif reference.entity_type == 'exchange':
+                if reference in self.reference_entity:
+                    ref = reference
+                else:
+                    raise NoReferenceFound('Exchange is not a reference exchange %s' % reference)
             else:
-                raise NoReferenceFound('Exchange is not a reference exchange %s' % reference)
+                ref = None
         else:
+            try:
+                ref = next(rf for rf in self.reference_entity if rf.flow.external_ref == reference)
+            except StopIteration:
+                ref = self._find_reference_by_string(reference, strict=strict)
+        if 0:  # not isinstance(ref, Exchange):
             raise NoReferenceFound('Unintelligible reference %s' % reference)
         return self._exchanges[ref.key]
 

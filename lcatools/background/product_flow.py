@@ -43,7 +43,7 @@ class ProductFlow(object):
             self._hash = (flow.external_ref, process.external_ref)
             ref_exch = process.reference(flow)
             self._direction = ref_exch.direction
-            self._inbound_ev = ref_exch.value
+            self._inbound_ev = next(process.exchange_values(ref_exch.flow, ref_exch.direction)).value
             if self._inbound_ev is None:
                 print('None inbound ev! using 1.0. f:%s t:%s' % (flow, process))
                 self._inbound_ev = 1.0

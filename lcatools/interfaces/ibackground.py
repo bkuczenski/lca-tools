@@ -12,6 +12,14 @@ class BackgroundInterface(AbstractQuery):
     """
     BackgroundInterface core methods
     """
+    def setup_bm(self, index=None):
+        """
+        allows a background implementation to obtain an index interface from the catalog
+        :param index:
+        :return:
+        """
+        pass
+
     def foreground_flows(self, search=None, **kwargs):
         """
         Yield a list of ProductFlows, which serialize to: origin, process external ref, reference flow external ref,

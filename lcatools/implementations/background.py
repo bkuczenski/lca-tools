@@ -20,6 +20,20 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
 
         self._bm = None
 
+    def setup_bm(self, query=None):
+        if self._bm is None:
+            # perform costly operations only when/if required
+            if not hasattr(self._archive, 'bm'):
+                if query is None:
+                    query = self._archive.make_interface('index', privacy=0)
+                try:
+                    self._archive.bm = BackgroundManager(query)
+                except ImportError:
+                    # if numpy is not available, use the proxy
+                    print('Unable to import background engine. Using the proxy engine: every node as flat background')
+                    self._archive.bm = BackgroundProxy(query)
+            self._bm = self._archive.bm
+
     @property
     def _bg(self):
         """
@@ -27,17 +41,7 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
         or by a BackgroundProxy (assumes archive is already aggregated)
         :return:
         """
-        if self._bm is None:
-            # perform costly operations only when/if required
-            if not hasattr(self._archive, 'bm'):
-                index = self._archive.make_interface('index', privacy=0)
-                try:
-                    self._archive.bm = BackgroundManager(index)
-                except ImportError:
-                    # if numpy is not available, use the proxy
-                    print('Unable to import background engine. Using the proxy engine: every node as flat background')
-                    self._archive.bm = BackgroundProxy(index)
-            self._bm = self._archive.bm
+        self.setup_bm()
         return self._bm
 
     '''

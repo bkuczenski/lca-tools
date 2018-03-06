@@ -54,8 +54,8 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
         :param kwargs:
         :return:
         """
-        fl = self._archive[flow_ref]
-        pr = self._archive[process_ref]
+        fl = self._archive.retrieve_or_fetch_entity(flow_ref)
+        pr = self._archive.retrieve_or_fetch_entity(process_ref)
         if direction is None:
             direction = self._check_direction(pr, fl)
 
@@ -74,14 +74,14 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
         :param kwargs:
         :return:
         """
-        fl = self._archive[flow_ref]
+        fl = self._archive.retrieve_or_fetch_entity(flow_ref)
         if process_ref is None:
             for p in self._archive.entities_by_type('process'):
                 for x in p.references():
                     if x.flow is fl and x.direction == direction:
                         x.process.remove_reference(x)
         else:
-            pr = self[process_ref]
+            pr = self._archive.retrieve_or_fetch_entity(process_ref)
             if direction is None:
                 direction = self._check_direction(pr, fl)
             pr.remove_reference(Exchange(pr, fl, direction))
@@ -99,8 +99,8 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
         :param kwargs:
         :return:
         """
-        flow = self._archive[flow_ref]
-        qty = self._archive[quantity_ref]
+        flow = self._archive.retrieve_or_fetch_entity(flow_ref)
+        qty = self._archive.retrieve_or_fetch_entity(quantity_ref)
         if flow.has_characterization(qty):
             if overwrite:
                 flow.del_characterization(qty)
@@ -122,8 +122,8 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
         :param kwargs:
         :return:
         """
-        p = self._archive[process_ref]
-        qty = self._archive[quantity_ref]
+        p = self._archive.retrieve_or_fetch_entity(process_ref)
+        qty = self._archive.retrieve_or_fetch_entity(quantity_ref)
         is_alloc = False
         if overwrite:
             for rf in p.reference_entity:

@@ -64,10 +64,6 @@ class LcResource(object):
 
         return sorted([cls.from_dict(ref, d) for d in j[ref]], key=lambda x: x.priority)
 
-    def _load_all(self):
-        self._archive.load_all()
-        self.apply_config()
-
     def _instantiate(self, catalog):
         if self.source is None:
             if 'download' in self._args:
@@ -82,7 +78,8 @@ class LcResource(object):
         if os.path.exists(catalog.cache_file(self.source)):
             update_archive(self._archive, catalog.cache_file(self.source))
         if self.static and self.ds_type.lower() != 'json':
-            self._load_all()  # static json archives are by convention saved in complete form
+            self._archive.load_all()  # static json archives are by convention saved in complete form
+        self.apply_config()
 
     @property
     def is_loaded(self):
@@ -98,7 +95,7 @@ class LcResource(object):
         return True
 
     def make_index(self, index_file):
-        self._load_all()
+        self._archive.load_all()
         suffix = 'index__%s' % new_date
         self._archive.write_to_file(index_file, gzip=True, ref_suffix=suffix,
                                     exchanges=False, characterizations=False, values=False)
@@ -115,8 +112,9 @@ class LcResource(object):
         return self._archive.make_interface(iface, privacy=self.privacy)
 
     def apply_config(self):
-        print('Applying stored configuration')
-        self._archive.make_interface('configure').apply_config(self._config)
+        if len(self._config) > 0:
+            print('Applying stored configuration')
+            self._archive.make_interface('configure').apply_config(self._config)
 
     def add_interface(self, iface):
         if iface in INTERFACE_TYPES:

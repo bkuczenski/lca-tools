@@ -62,6 +62,9 @@ class LcCatalogResolver(object):
         :param store: [True] if False, add the resource to memory only
         :return:
         """
+        if resource.exists(self._resource_dir):
+            # do nothing
+            return
         if store:
             resource.write_to_file(self._resource_dir)
         self._resources[resource.reference].append(resource)
@@ -120,7 +123,7 @@ class LcCatalogResolver(object):
 
         The convention is that no two resources should have the same source, so if a source is provided then the
         output of resources_with_source() is used.  Otherwise, the output of resolve() is used.  Internal resources
-        (indexes and archives) are never returned.
+        (indexes and archives) are never returned. [WHY?]
         :return: a single LcResource
         """
         if source is not None:

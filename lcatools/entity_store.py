@@ -557,11 +557,13 @@ class EntityStore(object):
         """
         return self.serialize(**kwargs)
 
-    def write_to_file(self, filename, gzip=False, complete=False, **kwargs):
+    def write_to_file(self, filename, gzip=False, complete=False, ref_suffix=None, **kwargs):
         if complete:
             s = self._serialize_all(**kwargs)
         else:
             s = self.serialize(**kwargs)
+        if ref_suffix is not None:
+            s['dataReference'] = '.'.join([s['dataReference'], ref_suffix])
         if gzip is True:
             if not bool(re.search('\.gz$', filename)):
                 filename += '.gz'

@@ -214,21 +214,7 @@ class LcCatalog(LciaEngine):
         :param kwargs: interfaces=None, privacy=0, priority=0, static=False; **kwargs passed to archive constructor
         :return:
         """
-        res = self._resolver.new_resource(*args, store=store, **kwargs)  # explicit store= for doc purposes
-
-        if not store:
-            '''
-            # WHY are we calling _register_index?
-            if we add a new resource that is NOT stored and does NOT have an index, then _register_index looks for
-            one and registers it if found.  But the way it registers it is via new_resource--
-            so there may be a recursion loop risk here.  This smells like a hack. Is there a better way?
-            '''
-            try:
-                next(i for i in self._resolver.resolve(res.reference, 'index', strict=True))
-            except StopIteration:  # if no index is resolvable
-                self._register_index(res.source, 10)  # register indices if they exist and are not stored
-
-            # self._ensure_resource(res)
+        return self._resolver.new_resource(*args, store=store, **kwargs)  # explicit store= for doc purposes
 
     def add_resource(self, resource, store=True):
         """
@@ -295,7 +281,15 @@ class LcCatalog(LciaEngine):
      - static archive (performs load_all())
     '''
 
-    def _index_source(self, source, force=False):
+    def _index_source(self, source, priority, force=False):
+        """
+        Instructs the resource to create an index of itself in the specified file; creates a new resource for the
+        index
+        :param source:
+        :param priority:
+        :param force:
+        :return:
+        """
         inx_file = self._index_file(source)
         if os.path.exists(inx_file):
             if not force:
@@ -304,26 +298,27 @@ class LcCatalog(LciaEngine):
             print('Re-indexing %s' % source)
         res = next(r for r in self._resolver.resources_with_source(source))
         res.check(self)
-        return res.make_index(inx_file)
+        new_ref = res.make_index(inx_file)
+        self._register_index(source, new_ref, priority, store=self._resolver.is_permanent(res), archive=res.archive)
 
-    def _register_index(self, source, priority, archive=None):
+    def _register_index(self, source, new_ref, priority, store=True, archive=None):
         """
         creates a resource entry for an index file, if it exists
         :param source:
+        :param new_ref: from index
         :param priority:
+        :param store: [True]
         :param archive: [None] if present, pre-load the resource with the specified archive
         :return:
         """
         inx_file = self._index_file(source)
         if os.path.exists(inx_file):
-            for r in self._resolver.resources_with_source(source):
-                print('Registering index %s for %s' % (inx_file, r.source))
-                store = self._resolver.is_permanent(r)
-                self.new_resource(r.reference, inx_file, 'json', interfaces='index', priority=priority,
-                                  store=store,
-                                  _internal=True,
-                                  static=True,
-                                  preload_archive=archive)
+            print('Registering index %s for %s' % (inx_file, source))
+            self.new_resource(new_ref, inx_file, 'json', interfaces='index', priority=priority,
+                              store=store,
+                              _internal=True,
+                              static=True,
+                              preload_archive=archive)
 
     def index_resource(self, origin, interface=None, source=None, priority=10, force=False):
         """
@@ -342,8 +337,7 @@ class LcCatalog(LciaEngine):
         :return:
         """
         source = self._find_single_source(origin, interface, source=source)
-        ar = self._index_source(source, force=force)
-        self._register_index(source, priority, archive=ar)
+        self._index_source(source, priority, force=force)
 
     def create_source_cache(self, source, static=False):
         """
@@ -382,7 +376,7 @@ class LcCatalog(LciaEngine):
         :return:
         """
         source = self._find_single_source(origin, interface, source=source)
-        self._index_source(source, force=True)
+        self._index_source(source, 10, force=True)
         if not os.path.isabs(archive_file):
             archive_file = os.path.join(self._archive_dir, archive_file)
         self.create_source_cache(source, static=True)
@@ -406,6 +400,9 @@ class LcCatalog(LciaEngine):
         :param source:
         :param force: overwrite if exists
         :param signifier: semantic descriptor for the new descendant (optional)
+        :param strict:
+        :param privacy:
+        :param priority:
         :param kwargs:
         :return:
         """
@@ -436,9 +433,7 @@ class LcCatalog(LciaEngine):
         for res in sorted(self._resolver.resolve(origin, interfaces=itype, strict=strict),
                           key=lambda x: (not x.is_loaded, x.reference != origin, x.priority)):
             res.check(self)
-            for iface in res.interfaces:
-                if iface == itype:
-                    yield res.make_interface(itype)
+            yield res.make_interface(itype)
         '''
         # no need for this because qdb is (a) listed in the resolver and (b) upstream of everything
         if 'quantity' in itype:

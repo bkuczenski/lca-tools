@@ -35,6 +35,9 @@ class OpenLcaJsonLdArchive(LcArchive):
         if not skip_index:
             self._gen_index()
 
+    def _check_id(self, _id):
+        return self[_id] is not None
+
     def _create_object(self, typ, key):
         return json.loads(self._archive.readfile(os.path.join(typ, key + '.json')))
 
@@ -58,7 +61,10 @@ class OpenLcaJsonLdArchive(LcArchive):
         return cat
 
     def _create_unit(self, unit_id):
-        u_j = self._create_object('unit_groups', unit_id)
+        try:
+            u_j = self._create_object('unit_groups', unit_id)
+        except KeyError:
+            return LcUnit(unit_id), None
         unitconv = dict()
         unit = None
 
@@ -78,6 +84,10 @@ class OpenLcaJsonLdArchive(LcArchive):
         return unit, unitconv
 
     def _create_quantity(self, q_id):
+        q = self[q_id]
+        if q is not None:
+            return q
+
         q_j, name, cat = self._clean_object('flow_properties', q_id)
         ug = q_j.pop('unitGroup')
         unit, unitconv = self._create_unit(ug['@id'])
@@ -88,6 +98,10 @@ class OpenLcaJsonLdArchive(LcArchive):
         return q
 
     def _create_flow(self, f_id):
+        q = self[f_id]
+        if q is not None:
+            return q
+
         f_j, name, comp = self._clean_object('flows', f_id)
         cas = f_j.pop('cas', '')
         loc = f_j.pop('location', {'name': 'GLO'})['name']
@@ -148,6 +162,10 @@ class OpenLcaJsonLdArchive(LcArchive):
         return p.add_exchange(flow, dirn, value=value, add_dups=True)
 
     def _create_process(self, p_id):
+        q = self[p_id]
+        if q is not None:
+            return q
+
         p_j, name, cls = self._clean_object('processes', p_id)
         ss = p_j.pop('location', {'name': 'GLO'})['name']
         stt = {'begin': p_j['processDocumentation']['validFrom'],

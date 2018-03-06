@@ -508,4 +508,5 @@ class LcProcess(LcEntity):
             j['exchanges'] = sorted([x.serialize(**kwargs) for x in self._exchanges.values()
                                      if x in self.reference_entity],
                                     key=lambda x: (x['direction'], x['flow']))
+            j.pop('allocationFactors', None)  # added just for OpenLCA JSON-LD, but could be generalized
         return j

@@ -9,7 +9,7 @@ from lcatools.entity_store import to_uuid
 from lcatools.entities import LcFragment, entity_types
 from lcatools.entity_refs import CatalogRef
 from lcatools.implementations import ForegroundImplementation
-from lcatools.providers.lc_archive import LcArchive
+from lcatools.providers.lc_archive import BasicArchive
 
 
 class AmbiguousReference(Exception):
@@ -20,7 +20,7 @@ class FragmentNotFound(Exception):
     pass
 
 
-class LcForeground(LcArchive):
+class LcForeground(BasicArchive):
     """
     An LcForeground is defined by being anchored to a physical directory, which is used to serialize the non-fragment
     entities.  Also within this directory is a subdirectory called fragments, which is used to store fragments

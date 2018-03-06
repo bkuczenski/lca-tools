@@ -17,13 +17,18 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
         applying them once.
         :return:
         """
+        print('Applying configuration to %s' % self._archive)
         for k in config['set_reference']:
+            print('Setting reference %s [%s] for %s' % (k[1], k[2], k[0]))
             self.set_reference(*k)
         for k in config['unset_reference']:
+            print('UnSetting reference %s [%s] for %s' % (k[1], k[2], k[0]))
             self.unset_reference(*k)
         for k in config['characterize_flow']:
+            print('Characterizing flow %s by %s: %g' % k)
             self.characterize_flow(*k, overwrite=overwrite)
         for k in config['allocate_by_quantity']:
+            print('Allocating %s by %s' % k)
             self.allocate_by_quantity(*k, overwrite=overwrite)
         if hasattr(self._archive, 'bm'):
             self._archive.bm.re_index()

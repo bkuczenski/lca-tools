@@ -1,10 +1,15 @@
 import json
 import os
 from collections import defaultdict
+from datetime import datetime
+
 
 from lcatools.entity_store import local_ref
 from lcatools.interfaces.catalog_query import INTERFACE_TYPES
 from lcatools.tools import create_archive, update_archive
+
+
+new_date = datetime.now().strftime('%Y%m%d')
 
 
 class LcResource(object):
@@ -59,6 +64,10 @@ class LcResource(object):
 
         return sorted([cls.from_dict(ref, d) for d in j[ref]], key=lambda x: x.priority)
 
+    def _load_all(self):
+        self._archive.load_all()
+        self.apply_config()
+
     def _instantiate(self, catalog):
         if self.source is None:
             if 'download' in self._args:
@@ -73,7 +82,7 @@ class LcResource(object):
         if os.path.exists(catalog.cache_file(self.source)):
             update_archive(self._archive, catalog.cache_file(self.source))
         if self.static and self.ds_type.lower() != 'json':
-            self._archive.load_all()  # static json archives are by convention saved in complete form
+            self._load_all()  # static json archives are by convention saved in complete form
 
     @property
     def is_loaded(self):
@@ -89,12 +98,16 @@ class LcResource(object):
         return True
 
     def make_index(self, index_file):
-        self._archive.load_all()
-        self._archive.write_to_file(index_file, gzip=True, exchanges=False, characterizations=False, values=False)
-        return self._archive
+        self._load_all()
+        suffix = 'index__%s' % new_date
+        self._archive.write_to_file(index_file, gzip=True, ref_suffix=suffix,
+                                    exchanges=False, characterizations=False, values=False)
+        return '.'.join([self._archive.ref, suffix])
 
     def make_cache(self, cache_file):
-        self._archive.write_to_file(cache_file, gzip=True, exchanges=True, characterizations=True, values=True)
+        suffix = 'cache__%s' % new_date
+        self._archive.write_to_file(cache_file, gzip=True, ref_suffix=suffix,
+                                    exchanges=True, characterizations=True, values=True)
         print('Created archive of %s containing:' % self._archive)
         self._archive.check_counter()
 
@@ -102,6 +115,7 @@ class LcResource(object):
         return self._archive.make_interface(iface, privacy=self.privacy)
 
     def apply_config(self):
+        print('Applying stored configuration')
         self._archive.make_interface('configure').apply_config(self._config)
 
     def add_interface(self, iface):
@@ -125,7 +139,7 @@ class LcResource(object):
             for k in interfaces:
                 self.add_interface(k)
 
-    def __init__(self, reference, source, ds_type, interfaces=None, privacy=0, priority=0, static=False,
+    def __init__(self, reference, source, ds_type, interfaces=None, privacy=0, priority=50, static=False,
                  preload_archive=None, **kwargs):
         """
 
@@ -134,7 +148,7 @@ class LcResource(object):
         :param ds_type: data source type
         :param interfaces: list which can include 'entity', 'foreground', or 'background'. Default 'foreground'
         :param privacy: privacy level... TBD... 0 = public, 1 = exchange values private, 2 = all exchanges private
-        :param priority: priority level.. 0-100 scale, lowest priority resource is loaded first
+        :param priority: [50] priority level.. numeric (nominally 0-100), lowest priority resource is loaded first
         :param static: [False] if True, load_all() after initializing
         :param preload_archive: [None] use to assign an existing archive
         :param kwargs: additional keyword arguments to constructor. Some interesting ones:
@@ -169,6 +183,12 @@ class LcResource(object):
         self._internal = kwargs.pop('_internal', False)
 
         self._config = defaultdict(set)
+
+        config = kwargs.pop('config', None)
+        if config:
+            for k, v in config.items():
+                for q in v:
+                    self.add_config(k, *q)
 
         self._args = kwargs
 

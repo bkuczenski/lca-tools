@@ -722,8 +722,9 @@ class LcFragment(LcEntity):
             if self['StageName'] == '' and not termination.is_null:
                 try:
                     self['StageName'] = termination.term_node['Classifications'][-1]
-                except (KeyError, TypeError):
+                except (KeyError, TypeError, IndexError):
                     self['StageName'] = termination.term_node['Name']
+        return termination
 
     def clear_termination(self, scenario=None):
         self._terminations[scenario] = FlowTermination.null(self)

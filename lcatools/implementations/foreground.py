@@ -95,6 +95,98 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
             self._archive.add_entity_and_children(bg)
         return bg
 
+    def create_fragment_from_node_(self, process_ref, ref_flow=None, observe=True, **kwargs):
+        """
+        Given a process reference without context and a reference, create a fragment using the complementary exchanges
+         to the reference.  Terminate background flows to background.  If fragments are found to terminate foreground
+         flows, terminate to them; otherwise leave cut-offs.
+
+        This method does not deal well with multioutput processes that do not have a specified partitioning allocation-
+         though it's possible that the place to deal with that is the inventory query.
+
+        :param process_ref:
+        :param ref_flow:
+        :param observe:
+        :param kwargs:
+        :return:
+        """
+        rx = process_ref.reference(ref_flow)
+        top_frag = ed.create_fragment(rx.flow, rx.direction,
+                                      comment='Reference fragment; %s ' % process_ref.link)
+        term = top_frag.terminate(process_ref)
+        self._child_fragments(top_frag, term, **kwargs)
+        self._archive.add_entity_and_children(top_frag)
+        if observe:
+            top_frag.observe(accept_all=True)
+        return top_frag
+
+    def terminate_fragment(self, fragment, term_node, term_flow=None, scenario=None, **kwargs):
+        """
+        Given a fragment, terminate it to the given node, either process_ref or subfragment.
+        :param fragment:
+        :param term_node:
+        :param term_flow: required if the node does not natively terminate the fragment
+        :param scenario:
+        :param kwargs:
+        :return:
+        """
+        if len([t for t in fragment.child_flows]) > 0:
+            print('warning: fragment has child flows and duplication is not detected')
+            # how should we deal with this?
+        term = fragment.terminate(term_node, scenario=scenario, term_flow=term_flow)
+        self._child_fragments(fragment, term, **kwargs)
+        if term_node.entity_type == 'process':
+            fragment.observe(scenario=scenario, accept_all=True)
+
+    def _child_fragments(self, parent, term, include_elementary=False):
+        process = term.term_node
+        child_exchs = [x for x in process.inventory(ref_flow=term.term_flow)]
+        comment = 'Created from inventory query to %s' % process.link
+
+        if include_elementary:
+            for x in process.elementary(child_exchs):
+                elem = ed.create_fragment(x.flow, x.direction, parent=parent, value=x.value,
+                                          comment='FG Emission; %s' % comment,
+                                          StageName='Foreground Emissions')
+                elem.to_foreground()  # this needs renamed
+
+        for x in process.intermediate(child_exchs):
+            child_frag = ed.create_fragment(x.flow, x.direction, parent=parent, value=x.value, comment=comment)
+
+            if x.termination is not None:
+                if process.is_in_background(termination=x.termination, ref_flow=x.flow):
+                    bg = self.find_or_create_term(x, background=True)
+                    child_frag.terminate(bg)
+                else:
+                    # definitely some code duplication here with find_or_create_term--- but can't exactly use because
+                    # in the event of 'create', we want the subfragment to also be recursively traversed.
+                    try:
+                        subfrag = next(f for f in self._archive.fragments(background=False) if
+                                       f.term.terminates(x))
+                        child_frag.terminate(subfrag)
+
+                    except StopIteration:
+                        child_frag['termination'] = x.termination
+
+    def create_forest(self, process_ref, ref_flow=None):
+        """
+        create a collection of maximal fragments that span the foreground for a given node.  Any node that is
+        multiply invoked will be a subfragment; any node that has a unique parent will be a child fragment.
+
+        All the resulting fragments will be added to the foreground archive.
+
+        Given that the fragment traversal routine can be made to effectively handle single-large-loop topologies (i.e.
+        where the fragment depends on its own reference but is otherwise acyclic), this routine may have to do some
+        slightly complicated adjacency modeling.
+
+        before I can write this, I need to decide how to get foreground, dependency, and emission data out of the
+        background interface.
+        :param process_ref:
+        :param ref_flow:
+        :return:
+        """
+        pass
+
     def create_fragment_from_node(self, process_ref, ref_flow=None, include_elementary=False, observe=True):
         """
 
@@ -120,21 +212,21 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
             raise FragRecursionError('Encountered the same process!')
         self._recursion_check.add(process.uuid)
 
-        fg_exchs = process.foreground(ref_flow=ref_flow)
-        rx = fg_exchs[0]
-        comment = 'Created from foreground query to %s' % process.origin
+        fg_exchs = [x for x in process.inventory(ref_flow=ref_flow)]
+        rx = process.reference(ref_flow)
+        comment = 'Created from inventory query to %s' % process.origin
         top_frag = ed.create_fragment(rx.flow, rx.direction,
                                       comment='Reference fragment; %s ' % comment)
         top_frag.terminate(process)
 
         if include_elementary:
-            for x in process.elementary(fg_exchs[1:]):
+            for x in process.elementary(fg_exchs):
                 elem = ed.create_fragment(x.flow, x.direction, parent=top_frag, value=x.value,
                                           comment='FG Emission; %s' % comment,
                                           StageName='Foreground Emissions')
                 elem.to_foreground()
 
-        for x in process.intermediate(fg_exchs[1:]):
+        for x in process.intermediate(fg_exchs):
             if x.termination is None:
                 ed.create_fragment(x.flow, x.direction, parent=top_frag, value=x.value,
                                    comment='Cut-off; %s' % comment)

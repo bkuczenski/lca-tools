@@ -6,10 +6,9 @@ import os
 import re
 
 from lcatools.entity_store import to_uuid
-from lcatools.entities import LcFragment, entity_types
+from lcatools.entities import LcFragment, entity_types, BasicArchive
 from lcatools.entity_refs import CatalogRef
 from lcatools.implementations import ForegroundImplementation
-from lcatools.providers.lc_archive import BasicArchive
 
 
 class AmbiguousReference(Exception):

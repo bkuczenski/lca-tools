@@ -63,8 +63,7 @@ Handle connectivity / adjacency of processes; perform partial ordering, foregrou
  - distinguish foreground from background flows
  - distinguish interior from exterior flows
  - compute lci
- * retrieve foreground
- * retrieve dependencies
+ * retrieve foreground + dependencies
  * retrieve emissions
  - perform background LCIA using local quantity resources
 
@@ -77,14 +76,15 @@ Construct fragments of product system models from entity references.  Flows are 
  - create flows and fragments by specification
  - find or create a fragment that terminates a given exchange
  * specify a termination for a fragment
- # edit fragment observational data and metadata
- # edit fragment scenario specifications
  * create a fragment from a given reference node- requires inventory access
  * create a foreground forest for a given reference node- requires background access
  - copy fragments
  * split / join subtree or subfragment
  - traverse a fragment
+ - terminate a fragment
  - perform fragment LCIA
+ # edit fragment observational data and metadata
+ # edit fragment scenario specifications
 
 
 CONFIGURE

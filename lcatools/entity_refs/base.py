@@ -257,3 +257,15 @@ class EntityRef(BaseRef):
 
     def __getitem__(self, item):
         return self.get_item(item)
+
+    def merge(self, other):
+        if self.entity_type != other.entity_type:
+            raise ValueError('Type mismatch %s vs %s' % (self.entity_type, other.entity_type))
+        if self.link != other.link:
+            if self.external_ref == other.external_ref:
+                if not (self.origin.startswith(other.origin) or other.origin.startswith(self.origin)):
+                    raise ValueError('Origin mismatch %s vs %s' % (self.origin, other.origin))
+            else:
+                raise ValueError('external_ref mismatch: %s vs %s' % (self.external_ref, other.external_ref))
+        # otherwise fine-- left argument is dominant
+        self._d.update(other._d)

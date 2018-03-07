@@ -1,3 +1,117 @@
+WHAT INTERFACES?
+
+Antelope is [supposed to be] an API specification.  My thesis is that performing LCA computations requires access to different types of information.
+
+First there's a basic interface, which basically retrieves things that exist and exposes the properties all entities have:
+ - semantic origin
+ - privacy status
+ - uuid
+ - arbitrary key-value content
+ - reference entity
+
+the type of the reference entity is as follows:
+
+ | Type | Reference Entity Type |
+ | ----
+ | quantity | unit |
+ | context | natural direction |
+ | flow | quantity |
+ | process | set of exchanges |
+ | fragment | fragment |
+
+All object types are also permitted to have `None` as a reference, though some operations require a reference to be present.
+
+Then there are operations performed on the entities.  I grouped these somewhat arbitrarily into index, inventory, background, and quantity; then recently I added foreground (for authoring + editing models) and configure (for manipulating reference flows and allocation)
+
+`*` indicates a feature in development
+`#` indicates a possible new feature / interface
+
+## Read-only interfaces
+
+INDEX
+
+Handles data discovery and reference and metadata retrieval. "Termination" is a search for processes that can act as a complementary source or sink for a given flow or exchange, so that is a potentially rich / contextual query.
+
+ - list, count, and filter entities by type
+ - retrieve properties
+ - terminate flows or exchanges
+ - get synonyms for entity descriptors
+
+QUANTITY
+
+Handle quantitative information about physical measurements or characterizations of flowable entities.
+
+ - retrieve canonical quantity [grounded in a semantic reference]
+ - retrieve a flow profile (list of characterizations)
+ - retrieve characterization factors by quantity
+ - convert a given flow between quantities
+ - compute the quantity relation given flowable, context, reference and query quantity, and optional location (always returns a float)
+
+INVENTORY
+
+Handle quantitative information about exchanges of flows by processes.
+
+ - retrieve exchanges or exchange values by process specification
+ - retrieve inventory list, either allocated or unallocated
+ - compute the exchange relation given a process, reference and exchange flow, exchange direction, and optional termination (always returns a float)
+ - perform foreground LCIA using local quantity resources
+
+BACKGROUND
+
+Handle connectivity / adjacency of processes; perform partial ordering, foreground identification, and lci computation.  A background engine is required in order to compute a strongly connected database.  Both index and inventory access to a resource must be available to compute the background.
+
+ - distinguish foreground from background flows
+ - distinguish interior from exterior flows
+ - compute lci
+ * retrieve foreground
+ * retrieve dependencies
+ * retrieve emissions
+ - perform background LCIA using local quantity resources
+
+## Writable (local-only?) interfaces
+
+FOREGROUND
+
+Construct fragments of product system models from entity references.  Flows are created locally and don't really fit into an interface, but remote communication of flows would happen here.
+
+ - create flows and fragments by specification
+ - find or create a fragment that terminates a given exchange
+ * specify a termination for a fragment
+ # edit fragment observational data and metadata
+ # edit fragment scenario specifications
+ * create a fragment from a given reference node- requires inventory access
+ * create a foreground forest for a given reference node- requires background access
+ - copy fragments
+ * split / join subtree or subfragment
+ - traverse a fragment
+ - perform fragment LCIA
+
+
+CONFIGURE
+
+Created to manipulate allocation + references.  Basically this should be replaced by ocelot.
+
+ - set or unset a given exchange as a reference
+ - add a characterization value to a given flow
+ - specify a quantity for partitioning allocation
+
+There is not currently an interface for specifying an arbitrary allocation. All manner of system expansion or otherwise resolving multifunctionality can be performed through foreground construction.
+
+
+
+
+==========
+Tue Mar 06 22:13:30 -0800 2018
+
+
+
+Re-evaluation of the BackgroundInterface
+
+BackgroundInterface 
+
+
+
+
 ==========
 Fri Jan 19 15:29:56 -0800 2018
 

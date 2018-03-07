@@ -1,5 +1,5 @@
 from .basic import BasicImplementation
-from lcatools.interfaces import ForegroundInterface
+from lcatools.interfaces import ForegroundInterface, BackgroundRequired
 from lcatools.exchanges import comp_dir
 from lcatools.fragment_flows import frag_flow_lcia
 
@@ -98,11 +98,13 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
     def create_fragment_from_node_(self, process_ref, ref_flow=None, observe=True, **kwargs):
         """
         Given a process reference without context and a reference, create a fragment using the complementary exchanges
-         to the reference.  Terminate background flows to background.  If fragments are found to terminate foreground
-         flows, terminate to them; otherwise leave cut-offs.
+         to the reference.  Terminate background flows to background (only if a background interface is available).
+         If fragments are found to terminate foreground flows, terminate to them; otherwise leave cut-offs.
 
         This method does not deal well with multioutput processes that do not have a specified partitioning allocation-
          though it's possible that the place to deal with that is the inventory query.
+
+        This also has a sneak requirement for a background interface to detect backg
 
         :param process_ref:
         :param ref_flow:
@@ -154,12 +156,16 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
             child_frag = ed.create_fragment(x.flow, x.direction, parent=parent, value=x.value, comment=comment)
 
             if x.termination is not None:
-                if process.is_in_background(termination=x.termination, ref_flow=x.flow):
+                try:
+                    iib = process.is_in_background(termination=x.termination, ref_flow=x.flow)
+                except BackgroundRequired:
+                    iib = False
+                if iib:
                     bg = self.find_or_create_term(x, background=True)
                     child_frag.terminate(bg)
                 else:
                     # definitely some code duplication here with find_or_create_term--- but can't exactly use because
-                    # in the event of 'create', we want the subfragment to also be recursively traversed.
+                    # we don't want to create any subfragments here
                     try:
                         subfrag = next(f for f in self._archive.fragments(background=False) if
                                        f.term.terminates(x))
@@ -168,7 +174,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
                     except StopIteration:
                         child_frag['termination'] = x.termination
 
-    def create_forest(self, process_ref, ref_flow=None):
+    def create_forest(self, process_ref, ref_flow=None, include_elementary=False):
         """
         create a collection of maximal fragments that span the foreground for a given node.  Any node that is
         multiply invoked will be a subfragment; any node that has a unique parent will be a child fragment.
@@ -179,10 +185,14 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         where the fragment depends on its own reference but is otherwise acyclic), this routine may have to do some
         slightly complicated adjacency modeling.
 
-        before I can write this, I need to decide how to get foreground, dependency, and emission data out of the
-        background interface.
+        emissions are excluded by default, mainly because of the existence of pre-aggregated foreground nodes with very
+        large emission lists. But this will need to be sorted because the current fragment traversal requires an
+        inventory interface-- though I suppose I could simply fallback to a background.emissions() call on
+        InventoryRequired. [done]
+
         :param process_ref:
         :param ref_flow:
+        :param include_elementary:
         :return:
         """
         pass

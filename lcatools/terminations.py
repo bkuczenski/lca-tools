@@ -433,7 +433,11 @@ class FlowTermination(object):
             children = set()
             for c in self._parent.child_flows:
                 children.add((c.flow, c.direction))
-            for x in self.term_node.inventory(ref_flow=self.term_flow):
+            try:
+                iterable = self.term_node.inventory(ref_flow=self.term_flow)
+            except InventoryRequired:
+                iterable = self.term_node.emissions(ref_flow=self.term_flow)
+            for x in iterable:
                 if (x.flow, x.direction) not in children:
                     yield x
 

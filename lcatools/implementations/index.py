@@ -23,11 +23,15 @@ class IndexImplementation(BasicImplementation, IndexInterface):
     """
     def __init__(self, *args, **kwargs):
         super(IndexImplementation, self).__init__(*args, **kwargs)
-        self._terminations = defaultdict(set)
-        self._index_terminations()
+        if not hasattr(self._archive, 'ti'):
+            self.re_index()
+
+    @property
+    def _terminations(self):
+        return self._archive.ti
 
     def re_index(self):
-        self._terminations = defaultdict(set)
+        self._archive.ti = defaultdict(set)
         self._index_terminations()
 
     def _index_terminations(self):

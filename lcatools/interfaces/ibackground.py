@@ -65,17 +65,27 @@ class BackgroundInterface(AbstractQuery):
             if not self.is_elementary(i):
                 yield i
 
-    def emissions(self, direction=None, search=None, **kwargs):
+    def dependencies(self, process, ref_flow=None, **kwargs):
         """
-        Exterior Elementary Flows
+        Interior background exchanges for a given node
 
         :param direction:
         :param search:
         :return:
         """
-        for i in self.exterior_flows(direction=direction, search=search, **kwargs):
-            if self.is_elementary(i):
-                yield i
+        return self._perform_query(_interface, 'dependencies', BackgroundRequired('No knowledge of background'),
+                                   process, ref_flow=ref_flow, **kwargs)
+
+    def emissions(self, process, ref_flow=None, **kwargs):
+        """
+        Exterior exchanges for a given node
+
+        :param direction:
+        :param search:
+        :return:
+        """
+        return self._perform_query(_interface, 'emissions', BackgroundRequired('No knowledge of background'),
+                                   process, ref_flow=ref_flow, **kwargs)
 
     def foreground(self, process, ref_flow=None, **kwargs):
         """

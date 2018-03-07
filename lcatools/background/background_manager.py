@@ -93,6 +93,62 @@ class BackgroundManager(object):
 
         return exchs
 
+    def _background_dependencies(self, bg_product_flow):
+        _, _ad, _ = self._be.make_foreground(bg_product_flow)
+        rows, cols = _ad.nonzero()
+        exchs = []
+        for i in range(len(rows)):
+            assert cols[i] == 0
+            term = self._be.tstack.bg_node(rows[i])
+            exchs.append(ExchangeValue(bg_product_flow.process, term.flow, comp_dir(term.direction), value=_ad.data[i],
+                                       termination=term.process.external_ref))
+        return exchs
+
+    def _background_emissions(self, bg_product_flow):
+        _, _, _bf = self._be.make_foreground(bg_product_flow)
+        rows, cols = _bf.nonzero()
+        exchs = []
+        for i in range(len(rows)):
+            assert cols[i] == 0
+            emis = self._be.emissions[rows[i]]
+            exchs.append(ExchangeValue(bg_product_flow.process, emis.flow, emis.direction, value=_bf.data[i]))
+        return exchs
+
+    def dependencies(self, process, ref_flow=None):
+        """
+        Return a single node's direct dependencies (A_d or A) as a list of exchanges
+        :param process:
+        :param ref_flow:
+        :return:
+        """
+        pf = self._get_product_flow(process, ref_flow)
+        if self._be.is_in_background(pf):
+            return self._background_dependencies(pf)
+
+        exch = []
+        for dep in self._be.foreground_dependencies(pf):  # dep isa MatrixEntry
+            dat = dep.value
+            dirn = 'Output' if dat < 0 else 'Input'
+            exch.append(ExchangeValue(process, dep.term.flow, dirn, value=dat,
+                                      termination=dep.term.process.external_ref))
+        return exch
+
+    def emissions(self, process, ref_flow=None):
+        """
+        Return a single node's direct emissions (B_f or B) as a list of exchanges
+        :param process:
+        :param ref_flow:
+        :return:
+        """
+        pf = self._get_product_flow(process, ref_flow)
+        if self._be.is_in_background(pf):
+            return self._background_emissions(pf)
+
+        exch = []
+        for em in self._be.foreground_emissions(pf):  # em isa CutoffEntry
+            exch.append(ExchangeValue(process, em.emission.flow, em.emission.direction, value=em.value))
+        return exch
+
     def inventory(self, process, ref_flow=None, show=None):
         """
         Report the direct dependencies and exterior flows for the named product flow.  If the second argument is

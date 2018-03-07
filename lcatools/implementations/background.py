@@ -96,6 +96,16 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
         ref_flow = self._ensure_ref_flow(ref_flow)
         return self._bg.foreground(p, ref_flow=ref_flow)
 
+    def dependencies(self, process, ref_flow=None, **kwargs):
+        p = self._archive.retrieve_or_fetch_entity(process)
+        ref_flow = self._ensure_ref_flow(ref_flow)
+        return self._bg.dependencies(p, ref_flow=ref_flow)
+
+    def emissions(self, process, ref_flow=None, **kwargs):
+        p = self._archive.retrieve_or_fetch_entity(process)
+        ref_flow = self._ensure_ref_flow(ref_flow)
+        return self._bg.emissions(p, ref_flow=ref_flow)
+
     def is_in_background(self, process, ref_flow=None, **kwargs):
         p = self._archive.retrieve_or_fetch_entity(process)
         ref_flow = self._ensure_ref_flow(ref_flow)

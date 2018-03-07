@@ -12,7 +12,7 @@ First there's a basic interface, which basically retrieves things that exist and
 the type of the reference entity is as follows:
 
  | Type | Reference Entity Type |
- | ----
+ |----|-----|
  | quantity | unit |
  | context | natural direction |
  | flow | quantity |
@@ -63,8 +63,9 @@ Handle connectivity / adjacency of processes; perform partial ordering, foregrou
  - distinguish foreground from background flows
  - distinguish interior from exterior flows
  - compute lci
- * retrieve foreground + dependencies
- * retrieve emissions
+ `*` retrieve foreground as weighted adjacency list (list of ExchangeValues)
+ `*` retrieve dependencies for a given node (fg or bg)
+ `*` retrieve emissions (exterior exchanges- both elementary and intermediate) for a given node
  - perform background LCIA using local quantity resources
 
 ## Writable (local-only?) interfaces
@@ -75,16 +76,16 @@ Construct fragments of product system models from entity references.  Flows are 
 
  - create flows and fragments by specification
  - find or create a fragment that terminates a given exchange
- * specify a termination for a fragment
- * create a fragment from a given reference node- requires inventory access
- * create a foreground forest for a given reference node- requires background access
+ `*` specify a termination for a fragment
+ `*` create a fragment from a given reference node- requires inventory access
+ `*` create a foreground forest for a given reference node- requires background access
  - copy fragments
- * split / join subtree or subfragment
+ `*` split / join subtree or subfragment
  - traverse a fragment
  - terminate a fragment
  - perform fragment LCIA
- # edit fragment observational data and metadata
- # edit fragment scenario specifications
+ `#` edit fragment observational data and metadata
+ `#` edit fragment scenario specifications
 
 
 CONFIGURE

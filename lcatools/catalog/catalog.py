@@ -34,6 +34,7 @@ from .lc_resolver import LcCatalogResolver
 from .lc_resource import LcResource
 from lcatools.qdb import REF_QTYS
 from lcatools.flowdb.compartments import REFERENCE_INT  # reference intermediate flows
+from lcatools.entity_store import local_ref
 
 
 class DuplicateEntries(Exception):
@@ -469,3 +470,28 @@ class LcCatalog(LciaEngine):
     def fetch(self, origin, external_ref):
         org = self.lookup(origin, external_ref)
         return self.query(org).get(external_ref)
+
+    def create_foreground(self, path, ref=None, quiet=True):
+        """
+        Creates or activates a foreground as a sub-folder within the catalog's root directory.  Returns a
+        Foreground interface.
+        :param path: either an absolute path or a directory name (not an arbitrary relative path) to put the foreground
+        :param ref: semantic reference (optional)
+        :param quiet: passed to fg archive
+        :return:
+        """
+        if not os.path.isabs(path):
+            if path.find(os.path.sep) != -1:
+                raise ValueError('Relative path not allowed; use directory name only')
+            path = os.path.join(self._rootdir, path)
+
+        if ref is None:
+            ref = local_ref(path)
+
+        try:
+            res = next(self._resolver.resources_with_source(path))
+        except StopIteration:
+            res = self.new_resource(ref, path, 'LcForeground', interfaces=['index', 'foreground'], quiet=quiet)
+
+        res.check(self)
+        return res.make_interface('foreground')

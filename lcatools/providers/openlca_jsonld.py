@@ -175,7 +175,7 @@ class OpenLcaJsonLdArchive(LcArchive):
 
         # leave allocation in place for now
 
-        p = LcProcess(p_id, Name=name, Classification=cls, SpatialScope=ss, TemporalScope=stt, **p_j)
+        p = LcProcess(p_id, Name=name, Classifications=cls, SpatialScope=ss, TemporalScope=stt, **p_j)
 
         self.add(p)
 

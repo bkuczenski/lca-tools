@@ -64,6 +64,18 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
 
         self._recursion_check = None  # prevent recursive loops on frag-from-node
 
+    def fragments(self, *args, **kwargs):
+        """
+
+        :param args: optional regex filter(s)
+        :param kwargs: background [None], show_all [False]
+        :return:
+        """
+        return self._archive.fragments(*args, **kwargs)
+
+    def frag(self, string, strict=True):
+        return self._archive.frag(string, strict=strict)
+
     '''
     Create and modify fragments
     '''
@@ -88,6 +100,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         """
         try:
             bg = next(f for f in self._archive.fragments(background=background) if f.term.terminates(exchange))
+            print('%% Found existing termination bg=%s for %s' % (background, exchange.termination))
         except StopIteration:
             if background is None:
                 background = False
@@ -207,10 +220,11 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
            = if a fragment's termination already exists as a subfragment, terminate to the subfragment
            = otherwise, log the termination and add it as a child flow
         '''
-        self._count = 0
-
         fx = process_ref.foreground(ref_flow=ref_flow)
-        term_map = dict()
+
+        # index the entire local collection of fragments to find existing terminations and existing subfragments
+        term_map = dict(((k.term.term_node.external_ref, k) for k in self._archive.fragments(show_all=True)
+                        if k.term.is_process))
         subfrags = dict(((k.term.term_node.external_ref, k) for k in self._archive.fragments()))
 
         top_frag = self._new_node(fx[0].flow, fx[0].direction, process_ref)
@@ -249,7 +263,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         return top_frag
 
     def _new_node(self, flow, direction, term, value=1.0, parent=None):
-        print('# Creating node %2d with term %s' % (self._count, term))
+        print('# Creating node (%2d) with term %s' % (self._count, term))
         self._count += 1
         frag = ed.create_fragment(flow, direction, value=value, parent=parent)
         frag.terminate(term, term_flow=flow)

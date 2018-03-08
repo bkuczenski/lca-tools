@@ -1,4 +1,5 @@
 from lcatools.tools import archive_from_json
+from lcatools.catalog import LcCatalog
 
 
 def enum(_listss):

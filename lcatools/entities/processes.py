@@ -103,7 +103,7 @@ class RxRef(object):
 class LcProcess(LcEntity):
 
     _ref_field = 'referenceExchange'
-    _new_fields = ['SpatialScope', 'TemporalScope']
+    _new_fields = ['SpatialScope', 'TemporalScope', 'Classifications']
 
     @classmethod
     def new(cls, name, **kwargs):

@@ -716,14 +716,34 @@ class LcFragment(LcEntity):
         if scenario in self._terminations:
             if not self._terminations[scenario].is_null:
                 raise CacheAlreadySet('Scenario termination already set. use clear_termination()')
+
+        # check for recursive loops
+        if term_node.entity_type == 'fragment' and term_node is not self:
+            if term_node is self.top():
+                # interior recursive loop can be resolved by leaving cut-off
+
+                print('-- setting cut-off flow to resolve recursive loop')
+                termination = FlowTermination.null(self)
+                self._terminations[scenario] = termination
+                return termination
+
+            for ff in term_node.traverse(scenario):
+                # more extensive self-dependency cannot yet be resolved through automated means
+                if ff.fragment is self.top():
+                    raise InvalidParentChild('Termination would create a recursive loop')
+
         termination = FlowTermination(self, term_node, **kwargs)
         self._terminations[scenario] = termination
         if scenario is None:
             if self['StageName'] == '' and not termination.is_null:
-                try:
-                    self['StageName'] = termination.term_node['Classifications'][-1]
-                except (KeyError, TypeError, IndexError):
-                    self['StageName'] = termination.term_node['Name']
+                if termination.is_frag:
+                    self['StageName'] = termination.term_node['StageName']
+                else:
+                    try:
+                        self['StageName'] = termination.term_node['Classifications'][-1]
+                    except (KeyError, TypeError, IndexError):
+                        print('%.5s StageName failed %s' % (self.uuid, termination.term_node))
+                        self['StageName'] = termination.term_node['Name']
         return termination
 
     def clear_termination(self, scenario=None):

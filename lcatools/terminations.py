@@ -195,6 +195,14 @@ class FlowTermination(object):
         return (not self.is_null) and (self.term_node.entity_type == 'fragment')
 
     @property
+    def is_process(self):
+        """
+        termination is a process
+        :return:
+        """
+        return (not self.is_null) and (self.term_node.entity_type == 'process')
+
+    @property
     def is_fg(self):
         """
         Termination is parent

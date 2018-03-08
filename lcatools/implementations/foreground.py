@@ -52,6 +52,8 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
      - exchange value
      - termination
     """
+    _count = 0
+
     def __init__(self,  *args, **kwargs):
         """
 
@@ -89,6 +91,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         except StopIteration:
             if background is None:
                 background = False
+            print('@@ Creating new termination bg=%s for %s' % (background, exchange.termination))
             bg = ed.create_fragment(exchange.flow, comp_dir(exchange.direction), background=background)
             bg.terminate(self._archive.catalog_ref(exchange.process.origin, exchange.termination,
                                                    entity_type='process'), term_flow=exchange.flow)
@@ -103,8 +106,6 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
 
         This method does not deal well with multioutput processes that do not have a specified partitioning allocation-
          though it's possible that the place to deal with that is the inventory query.
-
-        This also has a sneak requirement for a background interface to detect backg
 
         :param process_ref:
         :param ref_flow:
@@ -174,7 +175,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
                     except StopIteration:
                         child_frag['termination'] = x.termination
 
-    def create_forest(self, process_ref, ref_flow=None, include_elementary=False):
+    def create_forest(self, process_ref, ref_flow=None, observe=True):
         """
         create a collection of maximal fragments that span the foreground for a given node.  Any node that is
         multiply invoked will be a subfragment; any node that has a unique parent will be a child fragment.
@@ -185,17 +186,79 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         where the fragment depends on its own reference but is otherwise acyclic), this routine may have to do some
         slightly complicated adjacency modeling.
 
-        emissions are excluded by default, mainly because of the existence of pre-aggregated foreground nodes with very
+        emissions are excluded, mainly because of the existence of pre-aggregated foreground nodes with very
         large emission lists. But this will need to be sorted because the current fragment traversal requires an
         inventory interface-- though I suppose I could simply fallback to a background.emissions() call on
         InventoryRequired. [done]
 
         :param process_ref:
         :param ref_flow:
-        :param include_elementary:
+        :param observe: [True]
         :return:
         """
-        pass
+        '''
+        Here's how this works:
+         * given a node, we ask the background interface for the node's foreground
+           =  the bg interface gives us a list of nonzero values in Af, formulated as exchanges
+         * starting with the reference node, we create a fragment for each Af exchange
+           = we assign it
+         * we keep a mapping of termination strings to terminations, beginning with a process ref
+           = if we encounter a termination that has already been mapped, upgrade it to a subfragment
+           = if a fragment's termination already exists as a subfragment, terminate to the subfragment
+           = otherwise, log the termination and add it as a child flow
+        '''
+        self._count = 0
+
+        fx = process_ref.foreground(ref_flow=ref_flow)
+        term_map = dict()
+        subfrags = dict(((k.term.term_node.external_ref, k) for k in self._archive.fragments()))
+
+        top_frag = self._new_node(fx[0].flow, fx[0].direction, process_ref)
+        top_frag['Comment'] = 'Reference node; foreground query to %s' % process_ref.link
+        term_map[process_ref.external_ref] = top_frag
+        subfrags[process_ref.external_ref] = top_frag
+
+        for x in fx[1:]:
+            parent = term_map[x.process.external_ref]
+            assert x.termination is not None
+            if x.termination in subfrags:
+                # termination is already a subfragment
+                child = ed.create_fragment(x.flow, x.direction, parent=parent, value=x.value, comment='Subfragment')
+                # need to test for recursion! this could even happen inside terminate()
+                child.terminate(subfrags[x.termination])
+            else:
+                # termination not [yet] encountered twice
+                if x.termination in term_map:
+                    # termination encountered for the second time -- need to make a subfragment
+                    print('### Splitting subfragment at %s' % x.termination)
+                    subfrag = ed.split_subfragment(term_map[x.termination])
+                    subfrags[x.termination] = subfrag
+                    child = ed.create_fragment(x.flow, x.direction, parent=parent, value=x.value, comment='Subfragment')
+                    # need to test for recursion! this could even happen inside terminate()
+                    child.terminate(subfrags[x.termination])
+                else:
+                    # termination encountered for the first time -- need to make a new node
+                    term = self._archive.catalog_ref(x.process.origin, x.termination, entity_type='process')
+                    child = self._new_node(x.flow, x.direction, term, value=x.value, parent=parent)
+                    term_map[x.termination] = child
+
+        for f in subfrags.values():
+            self._archive.add_entity_and_children(f)
+            if observe:
+                f.observe(accept_all=True)
+        return top_frag
+
+    def _new_node(self, flow, direction, term, value=1.0, parent=None):
+        print('# Creating node %2d with term %s' % (self._count, term))
+        self._count += 1
+        frag = ed.create_fragment(flow, direction, value=value, parent=parent)
+        frag.terminate(term, term_flow=flow)
+
+        for dep in term.dependencies(ref_flow=flow):
+            child = ed.create_fragment(dep.flow, dep.direction, parent=frag, value=dep.value,
+                                       comment='Dependency; %s' % term.link)
+            child.terminate(self.find_or_create_term(dep, background=True))
+        return frag
 
     def create_fragment_from_node(self, process_ref, ref_flow=None, include_elementary=False, observe=True):
         """

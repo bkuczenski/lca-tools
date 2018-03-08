@@ -127,6 +127,8 @@ class BackgroundManager(object):
 
         exch = []
         for dep in self._be.foreground_dependencies(pf):  # dep isa MatrixEntry
+            if not self.is_in_background(dep.term.process, dep.term.flow):
+                continue
             dat = dep.value
             dirn = 'Output' if dat < 0 else 'Input'
             exch.append(ExchangeValue(process, dep.term.flow, dirn, value=dat,

@@ -69,8 +69,8 @@ class BackgroundInterface(AbstractQuery):
         """
         Interior background exchanges for a given node
 
-        :param direction:
-        :param search:
+        :param process:
+        :param ref_flow:
         :return:
         """
         return self._perform_query(_interface, 'dependencies', BackgroundRequired('No knowledge of background'),
@@ -80,8 +80,8 @@ class BackgroundInterface(AbstractQuery):
         """
         Exterior exchanges for a given node
 
-        :param direction:
-        :param search:
+        :param process:
+        :param ref_flow:
         :return:
         """
         return self._perform_query(_interface, 'emissions', BackgroundRequired('No knowledge of background'),

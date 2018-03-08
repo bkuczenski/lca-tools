@@ -146,6 +146,7 @@ class FragmentEditor(EntityEditor):
         :param parent:
         :param flow: required. flow or catalog_ref
         :param direction: required. 'Input' or 'Output'
+          (note that direction reversal for reference fragments happens internally!)
         :param uuid: [None]
         :param comment:
         :param value:
@@ -199,7 +200,7 @@ class FragmentEditor(EntityEditor):
                                   balance_flow=balance, Name=name, **kwargs)
 
             # traverse -- may not need to do this anymore if we switch to live traversals for everything
-            parent.traverse(None)
+            parent.traverse(None)  # in fact, let's skip it
 
         """ # can't hack this without a qdb
         if self._qdb.is_elementary(frag.flow):
@@ -293,6 +294,9 @@ class FragmentEditor(EntityEditor):
         direction is the same as the given fragment. exchange value is shifted to new frag; given frag's ev is
         set to 1.
 
+        The newly created fragment is not terminated and the original fragment's parent is not corrected.  Both of
+        these must be done by the calling function before the fragment will have a sensible topology.
+
         :param fragment:
         :param comment:
         :return: the new fragment
@@ -307,7 +311,8 @@ class FragmentEditor(EntityEditor):
 
     def interpose(self, fragment):
         """
-        Ins
+        Insert a new foreground node in-line between the fragment and its parent, terminating it to the foreground and
+        making the specified fragment a child flow.
         given fragment sets the new frag as its parent.
         """
         interp = self._fork_fragment(fragment, comment='Interposed node')
@@ -320,7 +325,7 @@ class FragmentEditor(EntityEditor):
     def split_subfragment(self, fragment):
         """
         This method is like interpose except a new reference fragment is created.  The new node becomes a
-        cutoff w/r/t its parent, and then gets terminated to the new reference fragment.
+        cutoff w/r/t its parent, and then gets terminated to the new reference fragment as a subfragment.
 
         Exchange value and balancing status stays with parent.
 
@@ -332,4 +337,4 @@ class FragmentEditor(EntityEditor):
         fragment.unset_parent()
         surrogate.terminate(fragment)
 
-        return surrogate
+        return fragment

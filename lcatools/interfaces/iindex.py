@@ -58,6 +58,15 @@ class IndexInterface(AbstractQuery):
         for i in self._perform_query(_interface, 'quantities', IndexRequired('Index access required'), **kwargs):
             yield self.make_ref(i)
 
+    def lcia_methods(self, **kwargs):
+        """
+        Generate LCIA Methods-- which are quantities that have defined indicators
+        :param kwargs:
+        :return:
+        """
+        indicator = kwargs.pop('Indicator', '')
+        return self.quantities(Indicator=indicator, **kwargs)
+
     def fragments(self, show_all=False, **kwargs):
         if show_all:
             raise ValueError('Cannot retrieve non-parent fragments via interface')

@@ -70,6 +70,11 @@ class IlcdLcia(IlcdArchive):
 
         return lcia
 
+    def _load_all(self):
+        super(IlcdLcia, self)._load_all()
+        self.load_lcia()
+        self.check_counter('quantity')
+
     def _fetch(self, term, dtype=None, version=None, **kwargs):
         o = super(IlcdLcia, self)._fetch(term, dtype=dtype, version=version, **kwargs)
         if isinstance(o, LcEntity):
@@ -118,10 +123,10 @@ class IlcdLcia(IlcdArchive):
     def load_lcia(self, **kwargs):
         for f in self.list_objects('LCIAMethod'):
             u = uuid_regex.search(f).groups()[0]
-            if self._get_entity(u) is not None:  # we want to look strictly locally
-                continue
-
-            self.load_lcia_method(u, **kwargs)
+            try:
+                self._get_entity(u)
+            except KeyError:
+                self.load_lcia_method(u, **kwargs)
 
     def generate_factors(self, quantity):
         o = self._get_objectified_entity(self._path_from_ref(quantity))

@@ -253,7 +253,7 @@ def frag_flow_lcia(fragmentflows, quantity_ref, scenario=None, refresh=False):
                 v = ff.term.term_node.fragment_lcia(quantity_ref, scenario=scenario, refresh=refresh)
             else:
                 v = frag_flow_lcia(ff.subfragments, quantity_ref, refresh=refresh)
-        if v.total() == 0:
+        if v.is_null:
             continue
 
         if ff.term.direction == ff.fragment.direction:

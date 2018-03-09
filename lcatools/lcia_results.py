@@ -65,6 +65,10 @@ class DetailedLciaResult(object):
         self._lc = lc_result
 
     @property
+    def is_null(self):
+        return self.result == 0
+
+    @property
     def _dirn_adjust(self):
         """
         Memoized direction correction for "Outputs" "from ground" and "Inputs" "to environment".
@@ -164,6 +168,14 @@ class SummaryLciaResult(object):
         return self._static_value is not None
 
     @property
+    def is_null(self):
+        if self.static:
+            if self._static_value == 0:
+                return True
+            return False
+        return self._internal_result.is_null
+
+    @property
     def node_weight(self):
         return self._node_weight * self._lc.scale
 
@@ -234,11 +246,22 @@ class SummaryLciaResult(object):
         """
         if not isinstance(other, SummaryLciaResult):
             raise TypeError('Can only add SummaryLciaResults together')
-        if self.unit_score == other.unit_score:
-            if self.static:
-                unit_score = self._static_value
+        if self.static:
+            if other.static:
+                # either the node weights or the unit scores must be equal
+                if self._node_weight == other._node_weight:
+                    _node_weight = self._node_weight
+                    unit_score = self._static_value + other.unit_score
+                else:
+                    raise InconsistentScores('These summaries do not add together:\n%s\n%s' % (self, other))
             else:
-                unit_score = self._internal_result
+                if self.unit_score == other.unit_score:
+                    _node_weight = self._node_weight + other.node_weight
+                    unit_score = self.unit_score
+                else:
+                    raise InconsistentScores('This corner case not yet handled')
+        elif self._internal_result is other._internal_result:
+            unit_score = self._internal_result
             # just sum the node weights, ignoring our local scaling factor (DWR!)
             if self.entity == other.entity:
                 # WARNING: FragmentFlow equality does not include magnitude or node weight
@@ -246,13 +269,6 @@ class SummaryLciaResult(object):
             else:
                 print("entities do not match\n self: %s\nother: %s" % (self.entity, other.entity))
                 raise InconsistentSummaries
-        elif self.static and other.static:
-            # either the node weights or the unit scores must be equal
-            if self._node_weight == other._node_weight:
-                _node_weight = self._node_weight
-                unit_score = self._static_value + other.unit_score
-            else:
-                raise InconsistentScores('These summaries do not add together:\n%s\n%s' % (self, other))
         else:
             raise InconsistentSummaries('One static, the other not, and unit scores do not match')
         return SummaryLciaResult(self._lc, self.entity, _node_weight, unit_score)
@@ -277,6 +293,13 @@ class AggregateLciaScore(object):
         if len(self.LciaDetails) == 0:
             return 0.0
         return sum([i.result for i in self.LciaDetails])
+
+    @property
+    def is_null(self):
+        for i in self.LciaDetails:
+            if not i.is_null:
+                return False
+        return True
 
     def _augment_entity_contents(self, other):
         """
@@ -379,6 +402,13 @@ class LciaResult(object):
         self._LciaScores = dict()
         self._private = private
         self._autorange = None
+
+    @property
+    def is_null(self):
+        for i in self._LciaScores.values():
+            if not i.is_null:
+                return False
+        return True
 
     def set_autorange(self, value=True):
         """

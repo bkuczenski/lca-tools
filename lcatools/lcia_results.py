@@ -260,7 +260,7 @@ class SummaryLciaResult(object):
                     unit_score = self.unit_score
                 else:
                     raise InconsistentScores('This corner case not yet handled')
-        elif self._internal_result is other._internal_result:
+        elif self._internal_result is other._internal_result:  # this only works because terminations cache unit scores
             unit_score = self._internal_result
             # just sum the node weights, ignoring our local scaling factor (DWR!)
             if self.entity == other.entity:
@@ -270,7 +270,7 @@ class SummaryLciaResult(object):
                 print("entities do not match\n self: %s\nother: %s" % (self.entity, other.entity))
                 raise InconsistentSummaries
         else:
-            raise InconsistentSummaries('One static, the other not, and unit scores do not match')
+            raise InconsistentSummaries('At least one not static, and unit scores do not match')
         return SummaryLciaResult(self._lc, self.entity, _node_weight, unit_score)
 
 

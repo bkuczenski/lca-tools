@@ -7,6 +7,8 @@
       "elementary": true,
       "name": [
         "Elementary Flows",
+        "Elementary flows",
+        "elementary flows",
         "Other elementary flows"
       ],
       "subcompartments": [
@@ -344,7 +346,9 @@
     },
     {
       "name": [
-        "Intermediate Flows"
+        "Intermediate Flows",
+        "Intermediate flows",
+        "intermediate flows"
       ],
       "subcompartments": []
     }

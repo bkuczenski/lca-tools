@@ -552,6 +552,7 @@ class Qdb(BasicArchive):
         cfs = set()
         for f_ind in f_inds:
             for item in self._fq_dict[f_ind, q_ind].find(compartment, dist=2, return_first=True):
+                self._print('  ** _lookup_cfs found %s' % item)
                 cfs.add(item)
         return cfs
 
@@ -651,6 +652,8 @@ class Qdb(BasicArchive):
         """
         cfs = self._lookup_cfs(f_inds, comp, query_q_ind)
         _conv_error = False
+        if len(cfs) == 0:
+            self._print(' !! No cfs returned !!')
 
         # now to check reference quantity
         vals = []
@@ -686,6 +689,7 @@ class Qdb(BasicArchive):
                         flow.add_characterization(cf.flow.reference_entity, value=ref_conversion, location=locale,
                                                   origin=origin)
 
+            self._print('  ** found value %g\n%s' % (factor, cf))
             vals.append(factor)
 
         if _conv_error and len(vals) == 0:
@@ -725,12 +729,16 @@ class Qdb(BasicArchive):
             _biogenics = (y for y in self._flow_terms(flow))
 
         if ref_q_ind is None:
+            self._print('  ** convert - no ref_q_ind found')
             return None
 
         if ref_q_ind == query_q_ind:
+            self._print('  ** convert - ref and query are the same')
             return 1.0
 
         comp = self.c_mgr.find_matching(compartment)
+        if len(f_inds) == 0:
+            self._print(' !! No matching flowables !!')
 
         for f_ind in f_inds:
             if f_ind == self._co2_index:
@@ -748,6 +756,7 @@ class Qdb(BasicArchive):
         vals = self._convert_values(f_inds, comp, ref_q_ind, query_q_ind, flow=flow, locale=locale)
 
         if len(vals) == 0:
+            self._print('  ** no values found')
             return None
         if len(set(vals)) > 1:
             print('Multiple CFs found: %s' % vals)
@@ -771,8 +780,10 @@ class Qdb(BasicArchive):
         """
         q = self[quantity.link]
         q_ind = self._get_q_ind(q)
+        _is_quiet = self._quiet
         if debug:
-            print('q_ind: %d' % q_ind)
+            self._quiet = False
+        self._print('q_ind: %d' % q_ind)
         r = LciaResult(q)
         for x in inventory:
             if refresh or not x.flow.has_characterization(q):
@@ -782,18 +793,17 @@ class Qdb(BasicArchive):
                     print('Mismatch %s' % x)
                     factor = None
                 if factor is not None:
-                    if debug:
-                        print('factor %g %s' % (factor, x))
+                    self._print('factor %g %s' % (factor, x))
                     x.flow.add_characterization(q, value=factor, overwrite=refresh)
                 else:
-                    if debug:
-                        print('factor NONE %s' % x)
+                    self._print('factor NONE %s' % x)
                     x.flow.add_characterization(q)
             if x.flow.cf(q) is not None:
                 r.add_component(x.flow.external_ref, entity=x.flow)
                 fac = x.flow.factor(q)
                 fac.set_natural_direction(self.c_mgr)
                 r.add_score(x.flow.external_ref, x, fac, locale)
+        self._quiet = _is_quiet
         return r
 
     def cf(self, flow, query_quantity, locale='GLO'):

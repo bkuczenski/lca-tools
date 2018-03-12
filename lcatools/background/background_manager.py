@@ -74,6 +74,7 @@ class BackgroundManager(object):
             exchs.append(ExchangeValue(node.process, term.flow, comp_dir(term.direction), value=_af.data[i],
                                        termination=term.process.external_ref))
 
+        '''
         if 0:
             # need to figure this out but for now we just want Af
             # next, dependencies
@@ -90,7 +91,7 @@ class BackgroundManager(object):
                 node = fg[cols[i]]
                 emis = self._be.emissions[rows[i]]
                 exchs.append(ExchangeValue(node.process, emis.flow, emis.direction, value=_bf.data[i]))
-
+        '''
         return exchs
 
     def _background_dependencies(self, bg_product_flow):
@@ -131,7 +132,7 @@ class BackgroundManager(object):
                 continue
             dat = dep.value
             dirn = 'Output' if dat < 0 else 'Input'
-            exch.append(ExchangeValue(process, dep.term.flow, dirn, value=dat,
+            exch.append(ExchangeValue(dep.parent.process, dep.term.flow, dirn, value=dat,
                                       termination=dep.term.process.external_ref))
         return exch
 
@@ -148,7 +149,7 @@ class BackgroundManager(object):
 
         exch = []
         for em in self._be.foreground_emissions(pf):  # em isa CutoffEntry
-            exch.append(ExchangeValue(process, em.emission.flow, em.emission.direction, value=em.value))
+            exch.append(ExchangeValue(em.parent.process, em.emission.flow, em.emission.direction, value=em.value))
         return exch
 
     def inventory(self, process, ref_flow=None, show=None):

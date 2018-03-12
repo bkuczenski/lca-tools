@@ -14,6 +14,13 @@ class FragRecursionError(Exception):
     pass
 
 
+class OutOfOrderException(Exception):
+    """
+    exchange's parent node not yet created
+    """
+    pass
+
+
 ed = FragmentEditor(interactive=False)
 
 
@@ -209,66 +216,135 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         :param observe: [True]
         :return:
         """
-        '''
-        Here's how this works:
-         * given a node, we ask the background interface for the node's foreground
-           =  the bg interface gives us a list of nonzero values in Af, formulated as exchanges
-         * starting with the reference node, we create a fragment for each Af exchange
-           = we assign it
-         * we keep a mapping of termination strings to terminations, beginning with a process ref
-           = if we encounter a termination that has already been mapped, upgrade it to a subfragment
-           = if a fragment's termination already exists as a subfragment, terminate to the subfragment
-           = otherwise, log the termination and add it as a child flow
-        '''
         fx = process_ref.foreground(ref_flow=ref_flow)
+        px = []
+        '''
+        New plan
+        Constraints:
+         - every distinct termination matches exactly one foreground node (enforced with term_map)
+         - every exchange value matches exactly one child fragment (enforced with has_child())
+         - child flows may only be added to fragments created in this function call (enforced with _new_frags)
+        workflow:
+         - index existing terminations
+         - check/create reference node
+         - for each exchange:
+           * lookup parent-- should be fragment (reference or child)
+           * lookup termination
+             = if missing, create new child + store
+             = if child, split new subfragment + replace
+             = if subfragment, use
+           * if parent has matching child already, continue
+           * else create new child fragment; terminate as above
+         - observe
 
+        '''
         # index the entire local collection of fragments to find existing terminations and existing subfragments
         term_map = dict(((k.term.term_node.external_ref, k) for k in self._archive.fragments(show_all=True)
                         if k.term.is_process))
-        subfrags = dict(((k.term.term_node.external_ref, k) for k in self._archive.fragments()))
+        _new_frags = set()
 
-        top_frag = self._new_node(fx[0].flow, fx[0].direction, process_ref)
-        top_frag['Comment'] = 'Reference node; foreground query to %s' % process_ref.link
-        term_map[process_ref.external_ref] = top_frag
-        subfrags[process_ref.external_ref] = top_frag
+        def _grab_parent(_exch):
+            if _exch.process.external_ref in term_map:
+                return term_map[_exch.process.external_ref]
+            else:
+                print('Out of order %s' % _exch)
+                raise OutOfOrderException
+
+        def _create_child(_par, _exch):
+            if _exch.termination in term_map:
+                _n = term_map[_exch.termination]
+                if _n.reference_entity is None:
+                    _c = ed.create_fragment(_exch.flow, _exch.direction, parent=_par, termination=_n,
+                                            value=_exch.value,
+                                            comment='Subfragment; %s' % _exch.termination)
+                else:
+                    # upgrade to a subfragment
+                    print('### Splitting subfragment %s' % _n.term.term_node)
+                    _s = ed.split_subfragment(_n)
+                    term_map[_exch.termination] = _s
+                    _c = ed.create_fragment(_exch.flow, _exch.direction, parent=_par, termination=_s,
+                                            value=_exch.value,
+                                            comment='Subfragment; %s' % _exch.termination)
+            else:
+                _c = self._new_node(_exch, parent=_par)
+                term_map[_exch.termination] = _c
+                _new_frags.add(_c)
+            return _c
+
+        def _try_exch(_p, _x):
+            if _p not in _new_frags:
+                print('Parent fragment is out of scope')
+                return
+            if _p.has_child(_x.flow, _x.direction, _x.termination):
+                print('Parent-child relationship already exists')
+                return
+
+            _create_child(_p, x)
+
+        if process_ref.external_ref in term_map:
+            print('This fragment has already been created.')
+            top_frag = term_map[process_ref.external_ref]
+            if top_frag.reference_entity is None:
+                return top_frag
+            else:
+                return ed.split_subfragment(top_frag)
+
+        top_frag = self._new_node(fx[0])
+        term_map[fx[0].process.external_ref] = top_frag
+        _new_frags.add(top_frag)
 
         for x in fx[1:]:
-            parent = term_map[x.process.external_ref]
-            assert x.termination is not None
-            if x.termination in subfrags:
-                # termination is already a subfragment
-                child = ed.create_fragment(x.flow, x.direction, parent=parent, value=x.value, comment='Subfragment')
-                # need to test for recursion! this could even happen inside terminate()
-                child.terminate(subfrags[x.termination])
-            else:
-                # termination not [yet] encountered twice
-                if x.termination in term_map:
-                    # termination encountered for the second time -- need to make a subfragment
-                    print('### Splitting subfragment at %s' % x.termination)
-                    subfrag = ed.split_subfragment(term_map[x.termination])
-                    subfrags[x.termination] = subfrag
-                    child = ed.create_fragment(x.flow, x.direction, parent=parent, value=x.value, comment='Subfragment')
-                    # need to test for recursion! this could even happen inside terminate()
-                    child.terminate(subfrags[x.termination])
-                else:
-                    # termination encountered for the first time -- need to make a new node
-                    term = self._archive.catalog_ref(x.process.origin, x.termination, entity_type='process')
-                    child = self._new_node(x.flow, x.direction, term, value=x.value, parent=parent)
-                    term_map[x.termination] = child
+            try:
+                parent = _grab_parent(x)
+            except OutOfOrderException:
+                px.append(x)
+                continue
 
-        for f in subfrags.values():
+            _try_exch(parent, x)
+
+        _rec_count = 0
+        while len(px) > 0:
+            if _rec_count > 9:
+                print('Abandoned out-of-order fragments!')
+                print([str(x) for x in px])
+                break
+
+            fx = px
+            px = []
+            _rec_count += 1
+            for x in fx:
+                try:
+                    parent = _grab_parent(x)
+                except OutOfOrderException:
+                    px.append(x)
+                    continue
+
+                _try_exch(parent, x)
+
+         for f in _new_frags:
             self._archive.add_entity_and_children(f)
             if observe:
                 f.observe(accept_all=True)
         return top_frag
 
-    def _new_node(self, flow, direction, term, value=1.0, parent=None):
-        print('# Creating node (%2d) with term %s' % (self._count, term))
-        self._count += 1
-        frag = ed.create_fragment(flow, direction, value=value, parent=parent)
-        frag.terminate(term, term_flow=flow)
+    def _new_node(self, exch, parent=None):
+        """
+        Call only when no fragment exists with the given termination
+        :param exch:
+        :param parent:
+        :return:
+        """
+        if parent is None:
+            term = exch.process
+        else:
+            term = self._archive.catalog_ref(exch.process.origin, exch.termination, 'process')
 
-        for dep in term.dependencies(ref_flow=flow):
+        print('# Creating node (%2d) with term %s' % (self._count, term.external_ref))
+        self._count += 1
+        frag = ed.create_fragment(exch.flow, exch.direction, value=exch.value, parent=parent)  # will flip direction
+        frag.terminate(term, term_flow=exch.flow)
+
+        for dep in term.dependencies(ref_flow=exch.flow):
             child = ed.create_fragment(dep.flow, dep.direction, parent=frag, value=dep.value,
                                        comment='Dependency; %s' % term.link)
             child.terminate(self.find_or_create_term(dep, background=True))
@@ -276,6 +352,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
 
     def create_fragment_from_node(self, process_ref, ref_flow=None, include_elementary=False, observe=True):
         """
+        Unclear where this lies with respect to create_forest-- should we deprecate?
 
         :param process_ref:
         :param ref_flow:

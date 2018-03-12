@@ -210,6 +210,21 @@ class LcFragment(LcEntity):
         self.reference_entity.remove_child(self)
         self._set_reference(None)
 
+    def has_child(self, flow, direction, termination=None):
+        for c in self.child_flows:
+            if c.flow == flow and c.direction == direction:
+                term = c.term
+                if term.is_null:
+                    if termination is None:
+                        return True
+                else:
+                    if term.is_process and term.term_node.external_ref == termination:
+                        return True
+                    # this looks a bit ridiculous but I think it's right
+                    if term.is_frag and term.term_node.term.term_node.external_ref == termination:
+                        return True
+        return False
+
     def add_child(self, child):
         """
         This should only be called from the child's set_parent function

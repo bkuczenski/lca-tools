@@ -226,8 +226,9 @@ class BackgroundEngine(object):
 
     def _create_product_flow(self, flow, termination):
         index = len(self._pf_index)
+        term = self.fg.get(termination.external_ref)  # turn it into a catalog ref
         try:
-            pf = ProductFlow(index, flow, termination)
+            pf = ProductFlow(index, flow, term)
         except NoMatchingReference:
             print('### !!! NO MATCHING REFERENCE !!! ###')  # fix this if it comes up again
             return None

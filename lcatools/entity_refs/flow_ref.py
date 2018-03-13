@@ -44,15 +44,15 @@ class FlowRef(EntityRef, IndexInterface, QuantityInterface):
         :param location:
         :return:
         """
-        if quantity.link in self._characterizations.keys():
+        if quantity.uuid in self._characterizations.keys():
             if location == 'GLO' or location is None:
                 return True
-            if location in self._characterizations[quantity.link].locations():
+            if location in self._characterizations[quantity.uuid].locations():
                 return True
         return False
 
     def add_characterization(self, quantity, value=None, **kwargs):
-        q = quantity.link
+        q = quantity.uuid
         if q in self._characterizations.keys():
             if value is None:
                 return
@@ -82,7 +82,13 @@ class FlowRef(EntityRef, IndexInterface, QuantityInterface):
         return self._query.originate(self.external_ref, direction, **kwargs)
 
     def cf(self, query_quantity, locale='GLO', **kwargs):
-        return self._query.cf(self, query_quantity, locale=locale, **kwargs)
+        quant = self._query.get(query_quantity)
+        u = quant.uuid
+        if u in self._characterizations:
+            return self._characterizations[u][locale]
+        val = self._query.cf(self, query_quantity, locale=locale, **kwargs)
+        self.add_characterization(quant, value=val, locale=locale)
+        return val
 
     def profile(self, **kwargs):
         """
@@ -92,7 +98,18 @@ class FlowRef(EntityRef, IndexInterface, QuantityInterface):
         """
         print('%s' % self)
         out = []
+        do = True
+        for cf in self._characterizations.values():
+            if do:
+                print('Local CFs:')  # hack to print a header only if list is nonzero
+                do = False
+            print('%2d %s' % (len(out), cf.q_view()))
+            out.append(cf)
+        do = True
         for cf in self._query.profile(self.external_ref, **kwargs):
+            if do:
+                print('Remote CFs:')  # hack to print a header only if list is nonzero
+                do = False
             print('%2d %s' % (len(out), cf.q_view()))
             out.append(cf)
         return out

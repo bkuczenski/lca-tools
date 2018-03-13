@@ -1,6 +1,6 @@
 import os
 import json
-from lcatools.flowdb.compartments import Compartment, CompartmentManager, MissingCompartment
+from lcatools.flowdb.compartments import Compartment, CompartmentManager
 from lcatools.entities import LcFlow
 
 import unittest

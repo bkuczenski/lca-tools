@@ -137,6 +137,17 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
                     continue
             yield f.factor(int_q)
 
+    def cf(self, flow, quantity, locale='GLO', **kwargs):
+        """
+
+        :param flow:
+        :param quantity:
+        :param locale:
+        :param kwargs:
+        :return:
+        """
+        return self._archive.get(flow).cf(quantity, locale=locale)
+
     def quantity_relation(self, ref_quantity, flowable, compartment, query_quantity, locale='GLO', **kwargs):
         """
         Return a single number that converts the a unit of the reference quantity into the query quantity for the

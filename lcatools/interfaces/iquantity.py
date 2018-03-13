@@ -76,6 +76,19 @@ class QuantityInterface(AbstractQuery):
         return self._perform_query(_interface, 'factors', QuantityRequired('Quantity interface required'),
                                    quantity, flowable=flowable, compartment=compartment, **kwargs)
 
+    def cf(self, flow, quantity, locale='GLO', **kwargs):
+        """
+        Determine a flow's characterization factor for a given quantity by consulting the flow directly.  This will
+        fall back to a Qdb lookup if the flow's originating resource cannot answer the question.
+        :param flow:
+        :param quantity:
+        :param locale:
+        :param kwargs:
+        :return:
+        """
+        return self._perform_query(_interface, 'cf', QuantityRequired('Quantity interface required'),
+                                   flow, quantity, locale=locale, **kwargs)
+
     def quantity_relation(self, ref_quantity, flowable, compartment, query_quantity, locale='GLO', **kwargs):
         """
         Return a single number that converts the a unit of the reference quantity into the query quantity for the

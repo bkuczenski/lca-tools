@@ -101,6 +101,14 @@ class ExchangesTest(unittest.TestCase):
             total = sum(k[rx] * rx.value for rx in self.petro.references())
             self.assertAlmostEqual(total, k.value, places=10)
 
+    def test_alloc_equality(self):
+        d_cf = self.petro_d.flow.cf(self.petro.alloc_qty)
+        r_cf = self.petro_r.flow.cf(self.petro.alloc_qty)
+        for k in self.petro.inventory():
+            if k.is_reference:
+                continue
+            self.assertAlmostEqual(k[self.petro_d] / d_cf, k[self.petro_r] / r_cf, places=10)
+
 
 if __name__ == '__main__':
     unittest.main()

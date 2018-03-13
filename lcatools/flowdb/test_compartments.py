@@ -270,9 +270,9 @@ class CompartmentManagerTestCase(unittest.TestCase):
 
     def test_read_reference(self):
         kn = self.cm.known_names
-        self.assertEqual(len(kn), 117, "Length does not match")
-        self.assertEqual(kn[45], 'Heavy metals to industrial soil')
-        self.assertEqual(kn[-1], 'Intermediate Flows')
+        self.assertEqual(len(kn), 121, "Length does not match")
+        self.assertEqual(kn[47], 'Heavy metals to industrial soil')
+        self.assertEqual(kn[-1], 'intermediate flows')
 
     def test_idempotency(self):
         kn = self.cm.known_names
@@ -297,7 +297,7 @@ class CompartmentManagerTestCase(unittest.TestCase):
         with open(self._test_file, 'w') as fp:
             fp.write(local_cm_json)
         self.cm.set_local(self._test_file)
-        self.assertEqual(self.cm.compartments.known_names()[17:20],
+        self.assertEqual(self.cm.compartments.known_names()[19:22],
                          ['Radioactive emissions to air', 'blorgle air', 'fossil'])
         self.assertSetEqual({i.name for i in self.cm.compartments.subcompartments()},
                             {'Intermediate Flows', 'Elementary Flows'})

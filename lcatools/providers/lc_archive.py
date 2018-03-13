@@ -101,6 +101,7 @@ class LcArchive(BasicArchive):
         # note-- we are officially abandoning referenceExchange notation
         if 'referenceExchange' in entity_j:
             entity_j.pop('referenceExchange')
+        a_b_q = entity_j.pop('AllocatedByQuantity', None)
         exchs = entity_j.pop('exchanges', [])
         process = LcProcess(uid, **entity_j)
         refs, nonrefs = [], []
@@ -146,6 +147,10 @@ class LcArchive(BasicArchive):
                     # assert rx.direction == drr
                     process.add_exchange(f, d, reference=rx, value=val, termination=t)
 
+        if a_b_q is not None:
+            alloc_q = self[a_b_q['externalId']]  # allocation quantity must be locally present
+            process.allocate_by_quantity(alloc_q)
+
         return process
 
     def _make_entity(self, e, etype, uid):
@@ -170,7 +175,7 @@ class LcArchive(BasicArchive):
         :param values:
         :return:
         """
-        j = super(LcArchive, self).serialize()
+        j = super(LcArchive, self).serialize(characterizations=characterizations, values=values)
         j['processes'] = sorted([p.serialize(exchanges=exchanges, values=values)
                                  for p in self.entities_by_type('process')],
                                 key=lambda x: x['entityId'])

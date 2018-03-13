@@ -84,7 +84,7 @@ class ProcessRef(EntityRef):
                                            termination=termination, **kwargs)
 
     def inventory(self, ref_flow=None, **kwargs):
-        ref_flow = self._use_ref_exch(ref_flow)
+        # ref_flow = self._use_ref_exch(ref_flow)  # ref_flow=None returns unallocated inventory
         return self._query.inventory(self.external_ref, ref_flow=ref_flow, **kwargs)
 
     def exchange_relation(self, ref_flow, exch_flow, direction, termination=None, **kwargs):

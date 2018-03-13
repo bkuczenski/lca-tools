@@ -136,6 +136,8 @@ class LcProcess(LcEntity):
         if self.reference_entity is not None:
             raise AttributeError('How could the reference entity not be None?')
         self.reference_entity = set()  # it is not possible to specify a valid reference_entity on init
+        self._alloc_by_quantity = None
+        self._alloc_sum = 0.0
 
         if 'SpatialScope' not in self._d:
             self._d['SpatialScope'] = 'GLO'
@@ -170,6 +172,16 @@ class LcProcess(LcEntity):
                 self.reference_entity.add(ref_entity)
             else:
                 raise ReferenceSettingFailed('%s\n%s' % (self, ref_entity))
+        if self.alloc_qty is not None:
+            self.allocate_by_quantity(self._alloc_by_quantity)
+
+    @property
+    def alloc_qty(self):
+        return self._alloc_by_quantity
+
+    @property
+    def alloc_total(self):
+        return self._alloc_sum
 
     def _find_reference_by_string(self, term, strict=False):
         """
@@ -327,6 +339,8 @@ class LcProcess(LcEntity):
         self.remove_allocation(reference)
         if reference in self.reference_entity:
             self.reference_entity.remove(reference)
+        if self._alloc_by_quantity is not None:
+            self.allocate_by_quantity(self._alloc_by_quantity)
 
     def references(self, flow=None):
         for rf in self.reference_entity:
@@ -348,15 +362,22 @@ class LcProcess(LcEntity):
 
     def allocate_by_quantity(self, quantity):
         """
-        Apply allocation factors to all non-reference exchanges, determined by the quantity specified.  For each
+        Store a quantity for partitioning allocation.  All non-reference exchanges will have their exchange values
+        computed based on the total, determined by the quantity specified.  For each
         reference exchange, computes the magnitude of the quantity output from the unallocated process. Reference flows
         lacking characterization in that quantity will receive zero allocation.
 
         Each magnitude is the allocation numerator for that reference, and the sum of the magnitudes is the allocation
         denominator.
-        :param quantity: an LcQuantity
+        :param quantity: an LcQuantity (or None to remove quantity allocation)
         :return:
         """
+        if quantity is None:
+            self._alloc_by_quantity = None
+            self._alloc_sum = 0.0
+            self._d.pop('AllocatedByQuantity', None)
+            return
+
         exchs = dict()
         mags = dict()
         for rf in self.reference_entity:
@@ -365,11 +386,8 @@ class LcProcess(LcEntity):
 
         total = sum([v for v in mags.values()])
 
-        for rf in self.references():
-            alloc_factor = mags[rf.flow] / total  # sum of all allocated exchanges should equal unallocated value
-            for x in self.inventory():
-                if x not in self.reference_entity:
-                    x[rf] = x.value * alloc_factor
+        self._alloc_by_quantity = quantity
+        self._alloc_sum = total
         self['AllocatedByQuantity'] = quantity
 
     def is_allocated(self, reference, strict=False):
@@ -379,13 +397,15 @@ class LcProcess(LcEntity):
         :param strict: [False] if True, raise an exception if some (but not all) exchanges are missing allocations.
         :return: True - allocations exist; False - no allocations exist; raise MissingFactor - some allocations exist
         """
-        if reference is None:
-            return False
         try:
             reference = self.find_reference(reference)
         except NoReferenceFound:
             print('Not a reference exchange.')
             return False
+        if self.alloc_qty is not None:
+            if reference.flow.cf(self.alloc_qty) == 0:
+                return False
+            return True
         missing_allocations = []
         has_allocation = []
         for x in self._exchanges.values():

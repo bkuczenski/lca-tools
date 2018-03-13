@@ -321,7 +321,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
 
                 _try_exch(parent, x)
 
-         for f in _new_frags:
+        for f in _new_frags:
             self._archive.add_entity_and_children(f)
             if observe:
                 f.observe(accept_all=True)

@@ -132,6 +132,10 @@ class Exchange(object):
 
     @property
     def lkey(self):
+        """
+        Long key, for testing equality-- more robust than a hash
+        :return:
+        """
         return self.flow.external_ref, self._direction, self._termination  # self._hash_tuple
 
     def is_allocated(self, reference):
@@ -193,7 +197,7 @@ class Exchange(object):
 
     @classmethod
     def signature_fields(cls):
-        return ['process', 'flow', 'direction', 'quantity']
+        return ['process', 'flow', 'direction', 'termination']
 
 
 class ExchangeValue(Exchange):
@@ -292,6 +296,13 @@ class ExchangeValue(Exchange):
 
     def __getitem__(self, item):
         """
+        Implements the exchange relation-- computes the quantity of self that is exchanged for a unit of item,
+        according to whatever allocation is specified for the exchange or process.  self and item must share the
+        same process (tested as external_ref to allow entities and references to interoperate)
+
+        If self is a reference exchange, the exchange relation will equal either 0.0 or 1.0 depending on whether item
+        is self or a different reference.  FOR NOW: Reference exchanges cannot
+
         When an exchange is asked for its value with respect to a particular reference, lookup the allocation in
         the value_dict.  IF there is no value_dict, then the default _value is returned AS LONG AS the process has
         only 0 or 1 reference exchange.
@@ -302,43 +313,53 @@ class ExchangeValue(Exchange):
         :param item:
         :return:
         """
+        '''
         if len(self._value_dict) == 0:
             # unallocated exchanges always read the same
             return self._value
-        if self.is_reference:  # if self is a reference entity, the allocation is either .value or 0
-            if item.lkey == self.lkey:  # and item.direction == self.direction:
-                return self.value
-            return 0.0
+        '''
+        if item.process.external_ref != self.process.external_ref:
+            raise KeyError('Reference exchange belongs to a different process')
         # elif len(self.process.reference_entity) == 1:
         #    # no allocation necessary
         #    return self.value
-        elif not item.is_reference:
-            raise MissingReference('Allocation key is not a reference exchange')
-        else:
-            try:
-                return self._value_dict[item]
-            except KeyError:
+        if item.is_reference:
+            if self.is_reference:  # if self is a reference entity, the allocation is either .value or 0
+                if item.lkey == self.lkey:  # and item.direction == self.direction:
+                    return 1.0
                 return 0.0
-                # no need to raise on zero allocation
-        # raise NoAllocation('No allocation found for key %s in process %s' % (item, self.process))
+            elif self.process.alloc_qty is not None:
+                exch_norm = self.value / self.process.alloc_total  # exchange value per total output quantity
+                ref_norm = item.flow.cf(self.process.alloc_qty)  # quantity for a unit output of ref
+                return exch_norm * ref_norm
+            elif len(self._value_dict) > 0:
+                try:
+                    return self._value_dict[item]
+                except KeyError:
+                    return 0.0
+                    # no need to raise on zero allocation
+                    # raise NoAllocation('No allocation found for key %s in process %s' % (item, self.process))
+                # else fall through
+        return self._value / item.value
 
     def __setitem__(self, key, value):
+        """
+        Used to set custom or "causal" allocation factors.  Here the allocation should be specified exactly as it
+        gets returned, i.e. as a quantity of self.flow exchanged with a unit of key.flow.
+        :param key: a reference exchange
+        :param value:
+        :return:
+        """
+        if key.process.external_ref != self.process.external_ref:
+            raise KeyError('Reference exchange belongs to a different process')
         if not key.is_reference:
             raise AmbiguousReferenceError('Allocation key is not a reference exchange')
         if key in self._value_dict:
             # print(self._value_dict)
             raise DuplicateExchangeError('Exchange value already defined for this reference!')
-        '''
-        if self._ref_flow in self._value_dict:  # reference exchange
-            if key == self._ref_flow:
-                if value == 0:
-                    raise ValueError('Reference exchange cannot be zero')
-            else:
-                if value != 0:
-                    raise ValueError('Allocation for non-reference exchange must be zero')
-        '''
         if self.is_reference:
-            if key.flow == self.flow and key.direction == self.direction:
+            # if it's a reference exchange, it's non-allocatable and should have an empty value_dict
+            if self.lkey == key.lkey:
                 self.value = value
                 # if value != 1:
                 #    raise ValueError('Reference Allocation for reference exchange should be 1.0')
@@ -346,7 +367,6 @@ class ExchangeValue(Exchange):
                 if value != 0:
                     raise ValueError('Non-reference Allocation for reference exchange should be 0.')
         else:
-            # if it's a reference exchange, it's non-allocatable and should have an empty value_dict
             self._value_dict[key] = value
 
     def remove_allocation(self, key):

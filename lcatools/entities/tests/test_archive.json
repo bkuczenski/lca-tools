@@ -1,0 +1,1543 @@
+{
+  "@context": "https://bkuczenski.github.io/lca-tools-datafiles/context.jsonld",
+  "catalogNames": {
+    "test.entities": null
+  },
+  "dataReference": "test.entities",
+  "dataSource": null,
+  "dataSourceType": "LcArchive",
+  "flows": [
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Utilities",
+        "Fossil Fuel Electric Power Generation"
+      ],
+      "Name": "Electricity, at grid, US, 2008",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "f6811440-ee37-11de-8a39-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "06581fb2-1de0-3e78-8298-f37605dea142",
+      "entityType": "flow",
+      "externalId": "06581fb2-1de0-3e78-8298-f37605dea142",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "CUTOFF Flows"
+      ],
+      "Name": "CUTOFF Electricity, MSW, non-biogenic, at power plant",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "f6811440-ee37-11de-8a39-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "0d6051cd-bd1d-3422-8931-e7a46466b9c7",
+      "entityType": "flow",
+      "externalId": "0d6051cd-bd1d-3422-8931-e7a46466b9c7",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Petroleum and Coal Products Manufacturing",
+        "Petroleum Refineries"
+      ],
+      "Name": "Gasoline, at refinery",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "quantity": "93a60a56-a3c8-11da-a746-0800200b9a66",
+          "value": 750
+        },
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "93a60a56-a3c8-22da-a746-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "0e44e579-abb0-3c77-af64-c774d65be529",
+      "entityType": "flow",
+      "externalId": "0e44e579-abb0-3c77-af64-c774d65be529",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "air",
+        "unspecified"
+      ],
+      "Name": "Nitrogen oxides ",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "93a60a56-a3c8-11da-a746-0800200b9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "1827a862-ccac-37ac-9ad7-d2dffe71058c",
+      "entityType": "flow",
+      "externalId": "1827a862-ccac-37ac-9ad7-d2dffe71058c",
+      "flowType": "ELEMENTARY_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Utilities",
+        "Fossil Fuel Electric Power Generation"
+      ],
+      "Name": "Electricity, diesel, at power plant",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "f6811440-ee37-11de-8a39-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "1e68baef-0ed7-37bb-9919-61963f9fbd08",
+      "entityType": "flow",
+      "externalId": "1e68baef-0ed7-37bb-9919-61963f9fbd08",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "water",
+        "unspecified"
+      ],
+      "Name": "Lead",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "93a60a56-a3c8-11da-a746-0800200b9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "2300c22d-fa07-34a3-81a2-6fb72e63b09c",
+      "entityType": "flow",
+      "externalId": "2300c22d-fa07-34a3-81a2-6fb72e63b09c",
+      "flowType": "ELEMENTARY_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "CUTOFF Flows"
+      ],
+      "Name": "CUTOFF Electricity, biomass,liquid, unspecified, at power plant",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "f6811440-ee37-11de-8a39-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "29ae9fce-0435-3a0a-bedc-1ee78b6b4b3e",
+      "entityType": "flow",
+      "externalId": "29ae9fce-0435-3a0a-bedc-1ee78b6b4b3e",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "CUTOFF Flows"
+      ],
+      "Name": "CUTOFF Electricity, solar, unspecified, at power plant",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "f6811440-ee37-11de-8a39-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "2e5ad224-751f-3379-8b19-1d533cf2b09c",
+      "entityType": "flow",
+      "externalId": "2e5ad224-751f-3379-8b19-1d533cf2b09c",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Petroleum and Coal Products Manufacturing",
+        "Petroleum Refineries"
+      ],
+      "Name": "Bitumen, at refinery",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "93a60a56-a3c8-11da-a746-0800200b9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "30a64e63-3583-3f83-8d8d-0b6ea003b888",
+      "entityType": "flow",
+      "externalId": "30a64e63-3583-3f83-8d8d-0b6ea003b888",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "CUTOFF Flows"
+      ],
+      "Name": "CUTOFF Electricity, biomass, liquid, sludge, at power plant",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "f6811440-ee37-11de-8a39-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "3e5fb48a-67e0-38bf-a09f-d3991e142de0",
+      "entityType": "flow",
+      "externalId": "3e5fb48a-67e0-38bf-a09f-d3991e142de0",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "CUTOFF Flows"
+      ],
+      "Name": "CUTOFF Electricity, biomass, solid, biogenic MSW, at power plant",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "f6811440-ee37-11de-8a39-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "4211c454-1719-3763-8d1e-86c587273b10",
+      "entityType": "flow",
+      "externalId": "4211c454-1719-3763-8d1e-86c587273b10",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Water Transportation",
+        "Deep Sea Freight Transportation"
+      ],
+      "Name": "Transport, ocean freighter, residual fuel oil powered",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "838aaa20-0117-11db-92e3-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "455470fa-1a78-344b-ae09-ffa4e22c1f8b",
+      "entityType": "flow",
+      "externalId": "455470fa-1a78-344b-ae09-ffa4e22c1f8b",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "CUTOFF Flows"
+      ],
+      "Name": "CUTOFF Electricity, hydropower, at power plant, unspecified",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "f6811440-ee37-11de-8a39-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "4b4d38d5-b196-3075-8f90-27fa7e45d92b",
+      "entityType": "flow",
+      "externalId": "4b4d38d5-b196-3075-8f90-27fa7e45d92b",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Petroleum and Coal Products Manufacturing",
+        "Petroleum Refineries"
+      ],
+      "Name": "Petroleum coke, at refinery",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "93a60a56-a3c8-11da-a746-0800200b9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "4f1bfabb-f0d3-3f1f-a905-2fd9b36bbfa0",
+      "entityType": "flow",
+      "externalId": "4f1bfabb-f0d3-3f1f-a905-2fd9b36bbfa0",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "CUTOFF Flows"
+      ],
+      "Name": "CUTOFF Electricity, biomass, solid, agriculture by-products, at power plant",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "f6811440-ee37-11de-8a39-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "50a39fc4-b698-37e8-b8f9-0142a6ef76ce",
+      "entityType": "flow",
+      "externalId": "50a39fc4-b698-37e8-b8f9-0142a6ef76ce",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "CUTOFF Flows"
+      ],
+      "Name": "CUTOFF Electricity, petroleum, waste oil, at power plant",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "f6811440-ee37-11de-8a39-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "51480a07-c9df-35d8-a1a1-5405ffc62284",
+      "entityType": "flow",
+      "externalId": "51480a07-c9df-35d8-a1a1-5405ffc62284",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Petroleum and Coal Products Manufacturing",
+        "Petroleum Refineries"
+      ],
+      "Name": "Residual fuel oil, at refinery",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "quantity": "93a60a56-a3c8-11da-a746-0800200b9a66",
+          "value": 975
+        },
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "93a60a56-a3c8-22da-a746-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "562918fe-3ff5-33f4-abaa-d8c615380d25",
+      "entityType": "flow",
+      "externalId": "562918fe-3ff5-33f4-abaa-d8c615380d25",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "CUTOFF Flows"
+      ],
+      "Name": "CUTOFF Electricity, biomass, gas, unspecified, at power plant",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "f6811440-ee37-11de-8a39-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "57c83e8d-732a-38f3-b716-bcfc655cfd17",
+      "entityType": "flow",
+      "externalId": "57c83e8d-732a-38f3-b716-bcfc655cfd17",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Petroleum and Coal Products Manufacturing",
+        "Petroleum Refineries"
+      ],
+      "Name": "Liquefied petroleum gas, at refinery",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "quantity": "93a60a56-a3c8-11da-a746-0800200b9a66",
+          "value": 500
+        },
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "93a60a56-a3c8-22da-a746-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "588384cf-851f-391e-bf49-c6e5309d76db",
+      "entityType": "flow",
+      "externalId": "588384cf-851f-391e-bf49-c6e5309d76db",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Petroleum and Coal Products Manufacturing",
+        "Petroleum Refineries"
+      ],
+      "Name": "Petroleum refining coproduct, at refinery",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "93a60a56-a3c8-11da-a746-0800200b9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "5f96ad43-abab-3b62-bcf8-c71f9d6c7881",
+      "entityType": "flow",
+      "externalId": "5f96ad43-abab-3b62-bcf8-c71f9d6c7881",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "air",
+        "unspecified"
+      ],
+      "Name": "Ammonia ",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "93a60a56-a3c8-11da-a746-0800200b9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "609069a0-462c-3a2e-b0a1-8f22cf9585d1",
+      "entityType": "flow",
+      "externalId": "609069a0-462c-3a2e-b0a1-8f22cf9585d1",
+      "flowType": "ELEMENTARY_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Utilities",
+        "Other Electric Power Generation"
+      ],
+      "Name": "Electricity, biomass, at power plant",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "f6811440-ee37-11de-8a39-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "64360b9b-adc0-3154-b391-40f2a09891d4",
+      "entityType": "flow",
+      "externalId": "64360b9b-adc0-3154-b391-40f2a09891d4",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Utilities",
+        "Fossil Fuel Electric Power Generation"
+      ],
+      "Name": "Electricity, natural gas, at power plant",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "f6811440-ee37-11de-8a39-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "6cb3e4a8-d7e0-3566-ae66-8022182af846",
+      "entityType": "flow",
+      "externalId": "6cb3e4a8-d7e0-3566-ae66-8022182af846",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "CUTOFF Flows"
+      ],
+      "Name": "CUTOFF Electricity, other fuels, unspecified, at power plant",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "f6811440-ee37-11de-8a39-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "6e9f8d2d-5ce1-3e64-8130-5ec0b62ca7d1",
+      "entityType": "flow",
+      "externalId": "6e9f8d2d-5ce1-3e64-8130-5ec0b62ca7d1",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Utilities",
+        "Fossil Fuel Electric Power Generation"
+      ],
+      "Name": "Electricity, bituminous coal, at power plant",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "f6811440-ee37-11de-8a39-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "737e3efb-29d4-3b9d-8d78-6269508c1f59",
+      "entityType": "flow",
+      "externalId": "737e3efb-29d4-3b9d-8d78-6269508c1f59",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "CUTOFF Flows"
+      ],
+      "Name": "CUTOFF Electricity, other gases, unspecified,  at power plant",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "f6811440-ee37-11de-8a39-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "7b8d7c56-1021-37b6-be2c-3c92d8b9f026",
+      "entityType": "flow",
+      "externalId": "7b8d7c56-1021-37b6-be2c-3c92d8b9f026",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "CUTOFF Flows"
+      ],
+      "Name": "CUTOFF Electricity, biomass, gas, landfill, at power plant",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "f6811440-ee37-11de-8a39-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "7f11b3fc-4396-3cb0-b1c6-4016a7c31533",
+      "entityType": "flow",
+      "externalId": "7f11b3fc-4396-3cb0-b1c6-4016a7c31533",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "CUTOFF Flows"
+      ],
+      "Name": "CUTOFF Disposal, solid waste, unspecified, to sanitary landfill",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "93a60a56-a3c8-11da-a746-0800200b9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "838cef47-a3a6-3dce-bcb2-560991c5e95c",
+      "entityType": "flow",
+      "externalId": "838cef47-a3a6-3dce-bcb2-560991c5e95c",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "CUTOFF Flows"
+      ],
+      "Name": "CUTOFF Electricity, at wind power plant, unspecified",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "f6811440-ee37-11de-8a39-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "8ca9c802-e837-30d6-a921-3bc7ea7d8448",
+      "entityType": "flow",
+      "externalId": "8ca9c802-e837-30d6-a921-3bc7ea7d8448",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Utilities",
+        "Nuclear Electric Power Generation"
+      ],
+      "Name": "Electricity, nuclear, at power plant",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "f6811440-ee37-11de-8a39-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "9e321869-bd1f-3c93-8528-8f198de2fa2b",
+      "entityType": "flow",
+      "externalId": "9e321869-bd1f-3c93-8528-8f198de2fa2b",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Utilities",
+        "Fossil Fuel Electric Power Generation"
+      ],
+      "Name": "Electricity, lignite coal, at power plant",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "f6811440-ee37-11de-8a39-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "a9f6971f-58a0-30b0-af5c-a36d11fe487f",
+      "entityType": "flow",
+      "externalId": "a9f6971f-58a0-30b0-af5c-a36d11fe487f",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Utilities",
+        "Fossil Fuel Electric Power Generation"
+      ],
+      "Name": "Transport, pipeline, unspecified petroleum products",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "838aaa20-0117-11db-92e3-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "acbe5bc4-6afd-31aa-bf3f-4a3fdc491945",
+      "entityType": "flow",
+      "externalId": "acbe5bc4-6afd-31aa-bf3f-4a3fdc491945",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "CUTOFF Flows"
+      ],
+      "Name": "CUTOFF Electricity, petroleum coke, at power plant",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "f6811440-ee37-11de-8a39-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "b31ba1d1-fb4b-3b9e-96c2-1e042fec4e84",
+      "entityType": "flow",
+      "externalId": "b31ba1d1-fb4b-3b9e-96c2-1e042fec4e84",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "water",
+        "unspecified"
+      ],
+      "Name": "Selenium",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "93a60a56-a3c8-11da-a746-0800200b9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "b4cec7e5-b107-3e94-8152-1d30a754387f",
+      "entityType": "flow",
+      "externalId": "b4cec7e5-b107-3e94-8152-1d30a754387f",
+      "flowType": "ELEMENTARY_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "CUTOFF Flows"
+      ],
+      "Name": "CUTOFF Electricity, tire derived fuel, at power plant",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "f6811440-ee37-11de-8a39-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "bc01a480-16b6-3151-b23a-1a5634441f37",
+      "entityType": "flow",
+      "externalId": "bc01a480-16b6-3151-b23a-1a5634441f37",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Petroleum and Coal Products Manufacturing",
+        "Petroleum Refineries"
+      ],
+      "Name": "Refinery gas, at refinery",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "quantity": "93a60a56-a3c8-11da-a746-0800200b9a66",
+          "value": 0.737
+        },
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "93a60a56-a3c8-22da-a746-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "c4069217-dfd4-324a-9243-2ee8058809d6",
+      "entityType": "flow",
+      "externalId": "c4069217-dfd4-324a-9243-2ee8058809d6",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Petroleum and Coal Products Manufacturing",
+        "Petroleum Refineries"
+      ],
+      "Name": "Kerosene, at refinery",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "quantity": "93a60a56-a3c8-11da-a746-0800200b9a66",
+          "value": 809
+        },
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "93a60a56-a3c8-22da-a746-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "c5f94bb1-b39e-39fa-b616-376a30531c2d",
+      "entityType": "flow",
+      "externalId": "c5f94bb1-b39e-39fa-b616-376a30531c2d",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Petroleum and Coal Products Manufacturing",
+        "Petroleum Refineries"
+      ],
+      "Name": "Diesel, at refinery",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "quantity": "93a60a56-a3c8-11da-a746-0800200b9a66",
+          "value": 850
+        },
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "93a60a56-a3c8-22da-a746-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "d939590b-a0d7-310c-8952-9921ed64a078",
+      "entityType": "flow",
+      "externalId": "d939590b-a0d7-310c-8952-9921ed64a078",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "CUTOFF Flows"
+      ],
+      "Name": "CUTOFF Electricity, biomass,solid, unspecified, at power plant",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "f6811440-ee37-11de-8a39-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "dadfc1d9-d2a9-3f86-9b4d-01cb03f4fd6c",
+      "entityType": "flow",
+      "externalId": "dadfc1d9-d2a9-3f86-9b4d-01cb03f4fd6c",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "CUTOFF Flows"
+      ],
+      "Name": "CUTOFF Electricity, geothermal, unspecified",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "f6811440-ee37-11de-8a39-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "e4229062-5210-3132-a1a2-a946454ffaf2",
+      "entityType": "flow",
+      "externalId": "e4229062-5210-3132-a1a2-a946454ffaf2",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Utilities",
+        "Steam and Air-Conditioning Supply"
+      ],
+      "Name": "Liquefied petroleum gas, combusted in industrial boiler",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "93a60a56-a3c8-22da-a746-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "f77da622-e84d-3639-8917-fcf792aaee13",
+      "entityType": "flow",
+      "externalId": "f77da622-e84d-3639-8917-fcf792aaee13",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Flow",
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "Utilities",
+        "Fossil Fuel Electric Power Generation"
+      ],
+      "Name": "Electricity, residual fuel oil, at power plant",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "f6811440-ee37-11de-8a39-0800200c9a66",
+          "value": 1.0
+        }
+      ],
+      "entityId": "f7d232cc-70aa-3669-a4e4-d1083d248e69",
+      "entityType": "flow",
+      "externalId": "f7d232cc-70aa-3669-a4e4-d1083d248e69",
+      "flowType": "PRODUCT_FLOW",
+      "infrastructureFlow": false,
+      "origin": "local.uslci.olca",
+      "version": "00.00.000"
+    }
+  ],
+  "nsUuid": "81ac4b0f-3301-4e80-b76a-bf1d0288e993",
+  "processes": [
+    {
+      "@type": "Process",
+      "AllocatedByQuantity": {
+        "entity_type": "quantity",
+        "externalId": "93a60a56-a3c8-11da-a746-0800200b9a66",
+        "origin": "local.uslci.olca"
+      },
+      "Classifications": [
+        "Petroleum and Coal Products Manufacturing",
+        "Petroleum Refineries"
+      ],
+      "Comment": "",
+      "Name": "Petroleum refining, at refinery",
+      "SpatialScope": "RNA",
+      "TemporalScope": {
+        "begin": "2003-01-01-05:00",
+        "end": "2003-01-01-05:00"
+      },
+      "entityId": "0aaf1e13-5d80-37f9-b7bb-81a6b8965c71",
+      "entityType": "process",
+      "exchanges": [
+        {
+          "direction": "Input",
+          "entityType": "exchange",
+          "flow": "455470fa-1a78-344b-ae09-ffa4e22c1f8b",
+          "value": 4.40889504679002
+        },
+        {
+          "direction": "Input",
+          "entityType": "exchange",
+          "flow": "838cef47-a3a6-3dce-bcb2-560991c5e95c",
+          "value": 0.00560421083986623
+        },
+        {
+          "direction": "Input",
+          "entityType": "exchange",
+          "flow": "acbe5bc4-6afd-31aa-bf3f-4a3fdc491945",
+          "value": 0.652170539921939
+        },
+        {
+          "direction": "Input",
+          "entityType": "exchange",
+          "flow": "f77da622-e84d-3639-8917-fcf792aaee13",
+          "value": 1.14922534711027e-06
+        },
+        {
+          "direction": "Output",
+          "entityType": "exchange",
+          "flow": "0e44e579-abb0-3c77-af64-c774d65be529",
+          "isReference": true,
+          "value": 0.000570086670859861
+        },
+        {
+          "direction": "Output",
+          "entityType": "exchange",
+          "flow": "1827a862-ccac-37ac-9ad7-d2dffe71058c",
+          "value": 0.000423482254234474
+        },
+        {
+          "direction": "Output",
+          "entityType": "exchange",
+          "flow": "2300c22d-fa07-34a3-81a2-6fb72e63b09c",
+          "value": 9.84604488706027e-10
+        },
+        {
+          "direction": "Output",
+          "entityType": "exchange",
+          "flow": "30a64e63-3583-3f83-8d8d-0b6ea003b888",
+          "isReference": true,
+          "value": 0.0371747954729888
+        },
+        {
+          "direction": "Output",
+          "entityType": "exchange",
+          "flow": "4f1bfabb-f0d3-3f1f-a905-2fd9b36bbfa0",
+          "isReference": true,
+          "value": 0.0595942417053244
+        },
+        {
+          "direction": "Output",
+          "entityType": "exchange",
+          "flow": "562918fe-3ff5-33f4-abaa-d8c615380d25",
+          "isReference": true,
+          "value": 5.1826060987260104e-05
+        },
+        {
+          "direction": "Output",
+          "entityType": "exchange",
+          "flow": "588384cf-851f-391e-bf49-c6e5309d76db",
+          "isReference": true,
+          "value": 4.9083177536680904e-05
+        },
+        {
+          "direction": "Output",
+          "entityType": "exchange",
+          "flow": "5f96ad43-abab-3b62-bcf8-c71f9d6c7881",
+          "isReference": true,
+          "value": 0.0514536791611454
+        },
+        {
+          "direction": "Output",
+          "entityType": "exchange",
+          "flow": "609069a0-462c-3a2e-b0a1-8f22cf9585d1",
+          "value": 3.57747709728232e-06
+        },
+        {
+          "direction": "Output",
+          "entityType": "exchange",
+          "flow": "b4cec7e5-b107-3e94-8152-1d30a754387f",
+          "value": 1.60179222886918e-09
+        },
+        {
+          "direction": "Output",
+          "entityType": "exchange",
+          "flow": "c4069217-dfd4-324a-9243-2ee8058809d6",
+          "isReference": true,
+          "value": 0.0611691306116913
+        },
+        {
+          "direction": "Output",
+          "entityType": "exchange",
+          "flow": "c5f94bb1-b39e-39fa-b616-376a30531c2d",
+          "isReference": true,
+          "value": 0.000112458221473748
+        },
+        {
+          "direction": "Output",
+          "entityType": "exchange",
+          "flow": "d939590b-a0d7-310c-8952-9921ed64a078",
+          "isReference": true,
+          "value": 0.000252345277453289
+        }
+      ],
+      "externalId": "0aaf1e13-5d80-37f9-b7bb-81a6b8965c71",
+      "infrastructureProcess": false,
+      "lastChange": "2011-10-26T05:48:34-04:00",
+      "origin": "local.uslci.olca",
+      "processType": "UNIT_PROCESS",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "Process",
+      "Classifications": [
+        "Utilities",
+        "Fossil Fuel Electric Power Generation"
+      ],
+      "Comment": "",
+      "Name": "Electricity, at Grid, US, 2008",
+      "SpatialScope": "RNA",
+      "TemporalScope": {
+        "begin": "2008-01-01-05:00",
+        "end": "2008-01-01-05:00"
+      },
+      "entityId": "96bffbb9-b875-36cf-8a11-5723c9d239d9",
+      "entityType": "process",
+      "exchanges": [
+        {
+          "direction": "Input",
+          "entityType": "exchange",
+          "flow": "0d6051cd-bd1d-3422-8931-e7a46466b9c7",
+          "value": 0.005559673749794387
+        },
+        {
+          "direction": "Input",
+          "entityType": "exchange",
+          "flow": "1e68baef-0ed7-37bb-9919-61963f9fbd08",
+          "value": 0.006654809433571737
+        },
+        {
+          "direction": "Input",
+          "entityType": "exchange",
+          "flow": "29ae9fce-0435-3a0a-bedc-1ee78b6b4b3e",
+          "value": 0.01521960447608689
+        },
+        {
+          "direction": "Input",
+          "entityType": "exchange",
+          "flow": "2e5ad224-751f-3379-8b19-1d533cf2b09c",
+          "value": 0.0007553387604227723
+        },
+        {
+          "direction": "Input",
+          "entityType": "exchange",
+          "flow": "3e5fb48a-67e0-38bf-a09f-d3991e142de0",
+          "value": 0.0001615255751676373
+        },
+        {
+          "direction": "Input",
+          "entityType": "exchange",
+          "flow": "4211c454-1719-3763-8d1e-86c587273b10",
+          "value": 0.007075926316384704
+        },
+        {
+          "direction": "Input",
+          "entityType": "exchange",
+          "flow": "4b4d38d5-b196-3075-8f90-27fa7e45d92b",
+          "value": 0.21720605474167018
+        },
+        {
+          "direction": "Input",
+          "entityType": "exchange",
+          "flow": "50a39fc4-b698-37e8-b8f9-0142a6ef76ce",
+          "value": 0.000679177269173844
+        },
+        {
+          "direction": "Input",
+          "entityType": "exchange",
+          "flow": "51480a07-c9df-35d8-a1a1-5405ffc62284",
+          "value": 0.0007983208894999607
+        },
+        {
+          "direction": "Input",
+          "entityType": "exchange",
+          "flow": "57c83e8d-732a-38f3-b716-bcfc655cfd17",
+          "value": 0.0005488556759333675
+        },
+        {
+          "direction": "Input",
+          "entityType": "exchange",
+          "flow": "64360b9b-adc0-3154-b391-40f2a09891d4",
+          "value": 0.017387566327236707
+        },
+        {
+          "direction": "Input",
+          "entityType": "exchange",
+          "flow": "6cb3e4a8-d7e0-3566-ae66-8022182af846",
+          "value": 0.7716511147081896
+        },
+        {
+          "direction": "Input",
+          "entityType": "exchange",
+          "flow": "6e9f8d2d-5ce1-3e64-8130-5ec0b62ca7d1",
+          "value": 0.0035947650496524364
+        },
+        {
+          "direction": "Input",
+          "entityType": "exchange",
+          "flow": "737e3efb-29d4-3b9d-8d78-6269508c1f59",
+          "value": 1.6649751068293641
+        },
+        {
+          "direction": "Input",
+          "entityType": "exchange",
+          "flow": "7b8d7c56-1021-37b6-be2c-3c92d8b9f026",
+          "value": 0.010230829346202083
+        },
+        {
+          "direction": "Input",
+          "entityType": "exchange",
+          "flow": "7f11b3fc-4396-3cb0-b1c6-4016a7c31533",
+          "value": 0.006254042337885671
+        },
+        {
+          "direction": "Input",
+          "entityType": "exchange",
+          "flow": "8ca9c802-e837-30d6-a921-3bc7ea7d8448",
+          "value": 0.048382714103545436
+        },
+        {
+          "direction": "Input",
+          "entityType": "exchange",
+          "flow": "9e321869-bd1f-3c93-8528-8f198de2fa2b",
+          "value": 0.7045586711934947
+        },
+        {
+          "direction": "Input",
+          "entityType": "exchange",
+          "flow": "a9f6971f-58a0-30b0-af5c-a36d11fe487f",
+          "value": 0.07044891859707623
+        },
+        {
+          "direction": "Input",
+          "entityType": "exchange",
+          "flow": "b31ba1d1-fb4b-3b9e-96c2-1e042fec4e84",
+          "value": 0.012519006583352326
+        },
+        {
+          "direction": "Input",
+          "entityType": "exchange",
+          "flow": "bc01a480-16b6-3151-b23a-1a5634441f37",
+          "value": 0.0010636470288676043
+        },
+        {
+          "direction": "Input",
+          "entityType": "exchange",
+          "flow": "dadfc1d9-d2a9-3f86-9b4d-01cb03f4fd6c",
+          "value": 0.0007680708335029031
+        },
+        {
+          "direction": "Input",
+          "entityType": "exchange",
+          "flow": "e4229062-5210-3132-a1a2-a946454ffaf2",
+          "value": 0.013066225943698655
+        },
+        {
+          "direction": "Input",
+          "entityType": "exchange",
+          "flow": "f7d232cc-70aa-3669-a4e4-d1083d248e69",
+          "value": 0.020440034230226865
+        },
+        {
+          "direction": "Output",
+          "entityType": "exchange",
+          "flow": "06581fb2-1de0-3e78-8298-f37605dea142",
+          "isReference": true,
+          "value": 3.5999999999999996
+        }
+      ],
+      "externalId": "96bffbb9-b875-36cf-8a11-5723c9d239d9",
+      "infrastructureProcess": false,
+      "lastChange": "2011-04-11T02:14:17-04:00",
+      "origin": "local.uslci.olca",
+      "processType": "UNIT_PROCESS",
+      "version": "00.00.000"
+    }
+  ],
+  "quantities": [
+    {
+      "@type": "FlowProperty",
+      "Category": [
+        "Technical flow properties"
+      ],
+      "Comment": "",
+      "Name": "Goods transport (mass*distance)",
+      "UnitConversion": {
+        "kg*km": 1000.0,
+        "kt*km": 0.001,
+        "lb*mi": 1369.8630136986303,
+        "lb*nmi": 1190.4761904761904,
+        "t*km": 1.0,
+        "t*mi": 0.621371192237334,
+        "t*nmi": 0.5405405405405405
+      },
+      "entityId": "838aaa20-0117-11db-92e3-0800200c9a66",
+      "entityType": "quantity",
+      "externalId": "838aaa20-0117-11db-92e3-0800200c9a66",
+      "flowPropertyType": "PHYSICAL_QUANTITY",
+      "origin": "local.uslci.olca",
+      "referenceUnit": "t*km",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "FlowProperty",
+      "Category": [
+        "Technical flow properties"
+      ],
+      "Comment": "",
+      "Name": "Mass",
+      "UnitConversion": {
+        "Mg": 0.001,
+        "Mt": 1e-09,
+        "cg": 99999.99999999999,
+        "ct": 5000.0,
+        "cwt": 0.022046226218487758,
+        "dag": 100.0,
+        "dg": 10000.0,
+        "dr (Av)": 564.3834534059131,
+        "dwt": 643.014865217654,
+        "g": 1000.0,
+        "gr": 15432.098765432098,
+        "hg": 10.0,
+        "kg": 1.0,
+        "kg SWU": 1.0,
+        "kt": 1e-06,
+        "lb av": 2.2222222222222223,
+        "long tn": 0.0009842132199519703,
+        "mg": 1000000.0,
+        "ng": 1000000000000.0,
+        "oz av": 50.0,
+        "oz t": 33.333333333333336,
+        "pg": 999999999999999.9,
+        "sh tn": 0.0011023170704821535,
+        "t": 0.001,
+        "ug": 999999999.9999999
+      },
+      "entityId": "93a60a56-a3c8-11da-a746-0800200b9a66",
+      "entityType": "quantity",
+      "externalId": "93a60a56-a3c8-11da-a746-0800200b9a66",
+      "flowPropertyType": "PHYSICAL_QUANTITY",
+      "origin": "local.uslci.olca",
+      "referenceUnit": "kg",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "FlowProperty",
+      "Category": [
+        "Technical flow properties"
+      ],
+      "Comment": "",
+      "Name": "Volume",
+      "UnitConversion": {
+        "Imp.min.": 16233766.233766235,
+        "Nm3": 1.0,
+        "US fl oz": 33783.78378378378,
+        "bbl": 6.666666666666667,
+        "bl (Imp)": 6.25,
+        "bl (US beer)": 9.090909090909092,
+        "bl (US dry)": 9.090909090909092,
+        "bl (US fl)": 9.090909090909092,
+        "bsh (Imp)": 33.333333333333336,
+        "bsh (US)": 33.333333333333336,
+        "cl": 99999.99999999999,
+        "cm3": 1000000.0,
+        "cu ft": 50.0,
+        "dal": 100.0,
+        "dl": 10000.0,
+        "dm3": 1000.0,
+        "dr (Fl)": 270270.27027027024,
+        "fl oz (Imp)": 35211.2676056338,
+        "gal (Imp)": 219.78021978021977,
+        "gal (US dry)": 227.27272727272725,
+        "gal (US fl)": 263.85224274406335,
+        "gal (US liq)": 263.85224274406335,
+        "gill": 8453.514125822105,
+        "hl": 10.0,
+        "in3": 60975.60975609757,
+        "l": 1000.0,
+        "m3": 1.0,
+        "ml": 1000000.0,
+        "mm3": 999999999.9999999,
+        "pk": 113.5103671288506,
+        "pt (Imp)": 1760.5633802816901,
+        "pt (US dry)": 1814.8820326678767,
+        "pt (US fl)": 2114.164904862579,
+        "qt (US dry)": 908.0829370308048,
+        "qt (US liq)": 1056.6881491367385,
+        "ul": 999999999.9999999,
+        "yd3": 1.3157894736842106
+      },
+      "entityId": "93a60a56-a3c8-22da-a746-0800200c9a66",
+      "entityType": "quantity",
+      "externalId": "93a60a56-a3c8-22da-a746-0800200c9a66",
+      "flowPropertyType": "PHYSICAL_QUANTITY",
+      "origin": "local.uslci.olca",
+      "referenceUnit": "m3",
+      "version": "00.00.000"
+    },
+    {
+      "@type": "FlowProperty",
+      "Category": [
+        "Technical flow properties"
+      ],
+      "Comment": "",
+      "Name": "Energy",
+      "UnitConversion": {
+        "GJ": 0.001,
+        "J": 1000000.0,
+        "MJ": 1.0,
+        "MWh": 0.0002777777777777778,
+        "PJ": 1e-09,
+        "TCE": 3.412084237535657e-05,
+        "TJ": 1e-06,
+        "TOE": 2.3884589662749594e-05,
+        "Wh": 277.77777777777777,
+        "btu": 943.3962264150944,
+        "kJ": 1000.0,
+        "kWh": 0.2777777777777778,
+        "kcal": 238.6634844868735
+      },
+      "entityId": "f6811440-ee37-11de-8a39-0800200c9a66",
+      "entityType": "quantity",
+      "externalId": "f6811440-ee37-11de-8a39-0800200c9a66",
+      "flowPropertyType": "PHYSICAL_QUANTITY",
+      "origin": "local.uslci.olca",
+      "referenceUnit": "MJ",
+      "version": "00.00.000"
+    }
+  ]
+}

@@ -399,7 +399,7 @@ class LcFragment(LcEntity):
     def cached_ev(self, value):
         if self.cached_ev != 1.0:
             raise CacheAlreadySet('Set Value: %g (new: %g)' % (self.cached_ev, value))
-        self._exchange_values[0] = value
+        self.set_exchange_value(0, value)
 
     def reset_cache(self):
         """
@@ -532,6 +532,8 @@ class LcFragment(LcEntity):
         return None
 
     def _match_scenario_term(self, scenario):
+        if scenario == 0 or scenario == '0' or scenario is None:
+            return None
         match = None
         if isinstance(scenario, set):
             for scen in scenario:
@@ -594,6 +596,9 @@ class LcFragment(LcEntity):
     def set_exchange_value(self, scenario, value):
         """
         TODO: needs to test whether ev is set-able (i.e. not if balance_flow, not if parent is subfragment)
+
+        The exchange value may not be set on a reference fragment UNLESS the termination for the named scenario is
+        to foreground- in which case the term's inbound_ev is set instead. (and a term is created if none exists)
         :param scenario:
         :param value:
         :return:
@@ -602,12 +607,20 @@ class LcFragment(LcEntity):
             raise DependentFragment('Fragment exchange value set during traversal')
         if isinstance(scenario, tuple) or isinstance(scenario, set):
             raise ScenarioConflict('Set EV must specify single scenario')
-        if scenario == 0 or scenario == '0' or scenario is None:
-            self.cached_ev = value
-        elif scenario == 1 or scenario == '1':
-            self._exchange_values[1] = value
+        if self.reference_entity is None:
+            if scenario in (0, '0', 1, '1', None):
+                self.term.inbound_exchange_value = value
+            elif scenario in self._terminations:
+                self._terminations[scenario].inbound_exchange_value = value
+            else:
+                self.terminate(self, scenario=scenario, inbound_ev=value)
         else:
-            self._exchange_values[scenario] = value
+            if scenario == 0 or scenario == '0' or scenario is None:
+                self.cached_ev = value
+            elif scenario == 1 or scenario == '1':
+                self._exchange_values[1] = value
+            else:
+                self._exchange_values[scenario] = value
 
     @property
     def balance_flow(self):
@@ -865,12 +878,13 @@ class LcFragment(LcEntity):
                 else:
                     child.set_exchange_value(scenario, x.value)
 
-    def _node_weight(self, magnitude, scenario, observed):
+    def _node_weight(self, magnitude, scenario):
         term = self.termination(scenario)
+        '''
         if self.reference_entity is None and term.is_fg:
             return magnitude / self.exchange_value(scenario, observed=observed)
-
-        elif term is None or term.is_null or term.is_frag:
+        '''
+        if term is None or term.is_null:
             return magnitude
 
         else:
@@ -1241,7 +1255,7 @@ class LcFragment(LcEntity):
                 conserved_val *= -1
             self.dbg_print('%.3s conserved_val %g' % (self.uuid, conserved_val), level=2)
 
-        node_weight = self._node_weight(magnitude, scenario, observed)
+        node_weight = self._node_weight(magnitude, scenario)
         term = self.termination(scenario)
 
         # print('%6f %6f %s' % (magnitude, node_weight, self))

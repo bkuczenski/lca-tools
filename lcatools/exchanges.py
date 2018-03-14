@@ -33,7 +33,7 @@ class AmbiguousReferenceError(Exception):
     pass
 
 
-class MissingReference(Exception):
+class NoReferenceFound(Exception):
     pass
 
 

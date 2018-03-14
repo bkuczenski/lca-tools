@@ -125,6 +125,10 @@ class LcFlow(LcEntity):
         self._local_unit = None
 
     def match(self, other):
+        if isinstance(other, str):
+            return (self.uuid == other or
+                    (trim_cas(self['CasNumber']) == trim_cas(other) and len(self['CasNumber']) > 4) or
+                    self.external_ref == other)
         return (self.get_uuid() == other.get_uuid() or
                 self['Name'].lower() == other['Name'].lower() or
                 (trim_cas(self['CasNumber']) == trim_cas(other['CasNumber']) and len(self['CasNumber']) > 4) or

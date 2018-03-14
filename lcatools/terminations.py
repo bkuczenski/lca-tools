@@ -6,7 +6,7 @@ as a ProductFlow in lca-matrix, although the FlowTermination is more powerful.  
 either one from the other.
 """
 
-from lcatools.exchanges import comp_dir, ExchangeValue, AmbiguousReferenceError
+from lcatools.exchanges import comp_dir, ExchangeValue, NoReferenceFound
 from lcatools.interfaces import InventoryRequired, PrivateArchive
 from lcatools.lcia_results import LciaResult, LciaResults
 
@@ -20,6 +20,13 @@ class FlowConversionError(Exception):
 
 
 class SubFragmentAggregation(Exception):
+    pass
+
+
+class NonConfigurableInboundEV(Exception):
+    """
+    only foreground terminations may have their inbound exchange values explicitly specified
+    """
     pass
 
 
@@ -172,9 +179,7 @@ class FlowTermination(object):
     def to_exchange(self):
         if self.is_null:
             return None
-        elif self.term_node.entity_type == 'fragment':
-            return ExchangeValue(self.term_node, self.term_flow, self.direction, value=self._cached_ev)
-        return ExchangeValue(self.term_node, self.term_flow, self.direction, value=self._cached_ev)
+        return ExchangeValue(self.term_node, self.term_flow, self.direction, value=self.inbound_exchange_value)
 
     @property
     def is_local(self):
@@ -208,7 +213,7 @@ class FlowTermination(object):
         Termination is parent
         :return:
         """
-        return self.is_frag and (self.term_node is self._parent)
+        return (not self.is_null) and (self.term_node is self._parent)
 
     @property
     def is_bg(self):
@@ -262,12 +267,6 @@ class FlowTermination(object):
         self._term = self._parent
         self.set_term_params(term_flow)
         self.clear_score_cache()
-
-    @property
-    def index(self):
-        if self._term is None:
-            return 0
-        return self._term.origin
 
     @property
     def term_node(self):
@@ -324,7 +323,16 @@ class FlowTermination(object):
 
     @property
     def inbound_exchange_value(self):
+        if self.is_bg:
+            return 1.0
         return self._cached_ev
+
+    @inbound_exchange_value.setter
+    def inbound_exchange_value(self, val):
+        if self.is_fg:
+            self._cached_ev = val
+        else:
+            raise NonConfigurableInboundEV
 
     @property
     def node_weight_multiplier(self):
@@ -335,8 +343,8 @@ class FlowTermination(object):
         if self.is_null:
             return '--'
         if self.term_node.entity_type == 'fragment':  # fg, bg, or subfragment
-            return '%4g unit' % self._cached_ev
-        return '%4g %s' % (self._cached_ev, self.term_flow.unit())  # process
+            return '%4g unit' % self.inbound_exchange_value
+        return '%4g %s' % (self.inbound_exchange_value, self.term_flow.unit())  # process
 
     def set_term_params(self, term_flow=None, inbound_ev=None):
         """
@@ -346,12 +354,9 @@ class FlowTermination(object):
 
         If both flow and ev are specified, quell catalog lookup and use them.
 
-        If no flow is specified, use the process reference as default. raise AmbiguousReferenceError for multiple
-        references.
+        If no flow is specified, use the parent's flow. If that fails, use the node's reference flow.
 
-        If the process has no references, use the parent's flow and 1.0 ev, direction as specified.
-
-        If the term is a fragment, the cached ev is always 1.0; default flow is same as parent flow.
+        If the term is a subfragment, the cached ev is always 1.0; default flow is same as child's flow.
 
         If a reference is found, the direction and cached_ev are set based on the reference, overriding the
         instantiation parameters.
@@ -363,37 +368,30 @@ class FlowTermination(object):
         if self.is_null:
             term_flow = self._parent.flow
         elif self._term.entity_type == 'fragment':
-            inbound_ev = 1.0
             if term_flow is None:
                 # let's try relaxing this
                 # term flow must be sub-fragment's reference flow
                 term_flow = self.term_node.flow
             # set direction of term to be direction of flow relative to term node
             if self.is_subfrag:
+                inbound_ev = 1.0
                 if self.term_node.reference_entity is None:
                     self.direction = comp_dir(self.term_node.direction)
                 else:
                     self.direction = self.term_node.direction
         else:
             if inbound_ev is None or term_flow is None:
-                if term_flow is None:
-                    r_e = [r for r in self._term.references()]
-                else:
-                    try:
-                        r_e = [r for r in self._term.exchange_values(term_flow, self.direction)]
-                    except (PrivateArchive, InventoryRequired):
-                        self._parent.dbg_print('%s\nprivate... falling back to reference exchanges' % self._term)
-                        r_e = [r for r in self._term.references()]
-                if len(r_e) > 1:
-                    raise AmbiguousReferenceError('%s\n%s' % (self._term, r_e))
-                elif len(r_e) == 1:
-                    term_flow = r_e[0].flow
-                    self.direction = r_e[0].direction
-                    inbound_ev = r_e[0].value
-                else:
-                    inbound_ev = 1.0
+                try:
                     if term_flow is None:
-                        term_flow = self._parent.flow
+                        r_e = self._term.reference(self._parent.flow)
+                    else:
+                        r_e = self._term.reference(term_flow)
+                except NoReferenceFound:
+                    r_e = self._term.reference()  # will raise AmbiguousReferenceError if multiple
+                self.direction = r_e.direction
+                inbound_ev = r_e.value
+                if term_flow is None:
+                    term_flow = r_e.flow
 
         self.term_flow = term_flow
         self._cached_ev = inbound_ev or 1.0
@@ -439,12 +437,13 @@ class FlowTermination(object):
         #         yield x
         else:
             children = set()
+            children.add((self.term_flow, self.direction))
             for c in self._parent.child_flows:
                 children.add((c.flow, c.direction))
-            try:
-                iterable = self.term_node.inventory(ref_flow=self.term_flow)
-            except InventoryRequired:
+            if self.is_bg:
                 iterable = self.term_node.emissions(ref_flow=self.term_flow)
+            else:
+                iterable = self.term_node.inventory()
             for x in iterable:
                 if (x.flow, x.direction) not in children:
                     yield x
@@ -466,15 +465,26 @@ class FlowTermination(object):
             else:
                 raise SubFragmentAggregation  # to be caught
 
+        '''
         if self._parent.is_background:
             # need bg_lcia method for FragmentRefs
             res = self.term_node.bg_lcia(lcia_qty=quantity_ref, ref_flow=self.term_flow.external_ref, **kwargs)
         else:
-            try:
-                locale = self.term_node['SpatialScope']
-            except KeyError:
-                locale = 'GLO'
+        '''
+        try:
+            locale = self.term_node['SpatialScope']
+        except KeyError:
+            locale = 'GLO'
+        try:
             res = quantity_ref.do_lcia(self._unobserved_exchanges(), locale=locale, **kwargs)
+        except PrivateArchive:
+            if self.is_bg:
+                print('terminations.compute_unit_score UNTESTED for private bg archives!')
+                res = self.term_node.bg_lcia(lcia_qty=quantity_ref, ref_flow=self.term_flow.external_ref, **kwargs)
+            else:
+                res = self.term_node.fg_lcia(quantity_ref, ref_flow=self.term_flow.external_ref, **kwargs)
+                print('terminations.compute_unit_score UNTESTED for private fg archives!')
+                # res.set_scale(self.inbound_exchange_value)
         self._score_cache[quantity_ref.uuid] = res
         return res
 
@@ -519,7 +529,7 @@ class FlowTermination(object):
             self._score_cache.add(res)
 
     def serialize(self, save_unit_scores=False):
-        if self._term is None:
+        if self.is_null:
             return {}
         source = self._term.origin
         j = {
@@ -538,7 +548,8 @@ class FlowTermination(object):
             j['direction'] = self.direction
         if self._descend is False:
             j['descend'] = False
-        j['inboundExchangeValue'] = self._cached_ev
+        if self._cached_ev != 1.0:
+            j['inboundExchangeValue'] = self._cached_ev
         if self._parent.is_background and save_unit_scores and len(self._score_cache) > 0:
             j['scoreCache'] = self._serialize_score_cache()
         return j

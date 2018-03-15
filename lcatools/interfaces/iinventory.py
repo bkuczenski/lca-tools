@@ -21,7 +21,7 @@ class InventoryInterface(AbstractQuery):
         return self._perform_query(_interface, 'exchanges',
                                    InventoryRequired('No access to exchange data'), process, **kwargs)
 
-    def exchange_values(self, process, flow, direction, termination=None, **kwargs):
+    def exchange_values(self, process, flow, direction=None, termination=None, **kwargs):
         """
         Return a list of exchanges with values matching the specification
         :param process:
@@ -32,7 +32,7 @@ class InventoryInterface(AbstractQuery):
         """
         return self._perform_query(_interface, 'exchange_values',
                                    InventoryRequired('No access to exchange data'),
-                                   process, flow, direction, termination=termination, **kwargs)
+                                   process, flow, direction=direction, termination=termination, **kwargs)
 
     def inventory(self, process, ref_flow=None, **kwargs):
         """

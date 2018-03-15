@@ -23,20 +23,21 @@ uslci_bg = LcResource('test.uslci.allocated', '/data/GitHub/lca-tools-datafiles/
                       static=True)
 
 work_dir = os.path.join(os.path.dirname(__file__), 'scratch')
-os.makedirs(work_dir, exist_ok=True)
 
 
-class LcCatalogTest(unittest.TestCase):
+class LcCatalogFixture(unittest.TestCase):
+    work_dir = work_dir
+
     @classmethod
     def setUpClass(cls):
-        # do this once because there's no reason to repeatedly initialize the catalog / load the data files
-        cls._cat = LcCatalog(work_dir)
+        os.makedirs(cls.work_dir)
+        cls._cat = LcCatalog(cls.work_dir)
         cls._cat.add_resource(uslci_fg)
         cls._cat.add_resource(uslci_bg)
 
     @classmethod
     def tearDownClass(cls):
-        rmtree(work_dir)
+        rmtree(cls.work_dir)
 
     def test_resolver_index(self):
         self.assertSetEqual({r for r in self._cat.references}, {'local.qdb', 'test.uslci', 'test.uslci.allocated'})

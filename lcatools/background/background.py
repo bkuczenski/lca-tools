@@ -592,6 +592,8 @@ class BackgroundEngine(object):
             exchs = parent.process.inventory()
 
         for exch in exchs:  # unallocated exchanges
+            if exch is rx:
+                continue  # don't add self
             if cutoff_refs:
                 val = pval = exch.value
             else:

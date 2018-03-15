@@ -35,17 +35,13 @@ class ProductFlow(object):
         if process is None:
             raise TypeError('No termination? should be a cutoff.')
 
-        if len([x for x in process.reference_entity if x.flow == flow]) == 0:
-            # still a cutoff- raise a flag but not an error
-            print('NoMatchingReference: Flow: %s, Termination: %s' % (flow.external_ref, process.external_ref))
-            raise NoMatchingReference
-        else:
-            self._hash = (flow.external_ref, process.external_ref)
-            ref_exch = process.reference(flow)
-            self._direction = ref_exch.direction
+        ref_exch = process.reference(flow)
+        self._hash = (flow.external_ref, process.external_ref)
+        # ref_exch = process.reference(flow)
+        self._direction = ref_exch.direction
 
-            if self._direction == 'Input':
-                self._inbound_ev *= -1
+        if self._direction == 'Input':
+            self._inbound_ev *= -1
 
     def __eq__(self, other):
         """

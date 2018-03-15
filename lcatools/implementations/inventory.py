@@ -14,7 +14,7 @@ class InventoryImplementation(BasicImplementation, InventoryInterface):
         for x in p.exchanges():
             yield x
 
-    def exchange_values(self, process, flow, direction, termination=None, **kwargs):
+    def exchange_values(self, process, flow, direction=None, termination=None, **kwargs):
         if self.privacy > 0:
             raise PrivateArchive('Exchange values are protected')
         p = self._archive.retrieve_or_fetch_entity(process)

@@ -49,7 +49,10 @@ class ProcessRef(EntityRef):
             print('Not a valid reference exchange specification')
 
     def reference(self, flow=None):
-        return next(x for x in self.references(flow=flow))
+        try:
+            return next(x for x in self.references(flow=flow))
+        except StopIteration:
+            return next(x for x in self.exchange_values(flow=flow))
 
     def references(self, flow=None):
         for x in self.reference_entity:
@@ -79,7 +82,7 @@ class ProcessRef(EntityRef):
     def exchanges(self, **kwargs):
         return self._query.exchanges(self.external_ref, **kwargs)
 
-    def exchange_values(self, flow, direction, termination=None, **kwargs):
+    def exchange_values(self, flow, direction=None, termination=None, **kwargs):
         return self._query.exchange_values(self.external_ref, flow.external_ref, direction,
                                            termination=termination, **kwargs)
 

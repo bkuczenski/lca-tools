@@ -291,14 +291,16 @@ class LcCatalog(LciaEngine):
         :param force:
         :return:
         """
+        res = next(r for r in self._resolver.resources_with_source(source))
+        res.check(self)
+
         inx_file = self._index_file(source)
         if os.path.exists(inx_file):
             if not force:
                 print('Not overwriting existing index. force=True to override.')
+                self._register_index(source, res.reference, priority, store=self._resolver.is_permanent(res))
                 return
             print('Re-indexing %s' % source)
-        res = next(r for r in self._resolver.resources_with_source(source))
-        res.check(self)
         new_ref = res.make_index(inx_file)
         self._register_index(source, new_ref, priority, store=self._resolver.is_permanent(res), archive=res.archive)
 

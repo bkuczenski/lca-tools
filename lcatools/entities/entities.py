@@ -49,6 +49,8 @@ class LcEntity(object):
 
         self._external_ref = external_ref
 
+        self._query_ref = None  # memoize this
+
         for k, v in kwargs.items():
             self[k] = v
 
@@ -58,14 +60,17 @@ class LcEntity(object):
         return None
 
     def make_ref(self, query):
-        d = dict()
-        reference_entity = self._make_ref_ref(query)
-        for k in self.signature_fields():
-            if k == self._ref_field:
-                continue
-            if k in self._d:
-                d[k] = self._d[k]
-        return CatalogRef.from_query(self.external_ref, query, self.entity_type, reference_entity, **d)
+        if self._query_ref is None:
+            d = dict()
+            reference_entity = self._make_ref_ref(query)
+            for k in self.signature_fields():
+                if k == self._ref_field:
+                    continue
+                if k in self._d:
+                    d[k] = self._d[k]
+            self._query_ref = CatalogRef.from_query(self.external_ref, query, self.entity_type, reference_entity,
+                                                    uuid=self.uuid, **d)
+        return self._query_ref
 
     @property
     def entity_type(self):

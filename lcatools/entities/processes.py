@@ -42,13 +42,17 @@ class RxRef(object):
     """
     def __init__(self, process, flow, direction, value=1.0):
         self._origin = process.origin
-        self._process = process.external_ref
+        self._process = process
         self._flow_ref = flow
         self._direction = direction
         self._value = value
         # self._hash_tuple = (process.uuid, flow.external_ref, direction, None)
         self._hash = hash((process.uuid, flow.external_ref, direction, None))
         self._is_alloc = process.is_allocated(self)
+
+    @property
+    def process(self):
+        return self._process
 
     @property
     def flow(self):

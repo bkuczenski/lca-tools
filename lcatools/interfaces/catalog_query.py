@@ -45,6 +45,12 @@ class CatalogQuery(IndexInterface, BackgroundInterface, ForegroundInterface, Inv
         self._origin = origin
         self._catalog = catalog
         self._debug = debug
+        self._validated = None
+
+    def validate(self):
+        if self._validated is None:
+            self._validated = super(CatalogQuery, self).validate()
+        return self._validated
 
     @property
     def origin(self):

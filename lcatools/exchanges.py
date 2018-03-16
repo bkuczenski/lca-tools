@@ -334,7 +334,7 @@ class ExchangeValue(Exchange):
                 return exch_norm * ref_norm
             elif len(self._value_dict) > 0:
                 try:
-                    return self._value_dict[item]
+                    return self._value_dict[item] / item.value  # quotient added to correct ecoinvent LCI calcs
                 except KeyError:
                     return 0.0
                     # no need to raise on zero allocation
@@ -344,8 +344,16 @@ class ExchangeValue(Exchange):
 
     def __setitem__(self, key, value):
         """
-        Used to set custom or "causal" allocation factors.  Here the allocation should be specified exactly as it
-        gets returned, i.e. as a quantity of self.flow exchanged with a unit of key.flow.
+        Used to set custom or "causal" allocation factors.  Here the allocation should be specified as a portion of the
+        unallocated exchange value to be allocated to the reference.  The entered values will be normalized by the
+        reference exchange's reference value when they are retrieved, to report the exchange value per unit of
+        reference.
+
+        This approach makes consistency of causal allocation easy to check: the allocation factors should simply add up
+        to the unallocated factor. (this does not apply in ecoinvent, where the different co-products are pre-normalized
+        and basically co-inhabiting the same process, and the unallocated factors are not present. The normalization
+        must still occur, though, because ecoinvent still does use the *sign* of reference exchanges to indicate
+        directionality)
         :param key: a reference exchange
         :param value:
         :return:

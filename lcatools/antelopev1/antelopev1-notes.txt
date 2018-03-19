@@ -1,0 +1,48 @@
+==========
+Mon Mar 19 15:45:34 -0700 2018
+
+Here's a list of all the Antelope endpoints used by the CalRecycle Frontend:
+
+resourceService.ROUTES = {
+    /** composition-related routes **/
+    "compositionFlow" : API_ROOT + "compositionflows",
+    "processDissipation" : API_ROOT + "processes/:processID/dissipation",
+
+    /** core entity routes **/
+    "flow" : API_ROOT + "flows/:flowID",
+    "fragment" : API_ROOT + "fragments/:fragmentID",
+    "impactCategory" : API_ROOT + "impactcategories",
+    "lciaMethod" : API_ROOT + "lciamethods",
+    "process" : API_ROOT + "processes",
+
+    /** entity-specific properties **/
+    "fragmentStage" : API_ROOT + "fragments/:fragmentID/fragmentstages",
+    "flowPropertyMagnitude" : API_ROOT + "flows/:flowID/flowpropertymagnitudes",
+    "lciaFactor" : API_ROOT + "lciamethods/:lciaMethodID/lciafactors",
+    "processComment" : API_ROOT + "processes/:processID/comment",
+    "processFlow" : API_ROOT + "processes/:processID/processflows",
+
+    /** compound entity routes -- basically just filters **/
+    "flowForFragment" : API_ROOT + "fragments/:fragmentID/flows",
+    "flowForLciaMethod" : API_ROOT + "lciamethods/:lciaMethodID/flows",
+    "flowPropertyForFragment" : API_ROOT + "fragments/:fragmentID/flowproperties",
+    "flowPropertyForProcess" : API_ROOT + "processes/:processID/flowproperties",
+    "lciaMethodForImpactCategory" : API_ROOT + "impactcategories/:impactCategoryID/lciamethods",
+    "processForFlowType" : API_ROOT + "flowtypes/:flowTypeID/processes",
+
+    /** scenario-aware routes **/
+    "fragmentFlow" : API_ROOT + "scenarios/:scenarioID/fragments/:fragmentID/fragmentflows",
+    "lciaResultForFragment" : API_ROOT + "scenarios/:scenarioID/fragments/:fragmentID/lciamethods/:lciaMethodID/lciaresults",
+    "lciaResultForProcess" : API_ROOT + "scenarios/:scenarioID/processes/:processID/lciamethods/:lciaMethodID/lciaresults",
+    "lciaTotalForFragment" : API_ROOT + "scenarios/:scenarioID/fragments/:fragmentID/lciaresults",
+    "lciaTotalForProcess" : API_ROOT + "scenarios/:scenarioID/processes/:processID/lciaresults",
+    "param" : API_ROOT + "scenarios/:scenarioID/params/:paramID",
+    "scenario" : API_ROOT + "scenarios/:scenarioID",
+    "scenarioGroup" : API_ROOT + "scenariogroups/:scenarioGroupID"
+};
+
+
+Dissipation endpoints are ignored for now-- those are very low priority.
+
+Also let's neglect scenarios for the moment-- though that is a large question mark and the API is going to need to handle POST and PUT data for scenarios-- perhaps a sql-like backend is appropriate for that-- in which case perhaps a sql-like backend is appropriate for at least mapping the entities from index to semantic link.  but for now the db is going to be just a defaultdict(list) (ZOMG!)
+

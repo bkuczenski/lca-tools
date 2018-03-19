@@ -137,6 +137,8 @@ class BackgroundEngine(object):
         self._a_matrix = None  # includes only interior exchanges -- dependencies in _interior
         self._b_matrix = None  # SciPy.csc_matrix for bg only
 
+        self._all_added = False
+
         self._rec_limit = self.fg.count('process')
         if self.required_recursion_limit > MAX_SAFE_RECURSION_LIMIT:
             raise EnvironmentError('This database may require too high a recursion limit-- time to learn lisp.')
@@ -312,6 +314,8 @@ class BackgroundEngine(object):
             ad_tilde = ad * x_tilde
             x, bx = self.compute_bg_lci(ad_tilde, **kwargs)
             bf_tilde = csc_matrix(bf * x_tilde)
+            if bx is None:
+                return bf_tilde
             return bx + bf_tilde
 
     def compute_bg_lci(self, ad, threshold=1e-8, count=100):
@@ -324,6 +328,9 @@ class BackgroundEngine(object):
         """
         x = csr_matrix(ad)  # tested this with ecoinvent: convert to sparse: 280 ms; keep full: 4.5 sec
         total = self.construct_sparse([], *x.shape)
+        if self._a_matrix is None:
+            return total, None
+
         mycount = 0
         sumtotal = 0.0
 
@@ -513,12 +520,15 @@ class BackgroundEngine(object):
         # self.make_foreground()
 
     def add_all_ref_products(self, multi_term='abort', default_allocation=None, net_coproducts=False):
+        if self._all_added:
+            return
         for p in self.fg.processes():
             for x in p.references():
                 j = self.check_product_flow(x.flow, p)
                 if j is None:
                     self._add_ref_product(x.flow, p, multi_term, default_allocation, net_coproducts)
         self._update_component_graph()
+        self._all_added = True
 
     def add_ref_product(self, flow, term, multi_term='abort', default_allocation=None, net_coproducts=False):
         """
@@ -597,7 +607,13 @@ class BackgroundEngine(object):
             if cutoff_refs:
                 val = pval = exch.value
             else:
-                val = pval = exch[rx]
+                if rx.is_reference:
+                    val = pval = exch[rx]
+                else:
+                    print('### Nonreference RX found!\nterm: %s\nflow: %s\next_id: %s' % (rx.process,
+                                                                                          rx.flow,
+                                                                                          rx.process.external_ref))
+                    val = pval = 0
             if val is None or val == 0:
                 # don't add zero entries (or descendants) to sparse matrix
                 continue

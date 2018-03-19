@@ -33,24 +33,43 @@ class BackgroundManager(object):
                                       (ref_flow, process))
         return pf
 
+    def _ensure_background(self):
+        """
+        adds product flows until a background exists
+        :return:
+        """
+        _pgen = self._be.fg.processes()
+        while self._be.tstack.background is None:
+            self._get_product_flow(next(_pgen), None)
+
+    def _ensure_foreground(self):
+        self._be.add_all_ref_products()
+
     @property
-    def background_flows(self):
-        for k in self._be.background_flows():
+    def background_flows(self, *args):
+        self._ensure_background()
+        for k in self._be.background_flows(*args):
             yield k
 
     @property
-    def foreground_flows(self):
-        for k in self._be.foreground_flows():
+    def foreground_flows(self, *args):
+        self._ensure_foreground()
+        for k in self._be.foreground_flows(*args):
             yield k
 
     @property
     def exterior_flows(self):
+        self._ensure_background()
         for k in self._be.emissions:
             yield k
 
     def is_in_background(self, process, ref_flow=None):
         product_flow = self._get_product_flow(process, ref_flow=ref_flow)
         return self._be.is_in_background(product_flow)
+
+    def product_flow(self, process, ref_flow=None):
+        product_flow = self._get_product_flow(process, ref_flow=ref_flow)
+        return ExchangeValue(product_flow.process, product_flow.flow, product_flow.direction, value=1.0)
 
     def foreground(self, process, ref_flow=None):
         """

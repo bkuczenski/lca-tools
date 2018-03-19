@@ -1,3 +1,6 @@
+from lcatools.exchanges import comp_dir
+
+
 class NoMatchingReference(Exception):
     pass
 
@@ -30,18 +33,23 @@ class ProductFlow(object):
         self._direction = None
 
         self._hash = (flow.external_ref, None)
-        self._inbound_ev = 1.0  # required to account for self-dependency
 
         if process is None:
             raise TypeError('No termination? should be a cutoff.')
 
         ref_exch = process.reference(flow)
         self._hash = (flow.external_ref, process.external_ref)
-        # ref_exch = process.reference(flow)
-        self._direction = ref_exch.direction
 
-        if self._direction == 'Input':
-            self._inbound_ev *= -1
+        self._inbound_ev = {'Input': -1.0,
+                            'Output': 1.0}[ref_exch.direction]  # required to account for self-dependency
+
+        if ref_exch.value is None:
+            print('None RX found! assuming nominal direction\nflow: %s\nterm: %s' % (flow, process))
+            self._direction = ref_exch.direction
+        elif ref_exch.value > 0:
+            self._direction = ref_exch.direction
+        else:
+            self._direction = comp_dir(ref_exch.direction)
 
     def __eq__(self, other):
         """
@@ -68,7 +76,10 @@ class ProductFlow(object):
         if value == self._inbound_ev:
             print('Ignoring unitary self-dependency')
         else:
-            self._inbound_ev -= value
+            if self._inbound_ev < 0:
+                self._inbound_ev += value
+            else:
+                self._inbound_ev -= value
 
     @property
     def index(self):

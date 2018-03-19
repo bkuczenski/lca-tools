@@ -105,6 +105,8 @@ class TarjanStack(object):
     def _generate_foreground_index(self):
         """
         Perform topological sort of fg nodes. Store the results of the sort by node
+        This is terribly inefficient-- mainly the list-comprehension that iterates through nodes INSIDE of a while loop.
+        Let's fix it, but not today. For now, we just add_all_ref_products and only run this once.
         :return:
         """
         fg_nodes = set()

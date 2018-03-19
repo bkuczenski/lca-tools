@@ -27,7 +27,7 @@ LD_CONTEXT = 'https://bkuczenski.github.io/lca-tools-datafiles/context.jsonld'
 # CatalogRef = namedtuple('CatalogRef', ['archive', 'id'])
 
 
-uuid_regex = re.compile('([0-9a-f]{8}.?([0-9a-f]{4}.?){3}[0-9a-f]{12})')
+uuid_regex = re.compile('([0-9a-f]{8}.?([0-9a-f]{4}.?){3}[0-9a-f]{12})', flags=re.IGNORECASE)
 
 
 def to_uuid(_in):

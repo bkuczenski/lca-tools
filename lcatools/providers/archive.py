@@ -194,7 +194,11 @@ class Archive(object):
                 lg = (q.filename for q in self._archive.files)
             elif self.ext == 'zip':
                 # filter out directory entries
-                lg = (q for q in self._archive.namelist() if q[:-1] not in self._internal_subfolders)
+                if self._internal_prefix is None:
+                    lg = (q for q in self._archive.namelist() if q[:-1] not in self._internal_subfolders)
+                else:
+                    lg = (q for q in self._archive.namelist() if q[:-1] not in self._internal_subfolders
+                          and q.startswith(self._internal_prefix))
             else:
                 lg = []
         else:

@@ -234,8 +234,7 @@ class EcoinventSpreadsheet(LcArchive):
             if ref_flow is None:
                 ref_flow = p.find_reference(reference).flow
             rf = self._find_rf(p, ref_flow=ref_flow)
-            return self.lcia.retrieve_lcia_scores('_'.join([process_id, rf.get_uuid()]) + '.spold',
-                                                  quantities=quantities)
+            return self.lcia.retrieve_lcia_scores(process_id, rf.uuid, quantities=quantities)
 
     def _create_quantity(self, unitstring):
         """

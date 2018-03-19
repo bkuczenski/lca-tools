@@ -34,12 +34,13 @@ def spold_reference_flow(filename):
     """
     second UUID, first match should be reference flow uuid
     :param filename:
-    :return:
+    :return: first uuid, second uuid
     """
+    m = uuid_regex.findall(filename)
     try:
-        return uuid_regex.findall(filename)[1][0]
+        return m[0][0], m[1][0]
     except IndexError:
-        return None
+        return m[0][0], None
 
 
 class EcospoldV2Error(Exception):
@@ -192,6 +193,11 @@ class EcospoldV2Archive(LcArchive):
         return f
 
     def _create_process_entity(self, o):
+        """
+        Constructs the process without populating exchanges
+        :param o:
+        :return:
+        """
         ad = find_tag(o, 'activityDescription')
 
         u = ad.activity.get('id')
@@ -223,19 +229,19 @@ class EcospoldV2Archive(LcArchive):
         self.add(p)
         return p
 
-    def _grab_reference_flow(self, o, rf):
+    def _grab_reference_flow(self, o, rf_uuid):
         """
         Create a reference exchange from the flowdata
         :param o:
-        :param rf:
+        :param rf_uuid:
         :return:
         """
         for x in find_tag(o, 'flowData').getchildren():
             if 'intermediate' in x.tag:
-                if x.attrib['intermediateExchangeId'] == rf:
+                if x.attrib['intermediateExchangeId'] == rf_uuid:
                     return self._create_flow(x)
 
-        raise KeyError('Noted reference exchange %s not found!' % rf)
+        raise KeyError('Noted reference exchange %s not found!' % rf_uuid)
 
     def _collect_exchanges(self, o):
         """
@@ -293,7 +299,8 @@ class EcospoldV2Archive(LcArchive):
 
         return scores
 
-    def objectify(self, filename):
+    def objectify(self, process_uuid, rf_uuid):
+        filename = '%s_%s.spold' % (process_uuid.lower(), rf_uuid.lower())
         self._print('\nObjectifying %s' % filename)
         try:
             o = self._get_objectified_entity(filename)
@@ -308,10 +315,7 @@ class EcospoldV2Archive(LcArchive):
                 raise
         return o
 
-    def find_tag(self, filename, tag):
-        return find_tag(self.objectify(filename), tag)
-
-    def _create_process(self, filename, exchanges=True):
+    def _create_process_and_single_reference(self, process_uuid, ref_uuid, exchanges=True):
         """
         Extract dataset object from XML file.  Handles unlinked and linked archives differently:
          * for unlinked (unallocated) archives, there is exactly one spold file for each process.  Reference flows are
@@ -321,17 +325,23 @@ class EcospoldV2Archive(LcArchive):
            determined based on the filename, which specifies the reference exchange for which the allocation was
            performed.
 
-        :param filename:
+        :param process_uuid: uuid of activity
+        :param ref_uuid: uuid of reference flow
         :return:
         """
         try:
-            o = self.objectify(filename)
+            o = self.objectify(process_uuid, ref_uuid)
         except KeyError:
             raise FileNotFoundError
 
         p = self._create_process_entity(o)
+
+        if p.has_reference(ref_uuid):
+            self._print('Process %s already has reference %s' % (process_uuid, ref_uuid))
+            return p
+
         if self._linked:
-            rf = self._grab_reference_flow(o, spold_reference_flow(filename))
+            rf = self._grab_reference_flow(o, ref_uuid)
             p.add_exchange(rf, 'Output')  # this should get overwritten with an ExchangeValue later
             rx = p.add_reference(rf, 'Output')
             self._print('# Identified reference exchange\n %s' % rx)
@@ -377,6 +387,9 @@ class EcospoldV2Archive(LcArchive):
                         p.add_reference(exch.flow, exch.direction)
         return p
 
+    def find_tag(self, process_uuid, rf_uuid, tag):
+        return find_tag(self.objectify(process_uuid, rf_uuid), tag)
+
     '''
     def _fetch(self, uid, ref_flow=None):
         """
@@ -397,27 +410,35 @@ class EcospoldV2Archive(LcArchive):
     def _fetch(self, ext_ref, **kwargs):
         """
         We want to handle two different kinds of external references: spold filenames (uuid_uuid.spold) and simple
-        entity uuids.
+        entity uuids.  In either case, we want to load *all* the files corresponding to the process, even if only
+        one file is specified.  That means we want to truncate the key so that it is a maximum of one UUID long (but
+        it would still be nice to allow the user to specify processes by partial uuid)
         :param ext_ref:
         :param kwargs:
         :return:
         """
+        p = None
+        p_uuid = self._key_to_id(ext_ref)
+        if p_uuid is None:  # no UUID found; must be partial
+            p_query = ext_ref
+            if len(ext_ref) > 36:
+                p_query = p_query[:36]
+        else:
+            p_query = p_uuid
 
-        try:
-            return self._create_process(ext_ref, **kwargs)
-        except FileNotFoundError:
-            p = None
-            for f in self.list_datasets(ext_ref):
-                p = self._create_process(f, **kwargs)
-            return p
+        for f in self.list_datasets(p_query):
+            p_uuid, r_uuid = spold_reference_flow(f)
+            p = self._create_process_and_single_reference(p_uuid, r_uuid, **kwargs)
+        return p
 
-    def retrieve_lcia_scores(self, filename, quantities=None):
+    def retrieve_lcia_scores(self, process_uuid, rf_uuid, quantities=None):
         """
         This function retrieves LCIA scores from an Ecospold02 file and stores them as characterizations in
         an LcFlow entity corresponding to the *first* (and presumably, only) reference intermediate flow
 
         Only stores cfs for quantities that exist locally.
-        :param filename:
+        :param process_uuid:
+        :param rf_uuid:
         :param quantities: list of quantity entities to look for (defaults to all local lcia_methods)
         :return: a dict of quantity uuid to score
         """
@@ -426,12 +447,12 @@ class EcospoldV2Archive(LcArchive):
 
         import time
         start_time = time.time()
-        print('Loading LCIA results from %s' % filename)
-        o = self.objectify(filename)
+        print('Loading LCIA results for %s_%s' % (process_uuid, rf_uuid))
+        o = self.objectify(process_uuid, rf_uuid)
 
         self._print('%30.30s -- %5f' % ('Objectified', time.time() - start_time))
         p = self._create_process_entity(o)
-        rf = self._grab_reference_flow(o, spold_reference_flow(filename))
+        rf = self._grab_reference_flow(o, rf_uuid)
 
         exch = ExchangeValue(p, rf, 'Output', value=1.0)
 
@@ -466,7 +487,8 @@ class EcospoldV2Archive(LcArchive):
         now = time()
         count = 0
         for k in self.list_datasets():
-            self.retrieve_or_fetch_entity(k, exchanges=exchanges)
+            p_u, r_u = spold_reference_flow(k)
+            self._create_process_and_single_reference(p_u, r_u, exchanges=exchanges)
             count += 1
             if count % 100 == 0:
                 print(' Loaded %d processes (t=%.2f s)' % (count, time()-now))

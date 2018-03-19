@@ -327,6 +327,10 @@ class LcProcess(LcEntity):
 
         If the reference is an exchange,
          if the reference is not a reference exchange, what are you doing?? raises NotAReference
+
+        If the reference is a string, it will check against the existing references' external_refs before falling back
+         on a costly _find_reference_by_string() call
+
         :param spec: could be None, string (name or uuid), flow, or exchange
         :param strict:
         :param direction: could be helpful if the object is a non-reference exchange
@@ -393,6 +397,13 @@ class LcProcess(LcEntity):
 
     def reference(self, flow=None):
         return self.find_reference(flow)
+
+    def has_reference(self, flow=None):
+        try:
+            self.find_reference(flow)
+            return True
+        except NoReferenceFound:
+            return False
 
     def allocate_by_quantity(self, quantity):
         """

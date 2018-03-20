@@ -1,4 +1,32 @@
 ==========
+Mon Mar 19 22:15:39 -0700 2018
+
+Flask app should be route-based and not subclassed
+
+flask blueprint to initialize AntelopePublisher, which spins out StudyPublications to service API requests. easy mapping of url prefix to StudyPublication, and then server performs queries
+
+the pub should just be a list /mapping of links to catalog entries.  and a mapping of scenario IDs to parameters (and param specifications;;; vs dissipation / upr / LCIA / fp params which are hard to support-- but process params should simply be upgraded to fragments and parameterized there.  flows parameterized in the foreground / serialization--> LcForeground?  studypub requires an LcForeground to initialize-- features the catalog-- so catalog identity should be required
+
+or maybe studypub just requires a semantic reference for a foreground
+because it already has/is a catalog
+
+ah but flow property parameters-- maybe I still need a local QDB wtf omg we already do that
+** this is obv the part to carve out from underneath and put into a graphdb **
+
+in the fucking flow qdb. make it scenario aware when we refactor the contexts and np.
+
+for now simply unsupported
+
+ok so then the study publication handles the entity retrieval
+the blueprint maps the queries to functions and formats the responses in json
+
+-> or perhaps another library should do that, e.g. flask-journey
+to write to the antelope spec
+and handle links
+yes very much
+
+
+==========
 Mon Mar 19 15:45:34 -0700 2018
 
 Here's a list of all the Antelope endpoints used by the CalRecycle Frontend:

@@ -1,0 +1,623 @@
+  openapi: 3.0.0
+info:
+  version: "1.0.0"
+  title: 'Antelope Type 2 - Open-ended access to LCA resources'
+  description: 'LCA Data Archival and Computation.'
+  contact: 
+    name: "Antelope API Support"
+    url: "http://vault.lc/support"
+    email: "support@vault.lc"
+paths:
+  ###################
+  # Index Interface #
+  ###################
+  /{entity_types}:
+    summary: retrieve process entities known to the server, with optional filter by query param
+    parameters:
+      - $ref: '#/components/parameters/entity_types'
+      - $ref: '#/components/parameters/freeForm'
+    get:
+      responses:
+        '200':
+          description: Successful query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityArray'
+  /count/{entity_types}:
+    summary: Count the number of entities of a given type
+    parameters:
+      - $ref: '#/components/parameters/entity_types'
+    get:
+      responses:
+        '200':
+          description: Successful query
+          content:
+            application/json:
+              schema:
+                type: integer
+  /synonyms/{term}:
+    summary: Return a list of synonyms for the given term
+    parameters:
+      - name: term
+        in: path
+        description: The term to be looked up- could be a flowable, context, quantity, or lcia method (processes don't generally have synonyms)
+        required: true
+        schema:
+          type: string
+    get:
+      responses:
+        '200':
+          description: Successful query
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+  /{entity_types}/{entity}:
+    summary: Retrieve metadata for a specific entity
+    parameters:
+      - $ref: '#/components/parameters/entity_types'
+      - $ref: '#/components/parameters/entity'
+    get:
+      responses:
+        '200':
+          description: successful query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Entity'
+  /terminate/{flowable_id}:
+    summary: Return a list of processes that list the reported flow as a reference exchange (if optional direction query param is provided, match its complement)
+    parameters:
+      - $ref: '#/components/parameters/flowable_id'
+      - $ref: '#/components/parameters/direction_query'
+    get:
+      responses:
+        '200':
+          description: Successful termination query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityArray'  # array of processes
+  /originate/{flowable_id}:
+    summary: Return a list of processes that list the reported flow as a reference exchange (if optional direction query param is provided, match it)
+    parameters:
+      - $ref: '#/components/parameters/flowable_id'
+      - $ref: '#/components/parameters/direction_query'
+    get:
+      responses:
+        '200':
+          description: Successful termination query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityArray'  # array of processes
+  #######################
+  # Inventory Interface #
+  #######################
+  /exchanges/{process_id}:
+    summary: return a list of exchanges belonging to the identified process
+    parameters:
+      - $ref: '#/components/parameters/process_id'
+      - $ref: '#/components/parameters/direction_query'
+      - $ref: '#/components/parameters/termination_query'
+    get:
+      responses:
+        '200':
+          description: Successful exchanges query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExchangeArray'
+  /exchanges/{process_id}/{direction}/{flow_id}:
+    summary: return a list of exchanges belonging to the identified process
+    parameters:
+      - $ref: '#/components/parameters/process_id'
+      - $ref: '#/components/parameters/direction_path'
+      - $ref: '#/components/parameters/flowable_id'
+      - $ref: '#/components/parameters/reference_flow'
+    get:
+      responses:
+        '200':
+          description: Successful exchanges query.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExchangeArray'
+  /exchanges/{process_id}/{direction}/{flow_id}/{termination}:
+    summary: return a single numeric value corresponding to the exchange ratio of the specified flowable, direction, and termination with respect to the reference.
+    parameters:
+      - $ref: '#/components/parameters/process_id'
+      - $ref: '#/components/parameters/direction_path'
+      - $ref: '#/components/parameters/flowable_id'
+      - $ref: '#/components/parameters/termination'
+      - $ref: '#/components/parameters/reference_flow'
+    get:
+      responses:
+        '200':
+          description: Successfully computed exchange relation.
+          content:
+            application/json:
+              schema:
+                type: number
+  /traverse/{fragment_id}:
+    summary: return a list of fragment flows that result from traversal of the named fragment with optionally specified scenario strings
+    parameters:
+      - $ref: '#/components/parameters/fragment_id'
+      - $ref: '#/components/parameters/scenarios_query'
+    get:
+      responses:
+        '200':
+          description: Successful traversal query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FragmentFlowArray'
+  /inventory/{entity}:
+    summary: The unit process inventory of the named object
+    description: Return a set of quantified exchanges across the foreground system boundary of the named object.  If the object is a fragment, then the inventory is computed from traversal of the fragment, and scenarios may be specified as query params. If the object is a process, then a reference flow specified as query param may be required. 
+    parameters:
+      - $ref: '#/components/parameters/entity'
+      - $ref: '#/components/parameters/reference_flow'
+      - $ref: '#/components/parameters/scenarios_query'
+    get:
+      responses:
+        '200':
+          description: Successful inventory query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExchangeArray'
+  ########################
+  # Background Interface #
+  ########################
+                
+  ######################
+  # Quantity Interface #
+  ######################
+  /profile/{flowable_id}/{termination}:
+    summary: report properties of the named flowable with the given termination
+    parameters:
+      - $ref: '#/components/parameters/flowable_id'
+      - $ref: '#/components/parameters/termination'
+      - $ref: '#/components/parameters/locale_query'
+    get:
+      responses:
+        '200':
+          description: Successful profile query
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FlowPropertyMagnitude'
+  /lcia/{lcia_id}/{process_id}:
+    summary: return LCIA result for any direct environmental exchanges belonging to the named process
+    parameters:
+      - $ref: '#/components/parameters/lcia_id'
+      - $ref: '#/components/parameters/process_id'
+      - $ref: '#/components/parameters/reference_flow'
+    get:
+      responses:
+        '200':
+          description: Successful foreground LCIA
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LciaResult'
+  /lcia/{lcia_id}/factors:
+    summary: return a list of LCIA characterization factors for the given method.
+    parameters:
+      - $ref: '#/components/parameters/lcia_id'
+      - $ref: '#/components/parameters/locale_query'
+    get:
+      responses:
+        '200':
+          description: Successful LCIA query
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Characterization'
+  /quantity/{ref_qty}/{flowable_id}:
+    summary: Lookup known terminations for a given flowable
+    description: progressively build a quantity relation query. Step 1, identify a flowable; step 2, find valid terminations for that flowable
+    parameters:
+      - $ref: '#/components/parameters/ref_qty'
+      - $ref: '#/components/parameters/flowable_id'
+      - $ref: '#/components/parameters/locale_query'
+    get:
+      responses:
+        '200':
+          description: Successful termination lookup
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+  /quantity/{ref_qty}/{flowable_id}/{termination}:
+    summary: Lookup known query quantities for a given flowable and termination
+    description: progressively build a quantity relation query. Step 1, identify a flowable; step 2, find valid terminations for that flowable; step 3, find known query quantities for that flowable and termination
+    parameters:
+      - $ref: '#/components/parameters/ref_qty'
+      - $ref: '#/components/parameters/flowable_id'
+      - $ref: '#/components/parameters/termination'
+      - $ref: '#/components/parameters/locale_query'
+    get:
+      responses:
+        '200':
+          description: Successful query quantity lookup -- list of query quantities
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityArray'
+  /quantity/{ref_qty}/{flowable_id}/{termination}/{query_qty}:
+    summary: Compute the quantity relation
+    description: progressively build a quantity relation query. Step 1, identify a flowable; step 2, find valid terminations for that flowable; step 3, find known query quantities for that flowable and termination; step 4, pick one and find its characterization
+    parameters:
+      - $ref: '#/components/parameters/ref_qty'
+      - $ref: '#/components/parameters/flowable_id'
+      - $ref: '#/components/parameters/termination'
+      - $ref: '#/components/parameters/locale_query'
+      - $ref: '#/components/parameters/query_qty'
+    get:
+      responses:
+        '200':
+          description: Successful quantity relation
+          content:
+            application/json:
+              schema:
+                type: number
+
+components:
+  responses:
+    EntityNotFound:
+      description: One entity specified in the query could not be located
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              item:
+                type: string
+                description: The query term that was not found
+              message:
+                type: string
+            required:
+              - item
+              - message
+    ReferenceFlowRequired:
+      description: If a process has multiple reference flows, one must be specified in order to resolve many queries
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+            required:
+              - message
+  schemas:
+    # enums
+    entity_type:
+      type: string
+      enum: ['process', 'flow', 'flowable', 'quantity', 'lcia_method', 'context']
+      example: 'flow'
+    entity_types:
+      type: string
+      enum: ['processes', 'flows', 'flowables', 'quantities', 'lcia_methods', 'contexts']
+      example: 'flows'
+    directions:
+      type: string
+      enum: ['in', 'input', 'out', 'output']
+      example: 'input'
+    # queries that return entities
+    Entity:
+      type: object
+      properties:
+        entityType:
+          $ref: '#/components/schemas/entity_type'
+        externalId:
+          type: string
+          example: 'Acetic acid, at plant'
+        origin:
+          type: string
+          example: 'uslci.ecospold'
+        referenceEntity:
+          oneOf:
+            - type: string
+            - $ref: '#/components/schemas/Entity'
+            - $ref: '#/components/schemas/ReferenceExchanges'
+    EntityArray:
+      type: array
+      items:
+        $ref: '#/components/schemas/Entity'
+    ReferenceExchange:
+      type: object
+      properties:
+        flowId:
+          type: string
+        direction:
+          $ref: '#/components/schemas/directions'
+        value:
+          type: number
+    ReferenceExchanges:
+      type: array
+      items:
+        $ref: '#/components/schemas/ReferenceExchange'
+    FlowPropertyMagnitude:
+      type: object
+      properties:
+        quantityId:
+          type: string
+        magnitude:
+          type: number
+        isReference:
+          type: boolean
+          default: false
+        locale:
+          type: string
+    # queries that return exchanges or exchange values
+    Exchange:
+      type: object
+      properties:
+        processId:
+          type: string
+        flowId:
+          type: string
+        direction:
+          $ref: '#/components/schemas/directions'
+        termination:
+          type: string
+      required: ['processId', 'flowId', 'direction']
+    ExchangeValue:
+      description: 'A particular flowable, direction, and termination that is accompanied by a single exchange value with respect to a unit operation of the process.  If the reference exchange is specified at query time, the exchange value will correspond to a unit of the specified reference; otherwise the exchange value will correspond to the collected reference exchanges in their natively specified quantities.'
+      allOf:
+        - $ref: '#/components/schemas/Exchange'
+        - type: object
+          properties:
+            value:
+              type: number
+    AllocatedExchange:
+      description: 'A particular flowable, direction, and termination that has also been allocated to all reference exchanges.'
+      allOf:
+        - $ref: '#/components/schemas/Exchange'
+        - type: object
+          properties:
+            allocatedArray:
+              description: A mapping of flowable ID for reference exchange to allocated exchange value of the query exchange.  The values in the mapping, when scaled by the natively specified quantities for the respective reference exchanges, should equal the unallocated exchange value.
+              type: object
+              additionalProperties:
+                type: number
+    ExchangeArray:
+      type: array
+      items:
+        oneOf:
+          - $ref: '#/components/schemas/Exchange'
+          - $ref: '#/components/schemas/AllocatedExchange'
+          - $ref: '#/components/schemas/ExchangeValue'
+    # traversal results
+    FlowTermination:
+      type: object
+      properties:
+        origin:
+          type: string
+        terminationId:
+          type: string
+        termFlow:
+          oneOf:
+            - type: object
+              properties:
+                origin:
+                  type: string
+                externalId:
+                  type: string
+            - type: string
+        inboundExchangeValue:
+          type: number
+          default: 1.0
+        scenarios:
+          type: array
+          items:
+            type: string
+          description: an array of scenarios that apply to the termination
+    FragmentFlow:
+      type: object
+      properties:
+        fragmentFlowID:
+          type: string
+        nodeWeight:
+          type: number
+        flowPropertyMagnitudes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FlowPropertyMagnitude'
+        termination:
+          $ref: '#/components/schemas/FlowTermination'
+        scenario:
+          type: string
+          description: A single scenario that determined the exchange value of the fragment
+    FragmentFlowArray:
+      type: array
+      items:
+        $ref: '#/components/schemas/FragmentFlow'
+    # queries that return LCIA Results:
+    Characterization:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/FlowPropertyMagnitude'
+        - type: object
+          properties:
+            flowableId:
+              type: string
+            context:
+              type: string
+    DetailedLciaResult:
+      type: object
+      properties:
+        flowId:
+          type: string
+        direction:
+          $ref: '#/components/schemas/directions'
+        quantity:
+          type: number
+        factor:
+          type: number
+        result:
+          type: number
+    AggregateLciaScore:
+      type: object
+      properties:
+        processId:
+          type: string
+        stage:
+          type: string
+        cumulativeResult:
+          type: number
+        lciaDetail:
+          type: array
+          items: 
+            $ref: '#/components/schemas/DetailedLciaResult'
+    LciaResult:
+      type: object
+      properties:
+        lciaMethodId: 
+          type: string
+        scenarioId:
+          type: array
+          items: 
+            type: string
+        total:
+          type: number
+        lciaScore:
+          type: array
+          items: 
+            $ref: '#/components/schemas/AggregateLciaScore'
+          
+  parameters:
+    # query parameters
+    freeForm:
+      name: 'freeForm'
+      in: query
+      schema:
+        type: object
+        additionalProperties:
+          type: string
+      description: Filter responses by free-form query parameter. Key is any attribute; Value is interpreted as a case-insensitive regex. Provide a parameter key with no value to return a list of all entities with that key. Entity lists greater than a [server-configurable] length will return abbreviated entity objects with just an entity ID and the requested attribute.
+    direction_query:
+      name: direction
+      in: query
+      description: Filters result set to only include exchanges that match the specified direction, relative to the specified process
+      schema:
+        $ref: '#/components/schemas/directions'
+      required: false
+    termination_query:
+      name: term
+      in: query
+      description: Filters result set to only include exchanges that match the specified termination.  It is still an open question whether this will be able to accommodate nested contexts (i.e. to air includes to urban air)
+      schema:
+        type: string
+      required: false
+    reference_flow:
+      name: ref
+      in: query
+      schema:
+        type: string
+      description: Optional parameter to specify, for multi-output processes, which allocated exchange value, LCI, or LCIA result to report for a given query. The parameter value should be a flowable ID that matches one entry in the process's reference set.  If omitted, multi-output processes will report unallocated exchange values, and may be unable to report LCI or LCIA results.
+    scenarios_query:
+      name: scenario
+      in: query
+      schema: 
+        type: array
+        items:
+          type: string
+      explode: true
+      description: Optional scenario specifier for fragment traversal and fragment LCIA queries.  Can be specified multiple times to modify the traversal in combinatorial ways.
+    locale_query:
+      name: locale
+      in: query
+      schema: 
+        type: string
+      description: Optional locale parameter for profile / factor / quantity relation lookup
+    # path parameters
+    entity_types:
+      name: entity_types
+      in: path
+      description: Core param for index queries
+      schema:
+        $ref: '#/components/schemas/entity_types'
+      required: true
+    direction_path:
+      name: direction
+      in: path
+      description: Constructs an exchange specification in a path
+      schema:
+        $ref: '#/components/schemas/directions'
+      required: true
+    entity:
+      name: 'entity_id'
+      in: path
+      description: An entity ID, or synonym in the case of flowables or contexts
+      schema:
+        type: string
+      required: true
+    process_id:
+      name: 'process_id'
+      in: path
+      schema:
+        type: string
+        example: 'Acetic acid, at plant'
+      required: true
+    fragment_id:
+      name: 'fragment_id'
+      in: path
+      schema:
+        type: string
+      required: true
+    flowable_id:
+      name: 'flowable_id'
+      in: path
+      description: The flowable ID must unambiguously define a particular flowable substance or concept, distinguishable by synonym.  
+      schema:
+        type: string
+        example: '000124-38-9'
+      required: true
+    termination:
+      name: 'termination'
+      in: path
+      description: A termination specifier.  Either a process_id or a synonym to a context ID
+      schema:
+        type: string
+        example: 'to urban air'
+      required: true
+    lcia_id:
+      name: lcia_id
+      in: path
+      description: A signifier for an LCIA method known to the server.  This cannot be a fully specified semantic reference.
+      schema:
+        type: string
+      required: true
+    ref_qty:
+      name: ref_qty
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Reference quantity for the flowable (convert FROM quantity)
+    query_qty:
+      name: ref_qty
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Query quantity for the quantity relation (convert TO quantity)
+
+# Added by API Auto Mocking Plugin
+servers:
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/Vault8/Antelope_v2/1
+    

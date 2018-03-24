@@ -3,12 +3,27 @@ Mon Mar 19 22:15:39 -0700 2018
 
 Flask app should be route-based and not subclassed
 
+App instance includes a single LcCatalog (open question: which owns the other?)
+
 flask blueprint to initialize AntelopePublisher, which spins out StudyPublications to service API requests. easy mapping of url prefix to StudyPublication, and then server performs queries
 
-the pub should just be a list /mapping of links to catalog entries.  and a mapping of scenario IDs to parameters (and param specifications;;; vs dissipation / upr / LCIA / fp params which are hard to support-- but process params should simply be upgraded to fragments and parameterized there.  flows parameterized in the foreground / serialization--> LcForeground?  studypub requires an LcForeground to initialize-- features the catalog-- so catalog identity should be required
+for a request that doesn't match a registered publication prefix, fallback to LcCatalog lookup, where the first arg is the semantic reference and the second arg becomes an AV2-equivalent lookup into the catalog.
 
-or maybe studypub just requires a semantic reference for a foreground
-because it already has/is a catalog
+the pub ITSELF should just be a list/mapping of links/sequential IDs to catalog entries.
+
+Fri 2018-03-23 14:40:36 -0700
+SCENARIOS are a bit fuzzy.  I suppose in the BAREBONES case there don't need to be any scenarios (though scenarios + params were kind of the whole point of antelope when it first came together)
+(that's not true- the point was the provenance framework)
+
+Anyway, there are two kinds of scenarios:
+ 1- scenarios designed by the study author; can be selectively exposed to or concealed from viewers
+ 2- scenarios created by viewers to test hypotheses; should be kept private 
+
+IT IS TRUE that in the original case, the server stored the users' params.
+
+HOWEVER, I think the better approach is to follow git: for the user to basically fork the model into their own local container and parameterize it there.  This is going to need a new client; but that's fine. The CalRecycle client can be supported without nec. supporting its parameterization abilities.
+
+For now: scenarios are read-only, and the studypub includes a mapping of scenario IDs to parameters (and param specifications;;; vs dissipation / upr / LCIA / fp params which are hard to support-- but process params should simply be upgraded to fragments and parameterized there.  ...)
 
 ah but flow property parameters-- maybe I still need a local QDB wtf omg we already do that
 ** this is obv the part to carve out from underneath and put into a graphdb **
@@ -32,7 +47,7 @@ Mon Mar 19 15:45:34 -0700 2018
 Here's a list of all the Antelope endpoints used by the CalRecycle Frontend:
 
 resourceService.ROUTES = {
-    /** composition-related routes **/
+    /** composition-related routes--> TO BE POSTPONED **/
     "compositionFlow" : API_ROOT + "compositionflows",
     "processDissipation" : API_ROOT + "processes/:processID/dissipation",
 

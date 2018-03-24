@@ -1,4 +1,80 @@
 ==========
+Thu Mar 22 13:25:52 -0700 2018
+
+In our new architecture, we have a number of different pieces to develop:
+
+ * A web infrastructure for providing information on (a) individual studies and (b) databases (open source, public, backend, NAL supported) [Antelope v1/v2 server]
+ * A research infrastructure for creating and reviewing product system models (open source, public, frontend + backend, UCSB supported) [js model editor; interacts w Av2 server]
+ * A data infrastructure for intelligent access, retrieval, and review of data (closed source, commercial, frontend + backend, vault.lc) [js data reviewer; interacts w Av2 servers and proprietary backend [e.g. graph / tag db]]
+ * A free model interactor (open source, public, frontend, interacts with Av1) [CalRecycle FrontEnd]
+ * a premium model interactor + publisher
+
+Thu 2018-03-22 13:59:30 -0700
+
+The security model for the Av1 server is unclear (as ever).
+
+How is the Av1 server used?
+
+ - Study authors use it to publish studies to specific audiences, or to the general public
+   = study content should not be available to someone who is not authorized by the study creator
+
+ - authorized users may create their own scenarios, which *could or could not* need to be stored on the server
+   = scenario specifications and results should not be available to people not authorized by the scenario creator
+
+In the basic (non-privacy-preserving) imagining, the av1 server is housed in a container which is enclosed within a private cloud.  Users access a wrapper service which handles authentication and forwards authorized requests (internally) to the servers that can answer them.
+ * here the wrapper service is aware of the contents of all requests and presumably has access to all resources in the internal cloud
+ * this is not desirable if people want to use the service to share secret models with collaborators
+
+Thereby, the privacy-preserving case requires that the av1 server be able to negotiate authorization with users directly.  This means that the study author needs to be able to specify access rights in a way that enables a 3rd party (vault.lc) to adjudicate access without being able to obtain access.
+
+Thu 2018-03-22 15:23:43 -0700
+
+OK, so the way I think this works is:
+A: Study author; owns secred data
+C: Client; granted authorization to view data or results
+V: vault.lc; provides hosting and auth adjudication
+R: repository to contain secret data; owned by hard private secure storage
+ + A must have exclusive access to write to R
+ + A must be able to mediate access to read from R (how?)
+S: Antelope V1 server instance; created by V
+
+0. A creates secret repo R, including an auth specification with:
+ - R contains distinct token per authorized client C
+ - R contains mapping of token to authorized views
+ - stored non-volatile in R and can be updated, replaced, or revoked by A
+
+1. A registers address of repo @R with vault V [case 0: provides $$$]
+
+2. V instantiates Av1 server S, gives it @R and id of A
+ - S generates pubkey pair, provides pubkey K_r,pub to V
+
+3. S attempts to access R; A mediates access (how?)
+ - A grants persistent access (how?)
+ - R must be able to push out updates to S
+
+4. A gives C her dedicated token
+--- A no longer needs to participate, until a new Av1 is required
+
+5. C contacts V with @R [case 1: provides $]
+ - V constructs JWT with prudent expiry and signs it with K_r,pub
+
+6. V provides @S and JWT to C 
+
+7. C transmits request and JWT to S; supplies token as query param (alt.: uses token to establish session)
+ - S validates JWT: ensures 
+ - S validates query token
+ - S answers request
+
+Where do scenarios live? if S is stateful, there needs to be a way to make them persistent across instantiations
+if they live on C, then S still has to be stateful, unless the full param list is specified with every query (seems wasteful)
+
+I guess the easiest thing is for C to replicate the model and perform its own traversals to implement scenarios
+
+Anyways, it's clear that the flask app needs to be able to receive and validate JWTs.
+
+
+
+==========
 Wed Dec 06 10:03:19 -0800 2017
 
 I have come up with at least five different things that "Antelope" means:
@@ -192,3 +268,6 @@ Components required for an Antelope V2 Server:
 
 I think that could be more or less it.
 
+Thu 2018-03-22 13:25:41 -0700
+
+This is updated in deadtree format in journal

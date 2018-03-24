@@ -1,0 +1,47 @@
+Thu 2018-03-22 15:23:43 -0700
+
+OK, so the way I think this works is as follows.
+
+PARTIES
+
+A: Study author; owns secred data
+C: Client; granted authorization to view data or results
+R: repository to contain secret data; owned by hard private secure storage
+ + A must have exclusive access to write to R
+ + A must be able to mediate access to read from R (how?)
+S: Antelope V1 server instance; created by V
+V: vault.lc; provides hosting and auth adjudication
+
+STEPS
+
+0. A creates secret repo R, including an auth specification with:
+ - R contains distinct token per authorized client C
+ - R contains mapping of token to authorized views / scenarios / fragments?
+ - stored non-volatile in R and can be updated, replaced, or revoked by A
+
+1. A registers address of repo @R with vault V [case 0: provides $$$]
+
+2. V instantiates Av1 server S, gives it @R and id of A
+ - S generates pubkey pair, provides pubkey K_r,pub to V
+
+3. S attempts to access R; A mediates access (how?)
+ - A grants persistent access (how?)
+ - R must be able to push out updates to S
+
+4. A gives C her dedicated token
+--- A no longer needs to participate, until a new Av1 is required
+
+5. C contacts V with @R [case 1: provides $]
+ - V constructs JWT with prudent expiry and signs it with K_r,pub
+
+6. V provides @S and JWT to C 
+
+7. C transmits request and JWT to S; supplies token as query param (alt.: uses token to establish session)
+ - S validates JWT: ensures 
+ - S validates query token
+ - S answers request
+
+Where do scenarios live? if S is stateful, there needs to be a way to make them persistent across instantiations
+if they live on C, then S still has to be stateful, unless the full param list is specified with every query (seems wasteful)
+
+I guess the easiest thing is for C to replicate the model and perform its own traversals to implement scenarios

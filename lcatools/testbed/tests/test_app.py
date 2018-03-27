@@ -3,10 +3,11 @@ from lcatools.testbed import app_factory
 
 
 class TestBedTest(unittest.TestCase):
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         my_app = app_factory()
-        self.app = my_app.test_client()
-        self.app.testing = True
+        cls.app = my_app.test_client()
+        cls.app.testing = True
 
     def test_helloworld(self):
         rv = self.app.get('/')

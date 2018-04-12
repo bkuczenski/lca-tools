@@ -2,6 +2,7 @@ import unittest
 from lcatools.testbed import app_factory
 
 
+# @unittest.skip('Flask testbed is under construction')
 class TestBedTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

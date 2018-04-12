@@ -219,10 +219,6 @@ class EntityRef(BaseRef):
     def resolved(self):
         return True
 
-    @property
-    def privacy(self):
-        return self._query.privacy()
-
     def _show_ref(self):
         print('reference: %s' % self.reference_entity)
 

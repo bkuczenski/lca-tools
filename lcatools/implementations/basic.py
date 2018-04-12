@@ -1,5 +1,5 @@
 class BasicImplementation(object):
-    def __init__(self, archive, privacy=None, **kwargs):
+    def __init__(self, archive, **kwargs):
         """
         Provides common features for an interface implementation: namely, an archive and a privacy setting. Also
         provides access to certain common methods of the archive.  This should be the base class for interface-specific
@@ -17,15 +17,10 @@ class BasicImplementation(object):
         abstract method.
 
         :param archive: an LcArchive
-        :param privacy: [None] Numeric scale indicating the level of privacy protection.  This is TBD... for now the
-        scale has the following meaning:
-         0 - no restrictions, fully public
-         1 - exchange lists are public, but exchange values are private
-         2 - exchange lists and exchange values are private
-         obv this needs to change
+        :param privacy: No longer used. Privacy is enforced at the server and not the resource (where it was phony
+        from the beginning)
         """
         self._archive = archive
-        self._privacy = privacy or 0
 
     def validate(self):
         """
@@ -37,10 +32,6 @@ class BasicImplementation(object):
     @property
     def origin(self):
         return self._archive.ref
-
-    @property
-    def privacy(self):
-        return self._privacy
 
     def __str__(self):
         return '%s for %s (%s)' % (self.__class__.__name__, self.origin, self._archive.source)

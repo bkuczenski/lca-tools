@@ -206,11 +206,11 @@ class Qdb(BasicArchive):
                 if cf.quantity is not f.reference_entity:
                     self.add_cf(cf)
 
-    def make_interface(self, iface, privacy=None):
+    def make_interface(self, iface):
         if iface == 'quantity':
-            return QdbQuantityImplementation(self, privacy=privacy)
+            return QdbQuantityImplementation(self)
         else:
-            return super(Qdb, self).make_interface(iface, privacy=privacy)
+            return super(Qdb, self).make_interface(iface)
 
     def _add_or_merge_quantity(self, q):
         """

@@ -3,7 +3,7 @@ import re
 from .basic import BasicImplementation
 from lcatools.background.background_manager import BackgroundManager
 from lcatools.background.proxy import BackgroundProxy
-from lcatools.interfaces import BackgroundInterface, PrivateArchive
+from lcatools.interfaces import BackgroundInterface
 
 
 class NonStaticBackground(Exception):
@@ -144,14 +144,10 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
         return self._bg.lci(p, ref_flow=ref_flow, **kwargs)
 
     def ad(self, process, ref_flow=None, **kwargs):
-        if self.privacy > 0:
-            raise PrivateArchive('Dependency data is protected')
         ref_flow = self._ensure_ref_flow(ref_flow)
         return self._bg.ad_tilde(process, ref_flow=ref_flow, **kwargs)
 
     def bf(self, process, ref_flow=None, **kwargs):
-        if self.privacy > 0:
-            raise PrivateArchive('Foreground data is protected')
         ref_flow = self._ensure_ref_flow(ref_flow)
         return self._bg.bf_tilde(process, ref_flow=ref_flow, **kwargs)
 
@@ -160,6 +156,8 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
         ref_flow = self._ensure_ref_flow(ref_flow)
         lci = self._bg.lci(p, ref_flow=ref_flow)
         res = query_qty.do_lcia(lci, locale=p['SpatialScope'], **kwargs)
+        """
         if self.privacy > 0:
             return res.aggregate('*', entity_id=p.link)
+        """
         return res

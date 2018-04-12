@@ -61,13 +61,13 @@ class AntelopeV1Client(BasicArchive, IndexInterface, InventoryInterface, Quantit
             'fragment': False
         }
 
-    def make_interface(self, iface, privacy=None):
+    def make_interface(self, iface):
         if iface == 'inventory':
-            return AntelopeInventoryImplementation(self, privacy=privacy)
+            return AntelopeInventoryImplementation(self)
         elif iface == 'quantity':
-            return AntelopeQuantityImplementation(self, privacy=privacy)
+            return AntelopeQuantityImplementation(self)
         else:
-            return super(AntelopeV1Client, self).make_interface(iface, privacy=privacy)
+            return super(AntelopeV1Client, self).make_interface(iface)
 
     def _make_ref(self, external_ref, entity_type, reference_entity, **kwargs):
         return CatalogRef.from_query(external_ref, self._query, entity_type, reference_entity, **kwargs)

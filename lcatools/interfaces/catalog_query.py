@@ -60,11 +60,6 @@ class CatalogQuery(IndexInterface, BackgroundInterface, InventoryInterface, Quan
     def ensure_lcia_factors(self, quantity_ref):
         self._catalog.load_lcia_factors(quantity_ref)
 
-    def get_privacy(self, origin=None):
-        if origin is None:
-            return self._catalog.privacy(self._origin)
-        return self._catalog.privacy(origin)
-
     def __str__(self):
         return '%s for %s (catalog: %s)' % (self.__class__.__name__, self.origin, self._catalog.root)
 

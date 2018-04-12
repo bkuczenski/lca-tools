@@ -34,7 +34,6 @@ from lcatools.catalog.lc_resource import LcResource
 from lcatools.catalog.catalog import LcCatalog
 from lcatools.entities.editor import FragmentEditor
 from lcatools.exchanges import comp_dir
-from lcatools.terminations import FlowTermination
 
 
 SemanticRoot = namedtuple('SemanticRoot', ('path', 'root', 'privacy', 'priority'))
@@ -53,6 +52,9 @@ data_pe22 = SemanticRoot(os.path.join(DATA_ROOT, 'Full UO LCA Flat Export PE-SP2
 lcia_elcd = SemanticRoot(os.path.join(DATA_ROOT, 'ELCD-LCIA'), 'calrecycle.lcia.elcd', 0, 70)
 lcia_traci = SemanticRoot(os.path.join(DATA_ROOT, 'TRACI Core-4 Export'), 'calrecycle.lcia.traci.2.0', 0, 70)
 
+sources = (data_main, data_improper, data_ecoinvent, data_pe22, data_pe24)
+
+private_roots = [k.root for k in sources if k.privacy > 0]
 
 
 def create_catalog(path):
@@ -60,13 +62,13 @@ def create_catalog(path):
 
 
 def install_resources(cat):
-    for a in (data_main, data_improper, data_ecoinvent, data_pe22, data_pe24):
+    for a in sources:
         if a.privacy > 0:
             iface = ['inventory', 'background']
         else:
             iface = 'inventory'
         res = LcResource(a.root, a.path, 'IlcdArchive', interfaces=iface,
-                         privacy=a.privacy, priority=a.priority, static=False)
+                         priority=a.priority, static=False)
         cat.add_resource(res)
     for q in (lcia_elcd, lcia_traci):
         res = LcResource(q.root, q.path, 'IlcdLcia', interfaces='quantity', priority=q.priority, static=False)
@@ -231,10 +233,10 @@ class CalRecycleImporter(object):
                 term_flow = qi.get(ff['Process']['FlowUUID'])
                 frag.clear_termination()
                 frag.terminate(term_node, term_flow=term_flow)
-                if qi.get_privacy(term_node.origin) == 0:
-                    frag.set_child_exchanges()
-                else:
+                if term_node.origin in private_roots:
                     frag.set_background()
+                else:
+                    frag.set_child_exchanges()
             elif ff['NodeTypeID'] == '2':
                 term_frag = self._fragments[ff['SubFragment']['SubFragmentID']]
                 term_flow = qi.get(ff['SubFragment']['FlowUUID'])
@@ -256,7 +258,7 @@ class CalRecycleImporter(object):
                 if bg['TargetUUID'] != '':
                     if bg['NodeTypeID'] == '1':
                         term_node = qi.get(bg['TargetUUID'])
-                        if qi.get_privacy(term_node.origin) > 0:
+                        if term_node.origin in private_roots:
                             frag.set_background()
                     else:
                         term_node = next(_f for _f in self._fragments.values() if _f.uuid == bg['TargetUUID'])

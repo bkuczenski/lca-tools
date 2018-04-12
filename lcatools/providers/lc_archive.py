@@ -61,15 +61,15 @@ class LcArchive(BasicArchive):
             item = item.uuid
         return super(LcArchive, self).__getitem__(item)
 
-    def make_interface(self, iface, privacy=None):
+    def make_interface(self, iface):
         if iface == 'inventory':
-            return InventoryImplementation(self, privacy=privacy)
+            return InventoryImplementation(self)
         elif iface == 'background':
-            return BackgroundImplementation(self, privacy=privacy)
+            return BackgroundImplementation(self)
         elif iface == 'configure':
-            return ConfigureImplementation(self, privacy=privacy)
+            return ConfigureImplementation(self)
         else:
-            return super(LcArchive, self).make_interface(iface, privacy=privacy)
+            return super(LcArchive, self).make_interface(iface)
 
     def _add_children(self, entity):
         if entity.entity_type == 'process':

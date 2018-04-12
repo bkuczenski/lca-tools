@@ -212,7 +212,7 @@ class LcCatalog(LciaEngine):
         Create a new data resource by specifying its properties directly to the constructor
         :param args: reference, source, ds_type
         :param store: [True] permanently store this resource
-        :param kwargs: interfaces=None, privacy=0, priority=0, static=False; **kwargs passed to archive constructor
+        :param kwargs: interfaces=None, priority=0, static=False; **kwargs passed to archive constructor
         :return:
         """
         return self._resolver.new_resource(*args, store=store, **kwargs)  # explicit store= for doc purposes
@@ -270,10 +270,6 @@ class LcCatalog(LciaEngine):
             rc = self.get_resource(ref, strict=strict)
         rc.check(self)
         return rc.archive
-
-    def privacy(self, ref, interfaces=None, strict=False):
-        res = next(r for r in self._resolver.resolve(ref, interfaces=interfaces, strict=strict))
-        return res.privacy
 
     '''
     Manage resources locally
@@ -395,7 +391,7 @@ class LcCatalog(LciaEngine):
                               static=True)
 
     def create_descendant(self, origin, interface=None, source=None, force=False, signifier=None, strict=True,
-                          privacy=None, priority=None, **kwargs):
+                          priority=None, **kwargs):
         """
 
         :param origin:
@@ -404,7 +400,6 @@ class LcCatalog(LciaEngine):
         :param force: overwrite if exists
         :param signifier: semantic descriptor for the new descendant (optional)
         :param strict:
-        :param privacy:
         :param priority:
         :param kwargs:
         :return:
@@ -413,9 +408,8 @@ class LcCatalog(LciaEngine):
         new_ref = res.archive.create_descendant(self._archive_dir, signifier=signifier, force=force)
         print('Created archive with reference %s' % new_ref)
         ar = res.archive
-        priv = privacy or res.privacy
         prio = priority or res.priority
-        self.add_existing_archive(ar, interfaces=res.interfaces, privacy=priv, priority=prio, **kwargs)
+        self.add_existing_archive(ar, interfaces=res.interfaces, priority=prio, **kwargs)
         res.remove_archive()
 
     '''

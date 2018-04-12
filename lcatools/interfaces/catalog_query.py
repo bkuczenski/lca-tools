@@ -4,7 +4,6 @@ Query Interface -- used to operate catalog refs
 
 from .iindex import IndexInterface, IndexRequired
 from .ibackground import BackgroundInterface
-from .iforeground import ForegroundInterface
 from .iinventory import InventoryInterface
 from .iquantity import QuantityInterface
 
@@ -24,7 +23,7 @@ class PrivateArchive(Exception):
     pass
 
 
-class CatalogQuery(IndexInterface, BackgroundInterface, ForegroundInterface, InventoryInterface, QuantityInterface):
+class CatalogQuery(IndexInterface, BackgroundInterface, InventoryInterface, QuantityInterface):
     """
     A CatalogQuery is a class that performs any supported query against a supplied catalog.
     Supported queries are defined in the different kinds of interfaces, which are all abstract.
@@ -45,12 +44,6 @@ class CatalogQuery(IndexInterface, BackgroundInterface, ForegroundInterface, Inv
         self._origin = origin
         self._catalog = catalog
         self._debug = debug
-        self._validated = None
-
-    def validate(self):
-        if self._validated is None:
-            self._validated = super(CatalogQuery, self).validate()
-        return self._validated
 
     @property
     def origin(self):

@@ -16,6 +16,7 @@ class AbstractQuery(object):
     Abstract base class for executing queries
     """
     _debug = False
+    _validated = None  # how much of a style violation is it to put these as class variables? I think, none at all
 
     def on_debug(self):
         self._debug = True
@@ -24,6 +25,13 @@ class AbstractQuery(object):
         self._debug = False
 
     def _iface(self, itype, strict=False):
+        """
+        Pseudo-abstract method to generate interfaces of the specified type upon demand.  Must be reimplemented
+        by user-facing subclasses
+        :param itype:
+        :param strict:
+        :return:
+        """
         for i in []:
             yield i
 
@@ -42,9 +50,22 @@ class AbstractQuery(object):
         raise exc
 
     def _grounded_query(self, origin):
+        """
+        Pseudo-abstract method used to construct entity references from a query that is anchored to an actual
+        resource.  must be overriden by user-facing subclasses if resources beyond self are required to answer
+        the queries (e.g. a catalog).
+        :param origin:
+        :return:
+        """
         return self
 
     def is_elementary(self, f):
+        """
+        Stopgap used to expose access to a catalog's Qdb; in the future, flows will no longer exist and is_elementary
+        will be a trivial function of an exchange asking whether its termination is a context or not.
+        :param f:
+        :return:
+        """
         return None
 
     def make_ref(self, entity):
@@ -60,8 +81,10 @@ class AbstractQuery(object):
             return entity  # already a ref
 
     def validate(self):
-        try:
-            self._perform_query(None, 'validate', ValidationError)
-            return True
-        except ValidationError:
-            return False
+        if self._validated is None:
+            try:
+                self._perform_query(None, 'validate', ValidationError)
+                self._validated = True
+            except ValidationError:
+                self._validated = False
+        return self._validated

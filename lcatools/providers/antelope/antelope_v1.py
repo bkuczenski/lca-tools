@@ -1,18 +1,13 @@
 import json
 from collections import defaultdict
-from math import isclose
-
-from lcatools.exchanges import ExchangeValue
-from lcatools.characterizations import Characterization
 
 from lcatools.providers.lc_archive import BasicArchive
-from lcatools.interfaces import IndexInterface, InventoryInterface, QuantityInterface, EntityNotFound
+from lcatools.interfaces import IndexInterface, InventoryInterface, QuantityInterface
 from lcatools.entity_refs import CatalogRef
 from lcatools.fragment_flows import FragmentFlow
 
 
 from .inventory import AntelopeInventoryImplementation
-from .foreground import AntelopeForegroundImplementation
 from .quantity import AntelopeQuantityImplementation
 from .exceptions import AntelopeV1Error
 
@@ -31,23 +26,6 @@ def remote_ref(url):
         if len(k) > 0:
             ref = '.'.join([ref, k])
     return ref
-
-
-class FragmentFlowProxy(object):
-    def __init__(self, entity_type, external_ref):
-        self._etype = entity_type
-        self._eref = external_ref
-
-    @property
-    def entity_type(self):
-        return self._etype
-
-    @property
-    def external_ref(self):
-        return self._eref
-
-    def __str__(self):
-        return '%s %s' % (self.external_ref, self.entity_type)
 
 
 class AntelopeV1Client(BasicArchive, IndexInterface, InventoryInterface, QuantityInterface):
@@ -86,8 +64,6 @@ class AntelopeV1Client(BasicArchive, IndexInterface, InventoryInterface, Quantit
     def make_interface(self, iface, privacy=None):
         if iface == 'inventory':
             return AntelopeInventoryImplementation(self, privacy=privacy)
-        elif iface == 'foreground':
-            return AntelopeForegroundImplementation(self, privacy=privacy)
         elif iface == 'quantity':
             return AntelopeQuantityImplementation(self, privacy=privacy)
         else:
@@ -167,60 +143,6 @@ class AntelopeV1Client(BasicArchive, IndexInterface, InventoryInterface, Quantit
         except StopIteration:
             raise ValueError('Unknown impact category ID %d' % cat_id)
 
-    def get_stage_name(self, stage_id):
-        stgs = self.get_endpoint('stages')
-        stage_id = int(stage_id)
-        if stgs[stage_id - 1]['fragmentStageID'] == stage_id:
-            return stgs[stage_id - 1]['name']
-        try:
-            return next(j['name'] for j in stgs if j['fragmentStageID'] == stage_id)
-        except StopIteration:
-            raise ValueError('Unknown fragment stage ID %d' % stage_id)
-
-    '''
-    LCIA handling
-    '''
-    def add_lcia_component(self, res, component):
-        if 'processID' in component:
-            entity = self.retrieve_or_fetch_entity('processes/%s' % component['processID'])
-            loc = entity['SpatialScope']
-        elif 'fragmentFlowID' in component:  # not currently implemented
-            entity = FragmentFlowProxy('FragmentFlow', 'fragmentflows/%s' % component['fragmentFlowID'])
-            loc = 'GLO'
-        elif 'fragmentStageID' in component:  # currently the default
-            entity = FragmentFlowProxy('Stage', self.get_stage_name(component['fragmentStageID']))
-            loc = 'GLO'
-        else:
-            raise ValueError('Unable to handle unrecognized LCIA Result Type\n%s' % component)
-
-        if len(component['lciaDetail']) == 0:
-            res.add_summary(entity.external_ref, entity, 1.0, component['cumulativeResult'])
-        else:
-            if entity.entity_type != 'process':
-                raise TypeError('Antelope v1 should not have details for non-process entities\n%s' % entity)
-            res.add_component(entity.external_ref, entity)
-            for d in component['lciaDetail']:
-                self._add_lcia_detail(res, entity, d, loc=loc)
-
-    def _add_lcia_detail(self, res, entity, detail, loc='GLO'):
-        flow = self.retrieve_or_fetch_entity('flows/%s' % detail['flowID'])
-        exch = ExchangeValue(entity, flow, detail['direction'], value=detail['quantity'])
-        fact = Characterization(flow, res.quantity, value=detail['factor'], location=loc)
-        res.add_score(entity.external_ref, exch, fact, loc)
-
-    @staticmethod
-    def check_total(res, check):
-        if not isclose(res, check, rel_tol=1e-8):
-            raise AntelopeV1Error('Total and Check do not match! %g / %g' % (res, check))
-
-    def get_lcia_quantity(self, quantity_ref):
-        if isinstance(quantity_ref, str):
-            return self.retrieve_or_fetch_entity(quantity_ref)
-        elif quantity_ref.origin == self.ref:
-            return self.retrieve_or_fetch_entity(quantity_ref.external_ref)
-        else:
-            raise EntityNotFound
-
     def make_fragment_flow(self, ff):
         """
         This needs to be in-house because it uses the query mechanism
@@ -234,7 +156,7 @@ class AntelopeV1Client(BasicArchive, IndexInterface, InventoryInterface, Quantit
     '''
     def retrieve_or_fetch_entity(self, key, **kwargs):
         """
-        A key in v1 antelope is 'datatype/index' where index is a sequential number starting from 1.  The archive also
+        A key in v1 antelopev1 is 'datatype/index' where index is a sequential number starting from 1.  The archive also
         caches references locally by their uuid, so retrieving an entity by uuid will work if the client has already
         come across it.
         :param key:

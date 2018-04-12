@@ -1,5 +1,7 @@
 from .basic import BasicImplementation
 from lcatools.interfaces import InventoryInterface, PrivateArchive
+from lcatools.fragment_flows import frag_flow_lcia
+
 
 
 class InventoryImplementation(BasicImplementation, InventoryInterface):
@@ -75,3 +77,12 @@ class InventoryImplementation(BasicImplementation, InventoryInterface):
         return quantity_ref.do_lcia(process.inventory(ref_flow=ref_flow),
                                     locale=process['SpatialScope'],
                                     refresh=refresh)
+
+    def traverse(self, fragment, scenario=None, **kwargs):
+        frag = self._archive.retrieve_or_fetch_entity(fragment)
+        return frag.top().traverse(scenario, observed=True)
+
+    def fragment_lcia(self, fragment, quantity_ref, scenario=None, refresh=False, **kwargs):
+        quantity_ref.ensure_lcia()
+        fragmentflows = self.traverse(fragment, scenario=scenario, **kwargs)
+        return frag_flow_lcia(fragmentflows, quantity_ref, scenario=scenario, refresh=refresh)

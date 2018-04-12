@@ -75,3 +75,27 @@ class InventoryInterface(AbstractQuery):
         """
         return self._perform_query(_interface, 'lcia', InventoryRequired('No access to exchange data'),
                                    process, ref_flow, quantity_ref, refresh=refresh, **kwargs)
+
+    def traverse(self, fragment, scenario=None, **kwargs):
+        """
+        Traverse the fragment (observed) according to the scenario specification and return a list of FragmentFlows
+        :param fragment:
+        :param scenario:
+        :param kwargs:
+        :return:
+        """
+        return self._perform_query(_interface, 'traverse', InventoryRequired('No access to fragment data'),
+                                   fragment, scenario, **kwargs)
+
+    def fragment_lcia(self, fragment, quantity_ref, scenario=None, **kwargs):
+        """
+        Perform fragment LCIA by first traversing the fragment to determine node weights, and then combining with
+        unit scores.
+        :param fragment:
+        :param quantity_ref:
+        :param scenario:
+        :param kwargs:
+        :return:
+        """
+        return self._perform_query(_interface, 'fragment_lcia', InventoryRequired('No access to fragment data'),
+                                   fragment, quantity_ref, scenario, **kwargs)

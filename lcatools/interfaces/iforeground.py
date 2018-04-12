@@ -66,30 +66,6 @@ class ForegroundInterface(AbstractQuery):
         """
         return self._perform_query(_interface, 'clone_fragment', ForegroundRequired, frag, **kwargs)
 
-    def traverse(self, fragment, scenario=None, **kwargs):
-        """
-        Traverse the fragment (observed) according to the scenario specification and return a list of FragmentFlows
-        :param fragment:
-        :param scenario:
-        :param kwargs:
-        :return:
-        """
-        return self._perform_query(_interface, 'traverse', ForegroundRequired('No access to fragment data'),
-                                   fragment, scenario, **kwargs)
-
-    def fragment_lcia(self, fragment, quantity_ref, scenario=None, **kwargs):
-        """
-        Perform fragment LCIA by first traversing the fragment to determine node weights, and then combining with
-        unit scores.
-        :param fragment:
-        :param quantity_ref:
-        :param scenario:
-        :param kwargs:
-        :return:
-        """
-        return self._perform_query(_interface, 'fragment_lcia', ForegroundRequired('No access to fragment data'),
-                                   fragment, quantity_ref, scenario, **kwargs)
-
     def observe(self, fragment, exch_value, scenario=None, **kwargs):
         """
         Observe a fragment's exchange value with respect to its parent activity level.  Only applicable for

@@ -17,6 +17,7 @@ class FlowRef(EntityRef, IndexInterface, QuantityInterface):
     def __init__(self, *args, **kwargs):
         super(FlowRef, self).__init__(*args, **kwargs)
         self._characterizations = dict()
+        self._cfs_fetched = False
         self.add_characterization(self.reference_entity, value=1.0)
 
     def unit(self):
@@ -90,28 +91,32 @@ class FlowRef(EntityRef, IndexInterface, QuantityInterface):
         self.add_characterization(quant, value=val, locale=locale)
         return val
 
-    def profile(self, **kwargs):
+    def profile(self, show=False, **kwargs):
         """
         Made to print out results, to operate identically to LcFlow.profile()
+        :param show: whether to print to stdout
         :param kwargs:
         :return:
         """
-        print('%s' % self)
+        if show:
+            print('%s' % self)
         out = []
-        do = True
+        seen = set()
         for cf in self._characterizations.values():
-            if do:
-                print('Local CFs:')  # hack to print a header only if list is nonzero
-                do = False
-            print('%2d %s' % (len(out), cf.q_view()))
+            if show:
+                print('%2d %s' % (len(out), cf.q_view()))
             out.append(cf)
-        do = True
-        for cf in self._query.profile(self.external_ref, **kwargs):
-            if do:
-                print('Remote CFs:')  # hack to print a header only if list is nonzero
-                do = False
-            print('%2d %s' % (len(out), cf.q_view()))
-            out.append(cf)
+            seen.add(cf.quantity.uuid)
+        if not self._cfs_fetched:
+            for cf in self._query.profile(self.external_ref, **kwargs):
+                if cf.quantity.uuid in seen:
+                    continue
+                if show:
+                    print('%2d %s' % (len(out), cf.q_view()))
+                out.append(cf)
+                seen.add(cf.quantity.uuid)
+                self.add_characterization(cf.quantity, value={l: cf[l] for l in cf.locations()})
+            self._cfs_fetched = True
         return out
 
     '''

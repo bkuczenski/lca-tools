@@ -78,6 +78,10 @@ class Characterization(object):
         self._locations['GLO'] = val
 
     def __getitem__(self, item):
+        if item == 'quantity':  # f%&(@*$ marshmallow hack
+            return self.quantity
+        if item == 'flow':  # ibid.
+            return self.flow
         if item in self._locations.keys():
             return self._locations[item]
         if len(self._locations) == 0:

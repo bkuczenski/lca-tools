@@ -42,6 +42,7 @@ class DuplicateEntries(Exception):
 
 
 class LcCatalog(LciaEngine):
+
     """
     Provides REST-style access to LCI information (exclusive of the flow-quantity relation)
 
@@ -129,8 +130,13 @@ class LcCatalog(LciaEngine):
     def root(self):
         return self._rootdir
 
-    def _make_rootdir(self):
+    @property
+    def _dirs(self):
         for x in (self._cache_dir, self._index_dir, self.resource_dir, self._archive_dir, self._download_dir):
+            yield x
+
+    def _make_rootdir(self):
+        for x in self._dirs:
             os.makedirs(x, exist_ok=True)
         if not os.path.exists(self._compartments):
             copy2(REFERENCE_INT, self._compartments)
@@ -466,6 +472,10 @@ class LcCatalog(LciaEngine):
     def fetch(self, origin, external_ref):
         org = self.lookup(origin, external_ref)
         return self.query(org).get(external_ref)
+
+    def fetch_link(self, link):
+        org, ext = link.split('/', maxsplit=1)
+        return self.fetch(org, ext)
 
     def create_foreground(self, path, ref=None, quiet=True):
         """

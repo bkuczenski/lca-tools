@@ -71,16 +71,16 @@ The query returns a literal string.
  * Python Type: `str`
  * JSON Fields: none; content is plain text
 
-### R0a - list of strings
+### R0l - list of strings
 
 list of valid query strings.  The strings here can be used directly in constructing subsequent queries.
 
  * Python Type: `list` of `str`
  * JSON Field: none; content is list of strings
 
-### R1 - entity list
+### R1 - entity
 
-The query returns a list of (serialized) entities (`process`, `flow`, `quantity`).  R1* indicates a list of entities with quantitative data included -- for flows, the profile; for processes, the exchanges.
+The query returns a single (serialized) entity (`process`, `flow`, `quantity`, `fragment`, `context`).  `flowable` is also optionally allowed- but will ultimately be the same as flow (right now a flowable is different but that is because everythihg is a mess.)  R1* indicates an entity with quantitative data included -- for flows, the profile; for processes, the exchanges.
 
  * Python Type: `EntityRef` subclass
  * JSON Fields: used to make operable CatalogRef.from_query() (origin and query known)
@@ -91,6 +91,10 @@ The query returns a list of (serialized) entities (`process`, `flow`, `quantity`
      - `externalId`
    - `uuid`
    - Entity type's signature fields
+
+### R1l - entity list
+
+The query returns a list of (serialized) entities.  
 
 ### R1a - Abbreviated entity list
 
@@ -119,8 +123,5 @@ The query returns one or a list of LciaResult objects, whose serializations are 
 
 ## R6 - Flow Terminations or Product Flows
 
-The query returns a list of processes and reference flows and directions.  These are highly similar to R2, but they are relevant in background systems because they provide reference products to upstream processes.  They also will be adapted to include fragment-flow terminations, for queries involving study models.  
+The query returns a list of reference flows and terminations.  The terminations are either a context or a process, and a direction.  These are highly similar to R2, but they leave out the parent node. They are relevant in background systems because they provide reference products to upstream processes.  They also will be adapted to include fragment-flow terminations, for queries involving study models.  
 
-## R7 - Exterior flows
-
-The query returns a list of flows with directions.  The flows are included as links rather than serialized entities.

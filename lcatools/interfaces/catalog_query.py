@@ -55,6 +55,8 @@ class CatalogQuery(IndexInterface, BackgroundInterface, InventoryInterface, Quan
         return self._catalog.query(origin)
 
     def _grounded_query(self, origin):
+        if origin is None:
+            return self
         return self._catalog.query(origin)
 
     def ensure_lcia_factors(self, quantity_ref):

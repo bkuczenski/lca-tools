@@ -75,8 +75,7 @@ class AbstractQuery(object):
             try:
                 return entity.make_ref(self._grounded_query(entity.origin))
             except UnknownOrigin:
-                entity.show()
-                raise
+                return entity.make_ref(self._grounded_query(None))  # falls back to self
         else:
             return entity  # already a ref
 

@@ -43,7 +43,7 @@ class BasicImplementation(object):
         entity = self._fetch(external_ref)
         if entity and entity.has_property(item):
             return entity[item]
-        return ''
+        raise KeyError
 
     def get_reference(self, key):
         entity = self._fetch(key)

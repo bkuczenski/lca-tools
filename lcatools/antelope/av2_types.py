@@ -55,6 +55,7 @@ class LciaResultSchema(ResultSchema):
 
 
 class ReferenceExchangeSchema(Schema):
+    id = fields.Function(lambda x: '%s/reference/%s' % (x.process.external_ref, x.flow.external_ref))
     flow = fields.Relationship(
         related_url='/{origin}/{flow_id}',
         related_url_kwargs={'origin': '<flow.origin>',
@@ -69,15 +70,15 @@ class ReferenceExchangeSchema(Schema):
     )
 
     class Meta:
-        type_ = 'reference_exchange',
+        type_ = 'reference_exchange'
         strict = True
 
 
 class ExchangeSchema(Schema):
-    id = fields.Function(lambda x: '(%s, %s, %s, %s)' % (x.process.external_ref,
-                                                         x.flow.external_ref,
-                                                         x.direction,
-                                                         x.termination))
+    id = fields.Function(lambda x: '%s(%s, %s, %s)' % (x.process.external_ref,
+                                                       x.flow.external_ref,
+                                                       x.direction,
+                                                       x.termination))
     process = fields.Relationship(
         related_url='/{origin}/{process_id}',
         related_url_kwargs={'origin': '<process.origin>',
@@ -86,7 +87,7 @@ class ExchangeSchema(Schema):
     flow = fields.Relationship(
         related_url='/{origin}/{flow_id}',
         related_url_kwargs={'origin': '<flow.origin>',
-                            'process_id': '<flow.external_ref'}
+                            'flow_id': '<flow.external_ref'}
     )
     direction = fields.Str()
     termination = fields.Str()
@@ -99,9 +100,9 @@ class ExchangeSchema(Schema):
 
 
 class CharacterizationSchema(Schema):
-    id = fields.Function(lambda x: '(%s, %s, %s)' % (x.flow.external_ref,
-                                                     x.flow['Compartment'][-1],
-                                                     x.quantity.external_ref))
+    id = fields.Function(lambda x: '%s(%s, %s)' % (x.quantity.external_ref,
+                                                   x.flow.external_ref,
+                                                   x.flow['Compartment'][-1]))
     flow = fields.Relationship(
         related_url='/{origin}/{flow_id}',
         related_url_kwargs={'origin': '<flow.origin>',
@@ -174,20 +175,18 @@ class ProcessSchema(EntitySchema):
     Classification = fields.List(fields.Str())
 
     reference_entity = fields.Relationship(
-        self_url='/{origin}/{id}/reference',
-        self_url_kwargs={'id': '<external_ref>',
-                         'origin': '<origin>'},
+        related_url='/{origin}/{id}/reference',
+        related_url_kwargs={'origin': '<origin>',
+                            'id': '<external_ref>'},
         many=True, include_resource_linkage=True,
-        type_='reference_exchange'
+        type_='reference_exchange',
+        schema=ReferenceExchangeSchema
     )
 
     exchanges = fields.Relationship(
         self_url='/{origin}/{id}/exchanges',
         self_url_kwargs={'id': '<external_ref>',
                          'origin': '<origin>'},
-        related_url='/{origin}/{id}/exchanges',
-        related_url_kwargs={'id': '<external_ref>',
-                            'origin': '<origin>'}
     )
 
     class Meta:

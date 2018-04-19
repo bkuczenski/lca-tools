@@ -9,7 +9,6 @@ each of which is a subclass with specialized properties.
 
 
 """
-from numbers import Number
 import os
 import json
 
@@ -124,22 +123,17 @@ class AntelopeV2Pub(LcPub):
 
     @property
     def name(self):
-        return self._pub_origin
-
-    @property
-    def origin(self):
         return self._query.origin
 
     @property
     def query(self):
         return self._query
 
-    def __init__(self, query, interfaces=allowed_interfaces, pub_origin=None, privacy=None):
+    def __init__(self, query, interfaces=allowed_interfaces, privacy=None):
         """
 
         :param query: a grounded query
         :param interfaces: interfaces to allow access
-        :param pub_origin: origin to publish (defaults to query origin
         :param privacy: a privacy specification: either a blanket number or a dict.
           if None, all information is public (though limited to the named interfaces)
           if a number, all queries must be authorized with a privacy score lower than or equal to the number
@@ -148,7 +142,6 @@ class AntelopeV2Pub(LcPub):
           Only keys in the list of known scopes are retained
         """
         self._query = query
-        self._pub_origin = pub_origin or query.origin
         if isinstance(interfaces, str):
             interfaces = (interfaces,)
         self._interfaces = tuple(k for k in interfaces if k in allowed_interfaces)
@@ -161,7 +154,6 @@ class AntelopeV2Pub(LcPub):
         return {
             'type': self._type,
             'name': self.name,
-            'origin': self.origin,
             'interfaces': self._interfaces,
             'privacy': self._scopes.serialize()
         }

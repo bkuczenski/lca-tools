@@ -51,31 +51,24 @@ class AntelopeCatalog(LcCatalog):
         path = os.path.join(self._antelope_path, name)
         if os.path.exists(path):
             os.remove(path)
-        srv = self._servers.pop(name, None)
-        if srv is not None:
-            if hasattr(srv, 'origin'):
-                self._origin_masq.pop(srv.origin, None)
 
     def _init_antelope(self, data):
         if data['type'] == 'Antelope_v1':
             frag = self.fetch_link(data['fragment'])
             pub = AntelopeV1Pub(data['name'], frag, lcia_methods=data['lcia'], mapping=data['mapping'])
         else:
-            pub = AntelopeV2Pub(self.query(data['origin']), interfaces=data['interfaces'], pub_origin=data['name'],
+            pub = AntelopeV2Pub(self.query(data['name']), interfaces=data['interfaces'],
                                 privacy=data['privacy'])
-            self._origin_masq[data['origin']] = data['name']
         self._register_server(pub)
 
     def __init__(self, *args, **kwargs):
         super(AntelopeCatalog, self).__init__(*args, **kwargs)
         self._servers = dict()
-        self._origin_masq = {}  # origin masquerade
 
         for res in os.listdir(self._antelope_path):
             with open(os.path.join(self._antelope_path, res)) as fp:
                 j = json.load(fp)
             self._init_antelope(j)
-
 
     @property
     def servers(self):
@@ -87,7 +80,8 @@ class AntelopeCatalog(LcCatalog):
             return self._servers[item]
         except KeyError:
             try:
-                return next(k for k in self.servers if k.startswith(item))  # not sure if this or item.startswith(k)
+                return next(v for k, v in self._servers.items()
+                            if k.startswith(item))  # not sure if this or item.startswith(k)
             except StopIteration:
                 raise KeyError
 

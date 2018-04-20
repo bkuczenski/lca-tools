@@ -43,9 +43,8 @@ class StringResultSchema(ResultSchema):
 
 class LciaResultSchema(ResultSchema):
     lcia_method = fields.Relationship(
-        related_url='/{origin}/{q_id}',
-        related_url_kwargs={'origin': '<quantity.origin>',
-                            'q_id': '<quantity.external_ref>'},
+        related_url='/{link}',
+        related_url_kwargs={'link': '<quantity.link>'},
         dump_to='lciaMethod'
     )
 
@@ -55,19 +54,26 @@ class LciaResultSchema(ResultSchema):
 
 
 class ReferenceExchangeSchema(Schema):
-    id = fields.Function(lambda x: '%s/reference/%s' % (x.process.external_ref, x.flow.external_ref))
+
+    id = fields.Function(lambda x: '%s/reference/%s' % (x.process.link, x.flow.external_ref))
     flow = fields.Relationship(
-        related_url='/{origin}/{flow_id}',
-        related_url_kwargs={'origin': '<flow.origin>',
-                            'process_id': '<flow.external_ref'}
+        related_url='/{flow_link}',
+        related_url_kwargs={'flow_link': '<flow.link>'}
     )
     direction = fields.Str()
 
     parent = fields.Relationship(
-        related_url='{origin}/{id}',
-        related_url_kwargs={'origin': '<process.origin>',
-                            'id': '<process.external_ref>'}
+        related_url='/{process_link}',
+        related_url_kwargs={'process_link': '<process.link>'}
     )
+
+    '''#for debug
+    def get_attribute(self, attr, obj, default):
+        print('Rx g_a | %s, %s, %s' % (attr, obj, default))
+        k = super(ReferenceExchangeSchema, self).get_attribute(attr, obj, default=default)
+        print(k)
+        return k
+    '''
 
     class Meta:
         type_ = 'reference_exchange'
@@ -80,14 +86,12 @@ class ExchangeSchema(Schema):
                                                        x.direction,
                                                        x.termination))
     process = fields.Relationship(
-        related_url='/{origin}/{process_id}',
-        related_url_kwargs={'origin': '<process.origin>',
-                            'process_id': '<process.external_ref'}
+        related_url='/{process_link}',
+        related_url_kwargs={'process_link': '<process.link'}
     )
     flow = fields.Relationship(
-        related_url='/{origin}/{flow_id}',
-        related_url_kwargs={'origin': '<flow.origin>',
-                            'flow_id': '<flow.external_ref'}
+        related_url='/{flow_link}',
+        related_url_kwargs={'flow_link': '<flow.link>'}
     )
     direction = fields.Str()
     termination = fields.Str()
@@ -104,15 +108,13 @@ class CharacterizationSchema(Schema):
                                                    x.flow.external_ref,
                                                    x.flow['Compartment'][-1]))
     flow = fields.Relationship(
-        related_url='/{origin}/{flow_id}',
-        related_url_kwargs={'origin': '<flow.origin>',
-                            'flow_id': '<flow.external_ref>'}
+        related_url='/{flow_link}',
+        related_url_kwargs={'flow_link': '<flow.link>'}
     )
     context = fields.List(fields.Str(), attribute='flow.Compartment')
     quantity = fields.Relationship(
-        related_url='/{origin}/{quantity_id}',
-        related_url_kwargs={'origin': '<quantity.origin>',
-                            'quantity_id': '<quantity.external_ref>'}
+        related_url='/{quantity_link}',
+        related_url_kwargs={'quantity_link': '<quantity.link>'}
     )
     value = fields.Dict(keys=fields.Str(), values=fields.Decimal(), attribute='_locations')
 
@@ -136,10 +138,10 @@ class QuantitySchema(EntitySchema):
     reference_entity = fields.Str(attribute='unit', dump_to='referenceUnit')
 
     class Meta:
-        type_ = 'quantity'
         strict = True
-        self_url = '/{origin}/{id}'
-        self_url_kwargs = {'id': '<externalId>', 'origin': '<origin>'}
+        self_url = '/{link}'
+        self_url_kwargs = {'link': '<link>'}
+        type_ = 'quantity'
         self_url_many = '/{origin}/quantities/'
 
 
@@ -162,11 +164,11 @@ class FlowSchema(EntitySchema):
     )
 
     class Meta:
-        type_ = 'flow'
         strict = True
-        self_url = '/{origin}/{id}'
-        self_url_kwargs = {'id': '<externalId>', 'origin': '<origin>'}
-        self_url_many = '/{origin}/quantities/'
+        self_url = '/{link}'
+        self_url_kwargs = {'link': '<link>'}
+        type_ = 'flow'
+        self_url_many = '/{origin}/flows/'
 
 
 class ProcessSchema(EntitySchema):
@@ -175,11 +177,13 @@ class ProcessSchema(EntitySchema):
     Classification = fields.List(fields.Str())
 
     reference_entity = fields.Relationship(
-        related_url='/{origin}/{id}/reference',
-        related_url_kwargs={'origin': '<origin>',
-                            'id': '<external_ref>'},
+        self_url='/{link}/reference',
+        self_url_kwargs={'link': '<link>'},
+        related_url='/{link}',
+        related_url_kwargs={'link': '<link>'},
         many=True, include_resource_linkage=True,
         type_='reference_exchange',
+        id_field='link',
         schema=ReferenceExchangeSchema
     )
 
@@ -190,25 +194,27 @@ class ProcessSchema(EntitySchema):
     )
 
     class Meta:
-        type_ = 'process'
         strict = True
+        self_url = '/{origin}/{id}'
+        self_url_kwargs = {'origin': '<origin>',
+                           'id': '<externalId>'}
+        type_ = 'process'
+        self_url_many = '/{origin}/processes/'
 
 
 class FlowTermination(Schema):
     id = fields.Function(lambda x: '(%s, %s, %s)' % (x.flow.external_ref, x.termination.direction, x.termination))
 
     flow = fields.Relationship(
-        related_url='/{origin}/{flow_id}',
-        related_url_kwargs={'origin': '<flow.origin>',
-                            'process_id': '<flow.external_ref'}
+        related_url='/{flow_link}',
+        related_url_kwargs={'flow_link': '<flow.link>'}
     )
     direction = fields.Str(attribute='termination.direction')
     termination = fields.Str()
 
     parent = fields.Relationship(
-        related_url='/{origin}/{parent_id}',
-        related_url_kwargs={'origin': '<parent.origin>',
-                            'parent_id': '<parent.external_ref>'}
+        related_url='/{parent_link}',
+        related_url_kwargs={'parent_link': '<parent.link>'}
     )
 
     class Meta:

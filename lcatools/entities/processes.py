@@ -97,6 +97,10 @@ class RxRef(object):
     def lkey(self):
         return self.flow.external_ref, self._direction, None
 
+    @property
+    def link(self):
+        return '%s/%s/reference/%s' % (self._origin, self.process.external_ref, self._flow_ref.external_ref)
+
     def __hash__(self):
         return self._hash
 

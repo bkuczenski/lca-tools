@@ -20,7 +20,7 @@ from lcatools.providers.ecoinvent_lcia import EcoinventLcia
 from lcatools.providers.foreground import LcForeground
 from lcatools.providers.openlca_jsonld import OpenLcaJsonLdArchive
 from lcatools.providers.traci import Traci21Factors
-from lcatools.providers.antelope.antelope_v1 import AntelopeV1Client
+# from lcatools.providers.antelope.antelope_v1 import AntelopeV1Client
 # from lcatools.foreground.foreground import ForegroundArchive
 
 # from lcatools.db_catalog import from_json  # included for "from tools import *" by user
@@ -65,7 +65,7 @@ def create_archive(source, ds_type, catalog=None, **kwargs):
 
 
 def update_archive(archive, json_file):
-    archive.load_json(from_json(json_file))
+    archive.load_json(from_json(json_file), jsonfile=json_file)
 
 
 def archive_factory(source, ds_type, **kwargs):
@@ -82,10 +82,10 @@ def archive_factory(source, ds_type, **kwargs):
         'ilcd': IlcdArchive,
         'ilcdlcia': IlcdLcia,
         'ilcd_lcia': IlcdLcia,
-        'antelope': AntelopeV1Client,
-        'antelopev1': AntelopeV1Client,
-        'antelopev1archive': AntelopeV1Client,
-        'antelopev1client': AntelopeV1Client,
+#        'antelope': AntelopeV1Client,
+#        'antelopev1': AntelopeV1Client,
+#        'antelopev1archive': AntelopeV1Client,
+#        'antelopev1client': AntelopeV1Client,
         'ecospoldv1archive': EcospoldV1Archive,
         'ecospold': EcospoldV1Archive,
         'ecospoldv2archive': EcospoldV2Archive,
@@ -133,26 +133,17 @@ def archive_from_json(fname, static=True, catalog=None, **archive_kwargs):
         archive_kwargs['internal'] = bool(j['internal'])
         archive_kwargs['version'] = j['version']
 
-    ref = None
     if 'dataSourceReference' in j:
         # old style
         source = j['dataSourceReference']
     else:
         # new style
         source = j['dataSource']
-        if 'dataReference' in j:
-            ref = j['dataReference']
 
     try:
         a = archive_factory(source, j['dataSourceType'], **archive_kwargs)
     except KeyError:
         raise ValueError('Unknown dataSourceType %s' % j['dataSourceType'])
-
-    if 'catalogNames' in j:
-        a.catalog_names.update(j['catalogNames'])
-
-    if ref is not None:
-        a.catalog_names[ref] = source
 
     if 'upstreamReference' in j:
         print('**Upstream reference encountered: %s\n' % j['upstreamReference'])
@@ -169,7 +160,7 @@ def archive_from_json(fname, static=True, catalog=None, **archive_kwargs):
         else:
             a._serialize_dict['upstreamReference'] = j['upstreamReference']
 
-    a.load_json(j)
+    a.load_json(j, jsonfile=fname)
     return a
 
 

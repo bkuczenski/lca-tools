@@ -72,6 +72,7 @@ class InventoryImplementation(BasicImplementation, InventoryInterface):
         :param kwargs:
         :return:
         """
-        return quantity_ref.do_lcia(process.inventory(ref_flow=ref_flow),
-                                    locale=process['SpatialScope'],
+        p = self._archive.retrieve_or_fetch_entity(process)
+        return quantity_ref.do_lcia(p.inventory(ref_flow=ref_flow),
+                                    locale=p['SpatialScope'],
                                     refresh=refresh)

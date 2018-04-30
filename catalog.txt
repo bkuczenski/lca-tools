@@ -1,4 +1,84 @@
 ==========
+Sat Apr 28 15:36:03 -0700 2018
+
+What we're looking at:
+archive catalog_names propoerty
+
+What it's doing:
+reporting how an archive was originally produced
+
+What we want it to do:
+report how an archive was most recently populated
+
+We could easily add a catalog name-
+I think the archive's 'source' should be its proximate source
+
+need to fix how ref is handled here.
+
+Mon 2018-04-30 10:54:36 -0700
+
+Projecting forward to think about how catalogs are "supposed" to work:
+ - a simple, local catalog has a set of resources
+ - the independently-empowered local user creates her own resources using Catalog.new_resource()
+ - when the resource is created, we want a provenance record of where the data come from.
+   = if the resource is generated from raw data, then the record will show that
+   = if the resource is populated from JSON, then the JSON source needs to be the 'source'
+   = but if the resource is populated from JSON but also tied to a real local source, then we have a conflict
+   = the `catalog_names` mapping is supposed to map semantic references to data sources
+     --= with the implication being, data from different sources have different semantic references
+     --= but that's in contradiction to the idea of semantic reference as an abstraction
+     --= so semantic reference is the wrong key to use for provenance tracking
+     --= so maybe catalog names is useless? what is it there for?
+     	 ans: it's NOT USED AT ALL. WHY is it there? CARVE IT OUT.
+
+   = replace it with what? I do like the association between sources and refs, and of there being some record when data get serialized and de-serialized.  Currently this is hacked in tools, but it should be done in load_json()
+
+We created catalog_names because we were combining a whole bunch of GaBi extension databases into one archive.  At the time, I guess it made sense to do ref -> source because -- why? all this has been mixed up so many times it's not even clear anymore. esp. now with 'origin' being ref instead of source (which is like 14 months old).  We don't need to honor any of that. in fact, we should not even worry particularly about breaking backward compatibility if, for instance, it really makes more sense for catalog_names to map SOURCE TO REF
+
+What's the use case? I'm afraid the necessary change is to make it a mapping to a list, because one semantic ref could well have multiple sources. that argues for either (a) making it a defaultdict(set) or (b) making it a source->ref mapping. both break compat. but the defaultdict less so.
+
+OK.
+
+So we may as well retain catalog_names, except *specify* it better.
+
+
+OK, so? what's the specification?
+
+(0) `source` property: this must be a single source identifier, either a local filesystem path or more generally a URI.
+    - The source should specify the *original* source of the archive, i.e. how the subclass expects it to behave.  This is required whenever the physical source is going to be queried
+    - It's also necessary to provide info documenting the instantiation, in case this is done from json
+      = this should be done from within load_json
+    - a single source is not allowed to provide multiple semantic refs, but multiple sources can be used for a single ref
+
+(1) `catalog_names` property: a generator of semantic references known to the archive (keys to the defaultdict)
+
+(1a) `get_sources()` function returns source for a catalog name
+
+(1b) `get_names()` returns a reverse mapping of source to ref
+
+(2) when serializing, the catalog names are serialized too
+
+(2a) in load_json, the catalog names are deserialized, but the instantiation params are still master.
+
+(2b) in from_dict, the information encoded in the dict _is_ used for instantiation and so is master.
+
+(3) "set names" happens implicitly in the following ways:
+    (a) when archive is instantiated, its ref+source is set according to init params
+    (b) when load_json() is run, read in serialized catalog names
+    (c) when an as-yet-unwritten routine to merge or combine archives runs, combine the names
+    (d) when a descendant is created, the new ref and source are added
+
+A corollary of this:
+(A) when instantiating archives from a json source, we want the json file to be the proximate source. However, we also want to log the original source and the original ref.  This means that load_json should add this explicitly, passing over a SourceAlreadyKnown exception.
+
+Mon 2018-04-30 12:38:27 -0700
+
+So what tests do we want to run?
+ - instantiate catalog, check that 
+
+
+
+==========
 Fri Jan 05 15:05:07 -0800 2018
 
 New year, new goals:

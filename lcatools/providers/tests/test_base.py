@@ -1,8 +1,14 @@
 from lcatools.providers.lc_archive import LcArchive
+from lcatools.from_json import from_json
 
 import os
+import json
+from shutil import rmtree
 import unittest
+from datetime import datetime
 
+work_dir = os.path.join(os.path.dirname(__file__), 'scratch')
+test_file = os.path.join(os.path.dirname(__file__), 'test_json.json')
 
 test_json = {
  'dataReference': 'test.basic',
@@ -118,10 +124,16 @@ test_json = {
 }
 
 
+def setUpModule():
+    with open(test_file, 'w') as fp:
+        print('writing to %s' % test_file)
+        json.dump(test_json, fp, indent=2, sort_keys=True)
+
+
 class LcArchiveTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls._ar = LcArchive.from_dict(test_json)
+        cls._ar = LcArchive.from_dict(from_json(test_file))
 
     def test_get_none(self):
         """
@@ -159,6 +171,33 @@ class LcArchiveTest(unittest.TestCase):
         fl = self._ar[fl_uuid]
         self.assertEqual(fl.external_ref, fl_uuid)
         self.assertIs(self._ar[q_uuid], fl.reference_entity)
+
+    def test_name(self):
+        self.assertEqual(self._ar.ref, test_json['dataReference'])
+
+    def test_json_init(self):
+        ar = LcArchive('/my/file')
+        ar.load_json(from_json(test_file), jsonfile='/my/test/json')
+        self.assertIn(test_json['dataReference'], ar.catalog_names)
+        self.assertEqual(ar.ref, 'local.my.file')
+        self.assertSequenceEqual([k for k in ar.get_sources(test_json['dataReference'])], [None])
+
+
+class DescendantTest(unittest.TestCase):
+    @classmethod
+    def tearDownClass(cls):
+        rmtree(work_dir)
+
+    def test_create_descendant(self):
+        new_date = datetime.now().strftime('%Y%m%d')
+        sig = 'mybaby'
+
+        ar = LcArchive.from_dict(from_json(test_file))
+
+        dref = ar.create_descendant(work_dir, signifier=sig, force=True)
+        self.assertEqual(dref, ar.ref)
+        self.assertTrue(dref.startswith('.'.join(['test.basic', sig, new_date])))
+        self.assertSetEqual({k for k in ar.get_sources(dref)}, {os.path.join(work_dir, '%s.json.gz' % dref)})
 
 
 if __name__ == '__main__':

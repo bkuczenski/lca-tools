@@ -1,5 +1,5 @@
 import re
-from lcatools.entity_store import EntityStore
+from lcatools.entity_store import EntityStore, SourceAlreadyKnown
 from lcatools.implementations import BasicImplementation, IndexImplementation, QuantityImplementation
 from .quantities import LcQuantity, LcUnit
 from .flows import LcFlow
@@ -28,6 +28,29 @@ class BasicArchive(EntityStore):
 
     """
     _entity_types = {'quantity', 'flow'}
+
+    @classmethod
+    def from_dict(cls, j):
+        """
+        BasicArchive factory from minimal dictionary.  Must include at least one of 'dataSource' or 'dataReference'
+        fields and 0 or more flows or quantities; but note that any flow present must have its reference
+        quantities included. The method is inherited by LcArchives which permit processes as well; any process must
+        have its exchanged flows (and their respective quantities) included.
+        :param j:
+        :return:
+        """
+        source = j.pop('dataSource', None)
+        try:
+            ref = j.pop('dataReference')
+        except KeyError:
+            if source is None:
+                print('Dictionary must contain at least a dataSource or a dataReference specification.')
+                return None
+            else:
+                ref = None
+        ar = cls(source, ref=ref)
+        ar.load_json(j)
+        return ar
 
     def _check_key_unused(self, key):
         """
@@ -167,13 +190,38 @@ class BasicArchive(EntityStore):
         else:
             print('## skipping bad external ref %s for uuid %s' % (ext_ref, uid))
 
-    def load_json(self, j, _check=True):
+    def load_json(self, j, _check=True, jsonfile=None):
         """
         Archives loaded from JSON files are considered static.
         :param j:
         :param _check:
+        :param jsonfile: [None] if present, add to the list of sources for the canonical ref
         :return:
         """
+
+        if 'catalogNames' in j:
+            for ref, l in j['catalogNames'].items():
+                if isinstance(l, str) or l is None:
+                    self._add_name(ref, l)
+                else:
+                    for s in l:
+                        self._add_name(ref, s)
+
+        if 'dataReference' in j:
+            # new style
+            source = j['dataSource']
+            ref = j['dataReference']
+            try:
+                self._add_name(ref, source)
+            except SourceAlreadyKnown:
+                self._add_name(ref, None)
+
+        if jsonfile is not None:
+            try:
+                self._add_name(self.ref, jsonfile)
+            except SourceAlreadyKnown:
+                pass
+
         if 'quantities' in j:
             for e in j['quantities']:
                 self.entity_from_json(e)

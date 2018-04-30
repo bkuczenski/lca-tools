@@ -27,28 +27,6 @@ class LcArchive(BasicArchive):
     """
     _entity_types = {'quantity', 'flow', 'process'}
 
-    @classmethod
-    def from_dict(cls, j):
-        """
-        LcArchive factory from minimal dictionary.  Must include at least one of 'dataSource' or 'dataReference' fields
-        and 0 or more processes, flows, or quantities; but note that any flow present must have its reference quantities
-        included, and any process must have its exchanged flows included.
-        :param j:
-        :return:
-        """
-        source = j.pop('dataSource', None)
-        try:
-            ref = j.pop('dataReference')
-        except KeyError:
-            if source is None:
-                print('Dictionary must contain at least a dataSource or a dataReference specification.')
-                return None
-            else:
-                ref = None
-        ar = cls(source, ref=ref)
-        ar.load_json(j)
-        return ar
-
     def __getitem__(self, item):
         """
         Note: this user-friendliness check adds 20% to the execution time of getitem-- so avoid it if possible
@@ -83,14 +61,14 @@ class LcArchive(BasicArchive):
     def _lcia_key(quantity):
         return ', '.join([quantity['Method'], quantity['Category'], quantity['Indicator']])
 
-    def load_json(self, j, _check=True):
+    def load_json(self, j, _check=True, **kwargs):
         """
         Archives loaded from JSON files are considered static.
         :param j:
         :param _check:
         :return:
         """
-        super(LcArchive, self).load_json(j, _check=False)
+        super(LcArchive, self).load_json(j, _check=False, **kwargs)
         if 'processes' in j:
             for e in j['processes']:
                 self.entity_from_json(e)

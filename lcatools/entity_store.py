@@ -28,6 +28,15 @@ LD_CONTEXT = 'https://bkuczenski.github.io/lca-tools-datafiles/context.jsonld'
 
 
 uuid_regex = re.compile('([0-9a-f]{8}.?([0-9a-f]{4}.?){3}[0-9a-f]{12})', flags=re.IGNORECASE)
+ref_regex = re.compile('[a-z0-9_]+(\.[a-z0-9_]+)*', flags=re.IGNORECASE)
+
+
+class SourceAlreadyKnown(Exception):
+    pass
+
+
+class InvalidSemanticReference(Exception):
+    pass
 
 
 def to_uuid(_in):
@@ -196,6 +205,12 @@ class EntityStore(object):
         """
 
         self._source = source
+        if ref is None:
+            if dataReference is None:
+                ref = local_ref(source)
+            else:
+                ref = dataReference
+
         self._entities = {}  # uuid-indexed list of known entities
 
         self._quiet = quiet  # whether to print out a message every time a new entity is added / deleted / modified
@@ -214,18 +229,74 @@ class EntityStore(object):
         if upstream is not None:
             self.set_upstream(upstream)
 
-        self.catalog_names = dict()  # this is a place to map semantic references to data sources
-        if ref is None:
-            if dataReference is None:
-                ref = local_ref(source)
-            else:
-                ref = dataReference
+        self._catalog_names = defaultdict(set)  # this is a place to map semantic references to data sources
+        self._add_name(ref, source)
 
         self._serialize_dict['dataReference'] = ref
         if self._ns_uuid is not None:
             self._serialize_dict['nsUuid'] = str(self._ns_uuid)
 
-        self.catalog_names[ref] = source
+    def _add_name(self, ref, source):
+        """
+        A source is not allowed to provide multiple semantic references
+        a ref must match the regexp ([A-Za-z0-9_]+(\.[A-Za-z0-9_])*)
+        :param ref:
+        :param source:
+        :return:
+        """
+        if not ref_regex.match(ref):
+            raise InvalidSemanticReference('%s' % ref)
+        for k, s in self._catalog_names.items():
+            if source in s and source is not None:
+                raise SourceAlreadyKnown('Source %s already registered to name %s' % (source, k))
+        self._catalog_names[ref].add(source)
+
+    @property
+    def source(self):
+        """
+        The catalog's original source is the "master descriptor" of the catalog's content. This is required for
+        subclass methods to work properly, in the event that the original source is called upon.
+        :return:
+        """
+        return self._source
+
+    @property
+    def ref(self):
+        return next(k for k, s in self._catalog_names.items() if self.source in s)
+
+    @property
+    def catalog_names(self):
+        for k in self._catalog_names.keys():
+            yield k
+
+    def get_names(self):
+        """
+        Return a mapping of data source to semantic reference, based on the catalog_names property.  This is used by
+        a catalog interface to convert entity origins from physical to semantic.
+
+        If a single data source has multiple semantic references, only the most-downstream one will be kept.  If there
+        are multiple semantic references for the same data source in the same archive, one will be kept at random.
+        This should be avoided and I should probably test for it when setting catalog_names.
+        :return:
+        """
+        if self._upstream is None:
+            names = dict()
+        else:
+            names = self._upstream.get_names()
+
+        for k, s in self._catalog_names.items():
+            for v in s:
+                names[v] = k
+        return names
+
+    def get_sources(self, name):
+        s = self._catalog_names[name]
+        if len(s) == 0:
+            for k, ss in self._catalog_names.items():
+                if k.startswith(name):
+                    s = s.union(ss)
+        for d in s:
+            yield d
 
     def _construct_new_ref(self, signifier):
         new_date = datetime.now().strftime('%Y%m%d')
@@ -283,15 +354,14 @@ class EntityStore(object):
             else:
                 raise EnvironmentError('File %s exists: force=True to overwrite' % new_source)
 
-        self.catalog_names[new_ref] = new_source
+        self._add_name(new_ref, new_source)
         self._source = new_source
-        self.load_all()
+        try:
+            self.load_all()
+        except NotImplementedError:
+            pass
         self.write_to_file(new_source, gzip=True, complete=True)
         return new_ref
-
-    @property
-    def ref(self):
-        return next(k for k, v in self.catalog_names.items() if v == self.source)
 
     @property
     def static(self):
@@ -307,10 +377,6 @@ class EntityStore(object):
         return self._source
     '''
 
-    @property
-    def source(self):
-        return self._source
-
     def entities(self):
         for v in self._entities.values():
             yield v
@@ -321,29 +387,10 @@ class EntityStore(object):
             self._serialize_dict['upstreamReference'] = upstream.ref
         self._upstream = upstream
 
-    def get_names(self):
-        """
-        Return a mapping of data source to semantic reference, based on the catalog_names property.  This is used by
-        a catalog interface to convert entity origins from physical to semantic.
-
-        If a single data source has multiple semantic references, only the most-downstream one will be kept.  If there
-        are multiple semantic references for the same data source in the same archive, one will be kept at random.
-        This should be avoided and I should probably test for it when setting catalog_names.
-        :return:
-        """
-        if self._upstream is None:
-            names = dict()
-        else:
-            names = self._upstream.get_names()
-
-        for k, v in self.catalog_names.items():
-            names[v] = k
-        return names
-
     '''
     def truncate_upstream(self):
         """
-        BROKEN!
+        BROKEN! / deprecated
         removes upstream reference and rewrites entity uuids to match current index. note: deprecates the upstream
         upstream_
         :return:
@@ -544,7 +591,7 @@ class EntityStore(object):
             '@context': LD_CONTEXT,
             'dataSourceType': self.__class__.__name__,
             'dataSource': self.source,
-            'catalogNames': self.catalog_names
+            'catalogNames': {k: sorted(s) for k, s in self._catalog_names.items()}
         }
         j.update(self._serialize_dict)
         return j

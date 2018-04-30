@@ -38,7 +38,7 @@ class LcForeground(BasicArchive):
 
     def _load_json_file(self, filename):
         with open(filename, 'r') as fp:
-            self.load_json(json.load(fp))
+            self.load_json(json.load(fp), jsonfile=filename)
 
     def _key_to_id(self, key):
         """

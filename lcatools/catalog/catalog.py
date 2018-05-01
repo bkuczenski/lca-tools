@@ -293,35 +293,17 @@ class LcCatalog(LciaEngine):
         """
         res = next(r for r in self._resolver.resources_with_source(source))
         res.check(self)
+        stored = self._resolver.is_permanent(res)
 
         inx_file = self._index_file(source)
         if os.path.exists(inx_file):
             if not force:
                 print('Not overwriting existing index. force=True to override.')
-                self._register_index(source, res.reference, priority, store=self._resolver.is_permanent(res))
                 return
             print('Re-indexing %s' % source)
         new_ref = res.make_index(inx_file)
-        self._register_index(source, new_ref, priority, store=self._resolver.is_permanent(res), archive=res.archive)
-
-    def _register_index(self, source, new_ref, priority, store=True, archive=None):
-        """
-        creates a resource entry for an index file, if it exists
-        :param source:
-        :param new_ref: from index
-        :param priority:
-        :param store: [True]
-        :param archive: [None] if present, pre-load the resource with the specified archive
-        :return:
-        """
-        inx_file = self._index_file(source)
-        if os.path.exists(inx_file):
-            print('Registering index %s for %s' % (inx_file, source))
-            self.new_resource(new_ref, inx_file, 'json', interfaces='index', priority=priority,
-                              store=store,
-                              _internal=True,
-                              static=True,
-                              preload_archive=archive)
+        self._resolver.new_resource(new_ref, inx_file, 'json', priority=priority, store=stored, interfaces='index',
+                                    static=True, preload_archive=res.archive)
 
     def index_resource(self, origin, interface=None, source=None, priority=10, force=False):
         """

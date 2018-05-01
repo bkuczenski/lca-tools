@@ -97,13 +97,14 @@ class LcResource(object):
     def make_index(self, index_file):
         self._archive.load_all()
         suffix = 'index__%s' % new_date
+        # note: archive ref is updated by writing index
         self._archive.write_to_file(index_file, gzip=True, ref_suffix=suffix,
                                     exchanges=False, characterizations=False, values=False)
-        return '.'.join([self._archive.ref, suffix])
+        return self._archive.ref
 
     def make_cache(self, cache_file):
-        suffix = 'cache__%s' % new_date
-        self._archive.write_to_file(cache_file, gzip=True, ref_suffix=suffix,
+        # note: do not make descendant
+        self._archive.write_to_file(cache_file, gzip=True,
                                     exchanges=True, characterizations=True, values=True)
         print('Created archive of %s containing:' % self._archive)
         self._archive.check_counter()

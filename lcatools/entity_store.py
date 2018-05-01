@@ -223,6 +223,7 @@ class EntityStore(object):
 
         self._loaded = False
         self._static = static
+        self._descendant = False
 
         self._ns_uuid = self._set_ns_uuid(ns_uuid)
 
@@ -262,6 +263,11 @@ class EntityStore(object):
         :return:
         """
         return self._source
+
+    def _set_source(self, new_ref, new_source):
+        self._source = new_source
+        self._add_name(new_ref, new_source)
+        self._descendant = True
 
     @property
     def ref(self):
@@ -314,7 +320,7 @@ class EntityStore(object):
                 raise ValueError('Invalid signifier %s' % signifier)
             new_tail = '.'.join([signifier, new_date])
 
-        if bool(re.match('[0-9-]{6,}', old_tail)):
+        if bool(re.search('[0-9-]{6,}$', old_tail)):
             # strip trailing date
             new_ref = '.'.join(self.ref.split('.')[:-1])
         else:
@@ -357,8 +363,7 @@ class EntityStore(object):
             else:
                 raise EnvironmentError('File %s exists: force=True to overwrite' % new_source)
 
-        self._add_name(new_ref, new_source)
-        self._source = new_source
+        self._set_source(new_ref, new_source)
         try:
             self.load_all()
         except NotImplementedError:
@@ -611,8 +616,7 @@ class EntityStore(object):
         if ref_suffix is not None:
             new_ref = '.'.join([self._serialize_dict['dataReference'], ref_suffix])
             self._serialize_dict['dataReference'] = new_ref
-            self._source = filename
-            self._add_name(new_ref, filename)
+            self._set_source(new_ref, filename)
         if complete:
             s = self._serialize_all(**kwargs)
         else:

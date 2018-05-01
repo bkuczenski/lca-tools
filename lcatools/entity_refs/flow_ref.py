@@ -86,8 +86,8 @@ class FlowRef(EntityRef, IndexInterface, QuantityInterface):
         u = quant.uuid
         if u in self._characterizations:
             return self._characterizations[u][locale]
-        val = self._query.cf(self, query_quantity, locale=locale, **kwargs)
-        self.add_characterization(quant, value=val, locale=locale)
+        val = self._query.cf(self.external_ref, query_quantity, locale=locale, **kwargs)
+        self.add_characterization(quant, value=val, location=locale)
         return val
 
     def profile(self, **kwargs):

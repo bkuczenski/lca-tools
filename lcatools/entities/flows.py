@@ -225,33 +225,33 @@ class LcFlow(LcEntity):
             return self._characterizations[quantity.uuid]
         return Characterization(self, quantity)
 
-    def cf(self, quantity, location='GLO'):
+    def cf(self, quantity, locale='GLO'):
         """
         These are backwards.  cf should return the Characterization ; factor should return the value.  instead, it's
         the other way around.
         :param quantity:
-        :param location: ['GLO']
+        :param locale: ['GLO']
         :return: value of quantity per unit of reference, or 0.0
         """
         if quantity.uuid in self._characterizations:
             try:
-                return self._characterizations[quantity.uuid][location]
+                return self._characterizations[quantity.uuid][locale]
             except KeyError:
                 return self._characterizations[quantity.uuid].value
         return 0.0
 
-    def convert(self, val, to=None, fr=None, location='GLO'):
+    def convert(self, val, to=None, fr=None, locale='GLO'):
         """
         converts the value (in
         :param val:
         :param to: to quantity
         :param fr: from quantity
-        :param location: cfs are localized to unrestricted strings babee
+        :param locale: cfs are localized to unrestricted strings babee
         the flow's reference quantity is used if either is unspecified
         :return: value * self.char(to)[loc] / self.char(fr)[loc]
         """
-        out = self.cf(to or self.reference_entity, location=location)
-        inn = self.cf(fr or self.reference_entity, location=location)
+        out = self.cf(to or self.reference_entity, locale=locale)
+        inn = self.cf(fr or self.reference_entity, locale=locale)
         return val * out / inn
 
     def merge(self, other):

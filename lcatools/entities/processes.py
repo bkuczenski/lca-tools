@@ -64,7 +64,7 @@ class RxRef(object):
 
     @property
     def value(self):
-        print('ACCESSING RxRef VALUE')  # need to be cautious about when / why this is used
+        # print('ACCESSING RxRef VALUE')  # need to be cautious about when / why this is used
         return self._value
 
     @property
@@ -191,7 +191,9 @@ class LcProcess(LcEntity):
 
     @property
     def alloc_qty(self):
-        return self._alloc_by_quantity
+        if self._alloc_sum != 0:
+            return self._alloc_by_quantity
+        return None
 
     @property
     def alloc_total(self):
@@ -426,10 +428,15 @@ class LcProcess(LcEntity):
         exchs = dict()
         mags = dict()
         for rf in self.reference_entity:
-            exchs[rf.flow] = self._exchanges[rf.key].value
+            rfx = self._exchanges[rf.key]
+            if rfx.value is None:
+                continue
+            exchs[rf.flow] = rfx.value
             mags[rf.flow] = exchs[rf.flow] * rf.flow.cf(quantity)
 
         total = sum([v for v in mags.values()])
+        if total == 0:
+            return
 
         self._alloc_by_quantity = quantity
         self._alloc_sum = total

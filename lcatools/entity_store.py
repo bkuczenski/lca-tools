@@ -248,7 +248,10 @@ class EntityStore(object):
             raise InvalidSemanticReference('%s' % ref)
         for k, s in self._catalog_names.items():
             if source in s and source is not None:
+                if k == ref:
+                    return
                 raise SourceAlreadyKnown('Source %s already registered to name %s' % (source, k))
+        print('%s: %s' % (ref, source))
         self._catalog_names[ref].add(source)
 
     @property
@@ -605,12 +608,15 @@ class EntityStore(object):
         return self.serialize(**kwargs)
 
     def write_to_file(self, filename, gzip=False, complete=False, ref_suffix=None, **kwargs):
+        if ref_suffix is not None:
+            new_ref = '.'.join([self._serialize_dict['dataReference'], ref_suffix])
+            self._serialize_dict['dataReference'] = new_ref
+            self._source = filename
+            self._add_name(new_ref, filename)
         if complete:
             s = self._serialize_all(**kwargs)
         else:
             s = self.serialize(**kwargs)
-        if ref_suffix is not None:
-            s['dataReference'] = '.'.join([s['dataReference'], ref_suffix])
         if gzip is True:
             if not bool(re.search('\.gz$', filename)):
                 filename += '.gz'

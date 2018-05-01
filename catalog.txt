@@ -57,6 +57,7 @@ OK, so? what's the specification?
 (1b) `get_names()` returns a reverse mapping of source to ref
 
 (2) when serializing, the catalog names are serialized too
+    - if the semantic ref changes in serialization, the source must be changed as well
 
 (2a) in load_json, the catalog names are deserialized, but the instantiation params are still master.
 

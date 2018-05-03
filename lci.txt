@@ -1,0 +1,40 @@
+==========
+Wed May 02 11:53:08 -0700 2018
+
+On point now: the tarjan algorithm does NOT need to run every time. Instead I should serialize the Tarjan Stack and make that the only thing the bg needs.
+
+So-- what does the Background manager really need?
+
+Implementation methods:
+ (general)
+ foreground_flows
+ background_flows
+ exterior_flows
+
+
+ (product-flow specific)
+ _ensure_ref_flow: needs a local list of flow entities
+ foreground(process, flow)
+ dependencies(process, flow)
+ emissions(process, flow)
+ is_in_background(process, flow)
+ lci(process, flow)
+ ad_tilde(process, flow)
+ bf_tilde(process, flow)
+
+BackgroundManager methods:
+ tstack: background is not None
+
+Wed 2018-05-02 12:24:14 -0700
+
+Well-- a lot of things can be moved, but a lot of things still live in the background engine.
+
+There are two issues here: one is that the tarjan stack + background engine were designed to be built incrementally- which is nice and sweet and cool- even if it is a bit false, because it doesn't really support changes to the data, only incremental additions of the data, so it's not really required- but more importantly it introduces complexity.
+
+Second: there is POOR separation of concerns between tstack and be. They are tightly symbiotic, which is nice in a biological setting but really suggests the programmer was snoozing through this (which is not actually true, the programmer was implementing a highly complex algorithm, and successfully, but couldn't solve this many problems at once).
+
+So the solution in both cases is to leave the machinery as it is, and change the background manager to have a clear INTERFACIAL dependence on tstack.  Then re-implement tstack to a serializeable form, and then serialize it inside an LcArchive subclass.
+
+Wed 2018-05-02 14:02:27 -0700
+
+Ultimately what has to happen here is the creation of an Scc object that encapsulates the matrix construction and inversion.  So, most of be._update_component_graph moves into that; make_foreground needs to get generalized to deal with multiple Sccs, and moved into tstack; lci computation needs to be generalized (to multiple Sccs) and moved to tstack, and background engine runs and terminates on __init__, adding all reference products and returning a [static, fully-populated] t-stack object.

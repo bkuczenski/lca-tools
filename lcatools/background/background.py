@@ -374,6 +374,8 @@ class BackgroundEngine(object):
                            for i in self._interior])
         self._a_matrix = self.construct_sparse(num_bg, ndim, ndim)
 
+    '''Deprecated
+    '''
     def foreground_flows(self, search=None, outputs=True):
         for k in self.tstack.foreground_flows(outputs=outputs):
             if search is None:

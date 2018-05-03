@@ -1,0 +1,55 @@
+==========
+Wed May 02 11:38:27 -0700 2018
+
+The major thread here is how an ordinary user may use the catalog to perform LCA computations.
+
+The ultimate goal is for the software to be distributed data-free, with all resources provided via a resource-and-auth server run by vault.lc.  For local collections (e.g. ecoinvent), the resource file will contain a one-time key to download the file from amazon s3; after that point it will be local and the user can use it freely.
+
+The proximate project here is unit-testing the LCI computation, for which ecoinvent is the preferred data resource to use because it distributes its own pre-computed LCI results.
+
+For this, I've already decided, the solution is to specify a catalog root which can resolve ecoinvent queries.  to THAT, then, comes the question: what are the proper semantic origins for ecoinvent?
+
+I think (1) we require the unittests to use local ecoinvent- although in principle the lci results could be non-local.  
+
+I also think (2) our current practice of 'local.ecoinvent.3.2.apos.lci' is a semantic error because the 'apos.lci' is not a refinement or descendant of 'apos', but rather a derivative with different content.  That said, it is still ecoinvent-specific.  So I propose:
+
+[local.]ecoinvent.<version>.<model>
+[local.]ecoinvent.lci.<version>.<model>
+
+The local catalog is configured to either be stand-alone or (in the mature case) to have credentials to access an auth server.  The auth server delivers resource files (as JSON) which include tokens (cryptographically signed) for obtaining data resources from S3, or for making queries to antelope servers.
+
+Wed 2018-05-02 22:39:16 -0700
+
+Anyway, for the time being the task is to come up with a mechanism for constructing the local catalog from scratch in a testable way.  This is bulletproof because all this should be tested *and* I want it to be standardized and regenerable.
+
+so: the class already generates its own directory structure (unit test #1)
+
+the Big Question: how does one specify where the test catalog goes? pythonically, I mean.
+
+I guess there should be a config file.  But we need that anyway because we need to configure what resources are available.  So there has to be a json config file somewhere and if it doesn't exist it has to be created.
+
+but for now we can just hardcode it in local.py
+
+Wed 2018-05-02 23:11:16 -0700
+
+Only we don't want to hardcode everything. And we don't want to do much by hand.
+
+What would an abstract DataSource specification do?
+ * it would know how to create LcResource objects from literal resources
+ * it would know how to test those resources
+ it needs:
+ = a method that enumerates valid semantic refs the data source can provide
+ = a method that enumerates interfaces for a semantic ref in the list
+ = a method that generates a resource for a semantic ref in the list
+ - the tests should be standardized
+   = is the resource file created?
+   = can the resource be instantiated?
+   = different interfaces should have their own [fixed] test problems
+   - the DataSource spec should know the answers
+
+Thu 2018-05-03 01:15:49 -0700
+
+OK, so now we have a self-generating catalog featuring a full suite of ei3.2 system models (auto-discovered).
+
+tomorrow: test the interfaces! and lci! and move on to USLCI!
+

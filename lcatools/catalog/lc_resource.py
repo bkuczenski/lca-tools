@@ -104,8 +104,7 @@ class LcResource(object):
 
     def make_cache(self, cache_file):
         # note: do not make descendant
-        self._archive.write_to_file(cache_file, gzip=True,
-                                    exchanges=True, characterizations=True, values=True)
+        self._archive.write_to_file(cache_file, complete=True, gzip=True)
         print('Created archive of %s containing:' % self._archive)
         self._archive.check_counter()
 

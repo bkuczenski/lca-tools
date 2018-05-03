@@ -110,7 +110,7 @@ class LcCatalog(LciaEngine):
         return local_file
 
     @property
-    def _archive_dir(self):
+    def archive_dir(self):
         return os.path.join(self._rootdir, 'archives')
 
     @property
@@ -130,7 +130,7 @@ class LcCatalog(LciaEngine):
         return self._rootdir
 
     def _make_rootdir(self):
-        for x in (self._cache_dir, self._index_dir, self.resource_dir, self._archive_dir, self._download_dir):
+        for x in (self._cache_dir, self._index_dir, self.resource_dir, self.archive_dir, self._download_dir):
             os.makedirs(x, exist_ok=True)
         if not os.path.exists(self._compartments):
             copy2(REFERENCE_INT, self._compartments)
@@ -303,7 +303,7 @@ class LcCatalog(LciaEngine):
             print('Re-indexing %s' % source)
         new_ref = res.make_index(inx_file)
         self._resolver.new_resource(new_ref, inx_file, 'json', priority=priority, store=stored, interfaces='index',
-                                    static=True, preload_archive=res.archive)
+                                    _internal=True, static=True, preload_archive=res.archive)
 
     def index_resource(self, origin, interface=None, source=None, priority=10, force=False):
         """
@@ -361,9 +361,12 @@ class LcCatalog(LciaEngine):
         :return:
         """
         source = self._find_single_source(origin, interface, source=source)
-        self._index_source(source, 10, force=True)
+        res = next(self._resolver.resources_with_source(source))
+        res.check(self)
+        res.archive.load_all()
+
         if not os.path.isabs(archive_file):
-            archive_file = os.path.join(self._archive_dir, archive_file)
+            archive_file = os.path.join(self.archive_dir, archive_file)
         self.create_source_cache(source, static=True)
         os.rename(self.cache_file(source), archive_file)
         for res in self._resolver.resources_with_source(source):
@@ -373,7 +376,6 @@ class LcCatalog(LciaEngine):
             store = self._resolver.is_permanent(res)
             self.new_resource(res.reference, archive_file, 'JSON', interfaces=ifaces, priority=priority,
                               store=store,
-                              _internal=True,
                               static=True)
 
     def create_descendant(self, origin, interface=None, source=None, force=False, signifier=None, strict=True,
@@ -392,7 +394,7 @@ class LcCatalog(LciaEngine):
         :return:
         """
         res = self.get_resource(origin, iface=interface, source=source, strict=strict)
-        new_ref = res.archive.create_descendant(self._archive_dir, signifier=signifier, force=force)
+        new_ref = res.archive.create_descendant(self.archive_dir, signifier=signifier, force=force)
         print('Created archive with reference %s' % new_ref)
         ar = res.archive
         priv = privacy or res.privacy

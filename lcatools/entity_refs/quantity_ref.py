@@ -18,6 +18,11 @@ class QuantityRef(EntityRef):
     def _addl(self):
         return self.unit()
 
+    def serialize(self):
+        j = super(QuantityRef, self).serialize()
+        j['referenceUnit'] = self.unit()
+        return j
+
     def is_lcia_method(self):
         ind = self.get_item('Indicator')
         if ind is None:

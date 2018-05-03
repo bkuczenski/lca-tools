@@ -157,6 +157,8 @@ class LcProcess(LcEntity):
             self._d['SpatialScope'] = 'GLO'
         if 'TemporalScope' not in self._d:
             self._d['TemporalScope'] = '0'
+        if 'Classifications' not in self._d:
+            self._d['Classifications'] = []
 
     def _make_ref_ref(self, query):
         return [RxRef(self, x.flow.make_ref(query), x.direction, value=x.value) for x in self.references()]

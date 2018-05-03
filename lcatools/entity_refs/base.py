@@ -175,6 +175,9 @@ class EntityRef(BaseRef):
         self._query = query
         self._uuid = uuid or self._query.get_uuid(self.external_ref)
 
+    def make_ref(self, *args):
+        return self
+
     def get_reference(self):
         return self._reference_entity
 
@@ -269,3 +272,8 @@ class EntityRef(BaseRef):
                 raise ValueError('external_ref mismatch: %s vs %s' % (self.external_ref, other.external_ref))
         # otherwise fine-- left argument is dominant
         self._d.update(other._d)
+
+    def serialize(self):
+        j = super(EntityRef, self).serialize()
+        j['entityId'] = self.uuid
+        return j

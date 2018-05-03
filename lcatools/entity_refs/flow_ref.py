@@ -8,7 +8,7 @@ to store characterizations.
 '''
 
 
-class FlowRef(EntityRef, IndexInterface, QuantityInterface):
+class FlowRef(EntityRef):
     """
     Flows can lookup:
     """
@@ -70,6 +70,17 @@ class FlowRef(EntityRef, IndexInterface, QuantityInterface):
     def characterizations(self):
         for i in self._characterizations.values():
             yield i
+
+    def serialize(self, characterizations=False, **kwargs):
+        j = super(FlowRef, self).serialize()
+        if characterizations:
+            j['characterizations'] = sorted([x.serialize(**kwargs) for x in self._characterizations.values()],
+                                            key=lambda x: x['quantity'])
+        else:
+            j['characterizations'] = [x.serialize(**kwargs) for x in self._characterizations.values()
+                                      if x.quantity is self.reference_entity]
+
+        return j
 
     '''
     Interface methods

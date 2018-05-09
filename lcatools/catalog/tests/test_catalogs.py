@@ -52,6 +52,14 @@ class LcCatalogFixture(unittest.TestCase):
         inv = [x for x in q.inventory('Acetic acid, at plant')]
         self.assertEqual(len(inv), 21)
 
+    @unittest.skip
+    def test_find_source(self):
+        """
+        Need to determine a set of testing conditions that ensure the resolver.get_resource() works properly
+        :return:
+        """
+        pass
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -376,6 +376,7 @@ class LcCatalog(LciaEngine):
             store = self._resolver.is_permanent(res)
             self.new_resource(res.reference, archive_file, 'JSON', interfaces=ifaces, priority=priority,
                               store=store,
+                              _internal=True,
                               static=True)
 
     def create_descendant(self, origin, interface=None, source=None, force=False, signifier=None, strict=True,

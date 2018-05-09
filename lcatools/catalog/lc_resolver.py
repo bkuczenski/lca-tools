@@ -135,7 +135,7 @@ class LcCatalogResolver(object):
             if strict:
                 for k in matches:
                     for i in k.interfaces:
-                        print('%s:%s [priority %d]' % (k.reference, i, k.priority))
+                        print('%s:%s [priority %d]' % (k.source, i, k.priority))
                 raise ValueError('Ambiguous matches for supplied parameters')
         elif len(matches) == 0:
             raise KeyError('no resource found')

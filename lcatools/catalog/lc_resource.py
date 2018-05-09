@@ -31,7 +31,8 @@ class LcResource(object):
             ref = local_ref(source)
         ds_type = archive.__class__.__name__  # static flag indicates whether archive is complete
         kwargs.update(archive.init_args)
-        res = cls(ref, source, ds_type, interfaces=interfaces, static=archive.static, preload_archive=archive, **kwargs)
+        static = kwargs.pop('static', archive.static)
+        res = cls(ref, source, ds_type, interfaces=interfaces, static=static, preload_archive=archive, **kwargs)
 
         return res
 

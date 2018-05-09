@@ -6,6 +6,7 @@ from __future__ import print_function, unicode_literals
 
 
 import six
+import os
 
 from lcatools.entities import LcEntity, LcProcess, BasicArchive
 from lcatools.from_json import from_json
@@ -166,4 +167,7 @@ class LcArchive(BasicArchive):
         return self.serialize(exchanges=True, characterizations=True, values=True)
 
     def _load_all(self, **kwargs):
-        self.load_json(from_json(self.source))
+        if self.source is None:
+            return
+        if os.path.exists(self.source):
+            self.load_json(from_json(self.source))

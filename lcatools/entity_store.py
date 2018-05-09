@@ -363,11 +363,11 @@ class EntityStore(object):
             else:
                 raise EnvironmentError('File %s exists: force=True to overwrite' % new_source)
 
-        self._set_source(new_ref, new_source)
         try:
             self.load_all()
         except NotImplementedError:
             pass
+        self._set_source(new_ref, new_source)
         self.write_to_file(new_source, gzip=True, complete=True)
         return new_ref
 

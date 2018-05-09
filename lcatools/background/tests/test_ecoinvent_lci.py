@@ -64,8 +64,19 @@ def find_lci_ref(version, model):
 
 
 def _extract_and_reduce_lci(node):
-    if test_ref(node.version, node.model) in cat.references:
+    filename = lci_cache_file(node.version, node.model)
+    ref = test_ref(node.version, node.model)
+    if os.path.exists(filename):
+        a = archive_from_json(filename, ref=ref)
+    else:
+        a = LcArchive(filename, ref=ref)
+
+    if ref not in cat.references:
+        cat.add_existing_archive(a, interfaces='inventory', static=True)
+
+    if cat.query(ref).get(node.node) is not None:
         return
+
     lci_ref = find_lci_ref(node.version, node.model)
     if lci_ref is None:
         print('No LCI resource for (%s, %s)' % (node.version, node.model))
@@ -87,10 +98,7 @@ def _extract_and_reduce_lci(node):
     for x in exchs:
         p_slim.add_exchange(x.flow, x.direction, value=x.value)
 
-    filename = lci_cache_file(node.version, node.model)
-    a = LcArchive(filename, ref=test_ref(node.version, node.model))
     a.add_entity_and_children(p_slim)
-    cat.add_existing_archive(a, interfaces='inventory')
     a.write_to_file(filename, complete=True, gzip=True)
 
 
@@ -106,8 +114,12 @@ class EcoinventLciTest(unittest.TestCase):
             for node in cls._nodes:
                 if node.node is None:
                     continue
-                if test_ref(node.version, node.model) not in cat.references:
-                    _extract_and_reduce_lci(node)
+                ref = test_ref(node.version, node.model)
+                if ref in cat.references:
+                    if cat.query(ref).get(node.node) is not None:
+                        continue
+                # if ref is not in cat, or if node is not present, then we need to populate node
+                _extract_and_reduce_lci(node)
 
     def setUp(self):
         if not _run_ecoinvent:

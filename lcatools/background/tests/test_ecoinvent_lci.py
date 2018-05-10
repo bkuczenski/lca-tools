@@ -111,9 +111,16 @@ class EcoinventLciTest(unittest.TestCase):
     }
 
     @classmethod
+    def nodes(cls):
+        for node in cls._nodes:
+            if node.node is None:
+                continue
+            yield node
+
+    @classmethod
     def setUpClass(cls):
         if _run_ecoinvent:
-            for node in cls._nodes:
+            for node in cls.nodes():
                 if node.node is None:
                     continue
                 ref = test_ref(node.version, node.model)
@@ -128,13 +135,11 @@ class EcoinventLciTest(unittest.TestCase):
             self.skipTest('Ecoinvent not setup')
 
     def test_lci(self):
-        for node in self._nodes:
-            if node.node is None:
-                continue
+        for node in self.nodes():
             lci_result = cat.query(test_ref(node.version, node.model)).get(node.node)
             challenge = cat.query('local.ecoinvent.%s.%s' % (node.version, node.model), debug=_debug).get(node.node)
 
-            c_lci = challenge.lci(ref_flow=lci_result.reference().flow)
+            c_lci = challenge.lci(ref_flow=lci_result.reference().flow.external_ref)
             lci_check = {x.key: x for x in c_lci}
 
             count = 0

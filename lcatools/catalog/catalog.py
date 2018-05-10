@@ -371,6 +371,7 @@ class LcCatalog(LciaEngine):
         os.rename(self.cache_file(source), archive_file)
         for res in self._resolver.resources_with_source(source):
             ifaces = set(i for i in res.interfaces)
+            ifaces.add('index')  # load_all will satisfy index requirement
             if background:
                 ifaces.add('background')
             store = self._resolver.is_permanent(res)

@@ -33,6 +33,8 @@ else:
     # cat = None
 
 
+_debug = True
+
 EcoinventNode = namedtuple('EcoinventNode', ['version', 'model', 'node'])
 
 
@@ -127,8 +129,10 @@ class EcoinventLciTest(unittest.TestCase):
 
     def test_lci(self):
         for node in self._nodes:
+            if node.node is None:
+                continue
             lci_result = cat.query(test_ref(node.version, node.model)).get(node.node)
-            challenge = cat.query('local.ecoinvent.%s.%s' % (node.version, node.model)).get(node.node)
+            challenge = cat.query('local.ecoinvent.%s.%s' % (node.version, node.model), debug=_debug).get(node.node)
 
             c_lci = challenge.lci(ref_flow=lci_result.reference().flow)
             lci_check = {x.key: x for x in c_lci}

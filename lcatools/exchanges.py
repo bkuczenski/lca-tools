@@ -152,6 +152,7 @@ class Exchange(object):
     def __eq__(self, other):
         if other is None:
             return False
+        '''
         if not hasattr(other, 'entity_type'):
             return False
         if other.entity_type != 'exchange':
@@ -159,6 +160,11 @@ class Exchange(object):
         # if self.key == other.key and self.lkey != other.lkey:
         #     raise DuplicateExchangeError('Hash collision!')
         return self.key == other.key
+        '''
+        try:
+            return self.key == other.key
+        except AttributeError:
+            return False
 
     @property
     def comp_dir(self):

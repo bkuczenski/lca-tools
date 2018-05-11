@@ -1,5 +1,5 @@
 from .base import EntityRef
-from lcatools.interfaces import IndexInterface, QuantityInterface, trim_cas
+from lcatools.interfaces import trim_cas
 from lcatools.characterizations import Characterization
 
 '''

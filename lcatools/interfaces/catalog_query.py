@@ -47,6 +47,8 @@ class CatalogQuery(IndexInterface, BackgroundInterface, ForegroundInterface, Inv
         self._debug = debug
         self._validated = None
 
+        self._entity_cache = dict()
+
     def validate(self):
         if self._validated is None:
             self._validated = super(CatalogQuery, self).validate()
@@ -62,6 +64,8 @@ class CatalogQuery(IndexInterface, BackgroundInterface, ForegroundInterface, Inv
         return self._catalog.query(origin)
 
     def _grounded_query(self, origin):
+        if origin == self._origin:
+            return self
         return self._catalog.query(origin)
 
     def ensure_lcia_factors(self, quantity_ref):
@@ -139,8 +143,11 @@ class CatalogQuery(IndexInterface, BackgroundInterface, ForegroundInterface, Inv
         :param eid: an external Id
         :return:
         """
-        return self.make_ref(self._perform_query(None, 'get', EntityNotFound('%s/%s' % (self.origin, eid)), eid,
-                                                 **kwargs))
+        if eid not in self._entity_cache:
+            entity = self._perform_query(None, 'get', EntityNotFound('%s/%s' % (self.origin, eid)), eid,
+                                         **kwargs)
+            self._entity_cache[eid] = self.make_ref(entity)
+        return self._entity_cache[eid]
 
     def do_lcia(self, inventory, quantity_ref, **kwargs):
         self.ensure_lcia_factors(quantity_ref)

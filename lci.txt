@@ -38,3 +38,120 @@ So the solution in both cases is to leave the machinery as it is, and change the
 Wed 2018-05-02 14:02:27 -0700
 
 Ultimately what has to happen here is the creation of an Scc object that encapsulates the matrix construction and inversion.  So, most of be._update_component_graph moves into that; make_foreground needs to get generalized to deal with multiple Sccs, and moved into tstack; lci computation needs to be generalized (to multiple Sccs) and moved to tstack, and background engine runs and terminates on __init__, adding all reference products and returning a [static, fully-populated] t-stack object.
+
+==========
+Thu May 10 14:27:51 -0700 2018
+
+Now we are testing the background computation from a natural inventory source via the catalog for apparently the first time, and it doesn't work. why? because it uses the inventory archive instead of the static archive, for complicated reasons.
+
+The relationship between the background engine and the catalog is complex.  The background implementation instantiates the background manager with a query interface in setup_bm(), which in the archive case is called when the _bg property is first invoked, and in the catalog case is called when the implementation is first created, before it is returned to the user.
+
+This already feels like a big hack.
+
+Anyhow, the catalog query seeds the background engine with itself, thus providing a mechanism for the background engine to answer any query its heart desires.  This is great in theory.
+
+In practice, there are two ways the background engine is expected to work:
+ 1- from a static, comprehensive archive that has been loaded into memory
+ 2- from a dynamic query
+
+We definitely want to support (2) though ensure that it operates efficiently.  However, our performance benchmark is based on (1), which is also the way we expect the system to work in this interim period.
+
+What does the background engine require of the query interface?
+
+ - count('process') -- to set recursion limit
+ - get(termination.external_ref) -- to provide a working reference to the terminating process
+ - get(exch.termination) -- ditto
+ - terminate(flow, direction) -- to find terminations when one is not specified explicitly
+ - get(term.external_ref) -- to finish the job
+ - processes() -- to add all ref products
+
+In the current failure, it is the get() call that is breaking things, and that is because the ecospold2 implementation calls list_datasets() on the zip archive on every invocation because (as of ca393ba) we no longer want ecospold to permit partial loading of any process.
+
+That is fair, really, but the list_datasets() approach is terrible.
+
+on 3.2 apos, list_datasets() takes 100 ms to run, every time, even when a search term is provided.
+
+Solution: list_datasets() once on __init__, and make a mapping of process uuid to flow uuids.
+
+Thu 2018-05-10 15:51:12 -0700
+
+OK.  Having fixed that, the ecoinvent background now runs in 1m56s, which is 14s longer than it took to read in all spold files in generating the static background.
+
+OK! so we are back to benchmark performance.
+
+Except now there is the second matter, which is: in the presence of a static background archive, should we (shouldn't we?) use it for the background computation?
+Indeed, the whole point of the 'background' interface designation was to specify that the static data are available (and allocated)
+
+also, there is complexity because: we are planning on phasing out the current 'background' engine in favor of a binary numpy structure that will preserve the ordering and presumably load in much faster.
+
+so really, the static archive should NOT have the background label- instead the background label should come from the outcome of the background engine computation, and be saved as a distinct resource.
+
+the cached static archive is really just an index+inventory interface that happens to be static.
+
+it should also be datestamped, just like the cached index already is.
+
+In fact, there is no reason to have two different methods index_resource() and create_static_archive()
+the only question is whether both should be saved after load_all(), or only one.  As we know, an unrestricted inventory and index interface are all that's required to operate the background engine. so it should be run on demand when a background resource is requested.
+
+In that case, the question is back to how best to resolve a query.  In LcCatalog.get_interface(), we sort by whether a resource is loaded, but we should sort by whether it is both loaded AND static.  That should take care of the problem.
+
+An interesting entailment of this is that 'BackgroundRequired' goes away-- in the event that a background is required, we should just attempt to create one and the error will upgrade to 'InventoryRequired' instead.
+
+Except that could result in large charges. So the catalog should allow the user to explicitly create a background-- create_static_archive() should be folded into index_resource() and replaced with create_background().
+
+But then create_background() needs to properly select the data source to use-- that's where the sort by loaded and static comes in.  If we have a static loaded resource, use it.
+
+Thu 2018-05-10 16:13:43 -0700
+
+OK.  So, simply adding that into get_resource() solved the problem but now the runtime is 28 s!
+
+time to profile.
+51.791 s
+51.410 add_ref_product
+44.462 _add_ref_product
+ 6.948 _update_component_graph
+
+564,000 calls to CatalogQuery._iface() taking 13.4 s -- that probably does not help.
+261,458 calls to CatalogQuery.get() taking 21.8 s--
+      " calls to AbstractQuery.make_ref()   4.568 s
+      " calls to BasicImpl.get()	    3.331 s
+      " calls to BasicImpl._fetch()         3.134 s
+      " calls to CatalogQuery._grounded_qu  2.571 s
+      " calls to LcCatalog.query()	    2.381 s
+      " calls to CatalogQuery.__init__	    0.155 s
+273,925/
+      " calls to LcEntity.make_ref()	    1.380 s
+
+
+Fri 2018-05-11 11:02:27 -0700
+
+Big change in having CatalogQuery cache the refs it creates. No need to redundantly `get` the same processes 2 million times.
+
+To really make this sweet, the catalog itself should cache queries and return them instead of making new ones. then if the query objects retain the references, and the references themselves refer circularly to the queries, we will be on our way to creating a session-persistent dynamic mirror of content.
+
+Smaller but nontrivial change in using `exch.is_reference` instead of `exch in process.reference_entity`
+
+Not many other changes to make...
+26.9 sec
+26.5 s add_ref_product
+20.5 s _add_ref_product
+5.976 s _update_component_graph
+
+of the 20.5:
+ 2.872 s _traverse_term_exchanges foreground
+ 5.256 s exchanges.__getitem__
+ 3.989 s background.terminate
+ 1.721 s background.add_cutoff
+ 1.729 s inventory.inventory
+ 0.845 s background.add_interior
+ 0.681 s exchanges.__eq__
+ -----
+ 17.093 s
+
+Still seems like there's a chunk missing
+
+There's at least 1s remaining of catalog.gen_interfaces because those are still called for every inventory() call.
+
+It seems as though there is some refactoring to do on the CatalogQuery + LcResolver workflow.
+
+

@@ -4,7 +4,7 @@ Import ecospold2 files
 
 from __future__ import print_function, unicode_literals
 
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 from time import time
 
 import six
@@ -72,7 +72,10 @@ class EcospoldV2Archive(LcArchive):
 
         self._archive = Archive(self.source, internal_prefix=prefix)
         self._linked = linked
+        self._process_flow_map = defaultdict(set)
+        self._map_datasets()
 
+    '''
     def fg_proxy(self, proxy):
         for ds in self.list_datasets(proxy):
             self.retrieve_or_fetch_entity(ds)
@@ -80,6 +83,7 @@ class EcospoldV2Archive(LcArchive):
 
     def bg_proxy(self, proxy):
         return self.fg_proxy(proxy)
+    '''
 
     # no need for _key_to_id - keys in ecospold are uuids
     def _fetch_filename(self, filename):
@@ -87,6 +91,11 @@ class EcospoldV2Archive(LcArchive):
         if st is None:
             raise FileNotFoundError
         return st
+
+    def _map_datasets(self):
+        for f in self.list_datasets():
+            p, r = spold_reference_flow(f)
+            self._process_flow_map[p].add(r)
 
     def list_datasets(self, startswith=None):
         assert self._archive.remote is False, "Cannot list objects for remote archives"
@@ -329,6 +338,11 @@ class EcospoldV2Archive(LcArchive):
         :param ref_uuid: uuid of reference flow
         :return:
         """
+        p = self[process_uuid]
+        if p is not None:
+            if p.has_reference(ref_uuid):
+                return p
+
         try:
             o = self.objectify(process_uuid, ref_uuid)
         except KeyError:
@@ -417,17 +431,11 @@ class EcospoldV2Archive(LcArchive):
         :param kwargs:
         :return:
         """
-        p = None
-        p_uuid = self._key_to_id(ext_ref)
-        if p_uuid is None:  # no UUID found; must be partial
-            p_query = ext_ref
-            if len(ext_ref) > 36:
-                p_query = p_query[:36]
-        else:
-            p_query = p_uuid
+        p_uuid, _ = spold_reference_flow(ext_ref)  # will error if at least one UUID is not present
 
-        for f in self.list_datasets(p_query):
-            p_uuid, r_uuid = spold_reference_flow(f)
+        p = self[p_uuid]
+
+        for r_uuid in self._process_flow_map[p_uuid]:
             p = self._create_process_and_single_reference(p_uuid, r_uuid, **kwargs)
         return p
 
@@ -486,9 +494,9 @@ class EcospoldV2Archive(LcArchive):
     def _load_all(self, exchanges=True):
         now = time()
         count = 0
-        for k in self.list_datasets():
-            p_u, r_u = spold_reference_flow(k)
-            self._create_process_and_single_reference(p_u, r_u, exchanges=exchanges)
+        for p_u, r_set in self._process_flow_map.items():
+            for r_u in r_set:
+                self._create_process_and_single_reference(p_u, r_u, exchanges=exchanges)
             count += 1
             if count % 100 == 0:
                 print(' Loaded %d processes (t=%.2f s)' % (count, time()-now))

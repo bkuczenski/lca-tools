@@ -226,9 +226,15 @@ class BackgroundEngine(object):
         else:
             return None
 
-    def _create_product_flow(self, flow, termination):
+    def _create_product_flow(self, flow, term):
+        """
+
+        :param flow: actual flow or flow ref
+        :param term: actual process or process ref
+        :return:
+        """
         index = len(self._pf_index)
-        term = self.fg.get(termination.external_ref)  # turn it into a catalog ref
+        # term = self.fg.get(termination.external_ref)  # turn it into a catalog ref
         try:
             pf = ProductFlow(index, flow, term)
         except NoMatchingReference:
@@ -622,7 +628,7 @@ class BackgroundEngine(object):
             # interior flow-- enforce normative direction
             if exch.direction == 'Output':
                 pval *= -1
-            if exch in parent.process.reference_entity:
+            if exch.is_reference:  # in parent.process.reference_entity:
                 if cutoff_refs:
                     # for net coproducts- all coproducts after the first are simply created as free sources
                     i = self.check_product_flow(exch.flow, parent.process)

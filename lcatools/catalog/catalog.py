@@ -420,7 +420,7 @@ class LcCatalog(LciaEngine):
         if itype is None:
             itype = 'basic'  # fetch, get properties, uuid, reference
         for res in sorted(self._resolver.resolve(origin, interfaces=itype, strict=strict),
-                          key=lambda x: (not x.is_loaded, x.reference != origin, x.priority)):
+                          key=lambda x: (not (x.is_loaded and x.static), x.reference != origin, x.priority)):
             res.check(self)
             yield res.make_interface(itype)
         '''

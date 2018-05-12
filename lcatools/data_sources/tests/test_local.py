@@ -1,6 +1,11 @@
 """
 This may be a bit of a protocol violation, but the role of the unittest framework here is to construct a persistent
 catalog object.  The clever bit is that the object will be constructed entirely through unit test execution.
+
+The catalog resources are specified in data_sources.local.  This catalog is used by computation unit-testing routines
+to store persistent data sets to test against.
+
+see ..local.py for resource configuration details.
 """
 
 import unittest

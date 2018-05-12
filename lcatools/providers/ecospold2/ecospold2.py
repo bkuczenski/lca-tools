@@ -21,6 +21,8 @@ from lcatools.providers.archive import Archive
 from lcatools.providers.lc_archive import LcArchive
 from lcatools.providers.xml_widgets import *
 
+from .ecospold2_index import EcoSpold2IndexImplementation
+
 if six.PY2:
     bytes = str
     str = unicode
@@ -73,6 +75,7 @@ class EcospoldV2Archive(LcArchive):
         self._archive = Archive(self.source, internal_prefix=prefix)
         self._linked = linked
         self._process_flow_map = defaultdict(set)
+        self._terminations = defaultdict(set)
         self._map_datasets()
 
     '''
@@ -84,6 +87,10 @@ class EcospoldV2Archive(LcArchive):
     def bg_proxy(self, proxy):
         return self.fg_proxy(proxy)
     '''
+    def make_interface(self, iface, privacy=None):
+        if iface == 'index':
+            return EcoSpold2IndexImplementation(self)
+        return super(EcospoldV2Archive, self).make_interface(iface)
 
     # no need for _key_to_id - keys in ecospold are uuids
     def _fetch_filename(self, filename):
@@ -96,6 +103,24 @@ class EcospoldV2Archive(LcArchive):
         for f in self.list_datasets():
             p, r = spold_reference_flow(f)
             self._process_flow_map[p].add(r)
+            self._terminations[r].add(p)
+
+    @property
+    def ti(self):
+        return self._terminations
+
+    def count_by_type(self, entity_type):
+        if entity_type == 'process':
+            return len(self._process_flow_map)
+        return super(EcospoldV2Archive, self).count_by_type(entity_type)
+
+    def processes(self, **kwargs):
+        if len(kwargs) == 0:
+            for p in self._process_flow_map.keys():
+                yield self.retrieve_or_fetch_entity(p)
+        else:
+            for p in self.search('process', **kwargs):
+                yield p
 
     def list_datasets(self, startswith=None):
         assert self._archive.remote is False, "Cannot list objects for remote archives"

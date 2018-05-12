@@ -272,6 +272,13 @@ class TarjanStack(object):
     def sccs(self):
         return self._sccs.keys()
 
+    def nontrivial_fg_sccs(self):
+        for k, s in self._sccs.items():
+            if len(s) > 1:
+                if k == self._background or k in self._downstream:
+                    continue
+                yield k
+
     def scc(self, index):
         return self._sccs[index]
 

@@ -151,6 +151,10 @@ class BackgroundEngine(object):
             print(*args)
 
     @property
+    def lci_db(self):
+        return self._a_matrix, self._b_matrix
+
+    @property
     def surplus_coproducts(self):
         return self._surplus_coproducts
 

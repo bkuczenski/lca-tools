@@ -154,4 +154,31 @@ There's at least 1s remaining of catalog.gen_interfaces because those are still 
 
 It seems as though there is some refactoring to do on the CatalogQuery + LcResolver workflow.
 
+==========
+Fri May 11 17:43:26 -0700 2018
 
+Here's where we're at with flat background:
+
+ * Complications regarding background as resource
+
+The current approach is a complete kludge (obviously). Here's how we fix it:
+
+ 1. The only background implementation available to the native LcArchive IS the proxy background.  If a catalog maintainer creates a resource with a conventional archive source and 'background' interface specified, then the maintainer is ASSERTING that the database is a proxy background db, as in a GaBi bundle.
+
+ 1a. The BackgroundImplementation class then becomes a proxy bg implementation.  It should masquerade processes as background flows, provide no foreground flows, and masquerade emissions and all encountered cutoffs as exterior flows.
+
+ 2. The scipy-based background is invoked automatically any time a background interface is requested and _iface fails with BackgroundRequired.  The query asks the catalog to create the background.
+
+ 2a. The catalog creates a new archive, supplying a bg store file as source and the index interface as a positional argument, and the archive goes ahead and creates the new FlatBackground on __init__. This will fail with the import error if scipy is not available, and with the index or inventory required errors if appropriate.
+
+ 2b Assuming the __init__ doesn't fail, then by the time the LcBackground init returns, the background will be saved to the source. so then the catalog passes it to self.add_existing_archive()
+
+ 3. The LcBackground class itself will need to load the FlatBackground from the source if the file exists, or create it from the index interface if it doesn't. and save it to source.
+
+ 3a. the LcBackground class will need to override make_interface() to supply a rich background implementation, which relies on the FlatBackground being available.
+
+ 3b. The LcBackground class will also need to populate the list of processes and flows AS catalog refs obtained from the index interface, which is still supplied as a positional parameter.  There are definitely some details to be worked out here.
+
+ 3c. so the LcBackground will present as an LcArchive because it will BE an LcArchive.
+
+ 3d. The current BackgroundManager and BackgroundProxy will go away.

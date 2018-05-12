@@ -98,9 +98,6 @@ class IndexImplementation(BasicImplementation, IndexInterface):
                     if cdir == x[0]:
                         yield x[1]
 
-    def originate(self, flow_ref, direction=None, **kwargs):
-        return self.terminate(flow_ref, comp_dir(direction))  # just gets flipped back again in terminate()
-
     '''
     def mix(self, flow_ref, direction):
         if not isinstance(flow_ref, str):

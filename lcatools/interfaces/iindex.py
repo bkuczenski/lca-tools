@@ -1,4 +1,5 @@
 from .abstract_query import AbstractQuery
+from lcatools.exchanges import comp_dir
 
 
 class IndexRequired(Exception):
@@ -95,10 +96,13 @@ class IndexInterface(AbstractQuery):
         :param direction: if omitted, return all processes having the given flow as reference, regardless of direction
         :return:
         """
+        '''
         for i in self._perform_query(_interface, 'originate', IndexRequired('Index access required'),
                                      flow, direction=direction, **kwargs):
             yield self.make_ref(i)
-
+        '''
+        for i in self.terminate(flow, comp_dir(direction), **kwargs):  # just gets flipped back again in terminate()
+            yield i
     '''
     def mix(self, flow, direction, **kwargs):
         """

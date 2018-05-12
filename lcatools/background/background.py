@@ -599,6 +599,13 @@ class BackgroundEngine(object):
                 else:
                     no_alloc = True
 
+        if not rx.is_reference:
+            print('### Nonreference RX found!\nterm: %s\nflow: %s\next_id: %s' % (rx.process,
+                                                                                  rx.flow,
+                                                                                  rx.process.external_ref))
+            rx = parent.process.reference()
+            print('    using ref %s\n' % rx)
+
         if no_alloc:
             if net_coproducts:
                 exchs = [x for x in parent.process.inventory(rx)]
@@ -615,6 +622,7 @@ class BackgroundEngine(object):
             if cutoff_refs:
                 val = pval = exch.value
             else:
+                '''
                 if rx.is_reference:
                     val = pval = exch[rx]
                 else:
@@ -622,6 +630,8 @@ class BackgroundEngine(object):
                                                                                           rx.flow,
                                                                                           rx.process.external_ref))
                     val = pval = 0
+                '''
+                val = pval = exch[rx]
             if val is None or val == 0:
                 # don't add zero entries (or descendants) to sparse matrix
                 continue
@@ -659,6 +669,8 @@ class BackgroundEngine(object):
             if i is None:
                 # not visited -- need to visit
                 i = self._create_product_flow(exch.flow, term)
+                if i.debug:
+                    print('Parent: %s' % parent.process)
                 if i is None:
                     print('Cutting off at Parent process: %s\n%s\n' % (parent.process.external_ref, parent))
                     continue

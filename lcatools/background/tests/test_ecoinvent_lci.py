@@ -25,9 +25,14 @@ from lcatools.data_sources.local import CATALOG_ROOT, run_ecoinvent
 from lcatools.providers.lc_archive import LcArchive
 
 EcoinventNode = namedtuple('EcoinventNode', ['version', 'model', 'node'])
-_debug = False
+_debug = True
 
-_run_ecoinvent = run_ecoinvent or _debug
+
+if __name__ == '__main__':
+    _run_ecoinvent = run_ecoinvent
+else:
+    _run_ecoinvent = run_ecoinvent or _debug
+
 
 if _run_ecoinvent:
     cat = LcCatalog(CATALOG_ROOT)
@@ -85,6 +90,8 @@ def _extract_and_reduce_lci(node):
     if lci_ref is None:
         print('No LCI resource for (%s, %s)' % (node.version, node.model))
         return
+
+    print('WARNING: extracting and reducing LCI data can be very slow >60s per file')
 
     p_ref = cat.query(lci_ref).get(node.node)
 

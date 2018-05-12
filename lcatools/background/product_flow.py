@@ -34,6 +34,8 @@ class ProductFlow(object):
 
         self._hash = (flow.external_ref, None)
 
+        self._dbg = False
+
         if process is None:
             raise TypeError('No termination? should be a cutoff.')
 
@@ -46,10 +48,15 @@ class ProductFlow(object):
         if ref_exch.value is None:
             print('None RX found! assuming nominal direction\nflow: %s\nterm: %s' % (flow, process))
             self._direction = ref_exch.direction
+            self._dbg = True
         elif ref_exch.value > 0:
             self._direction = ref_exch.direction
         else:
             self._direction = comp_dir(ref_exch.direction)
+
+    @property
+    def debug(self):
+        return self._dbg
 
     def __eq__(self, other):
         """

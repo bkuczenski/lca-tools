@@ -191,7 +191,10 @@ class Archive(object):
 
         if self.compressed:
             if self.ext == '7z':
-                lg = (q.filename for q in self._archive.files)
+                if self._internal_prefix is None:
+                    lg = (q.filename for q in self._archive.files)
+                else:
+                    lg = (q.filename for q in self._archive.files if q.filename.startswith(self._internal_prefix))
             elif self.ext == 'zip':
                 # filter out directory entries
                 if self._internal_prefix is None:

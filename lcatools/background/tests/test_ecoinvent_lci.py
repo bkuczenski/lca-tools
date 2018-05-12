@@ -19,12 +19,15 @@ from lcatools.catalog import LcCatalog
 from lcatools.entities import LcProcess
 from lcatools.tools import archive_from_json
 
-from lcatools.data_sources.local import CATALOG_ROOT, _run_ecoinvent
+from lcatools.interfaces import EntityNotFound
+
+from lcatools.data_sources.local import CATALOG_ROOT, run_ecoinvent
 from lcatools.providers.lc_archive import LcArchive
 
 EcoinventNode = namedtuple('EcoinventNode', ['version', 'model', 'node'])
-_debug = True
+_debug = False
 
+_run_ecoinvent = run_ecoinvent or _debug
 
 if _run_ecoinvent:
     cat = LcCatalog(CATALOG_ROOT)
@@ -70,8 +73,13 @@ def _extract_and_reduce_lci(node):
     if ref not in cat.references:
         cat.add_existing_archive(a, interfaces='inventory', static=True)
 
-    if cat.query(ref).get(node.node) is not None:
+    try:
+        cat.query(ref).get(node.node)
         return
+    except EntityNotFound:
+        pass
+
+    cat.get_resource(ref, 'inventory').remove_archive()
 
     lci_ref = find_lci_ref(node.version, node.model)
     if lci_ref is None:
@@ -101,7 +109,7 @@ def _extract_and_reduce_lci(node):
 class EcoinventLciTest(unittest.TestCase):
     _nodes = {
         EcoinventNode('3.2', 'apos', '18085d22-72d0-4588-9c69-7dbeb24f8e2f'),
-        EcoinventNode('3.2', 'conseq', None)
+        EcoinventNode('3.2', 'conseq', '6b0f32fe-329d-4c1f-9205-0ea78f4f42e5')
     }
 
     @classmethod
@@ -119,8 +127,11 @@ class EcoinventLciTest(unittest.TestCase):
                     continue
                 ref = test_ref(node.version, node.model)
                 if ref in cat.references:
-                    if cat.query(ref).get(node.node) is not None:
-                        continue
+                    try:
+                        cat.query(ref).get(node.node)
+                    except EntityNotFound:
+                        _extract_and_reduce_lci(node)
+                    continue
                 # if ref is not in cat, or if node is not present, then we need to populate node
                 _extract_and_reduce_lci(node)
 

@@ -35,4 +35,4 @@ RESOURCES_CONFIG = {
     }
 }
 
-_run_ecoinvent = _check_enabled('ecoinvent')
+run_ecoinvent = _check_enabled('ecoinvent')

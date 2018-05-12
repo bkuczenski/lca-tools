@@ -40,7 +40,11 @@ def spold_reference_flow(filename):
     try:
         return m[0][0], m[1][0]
     except IndexError:
-        return m[0][0], None
+        try:
+            return m[0][0], None
+        except IndexError:
+            print('No UUID found in %s' % filename)
+            raise
 
 
 class EcospoldV2Error(Exception):

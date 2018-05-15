@@ -222,10 +222,7 @@ class BasicArchive(EntityStore):
                 self._add_name(ref, None)
 
         if jsonfile is not None:
-            try:
-                self._add_name(self.ref, jsonfile)
-            except SourceAlreadyKnown:
-                pass
+            self._add_name(self.ref, jsonfile, rewrite=True)
 
         if 'quantities' in j:
             for e in j['quantities']:

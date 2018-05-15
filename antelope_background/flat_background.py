@@ -71,7 +71,7 @@ def split_af(_af, _inds):
             _d_scc.append(0)
     _af_non = csc_matrix((_d_non, (_r, _c)), shape=_shape)
     _af_scc = csc_matrix((_d_scc, (_r, _c)), shape=_shape)
-    assert (_af_non + _af_scc - _af).nnz() == 0
+    assert (_af_non + _af_scc - _af).nnz == 0
     return _af_non, _af_scc
 
 
@@ -99,7 +99,7 @@ def flatten(af, ad, bf, ts):
 
     non, scc = split_af(af, scc_inds)
 
-    scc_inv = inv(eye(ts.pdim) - scc)
+    scc_inv = inv(eye(ts.pdim).tocsc() - scc)
 
     return non * scc_inv, ad * scc_inv, bf * scc_inv
 
@@ -130,11 +130,11 @@ class FlatBackground(object):
             try:
                 _scc_id = _map_nontrivial_sccs[be.tstack.scc_id(pf)]
             except KeyError:
-                _scc_id = None
+                _scc_id = 0
             return pf.flow.external_ref, pf.direction, pf.process.external_ref, _scc_id
 
         def _make_term_ext(em):
-            return em.flow.external_ref, em.direction, em.compartment[-1], None
+            return em.flow.external_ref, em.direction, em.compartment[-1], 0
 
         return cls([_make_term_ref(x) for x in be.foreground_flows(outputs=False)],
                    [_make_term_ref(x) for x in be.background_flows()],
@@ -160,8 +160,13 @@ class FlatBackground(object):
     @classmethod
     def from_matfile(cls, file, quiet=True):
         d = loadmat(file)
-        return cls(d['foreground'], d['background'], d['exterior'], (d['A'], d['B']), d['af'], d['ad'], d['bf'],
-                   origin=d['origin'], quiet=quiet)
+        if 'A' in d:
+            lci_db = (d['A'], d['B'])
+        else:
+            lci_db = None
+        return cls(d['foreground'], d['background'], d['exterior'], d['Af'], d['Ad'], d['Bf'],
+                   lci_db=lci_db,
+                   quiet=quiet)
 
     def __init__(self, foreground, background, exterior, af, ad, bf, lci_db=None, quiet=True):
         """
@@ -197,23 +202,24 @@ class FlatBackground(object):
         self._quiet = quiet
 
     @property
+    def ndim(self):
+        return len(self._bg)
+
+    @property
     def pdim(self):
         return len(self._fg)
 
     @property
     def fg(self):
-        for x in self._fg:
-            yield x
+        return self._fg
 
     @property
     def bg(self):
-        for x in self._bg:
-            yield x
+        return self._bg
 
     @property
     def ex(self):
-        for x in self._ex:
-            yield x
+        return self._ex
 
     def is_in_background(self, process, ref_flow):
         return (process, ref_flow) in self._bg_index
@@ -247,6 +253,19 @@ class FlatBackground(object):
                     dirn = comp_dir(term.direction)  # comp directions w.r.t. parent node
                 yield ExchDef(node.term_ref, term.flow_ref, dirn, term.term_ref, dat)
 
+    @staticmethod
+    def _generate_exch_defs(node_ref, data_vec, enumeration):
+        rows, cols = data_vec.nonzero()
+        for i in range(len(rows)):
+            term = enumeration[rows[i]]
+            dat = data_vec.data[i]
+            if dat < 0:
+                dat *= -1
+                dirn = term.direction
+            else:
+                dirn = comp_dir(term.direction)
+            yield ExchDef(node_ref, term.flow_ref, dirn, term.term_ref, dat)
+
     def dependencies(self, process, ref_flow):
         if self.is_in_background(process, ref_flow):
             index = self._bg_index[process, ref_flow]
@@ -255,16 +274,8 @@ class FlatBackground(object):
             index = self._fg_index[process, ref_flow]
             bg_deps = self._ad[:, index]
 
-        rows, cols = bg_deps.nonzero()
-        for i in range(len(rows)):
-            term = self._bg[rows[i]]
-            dat = bg_deps.data[i]
-            if dat < 0:
-                dat *= -1
-                dirn = term.direction  # comp directions w.r.t. parent node
-            else:
-                dirn = comp_dir(term.direction)  # comp directions w.r.t. parent node
-            yield ExchDef(process, term.flow_ref, dirn, term.term_ref, dat)
+        for x in self._generate_exch_defs(process, bg_deps, self._bg):
+            yield x
 
     def emissions(self, process, ref_flow):
         if self.is_in_background(process, ref_flow):
@@ -274,16 +285,8 @@ class FlatBackground(object):
             index = self._fg_index[process, ref_flow]
             ems = self._bf[:, index]
 
-        rows, cols = ems.nonzero()
-        for i in range(len(rows)):
-            em = self._ex[rows[i]]
-            dat = ems.data[i]
-            if dat < 0:
-                dat *= -1
-                dirn = em.direction  # comp directions w.r.t. parent node
-            else:
-                dirn = comp_dir(em.direction)  # comp directions w.r.t. parent node
-            yield ExchDef(process, em.flow_ref, dirn, em.term_ref, dat)
+        for x in self._generate_exch_defs(process, ems, self._ex):
+            yield x
 
     def _x_tilde(self, process, ref_flow, **kwargs):
         index = self._fg_index[process, ref_flow]
@@ -291,11 +294,58 @@ class FlatBackground(object):
 
     def ad(self, process, ref_flow, **kwargs):
         if self.is_in_background(process, ref_flow):
-            pass
-        return self._ad.dot(self._x_tilde(process, ref_flow, **kwargs))
+            for x in self.dependencies(process, ref_flow):
+                yield x
+        else:
+            ad_tilde = self._ad.dot(self._x_tilde(process, ref_flow, **kwargs))
+            for x in self._generate_exch_defs(process, ad_tilde, self._bg):
+                yield x
 
     def bf(self, process, ref_flow, **kwargs):
-        return self._bf.dot(self._x_tilde(process, ref_flow, **kwargs))
+        if self.is_in_background(process, ref_flow):
+            for x in self.emissions(process, ref_flow):
+                yield x
+        else:
+            bf_tilde = self._bf.dot(self._x_tilde(process, ref_flow, **kwargs))
+            for x in self._generate_exch_defs(process, bf_tilde, self._ex):
+                yield x
+
+    def _compute_lci(self, process, ref_flow, **kwargs):
+        if self.is_in_background(process, ref_flow):
+            ad = _unit_column_vector(self.ndim, self._bg_index[process, ref_flow])
+            bx = _iterate_a_matrix(self._A, ad, **kwargs)
+            return bx
+        else:
+            x_tilde = self._x_tilde(process, ref_flow, **kwargs)
+            ad_tilde = self._ad.dot(x_tilde)
+            bx = self._A.dot(ad_tilde)
+            bf_tilde = self._bf.dot(x_tilde)
+            if bx is None:
+                return bf_tilde
+            return bx + bf_tilde
 
     def lci(self, process, ref_flow, **kwargs):
-        pass
+        for x in self._generate_exch_defs(process,
+                                          self._compute_lci(process, ref_flow, **kwargs),
+                                          self._ex):
+            yield x
+
+    def _write_mat(self, filename, complete=True):
+        d = {'foreground': self._fg,
+             'background': self._bg,
+             'exterior': self._ex,
+             'Af': self._af,
+             'Ad': self._ad,
+             'Bf': self._bf}
+        if complete:
+            d['A'] = self._A
+            d['B'] = self._B
+        savemat(filename, d)
+
+    def write_to_file(self, filename, complete=True, filetype=None):
+        if filetype is None:
+            filetype = os.path.splitext(filename)[1]
+        if filetype == '.mat':
+            self._write_mat(filename, complete=complete)
+        else:
+            raise ValueError('Unsupported file type %s' % filetype)

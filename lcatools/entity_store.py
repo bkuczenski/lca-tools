@@ -237,12 +237,15 @@ class EntityStore(object):
         if self._ns_uuid is not None:
             self._serialize_dict['nsUuid'] = str(self._ns_uuid)
 
-    def _add_name(self, ref, source):
+    def _add_name(self, ref, source, rewrite=False):
         """
         A source is not allowed to provide multiple semantic references
         a ref must match the regexp ([A-Za-z0-9_]+(\.[A-Za-z0-9_])*)
         :param ref:
         :param source:
+        :param rewrite: [False] if True, if SourceAlreadyKnown, re-assign the source to the new ref. This may result
+        in the archive's ref changing, and should only be used when an authoritative source-ref pair is supplied
+        (e.g. a JSON file that was loaded into the archive)
         :return:
         """
         if not ref_regex.match(ref):
@@ -251,7 +254,11 @@ class EntityStore(object):
             if source in s and source is not None:
                 if k == ref:
                     return
-                raise SourceAlreadyKnown('Source %s already registered to name %s' % (source, k))
+                if rewrite:
+                    self._catalog_names[k].remove(source)
+                    print('%s: <source removed>' % k)
+                else:
+                    raise SourceAlreadyKnown('Source %s already registered to name %s' % (source, k))
         print('%s: %s' % (ref, source))
         self._catalog_names[ref].add(source)
 

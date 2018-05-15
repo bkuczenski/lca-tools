@@ -32,8 +32,10 @@ class TarjanBackground(LcArchive):
         """
         if self._flat is None:
             self._flat = FlatBackground.from_index(index)
-            self._add_name(index.origin, self.source)
+            self._add_name(index.origin, self.source, rewrite=True)
         return self._flat
 
-    def write_to_file(self, filename, gzip=False, complete=False, ref_suffix=None, **kwargs):
-        self._flat.write_to_file(filename, complete=complete)
+    def write_to_file(self, filename=None, gzip=False, complete=False, **kwargs):
+        if filename is None:
+            filename = self.source
+        self._flat.write_to_file(filename, complete=complete, **kwargs)

@@ -45,44 +45,44 @@ class TarjanBackgroundImplementation(BackgroundImplementation):
             yield ExteriorFlow(self.origin, f, ex.direction, c)
 
     def is_in_background(self, process, ref_flow=None, **kwargs):
-        ref_flow = self._ensure_ref_flow(ref_flow)
+        # ref_flow = self._ensure_ref_flow(ref_flow)
         return self._flat.is_in_background(process, ref_flow)
 
     def foreground(self, process, ref_flow=None, **kwargs):
-        ref_flow = self._ensure_ref_flow(ref_flow)
+        # ref_flow = self._ensure_ref_flow(ref_flow)
         for x in self._flat.foreground(process, ref_flow):
-            yield ExchangeValue(self[x.process], self[x.flow]. x.direction, termination=x.term, value=x.value)
+            yield ExchangeValue(self[x.process], self[x.flow], x.direction, termination=x.term, value=x.value)
 
     def _direct_exchanges(self, node, x_iter):
         for x in x_iter:
             yield ExchangeValue(node, self[x.flow], x.direction, termination=x.term, value=x.value)
 
     def dependencies(self, process, ref_flow=None, **kwargs):
-        ref_flow = self._ensure_ref_flow(ref_flow)
+        # ref_flow = self._ensure_ref_flow(ref_flow)
         node = self[process]
         for x in self._direct_exchanges(node, self._flat.dependencies(process, ref_flow)):
             yield x
 
     def emissions(self, process, ref_flow=None, **kwargs):
-        ref_flow = self._ensure_ref_flow(ref_flow)
+        # ref_flow = self._ensure_ref_flow(ref_flow)
         node = self[process]
         for x in self._direct_exchanges(node, self._flat.emissions(process, ref_flow)):
             yield x
 
     def ad(self, process, ref_flow=None, **kwargs):
-        ref_flow = self._ensure_ref_flow(ref_flow)
+        # ref_flow = self._ensure_ref_flow(ref_flow)
         node = self[process]
         for x in self._direct_exchanges(node, self._flat.ad(process, ref_flow)):
             yield x
 
     def bf(self, process, ref_flow=None, **kwargs):
-        ref_flow = self._ensure_ref_flow(ref_flow)
+        # ref_flow = self._ensure_ref_flow(ref_flow)
         node = self[process]
         for x in self._direct_exchanges(node, self._flat.bf(process, ref_flow)):
             yield x
 
     def lci(self, process, ref_flow=None, **kwargs):
-        ref_flow = self._ensure_ref_flow(ref_flow)
+        # ref_flow = self._ensure_ref_flow(ref_flow)
         node = self[process]
         for x in self._direct_exchanges(node, self._flat.lci(process, ref_flow)):
             yield x

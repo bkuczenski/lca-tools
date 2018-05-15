@@ -8,7 +8,7 @@ class TarjanBackgroundImplementation(BackgroundImplementation):
     basic implementation overrides
     """
     def __getitem__(self, item):
-        return self._index.__getitem__(item)
+        return self._index.get(item)
 
     def _fetch(self, external_ref, **kwargs):
         return self._index.get(external_ref, **kwargs)

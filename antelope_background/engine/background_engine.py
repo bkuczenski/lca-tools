@@ -603,7 +603,7 @@ class BackgroundEngine(object):
                 else:
                     no_alloc = True
 
-        if no_alloc:
+        if 0:  # no_alloc:
             if net_coproducts:
                 exchs = [x for x in parent.process.inventory(rx)]
                 cutoff_refs = True

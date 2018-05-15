@@ -324,8 +324,10 @@ class ExchangeValue(Exchange):
             # unallocated exchanges always read the same
             return self._value
         '''
-        if item.process.external_ref != self.process.external_ref:
-            raise KeyError('Reference exchange belongs to a different process')
+        try:
+            item = self.process.get_exchange(item.key)
+        except KeyError:
+            raise ExchangeError('Reference exchange belongs to a different process')
         # elif len(self.process.reference_entity) == 1:
         #    # no allocation necessary
         #    return self.value
@@ -365,7 +367,7 @@ class ExchangeValue(Exchange):
         :return:
         """
         if key.process.external_ref != self.process.external_ref:
-            raise KeyError('Reference exchange belongs to a different process')
+            raise ExchangeError('Reference exchange belongs to a different process')
         if not key.is_reference:
             raise AmbiguousReferenceError('Allocation key is not a reference exchange')
         if key in self._value_dict:

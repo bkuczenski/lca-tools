@@ -30,7 +30,6 @@ class ProductFlow(object):
         self._index = index
         self._flow = flow
         self._process = process
-        self._direction = None
 
         self._hash = (flow.external_ref, None)
 
@@ -43,6 +42,8 @@ class ProductFlow(object):
         self._inbound_ev = {'Input': -1.0,
                             'Output': 1.0}[ref_exch.direction]  # required to account for self-dependency
 
+        self._direction = ref_exch.direction
+        '''# I don't think this is doing anything
         if ref_exch.value is None:
             print('None RX found! assuming nominal direction\nflow: %s\nterm: %s' % (flow, process))
             self._direction = ref_exch.direction
@@ -50,6 +51,7 @@ class ProductFlow(object):
             self._direction = ref_exch.direction
         else:
             self._direction = comp_dir(ref_exch.direction)
+        '''
 
     def __eq__(self, other):
         """

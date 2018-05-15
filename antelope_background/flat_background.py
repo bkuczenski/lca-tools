@@ -7,6 +7,7 @@ from scipy.sparse.csr import csr_matrix
 from scipy.sparse.linalg import inv
 from scipy.sparse import eye
 from scipy.io import savemat, loadmat
+from scipy import array
 
 import os
 from collections import namedtuple
@@ -15,7 +16,46 @@ from .engine import BackgroundEngine
 from lcatools.exchanges import comp_dir
 
 
-TermRef = namedtuple('TermRef', ('flow_ref', 'direction', 'term_ref', 'scc_id'))
+class TermRef(object):
+    def __init__(self, flow_ref, direction, term_ref, scc_id=None):
+        self._f = flow_ref
+        self._d = {'Input': 0, 'Output': 1, 0: 0, 1: 1}[direction]
+        self._t = term_ref
+        self._s = 0
+        self.scc_id = scc_id
+
+    @property
+    def term_ref(self):
+        return self._t
+
+    @property
+    def flow_ref(self):
+        return self._f
+
+    @property
+    def direction(self):
+        return ('Input', 'Output')[self._d]
+
+    @property
+    def scc_id(self):
+        if self._s == 0:
+            return []
+        return int(self._s)
+
+    @scc_id.setter
+    def scc_id(self, item):
+        if item is None:
+            self._s = 0
+        else:
+            self._s = item
+
+    def __array__(self):
+        return self.flow_ref, self._d, self.term_ref, self._s
+
+    def to_array(self):
+        return array(self.__array__(), dtype='object')
+
+
 ExchDef = namedtuple('ExchDef', ('process', 'flow', 'direction', 'term', 'value'))
 
 
@@ -164,7 +204,17 @@ class FlatBackground(object):
             lci_db = (d['A'], d['B'])
         else:
             lci_db = None
-        return cls(d['foreground'], d['background'], d['exterior'], d['Af'], d['Ad'], d['Bf'],
+
+        def _unpack_term_ref(arr):
+            _xt = arr[3][0]
+            if len(_xt) == 1:
+                _xt = _xt[0]
+            return arr[0][0], arr[1][0][0], arr[2][0], _xt
+
+        return cls((_unpack_term_ref(f) for f in d['foreground']),
+                   (_unpack_term_ref(f) for f in d['background']),
+                   (_unpack_term_ref(f) for f in d['exterior']),
+                   d['Af'], d['Ad'], d['Bf'],
                    lci_db=lci_db,
                    quiet=quiet)
 
@@ -331,9 +381,9 @@ class FlatBackground(object):
             yield x
 
     def _write_mat(self, filename, complete=True):
-        d = {'foreground': self._fg,
-             'background': self._bg,
-             'exterior': self._ex,
+        d = {'foreground': [f.to_array() for f in self._fg],
+             'background': [f.to_array() for f in self._bg],
+             'exterior': [f.to_array() for f in self._ex],
              'Af': self._af,
              'Ad': self._ad,
              'Bf': self._bf}

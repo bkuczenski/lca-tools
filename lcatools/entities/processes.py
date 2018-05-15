@@ -265,6 +265,9 @@ class LcProcess(LcEntity):
                     continue
             yield x
 
+    def get_exchange(self, key):
+        return self._exchanges[key]
+
     def exchanges(self, flow=None, direction=None):
         for x in self._gen_exchanges(flow=flow, direction=direction):
             yield x.trim()

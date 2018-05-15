@@ -27,6 +27,11 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
         self._index = None
 
     def setup_bm(self, index=None):
+        """
+        Requires an index interface or catalog query <-- preferred
+        :param index:
+        :return:
+        """
         if self._index is None:
             if index is None:
                 self._index = self._archive.make_interface('index')

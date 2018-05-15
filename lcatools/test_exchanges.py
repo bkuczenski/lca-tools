@@ -3,7 +3,7 @@ import os
 
 from lcatools.from_json import from_json
 from lcatools.providers.lc_archive import LcArchive
-from lcatools.exchanges import AmbiguousReferenceError, DuplicateExchangeError
+from lcatools.exchanges import AmbiguousReferenceError, DuplicateExchangeError, ExchangeError
 
 
 refinery_archive = os.path.join(os.path.dirname(__file__), 'entities', 'tests', 'test_archive.json')
@@ -56,10 +56,10 @@ class ExchangesTest(unittest.TestCase):
         self.assertAlmostEqual(self.grid.reference().value, 3.6, places=6)
 
     def test_same_process(self):
-        with self.assertRaises(KeyError):
+        with self.assertRaises(ExchangeError):
             val = self.petro_nox[self.grid.reference()]
 
-        with self.assertRaises(KeyError):
+        with self.assertRaises(ExchangeError):
             self.petro_nox[self.grid.reference()] = 47
 
     def test_reference_exchange(self):

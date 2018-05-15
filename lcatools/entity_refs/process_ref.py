@@ -58,6 +58,9 @@ class ProcessRef(EntityRef):
         for x in self.reference_entity:
             if flow is None:
                 yield x
+            elif isinstance(flow, str):
+                if x.flow.external_ref == flow:
+                    yield x
             else:
                 if x.flow == flow:
                     yield x
@@ -68,8 +71,10 @@ class ProcessRef(EntityRef):
         :param rx:
         :return:
         """
-        if rx in self.reference_entity:
-            return rx.is_alloc
+        for _rx in self.reference_entity:
+            if _rx.key == rx.key:
+                return _rx.is_alloc
+        return False
 
     def _use_ref_exch(self, ref_flow):
         if ref_flow is None and self._default_rx is not None:

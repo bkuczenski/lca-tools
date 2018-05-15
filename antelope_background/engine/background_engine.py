@@ -13,9 +13,9 @@ import numpy as np
 import scipy as sp
 from scipy.sparse import csc_matrix, csr_matrix
 
-from lcatools.background.tarjan_stack import TarjanStack
-from lcatools.background.product_flow import ProductFlow, NoMatchingReference
-from lcatools.background.emission import Emission
+from .tarjan_stack import TarjanStack
+from .product_flow import ProductFlow, NoMatchingReference
+from .emission import Emission
 
 
 MAX_SAFE_RECURSION_LIMIT = 18000  # this should be validated using

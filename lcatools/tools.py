@@ -7,6 +7,8 @@ from __future__ import print_function, unicode_literals
 import os
 import re
 
+import importlib
+
 from collections import defaultdict, Counter
 
 from lcatools.from_json import from_json
@@ -108,8 +110,12 @@ def archive_factory(source, ds_type, **kwargs):
         return init_fcn(source, **kwargs)
 #        'foregroundarchive': ForegroundArchive.load,
 #        'foreground': ForegroundArchive.load
-    except KeyError as e:
-        raise ArchiveError('%s' % e)
+    except KeyError:
+        try:
+            mod = importlib.import_module(ds_type, package='antelope_%s' % ds_type.lower())
+        except ImportError as e:
+            raise ArchiveError(e)
+        return mod.init_fcn(source, **kwargs)
 
 
 def archive_from_json(fname, static=True, catalog=None, **archive_kwargs):

@@ -19,13 +19,10 @@ if six.PY2:
 
 class LcArchive(BasicArchive):
     """
-    A class meant for building life cycle models. This takes the archive machinery and adds functions
-    specific to processes, flows, and quantities. Creates an upstream lookup for quantities but no other entity types.
+    A class meant for storing and managing LCA data collections.  Adds processes as a supported entity type (contrast
+    with LcForeground which adds fragments).
 
-    Note: in lieu of having a @classmethod from_json, we have an archive factory that produces archives using the
-    appropriate constructor given the data type.  This is found in lcatools.tools and calls the base entity_from_json
-    method-- which itself should be offloaded to the entities wherever possible.
-
+    To support processes, adds inventory, background, and configure interfaces.
     """
     _entity_types = {'quantity', 'flow', 'process'}
 

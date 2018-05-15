@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from lcatools.background.product_flow import ProductFlow
+from .product_flow import ProductFlow
 
 
 class TarjanStack(object):
@@ -272,12 +272,15 @@ class TarjanStack(object):
     def sccs(self):
         return self._sccs.keys()
 
-    def nontrivial_fg_sccs(self):
+    def nontrivial_sccs(self):
         for k, s in self._sccs.items():
             if len(s) > 1:
-                if k == self._background or k in self._downstream:
-                    continue
                 yield k
+
+    def is_background_scc(self, k):
+        if k == self._background or k in self._downstream:
+            return True
+        return False
 
     def scc(self, index):
         return self._sccs[index]

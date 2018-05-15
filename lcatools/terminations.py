@@ -54,10 +54,10 @@ class FlowTermination(object):
     def from_json(cls, fragment, fg, scenario, j):
         if len(j) == 0:
             return cls.null(fragment)
-        if j['source'] == 'foreground':
+        origin = j.pop('source', None) or j.pop('origin')
+        if origin == 'foreground':
             origin = fg.ref
-        else:
-            origin = j['source']
+
         external_ref = j['externalId']
 
         # handle term flow
@@ -531,9 +531,8 @@ class FlowTermination(object):
     def serialize(self, save_unit_scores=False):
         if self.is_null:
             return {}
-        source = self._term.origin
         j = {
-            'source': source,
+            'origin': self._term.origin,
             'externalId': self._term.external_ref
         }
         if self.term_flow != self._parent.flow:

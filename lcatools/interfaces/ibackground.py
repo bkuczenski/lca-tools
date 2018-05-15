@@ -1,3 +1,25 @@
+"""
+The Background interface is a hybrid interface that can be produced from the combination of  a complete index and
+inventory interface for a self-contained database (terminate() and inventory() are required, and the resulting matrix
+must be invertible)
+
+The default implementation is a dumb proxy, for use when archives provide LCI information over an inventory interface.
+ Here the proxy just 'masquerades' the contents to answer background instead of inventory queries.  Though it does not
+ thrown an error, it is a conceptual violation for one data source to supply both inventory and background interfaces
+ using the proxy implementation.
+
+The LcBackground class, added with the antelope_lcbackground plugin, provides an engine that partially orders the
+datasets in an ecoinvent-style unit process database and stores the results in a static set of scipy sparse arrays, in
+a manner consistent with the JIE disclosure paper (augmented with the full LCIDB).
+
+The (as yet hypothetical) antelope_brightway2 plugin can provide index, inventory, and background data for a bw2
+database.
+
+More plugins are yet imagined.
+"""
+
+from collections import namedtuple
+
 from .abstract_query import AbstractQuery
 
 
@@ -62,7 +84,7 @@ class BackgroundInterface(AbstractQuery):
         :return:
         """
         for i in self.exterior_flows(direction=direction, search=search, **kwargs):
-            if not self.is_elementary(i):
+            if i.termination is None:
                 yield i
 
     def dependencies(self, process, ref_flow=None, **kwargs):

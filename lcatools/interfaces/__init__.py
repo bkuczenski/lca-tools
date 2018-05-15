@@ -8,6 +8,11 @@ from .iquantity import QuantityInterface
 from .iforeground import ForegroundInterface, ForegroundRequired
 
 import re
+from collections import namedtuple
+
+
+ExteriorFlow = namedtuple('ExteriorFlow', ('origin', 'flow', 'direction', 'termination'))
+ProductFlow = namedtuple('ProductFlow', ('origin', 'flow', 'direction', 'termination', 'component_id'))
 
 
 def trim_cas(cas):

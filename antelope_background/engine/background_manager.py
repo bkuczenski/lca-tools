@@ -1,4 +1,4 @@
-from lcatools.background.background import BackgroundEngine
+from .background_engine import BackgroundEngine
 from lcatools.exchanges import ExchangeValue, comp_dir
 
 
@@ -154,7 +154,7 @@ class BackgroundManager(object):
                     continue
                 dat = dep.value
                 dirn = 'Output' if dat < 0 else 'Input'
-                yield ExchangeValue(dep.parent.process, dep.term.flow, dirn, value=dat,
+                yield ExchangeValue(dep.parent.process, dep.term.flow, dirn, value=abs(dat),
                                     termination=dep.term.process.external_ref)
 
     def emissions(self, process, ref_flow=None):

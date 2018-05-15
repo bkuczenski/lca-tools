@@ -1,5 +1,5 @@
 from .basic import BasicImplementation
-from .background import BackgroundImplementation
+from .background import BackgroundImplementation, search_skip
 from .configure import ConfigureImplementation
 from .foreground import ForegroundImplementation
 from .index import IndexImplementation

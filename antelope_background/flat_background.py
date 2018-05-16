@@ -455,9 +455,9 @@ class FlatBackground(object):
         d = {'foreground': [f.to_array() for f in self._fg],
              'background': [f.to_array() for f in self._bg],
              'exterior': [f.to_array() for f in self._ex],
-             'Af': [] if self._af is None else self._af,
-             'Ad': [] if self._ad is None else self._ad,
-             'Bf': [] if self._bf is None else self._bf}
+             'Af': csr_matrix((0, 0)) if self._af is None else self._af,
+             'Ad': csr_matrix((0, 0)) if self._ad is None else self._ad,
+             'Bf': csr_matrix((0, 0)) if self._bf is None else self._bf}
         if complete and self._complete:
             d['A'] = self._A
             d['B'] = self._B

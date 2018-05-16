@@ -16,6 +16,10 @@ from .engine import BackgroundEngine
 from lcatools.exchanges import comp_dir
 
 
+class NoLciDatabase(Exception):
+    pass
+
+
 class TermRef(object):
     def __init__(self, flow_ref, direction, term_ref, scc_id=None):
         self._f = flow_ref
@@ -40,7 +44,7 @@ class TermRef(object):
     def scc_id(self):
         if self._s == 0:
             return []
-        return int(self._s)
+        return self._s
 
     @scc_id.setter
     def scc_id(self, item):
@@ -51,6 +55,9 @@ class TermRef(object):
 
     def __array__(self):
         return self.flow_ref, self._d, self.term_ref, self._s
+
+    def __iter__(self):
+        return iter(self.__array__())
 
     def to_array(self):
         return array(self.__array__(), dtype='object')
@@ -230,9 +237,9 @@ class FlatBackground(object):
         :param lci_db: [None] optional (A, B) 2-tuple
         :param quiet: [True] does nothing for now
         """
-        self._fg = [TermRef(*f) for f in foreground]
-        self._bg = [TermRef(*x) for x in background]
-        self._ex = [TermRef(*x) for x in exterior]
+        self._fg = tuple([TermRef(*f) for f in foreground])
+        self._bg = tuple([TermRef(*x) for x in background])
+        self._ex = tuple([TermRef(*x) for x in exterior])
 
         self._af = af
         self._ad = ad
@@ -250,6 +257,21 @@ class FlatBackground(object):
         self._ex_index = {(k.term_ref, k.flow_ref): i for i, k in enumerate(self._ex)}
 
         self._quiet = quiet
+
+    def index_of(self, term_ref, flow_ref):
+        key = (term_ref, flow_ref)
+        if key in self._fg_index:
+            return self._fg_index[key]
+        elif key in self._bg_index:
+            return self._bg_index[key]
+        elif key in self._ex_index:
+            return self._ex_index[key]
+        else:
+            raise KeyError('Unknown termination %s, %s' % key)
+
+    @property
+    def _complete(self):
+        return self._A is not None and self._B is not None
 
     @property
     def ndim(self):
@@ -362,17 +384,20 @@ class FlatBackground(object):
 
     def _compute_lci(self, process, ref_flow, **kwargs):
         if self.is_in_background(process, ref_flow):
+            if not self._complete:
+                raise NoLciDatabase
             ad = _unit_column_vector(self.ndim, self._bg_index[process, ref_flow])
-            bx = _iterate_a_matrix(self._A, ad, **kwargs)
+            bx = self._B.dot(_iterate_a_matrix(self._A, ad, **kwargs))
             return bx
         else:
             x_tilde = self._x_tilde(process, ref_flow, **kwargs)
             ad_tilde = self._ad.dot(x_tilde)
-            bx = self._A.dot(ad_tilde)
             bf_tilde = self._bf.dot(x_tilde)
-            if bx is None:
+            if self._complete:
+                bx = self._B.dot(self._A.dot(ad_tilde))
+                return bx + bf_tilde
+            else:
                 return bf_tilde
-            return bx + bf_tilde
 
     def lci(self, process, ref_flow, **kwargs):
         for x in self._generate_exch_defs(process,
@@ -384,10 +409,10 @@ class FlatBackground(object):
         d = {'foreground': [f.to_array() for f in self._fg],
              'background': [f.to_array() for f in self._bg],
              'exterior': [f.to_array() for f in self._ex],
-             'Af': self._af,
-             'Ad': self._ad,
-             'Bf': self._bf}
-        if complete:
+             'Af': self._af or [],
+             'Ad': self._ad or [],
+             'Bf': self._bf or []}
+        if complete and self._complete:
             d['A'] = self._A
             d['B'] = self._B
         savemat(filename, d)

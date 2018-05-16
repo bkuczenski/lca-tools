@@ -149,9 +149,9 @@ class BackgroundManager(object):
                 yield em
 
         else:
-            for dep in self._be.foreground_dependencies(pf):  # dep isa MatrixEntry
-                if not self.is_in_background(dep.term.process, dep.term.flow):
-                    continue
+            deps = [dep for dep in self._be.foreground_dependencies(pf)  # dep isa MatrixEntry
+                    if self.is_in_background(dep.term.process, dep.term.flow)]
+            for dep in sorted(deps, key=lambda x: self._be.tstack.bg_dict(x.term.index)):
                 dat = dep.value
                 dirn = 'Output' if dat < 0 else 'Input'
                 yield ExchangeValue(dep.parent.process, dep.term.flow, dirn, value=abs(dat),

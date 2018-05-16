@@ -49,6 +49,7 @@ class ProcessRefTest(unittest.TestCase):
         rx2 = p_ref.reference(cat.query(test_ref).get(blast_furnace_gas))
         self.assertIs(rx1, rx2)
 
+    '''
     def test_p_ref_is_allocated(self):
         """
         is_allocated should go away
@@ -59,6 +60,7 @@ class ProcessRefTest(unittest.TestCase):
         for rxref in p_ref.reference_entity:
             rx = self._get_matching_ref(rxref, p)
             self.assertEqual(p_ref.is_allocated(rx), p_ref.is_allocated(rxref))
+    '''
 
 
 if __name__ == '__main__':

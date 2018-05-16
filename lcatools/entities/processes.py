@@ -40,15 +40,15 @@ class RxRef(object):
     A placeholder object to store reference exchange info for process_refs.  It can be modified to interoperate in
     places where exchanges are expected, e.g by having equivalent equality tests, hashes, etc., as needed.
     """
-    def __init__(self, process, flow, direction, value=1.0):
+    def __init__(self, process, flow, direction):
         self._origin = process.origin
         self._process = process
         self._flow_ref = flow
         self._direction = direction
-        self._value = value
+        # self._value = value
         # self._hash_tuple = (process.uuid, flow.external_ref, direction, None)
         self._hash = hash((process.uuid, flow.external_ref, direction, None))
-        self._is_alloc = process.is_allocated(self)
+        # self._is_alloc = process.is_allocated(self)
 
     @property
     def process(self):
@@ -62,10 +62,12 @@ class RxRef(object):
     def direction(self):
         return self._direction
 
+    '''
     @property
     def value(self):
         # print('ACCESSING RxRef VALUE')  # need to be cautious about when / why this is used
         return self._value
+    '''
 
     @property
     def termination(self):
@@ -75,19 +77,23 @@ class RxRef(object):
     def is_reference(self):
         return True
 
+    '''
     @property
     def value_string(self):
         if self._value is None:
             return ' --- '
         return '%.3g' % self._value
+    '''
 
     @property
     def entity_type(self):
         return 'exchange'
 
+    '''
     @property
     def is_alloc(self):
         return self._is_alloc
+    '''
 
     @property
     def key(self):
@@ -111,7 +117,7 @@ class RxRef(object):
 
     def __str__(self):
         ref = '(*)'
-        return '%6.6s: %s [%s %s] %s' % (self.direction, ref, self.value_string, self.flow.unit(), self.flow)
+        return '%6.6s: %s [--- %s] %s' % (self.direction, ref, self.flow.unit(), self.flow)
 
 
 class LcProcess(LcEntity):
@@ -161,7 +167,7 @@ class LcProcess(LcEntity):
             self._d['Classifications'] = []
 
     def _make_ref_ref(self, query):
-        return [RxRef(self, x.flow.make_ref(query), x.direction, value=x.value) for x in self.references()]
+        return [RxRef(self, x.flow.make_ref(query), x.direction) for x in self.references()]
 
     def __str__(self):
         return '%s [%s]' % (self._d['Name'], self._d['SpatialScope'])
@@ -404,6 +410,11 @@ class LcProcess(LcEntity):
 
     def reference(self, flow=None):
         return self.find_reference(flow)
+
+    ''' # don't think I want this
+    def reference_value(self, flow=None):
+        return self.get_exchange(self.find_reference(flow).key).value
+    '''
 
     def has_reference(self, flow=None):
         try:

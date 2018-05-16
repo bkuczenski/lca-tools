@@ -22,6 +22,13 @@ class NoLciDatabase(Exception):
 
 class TermRef(object):
     def __init__(self, flow_ref, direction, term_ref, scc_id=None):
+        """
+
+        :param flow_ref:
+        :param direction: direction w.r.t. term
+        :param term_ref:
+        :param scc_id: None or 0 for singleton /emission; external_ref of a contained process for SCC
+        """
         self._f = flow_ref
         self._d = {'Input': 0, 'Output': 1, 0: 0, 1: 1}[direction]
         self._t = term_ref
@@ -181,7 +188,7 @@ class FlatBackground(object):
             return pf.flow.external_ref, pf.direction, pf.process.external_ref, _scc_id
 
         def _make_term_ext(em):
-            return em.flow.external_ref, em.direction, em.compartment[-1], 0
+            return em.flow.external_ref, comp_dir(em.direction), em.compartment[-1], 0
 
         return cls([_make_term_ref(x) for x in be.foreground_flows(outputs=False)],
                    [_make_term_ref(x) for x in be.background_flows()],
@@ -296,15 +303,30 @@ class FlatBackground(object):
     def is_in_background(self, process, ref_flow):
         return (process, ref_flow) in self._bg_index
 
-    def foreground(self, process, ref_flow):
+    def foreground(self, process, ref_flow, traverse=False):
         """
-        Most of the way toward making exchanges. yields a sequence of 5-tuples defining
+        Most of the way toward making exchanges. yields a sequence of 5-tuples defining terminated exchanges.
+
+        NOTE: traverse=True differs from the prior implementation because the old BackgroundEngine returned an Af
+        matrix and the foreground routine generated one exchange per matrix entry.
+
+        In contrast, the current implementation traverses the foreground and creates one exchange per traversal link.
+        If a fragment references the same subfragment multiple times, this will result in redundant entries for the
+        same fragment.  At the moment this is by design but it may be undesirable.
+
+        An easy solution would be to keep a log of nonzero Af indices and 'continue' if one is encountered.
         :param process:
         :param ref_flow:
+        :param traverse: [False] if True, generate one exchange for every traversal link. Default is to create one
+        exchange for every matrix entry.  traverse=True will produce duplicate exchanges in cases where sub-fragments
+        are traversed multiple times.
         :return:
         """
         index = self._fg_index[process, ref_flow]
         yield ExchDef(process, ref_flow, self._fg[index].direction, None, 1.0)
+
+        cols_seen = set()
+        cols_seen.add(index)
 
         q = [index]
         while len(q) > 0:
@@ -315,7 +337,12 @@ class FlatBackground(object):
             for i in range(len(rows)):
                 assert cols[i] == 0  # 1-column slice
                 assert rows[i] > current  # well-ordered and flattened
-                q.append(rows[i])
+                if rows[i] in cols_seen:
+                    if traverse:
+                        q.append(rows[i])  # allow fragment to be traversed multiple times
+                else:
+                    cols_seen.add(rows[i])
+                    q.append(rows[i])
                 term = self._fg[rows[i]]
                 dat = fg_deps.data[i]
                 if dat < 0:

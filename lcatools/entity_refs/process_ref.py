@@ -49,10 +49,18 @@ class ProcessRef(EntityRef):
             print('Not a valid reference exchange specification')
 
     def reference(self, flow=None):
+        """
+        This used to fallback to regular exchanges; no longer.
+        :param flow:
+        :return:
+        """
+        '''
         try:
             return next(x for x in self.references(flow=flow))
         except StopIteration:
             return next(x for x in self.exchange_values(flow=flow))
+        '''
+        return next(x for x in self.references(flow=flow))
 
     def references(self, flow=None):
         for x in self.reference_entity:
@@ -65,6 +73,7 @@ class ProcessRef(EntityRef):
                 if x.flow == flow:
                     yield x
 
+    '''
     def is_allocated(self, rx):
         """
         For process refs, assume
@@ -75,6 +84,7 @@ class ProcessRef(EntityRef):
             if _rx.key == rx.key:
                 return _rx.is_alloc
         return False
+    '''
 
     def _use_ref_exch(self, ref_flow):
         if ref_flow is None and self._default_rx is not None:
@@ -104,6 +114,13 @@ class ProcessRef(EntityRef):
     def fg_lcia(self, lcia_qty, ref_flow=None, **kwargs):
         ref_flow = self._use_ref_exch(ref_flow)
         return self._query.lcia(self.external_ref, ref_flow, lcia_qty, **kwargs)
+
+    '''
+    support process
+    '''
+    def reference_value(self, flow):
+        rx = self.reference(flow)
+        return sum(self.exchange_values(rx.flow, direction=rx.direction))
 
     '''
     Background queries

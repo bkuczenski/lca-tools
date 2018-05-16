@@ -40,7 +40,7 @@ class TarjanBackgroundImplementation(BackgroundImplementation):
 
     def exterior_flows(self, search=None, **kwargs):
         for ex in self._flat.ex:
-            c = self[ex.term_ref]
+            c = ex.term_ref
             f = self[ex.flow_ref]
             yield ExteriorFlow(self.origin, f, ex.direction, c)
 

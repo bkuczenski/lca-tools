@@ -594,14 +594,7 @@ class BackgroundEngine(object):
         :return:
         """
         rx = parent.process.reference(parent.flow)
-        no_alloc = False
         cutoff_refs = False
-        if len(parent.process.reference_entity) > 1:
-            if not parent.process.is_allocated(rx):
-                if default_allocation is not None:
-                    parent.process.allocate_by_quantity(default_allocation)
-                else:
-                    no_alloc = True
 
         if 0:  # no_alloc:
             if net_coproducts:

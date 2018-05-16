@@ -92,7 +92,7 @@ def _iterate_a_matrix(a, y, threshold=1e-8, count=100):
 
 
 def _unit_column_vector(dim, inx):
-    return csr_matrix((1, (inx, 0)), shape=(dim, 1))
+    return csr_matrix(((1,), ((inx,), (0,))), shape=(dim, 1))
 
 
 def split_af(_af, _inds):
@@ -382,19 +382,22 @@ class FlatBackground(object):
             for x in self._generate_exch_defs(process, bf_tilde, self._ex):
                 yield x
 
+    def _compute_bg_lci(self, ad, **kwargs):
+        return self._B.dot(_iterate_a_matrix(self._A, ad, **kwargs))
+
     def _compute_lci(self, process, ref_flow, **kwargs):
         if self.is_in_background(process, ref_flow):
             if not self._complete:
                 raise NoLciDatabase
             ad = _unit_column_vector(self.ndim, self._bg_index[process, ref_flow])
-            bx = self._B.dot(_iterate_a_matrix(self._A, ad, **kwargs))
+            bx = self._compute_bg_lci(ad, **kwargs)
             return bx
         else:
             x_tilde = self._x_tilde(process, ref_flow, **kwargs)
             ad_tilde = self._ad.dot(x_tilde)
             bf_tilde = self._bf.dot(x_tilde)
             if self._complete:
-                bx = self._B.dot(self._A.dot(ad_tilde))
+                bx = self._compute_bg_lci(ad_tilde, **kwargs)
                 return bx + bf_tilde
             else:
                 return bf_tilde

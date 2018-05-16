@@ -235,7 +235,9 @@ class BackgroundManager(object):
         :return: list of exchanges.
         """
         product_flow = self._get_product_flow(process, ref_flow)
-        in_ex = process.reference(ref_flow).value  # LCI values get normalized by inbound exchange-- we must de-norm
+        in_ex = sum(x.value for x in product_flow.process.exchange_values(product_flow.flow,
+                                                                          direction=product_flow.direction))
+        # in_ex = process.reference(ref_flow).value  # LCI values get normalized by inbound exchange-- we must de-norm
         b = self._be.compute_lci(product_flow, **kwargs)  # comes back as a sparse vector
         for i, em in enumerate(self._be.emissions):
             if b[i, 0] != 0:

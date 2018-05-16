@@ -8,7 +8,6 @@ be skipped.
 """
 
 import os
-import sys
 import unittest
 import random
 
@@ -20,22 +19,25 @@ from lcatools.catalog import LcCatalog
 from lcatools.entities import LcProcess
 from lcatools.tools import archive_from_json
 
-from lcatools.data_sources.local import CATALOG_ROOT
+from lcatools.interfaces import EntityNotFound
+
+from lcatools.data_sources.local import CATALOG_ROOT, run_ecoinvent
 from lcatools.providers.lc_archive import LcArchive
 
-
-cat = LcCatalog(CATALOG_ROOT)
-if '-lci' in sys.argv:
-    _run_ecoinvent = True
-    cat = LcCatalog(CATALOG_ROOT)
-else:
-    _run_ecoinvent = False
-    # cat = None
-
-
+EcoinventNode = namedtuple('EcoinventNode', ['version', 'model', 'node'])
 _debug = True
 
-EcoinventNode = namedtuple('EcoinventNode', ['version', 'model', 'node'])
+
+if __name__ == '__main__':
+    _run_ecoinvent = run_ecoinvent
+else:
+    _run_ecoinvent = run_ecoinvent or _debug
+
+
+if _run_ecoinvent:
+    cat = LcCatalog(CATALOG_ROOT)
+else:
+    cat = None
 
 
 def lci_cache_file(version, model):
@@ -76,13 +78,20 @@ def _extract_and_reduce_lci(node):
     if ref not in cat.references:
         cat.add_existing_archive(a, interfaces='inventory', static=True)
 
-    if cat.query(ref).get(node.node) is not None:
+    try:
+        cat.query(ref).get(node.node)
         return
+    except EntityNotFound:
+        pass
+
+    cat.get_resource(ref, 'inventory').remove_archive()
 
     lci_ref = find_lci_ref(node.version, node.model)
     if lci_ref is None:
         print('No LCI resource for (%s, %s)' % (node.version, node.model))
         return
+
+    print('WARNING: extracting and reducing LCI data can be very slow >60s per file')
 
     p_ref = cat.query(lci_ref).get(node.node)
 
@@ -107,7 +116,7 @@ def _extract_and_reduce_lci(node):
 class EcoinventLciTest(unittest.TestCase):
     _nodes = {
         EcoinventNode('3.2', 'apos', '18085d22-72d0-4588-9c69-7dbeb24f8e2f'),
-        EcoinventNode('3.2', 'conseq', None)
+        EcoinventNode('3.2', 'conseq', '6b0f32fe-329d-4c1f-9205-0ea78f4f42e5')
     }
 
     @classmethod
@@ -125,8 +134,11 @@ class EcoinventLciTest(unittest.TestCase):
                     continue
                 ref = test_ref(node.version, node.model)
                 if ref in cat.references:
-                    if cat.query(ref).get(node.node) is not None:
-                        continue
+                    try:
+                        cat.query(ref).get(node.node)
+                    except EntityNotFound:
+                        _extract_and_reduce_lci(node)
+                    continue
                 # if ref is not in cat, or if node is not present, then we need to populate node
                 _extract_and_reduce_lci(node)
 
@@ -137,28 +149,31 @@ class EcoinventLciTest(unittest.TestCase):
     def test_lci(self):
         for node in self.nodes():
             lci_result = cat.query(test_ref(node.version, node.model)).get(node.node)
-            challenge = cat.query('local.ecoinvent.%s.%s' % (node.version, node.model), debug=_debug).get(node.node)
+            rx = lci_result.reference()
+            challenge = cat.query('local.ecoinvent.%s.%s' % (node.version, node.model)).get(node.node)
 
-            c_lci = challenge.lci(ref_flow=lci_result.reference().flow.external_ref)
+            c_lci = challenge.lci(ref_flow=rx.flow.external_ref, threshold=1e-10)
             lci_check = {x.key: x for x in c_lci}
 
             count = 0
             inverted = []
             fail = []
 
-            for i in lci_result.inventory():
+            for i in lci_result.inventory(rx):
                 count += 1
                 z = lci_check[i.key]
-                if isclose(i.value, z.value):
+                if isclose(i.value, z.value, rel_tol=1e-6):
                     continue
-                elif isclose(i.value, -z.value):
+                elif isclose(i.value, -z.value, rel_tol=1e-6):
                     inverted.append(i)
                 else:
                     fail.append(i)
+                    print('Not close! %s\nInv: %12g Chk: %12g ratio: %.10f\n' % (i.flow, i.value, z.value,
+                                                                                 i.value / z.value))
+            self.assertEqual(len(fail), 0)
+            self.assertEqual(len(inverted), 0)
 
             print('Total %d, inverted %d, fail %d' % (count, len(inverted), len(fail)))
-
-
 
 """
         for v, m in ec.valid_lci():
@@ -171,32 +186,27 @@ class EcoinventLciTest(unittest.TestCase):
 
 
 
-true_dirn = [_x for _x in bm.foreground(my_p)][0].direction
-if my_p.reference().direction != true_dirn:
-    mult = -1
-else:
-    mult = 1
+        true_dirn = [_x for _x in bm.foreground(my_p)][0].direction
+        if my_p.reference().direction != true_dirn:
+            mult = -1
+        else:
+            mult = 1
 
-fail = []
-for i in lci:
-    try:
-        ic = inv_check_d[i.key]
-    except KeyError:
-        continue
-    if not isclose(i.value, mult*ic.value, rel_tol=1e-7):
-        print('Not close! %s\nInv: %12g Chk: %12g ratio: %.10f\n' % (i.flow, i.value, ic.value, i.value / ic.value))
-        fail.append(i)
-print('Failed: %d' % len(fail))
+        fail = []
+        for i in lci:
+            try:
+                ic = inv_check_d[i.key]
+            except KeyError:
+                continue
+            if not isclose(i.value, mult*ic.value, rel_tol=1e-7):
+                print('Not close! %s\nInv: %12g Chk: %12g ratio: %.10f\n' % (i.flow, i.value, ic.value, 
+                                                                             i.value / ic.value))
+                fail.append(i)
+        
+        print('Failed: %d' % len(fail))
 
 
 """
-
-
-
-
-
-
-
 
 if __name__ == '__main__':
     unittest.main()

@@ -120,7 +120,7 @@ class ProcessRef(EntityRef):
     '''
     def reference_value(self, flow):
         rx = self.reference(flow)
-        return sum(self.exchange_values(rx.flow, direction=rx.direction))
+        return sum(x.value for x in self.exchange_values(rx.flow, direction=rx.direction))
 
     '''
     Background queries

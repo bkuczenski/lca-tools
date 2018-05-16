@@ -228,7 +228,7 @@ class FlatBackground(object):
         return cls((_unpack_term_ref(f) for f in d['foreground']),
                    (_unpack_term_ref(f) for f in d['background']),
                    (_unpack_term_ref(f) for f in d['exterior']),
-                   d['Af'], d['Ad'], d['Bf'],
+                   d['Af'].tocsr(), d['Ad'].tocsr(), d['Bf'].tocsr(),
                    lci_db=lci_db,
                    quiet=quiet)
 
@@ -256,8 +256,8 @@ class FlatBackground(object):
             self._A = None
             self._B = None
         else:
-            self._A = lci_db[0]
-            self._B = lci_db[1]
+            self._A = lci_db[0].tocsr()
+            self._B = lci_db[1].tocsr()
 
         self._fg_index = {(k.term_ref, k.flow_ref): i for i, k in enumerate(self._fg)}
         self._bg_index = {(k.term_ref, k.flow_ref): i for i, k in enumerate(self._bg)}
@@ -365,6 +365,22 @@ class FlatBackground(object):
                 dirn = comp_dir(term.direction)
             yield ExchDef(node_ref, term.flow_ref, dirn, term.term_ref, dat)
 
+    @staticmethod
+    def _generate_em_defs(node_ref, data_vec, enumeration):
+        """
+        Emissions have a natural direction which should not be changed.
+        :param node_ref:
+        :param data_vec:
+        :param enumeration:
+        :return:
+        """
+        rows, cols = data_vec.nonzero()
+        for i in range(len(rows)):
+            term = enumeration[rows[i]]
+            dat = data_vec.data[i]
+            dirn = comp_dir(term.direction)
+            yield ExchDef(node_ref, term.flow_ref, dirn, term.term_ref, dat)
+
     def dependencies(self, process, ref_flow):
         if self.is_in_background(process, ref_flow):
             index = self._bg_index[process, ref_flow]
@@ -384,7 +400,7 @@ class FlatBackground(object):
             index = self._fg_index[process, ref_flow]
             ems = self._bf[:, index]
 
-        for x in self._generate_exch_defs(process, ems, self._ex):
+        for x in self._generate_em_defs(process, ems, self._ex):
             yield x
 
     def _x_tilde(self, process, ref_flow, **kwargs):
@@ -406,7 +422,7 @@ class FlatBackground(object):
                 yield x
         else:
             bf_tilde = self._bf.dot(self._x_tilde(process, ref_flow, **kwargs))
-            for x in self._generate_exch_defs(process, bf_tilde, self._ex):
+            for x in self._generate_em_defs(process, bf_tilde, self._ex):
                 yield x
 
     def _compute_bg_lci(self, ad, **kwargs):
@@ -430,18 +446,18 @@ class FlatBackground(object):
                 return bf_tilde
 
     def lci(self, process, ref_flow, **kwargs):
-        for x in self._generate_exch_defs(process,
-                                          self._compute_lci(process, ref_flow, **kwargs),
-                                          self._ex):
+        for x in self._generate_em_defs(process,
+                                        self._compute_lci(process, ref_flow, **kwargs),
+                                        self._ex):
             yield x
 
     def _write_mat(self, filename, complete=True):
         d = {'foreground': [f.to_array() for f in self._fg],
              'background': [f.to_array() for f in self._bg],
              'exterior': [f.to_array() for f in self._ex],
-             'Af': self._af or [],
-             'Ad': self._ad or [],
-             'Bf': self._bf or []}
+             'Af': [] if self._af is None else self._af,
+             'Ad': [] if self._ad is None else self._ad,
+             'Bf': [] if self._bf is None else self._bf}
         if complete and self._complete:
             d['A'] = self._A
             d['B'] = self._B

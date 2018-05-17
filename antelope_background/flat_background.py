@@ -7,13 +7,13 @@ from scipy.sparse.csr import csr_matrix
 from scipy.sparse.linalg import inv
 from scipy.sparse import eye
 from scipy.io import savemat, loadmat
-from scipy import array
 
 import os
 from collections import namedtuple
 
 from .engine import BackgroundEngine
 from lcatools.exchanges import comp_dir
+from lcatools.from_json import from_json, to_json
 
 
 class NoLciDatabase(Exception):
@@ -66,14 +66,11 @@ class TermRef(object):
     def __iter__(self):
         return iter(self.__array__())
 
-    def to_array(self):
-        return array(self.__array__(), dtype='object')
-
 
 ExchDef = namedtuple('ExchDef', ('process', 'flow', 'direction', 'term', 'value'))
 
 
-def _iterate_a_matrix(a, y, threshold=1e-8, count=100):
+def _iterate_a_matrix(a, y, threshold=1e-8, count=100, quiet=False):
     y = csr_matrix(y)  # tested this with ecoinvent: convert to sparse: 280 ms; keep full: 4.5 sec
     total = csr_matrix(y.shape)
     if a is None:
@@ -87,13 +84,15 @@ def _iterate_a_matrix(a, y, threshold=1e-8, count=100):
         y = a.dot(y)
         inc = sum(abs(y).data)
         if inc == 0:
-            print('exact result')
+            if not quiet:
+                print('exact result')
             break
         sumtotal += inc
         if inc / sumtotal < threshold:
             break
         mycount += 1
-    print('completed %d iterations' % mycount)
+    if not quiet:
+        print('completed %d iterations' % mycount)
 
     return total
 
@@ -215,19 +214,27 @@ class FlatBackground(object):
     def from_matfile(cls, file, quiet=True):
         d = loadmat(file)
         if 'A' in d:
-            lci_db = (d['A'], d['B'])
+            lci_db = (d['A'].tocsr(), d['B'].tocsr())
         else:
             lci_db = None
 
+        ix = from_json(file + '.index.json.gz')
+
+        '''
         def _unpack_term_ref(arr):
             _xt = arr[3][0]
             if len(_xt) == 1:
                 _xt = _xt[0]
             return arr[0][0], arr[1][0][0], arr[2][0], _xt
-
+        
         return cls((_unpack_term_ref(f) for f in d['foreground']),
                    (_unpack_term_ref(f) for f in d['background']),
                    (_unpack_term_ref(f) for f in d['exterior']),
+                   d['Af'].tocsr(), d['Ad'].tocsr(), d['Bf'].tocsr(),
+                   lci_db=lci_db,
+                   quiet=quiet)
+        '''
+        return cls(ix['foreground'], ix['background'], ix['exterior'],
                    d['Af'].tocsr(), d['Ad'].tocsr(), d['Bf'].tocsr(),
                    lci_db=lci_db,
                    quiet=quiet)
@@ -403,9 +410,9 @@ class FlatBackground(object):
         for x in self._generate_em_defs(process, ems, self._ex):
             yield x
 
-    def _x_tilde(self, process, ref_flow, **kwargs):
+    def _x_tilde(self, process, ref_flow, quiet=True, **kwargs):
         index = self._fg_index[process, ref_flow]
-        return _iterate_a_matrix(self._af, _unit_column_vector(self.pdim, index), **kwargs)
+        return _iterate_a_matrix(self._af, _unit_column_vector(self.pdim, index), quiet=quiet, **kwargs)
 
     def ad(self, process, ref_flow, **kwargs):
         if self.is_in_background(process, ref_flow):
@@ -452,16 +459,17 @@ class FlatBackground(object):
             yield x
 
     def _write_mat(self, filename, complete=True):
-        d = {'foreground': [f.to_array() for f in self._fg],
-             'background': [f.to_array() for f in self._bg],
-             'exterior': [f.to_array() for f in self._ex],
-             'Af': csr_matrix((0, 0)) if self._af is None else self._af,
+        d = {'Af': csr_matrix((0, 0)) if self._af is None else self._af,
              'Ad': csr_matrix((0, 0)) if self._ad is None else self._ad,
              'Bf': csr_matrix((0, 0)) if self._bf is None else self._bf}
         if complete and self._complete:
             d['A'] = self._A
             d['B'] = self._B
         savemat(filename, d)
+        ix = {'foreground': [tuple(f) for f in self._fg],
+              'background': [tuple(f) for f in self._bg],
+              'exterior': [tuple(f) for f in self._ex]}
+        to_json(ix, filename + '.index.json.gz', gzip=True)
 
     def write_to_file(self, filename, complete=True, filetype=None):
         if filetype is None:

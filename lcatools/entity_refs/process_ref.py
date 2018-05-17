@@ -118,7 +118,7 @@ class ProcessRef(EntityRef):
     '''
     support process
     '''
-    def reference_value(self, flow):
+    def reference_value(self, flow=None):
         rx = self.reference(flow)
         return sum(x.value for x in self.exchange_values(rx.flow, direction=rx.direction))
 

@@ -2,7 +2,7 @@ import unittest
 import os
 from tempfile import TemporaryDirectory
 
-from antelope_background.flat_background import FlatBackground, TermRef
+from antelope_background.background import FlatBackground, TermRef
 
 #  flow_ref, direction, term_ref, scc
 term_test = (('an_arbitrary_external_ref', 0, 'a_different_ref', None),

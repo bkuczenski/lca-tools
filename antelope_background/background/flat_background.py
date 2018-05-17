@@ -11,7 +11,7 @@ from scipy.io import savemat, loadmat
 import os
 from collections import namedtuple
 
-from .engine import BackgroundEngine
+from antelope_background.engine import BackgroundEngine
 from lcatools.exchanges import comp_dir
 from lcatools.from_json import from_json, to_json
 
@@ -458,6 +458,12 @@ class FlatBackground(object):
                                         self._ex):
             yield x
 
+    def _write_index(self, ix_filename):
+        ix = {'foreground': [tuple(f) for f in self._fg],
+              'background': [tuple(f) for f in self._bg],
+              'exterior': [tuple(f) for f in self._ex]}
+        to_json(ix, ix_filename, gzip=True)
+
     def _write_mat(self, filename, complete=True):
         d = {'Af': csr_matrix((0, 0)) if self._af is None else self._af,
              'Ad': csr_matrix((0, 0)) if self._ad is None else self._ad,
@@ -466,15 +472,12 @@ class FlatBackground(object):
             d['A'] = self._A
             d['B'] = self._B
         savemat(filename, d)
-        ix = {'foreground': [tuple(f) for f in self._fg],
-              'background': [tuple(f) for f in self._bg],
-              'exterior': [tuple(f) for f in self._ex]}
-        to_json(ix, filename + '.index.json.gz', gzip=True)
 
-    def write_to_file(self, filename, complete=True, filetype=None):
+    def write_to_file(self, filename, complete=True, filetype='.mat'):
         if filetype is None:
             filetype = os.path.splitext(filename)[1]
         if filetype == '.mat':
             self._write_mat(filename, complete=complete)
         else:
             raise ValueError('Unsupported file type %s' % filetype)
+        self._write_index(filename + '.index.json.gz')

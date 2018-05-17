@@ -78,7 +78,8 @@ def archive_factory(source, ds_type, **kwargs):
     :param kwargs:
     :return:
     """
-    init_fcn = {
+    ds_type = ds_type.lower()
+    init_map = {
         'lcarchive': LcArchive,
         'ilcdarchive': IlcdArchive,
         'ilcd': IlcdArchive,
@@ -105,14 +106,15 @@ def archive_factory(source, ds_type, **kwargs):
         'traci2': Traci21Factors,
         'traci': Traci21Factors,
         'traci21factors': Traci21Factors
-    }[ds_type.lower()]
+    }
     try:
+        init_fcn = init_map[ds_type]
         return init_fcn(source, **kwargs)
 #        'foregroundarchive': ForegroundArchive.load,
 #        'foreground': ForegroundArchive.load
     except KeyError:
         try:
-            mod = importlib.import_module(ds_type, package='antelope_%s' % ds_type.lower())
+            mod = importlib.import_module('.%s' % ds_type, package='antelope_%s' % ds_type)
         except ImportError as e:
             raise ArchiveError(e)
         return mod.init_fcn(source, **kwargs)

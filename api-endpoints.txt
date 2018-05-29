@@ -1,0 +1,38 @@
+==========
+Tue Aug 01 11:11:27 -0700 2017
+
+Sorted list of endpoints
+
+    /references			GENERAL
+    /index/references 		Index
+    /inventory/references 	Inventory
+    /background/references	Background
+
+    /qdb/...			Quantity
+    
+    /[semantic.ref]/processes	Index.processes()
+    /[semantic.ref]/flows 	Index.flows()
+    /[semantic.ref]/quantities 	Index.quantities()
+    /[semantic.ref]/lcia-methods
+    /[semantic.ref]/{entity type}?[property]=[string]&... -> perform a search (R1)
+    
+    /[semantic.ref]/terminate/[flow-id]/{direction} -> return list of processes (R1)
+    /[semantic.ref]/originate/[flow-id]/{direction} -> return list of processes (ref only) (R1)
+
+    /[semantic.ref]/[id] -> Index.get()
+    /[semantic.ref]/[id]/reference -> Index.reference()
+
+    /[semantic.ref]/[id]  include numeric data?? (R1*)
+    
+    /[semantic.ref]/[process-id]/exchanges -> 
+    /[semantic.ref]/[process-id]/[exch-flow-id]/{direction} -> (single-ref) return list of exch values (R2*)
+    /[semantic.ref]/[process-id]/[exch-flow-id]/{direction} -> (multi-ref) return list of alloc exchs (R2*)
+    /[semantic.ref]/[process-id]/[exch-flow-id]/{direction}/[termination] -> return single alloc exch (R2*)
+    /[semantic.ref]/[process-id]/[ref-flow]/[exch-flow-id]/{direction} -> (single result) return norm. exch val (R4)
+    /[semantic.ref]/[process-id]/[ref-flow]/[exch-flow-id]/{direction} -> (mult. terminations) return norm. sum exch val (R4)
+    /[semantic.ref]/[process-id]/[ref-flow]/[exch-flow-id]/{direction}/[termination] return norm. exch val (R4)
+    
+    /[semantic.ref]/[process-id]/lcia/[q-qty] -> (single ref) return qty fg LciaResult (R5)
+    /[semantic.ref]/[process-id]/lcia/[q-qty] -> (multi ref) return array qty fg LciaResult (R5)
+    /[semantic.ref]/[process-id]/[ref-flow]/lcia/[q-qty] -> return norm. qty fg LciaResult (R5)
+    

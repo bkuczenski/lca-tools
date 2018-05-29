@@ -44,6 +44,7 @@ class DuplicateEntries(Exception):
 
 
 class LcCatalog(LciaEngine):
+
     """
     Provides REST-style access to LCI information (exclusive of the flow-quantity relation)
 
@@ -131,8 +132,13 @@ class LcCatalog(LciaEngine):
     def root(self):
         return self._rootdir
 
-    def _make_rootdir(self):
+    @property
+    def _dirs(self):
         for x in (self._cache_dir, self._index_dir, self.resource_dir, self.archive_dir, self._download_dir):
+            yield x
+
+    def _make_rootdir(self):
+        for x in self._dirs:
             os.makedirs(x, exist_ok=True)
         if not os.path.exists(self._compartments):
             copy2(REFERENCE_INT, self._compartments)
@@ -223,7 +229,7 @@ class LcCatalog(LciaEngine):
         Create a new data resource by specifying its properties directly to the constructor
         :param args: reference, source, ds_type
         :param store: [True] permanently store this resource
-        :param kwargs: interfaces=None, privacy=0, priority=0, static=False; **kwargs passed to archive constructor
+        :param kwargs: interfaces=None, priority=0, static=False; **kwargs passed to archive constructor
         :return:
         """
         return self._resolver.new_resource(*args, store=store, **kwargs)  # explicit store= for doc purposes
@@ -281,10 +287,6 @@ class LcCatalog(LciaEngine):
             rc = self.get_resource(ref, strict=strict)
         rc.check(self)
         return rc.archive
-
-    def privacy(self, ref, interfaces=None, strict=False):
-        res = next(r for r in self._resolver.resolve(ref, interfaces=interfaces, strict=strict))
-        return res.privacy
 
     '''
     Manage resources locally
@@ -400,7 +402,7 @@ class LcCatalog(LciaEngine):
                               static=True)
 
     def create_descendant(self, origin, interface=None, source=None, force=False, signifier=None, strict=True,
-                          privacy=None, priority=None, **kwargs):
+                          priority=None, **kwargs):
         """
 
         :param origin:
@@ -409,7 +411,6 @@ class LcCatalog(LciaEngine):
         :param force: overwrite if exists
         :param signifier: semantic descriptor for the new descendant (optional)
         :param strict:
-        :param privacy:
         :param priority:
         :param kwargs:
         :return:
@@ -418,9 +419,8 @@ class LcCatalog(LciaEngine):
         new_ref = res.archive.create_descendant(self.archive_dir, signifier=signifier, force=force)
         print('Created archive with reference %s' % new_ref)
         ar = res.archive
-        priv = privacy or res.privacy
         prio = priority or res.priority
-        self.add_existing_archive(ar, interfaces=res.interfaces, privacy=priv, priority=prio, **kwargs)
+        self.add_existing_archive(ar, interfaces=res.interfaces, priority=prio, **kwargs)
         res.remove_archive()
 
     '''
@@ -475,7 +475,7 @@ class LcCatalog(LciaEngine):
         :param external_ref:
         :return: The origin of the lowest-priority resource to match the query
         """
-        for i in self.gen_interfaces(origin, None):
+        for i in self.gen_interfaces(origin):
             if i.lookup(external_ref):
                 return i.origin
         raise EntityNotFound('%s/%s' % (origin, external_ref))
@@ -483,6 +483,10 @@ class LcCatalog(LciaEngine):
     def fetch(self, origin, external_ref):
         org = self.lookup(origin, external_ref)
         return self.query(org).get(external_ref)
+
+    def fetch_link(self, link):
+        org, ext = link.split('/', maxsplit=1)
+        return self.fetch(org, ext)
 
     def create_foreground(self, path, ref=None, quiet=True):
         """

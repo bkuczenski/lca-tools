@@ -222,10 +222,6 @@ class EntityRef(BaseRef):
     def resolved(self):
         return True
 
-    @property
-    def privacy(self):
-        return self._query.privacy()
-
     def _show_ref(self):
         print('reference: %s' % self.reference_entity)
 
@@ -253,7 +249,7 @@ class EntityRef(BaseRef):
                 return loc
         self._check_query('getitem %s' % item)
         val = self._query.get_item(self.external_ref, item)
-        if val is not None:
+        if val is not None and val != '':
             self._d[item] = val
             return val
         return None

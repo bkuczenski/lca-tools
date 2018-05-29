@@ -591,7 +591,7 @@ class EntityStore(object):
             self._loaded = True
 
     def entities_by_type(self, entity_type):
-        for u in self._ents_by_type[entity_type]:
+        for u in sorted(self._ents_by_type[entity_type]):
             yield self._entities[u]
 
     def count_by_type(self, entity_type):

@@ -1,5 +1,6 @@
 from .basic import BasicImplementation
-from lcatools.interfaces import InventoryInterface, PrivateArchive
+from lcatools.interfaces import InventoryInterface
+from lcatools.fragment_flows import frag_flow_lcia
 
 
 class InventoryImplementation(BasicImplementation, InventoryInterface):
@@ -8,15 +9,11 @@ class InventoryImplementation(BasicImplementation, InventoryInterface):
     Creates no additional requirements on the archive.
     """
     def exchanges(self, process, **kwargs):
-        if self.privacy > 1:
-            raise PrivateArchive('Exchange lists are protected')
         p = self._archive.retrieve_or_fetch_entity(process)
         for x in p.exchanges():
             yield x
 
     def exchange_values(self, process, flow, direction=None, termination=None, **kwargs):
-        if self.privacy > 0:
-            raise PrivateArchive('Exchange values are protected')
         p = self._archive.retrieve_or_fetch_entity(process)
         for x in p.exchange_values(self.get(flow), direction=direction):
             if termination is None:
@@ -26,8 +23,6 @@ class InventoryImplementation(BasicImplementation, InventoryInterface):
                     yield x
 
     def inventory(self, process, ref_flow=None, scenario=None, **kwargs):
-        if self.privacy > 0:
-            raise PrivateArchive('Exchange values are protected')
         p = self._archive.retrieve_or_fetch_entity(process)
         if p.entity_type == 'process':
             for x in sorted(p.inventory(ref_flow=ref_flow),
@@ -47,8 +42,6 @@ class InventoryImplementation(BasicImplementation, InventoryInterface):
         :param termination:
         :return:
         """
-        if self.privacy > 0:
-            raise PrivateArchive('Exchange values are protected')
         p = self._archive.retrieve_or_fetch_entity(process)
         xs = [x for x in p.inventory(ref_flow=ref_flow)
               if x.flow.external_ref == exch_flow and x.direction == direction]
@@ -76,3 +69,12 @@ class InventoryImplementation(BasicImplementation, InventoryInterface):
         return quantity_ref.do_lcia(p.inventory(ref_flow=ref_flow),
                                     locale=p['SpatialScope'],
                                     refresh=refresh)
+
+    def traverse(self, fragment, scenario=None, **kwargs):
+        frag = self._archive.retrieve_or_fetch_entity(fragment)
+        return frag.top().traverse(scenario, observed=True)
+
+    def fragment_lcia(self, fragment, quantity_ref, scenario=None, refresh=False, **kwargs):
+        quantity_ref.ensure_lcia()
+        fragmentflows = self.traverse(fragment, scenario=scenario, **kwargs)
+        return frag_flow_lcia(fragmentflows, quantity_ref, scenario=scenario, refresh=refresh)

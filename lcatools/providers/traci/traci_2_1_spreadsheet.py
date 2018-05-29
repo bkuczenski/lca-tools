@@ -45,11 +45,11 @@ class Traci21Factors(BasicArchive):
         for k, v in self._methods.items():
             yield v
 
-    def make_interface(self, iface, privacy=None):
+    def make_interface(self, iface):
         if iface == 'quantity':
-            return Traci21QuantityImplementation(self, privacy=privacy)
+            return Traci21QuantityImplementation(self)
         else:
-            return super(Traci21Factors, self).make_interface(iface, privacy=privacy)
+            return super(Traci21Factors, self).make_interface(iface)
 
     @staticmethod
     def _flow_key(flowable, compartment):

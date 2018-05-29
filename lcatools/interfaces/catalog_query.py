@@ -4,7 +4,6 @@ Query Interface -- used to operate catalog refs
 
 from .iindex import IndexInterface, IndexRequired
 from .ibackground import BackgroundInterface
-from .iforeground import ForegroundInterface
 from .iinventory import InventoryInterface
 from .iquantity import QuantityInterface
 
@@ -24,7 +23,7 @@ class PrivateArchive(Exception):
     pass
 
 
-class CatalogQuery(IndexInterface, BackgroundInterface, ForegroundInterface, InventoryInterface, QuantityInterface):
+class CatalogQuery(IndexInterface, BackgroundInterface, InventoryInterface, QuantityInterface):
     """
     A CatalogQuery is a class that performs any supported query against a supplied catalog.
     Supported queries are defined in the different kinds of interfaces, which are all abstract.
@@ -45,14 +44,8 @@ class CatalogQuery(IndexInterface, BackgroundInterface, ForegroundInterface, Inv
         self._origin = origin
         self._catalog = catalog
         self._debug = debug
-        self._validated = None
 
         self._entity_cache = dict()
-
-    def validate(self):
-        if self._validated is None:
-            self._validated = super(CatalogQuery, self).validate()
-        return self._validated
 
     @property
     def origin(self):
@@ -64,17 +57,12 @@ class CatalogQuery(IndexInterface, BackgroundInterface, ForegroundInterface, Inv
         return self._catalog.query(origin)
 
     def _grounded_query(self, origin):
-        if origin == self._origin:
+        if origin is None or origin == self._origin:
             return self
         return self._catalog.query(origin)
 
     def ensure_lcia_factors(self, quantity_ref):
         self._catalog.load_lcia_factors(quantity_ref)
-
-    def get_privacy(self, origin=None):
-        if origin is None:
-            return self._catalog.privacy(self._origin)
-        return self._catalog.privacy(origin)
 
     def __str__(self):
         return '%s for %s (catalog: %s)' % (self.__class__.__name__, self.origin, self._catalog.root)

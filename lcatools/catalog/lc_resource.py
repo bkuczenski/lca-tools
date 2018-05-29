@@ -110,7 +110,7 @@ class LcResource(object):
         self._archive.check_counter()
 
     def make_interface(self, iface):
-        return self._archive.make_interface(iface, privacy=self.privacy)
+        return self._archive.make_interface(iface)
 
     def apply_config(self):
         if len(self._config) > 0:
@@ -146,7 +146,7 @@ class LcResource(object):
         :param source: physical data source; 'None' allowed if 'downloadLink' argument provided
         :param ds_type: data source type
         :param interfaces: list which can include 'entity', 'foreground', or 'background'. Default 'foreground'
-        :param privacy: privacy level... TBD... 0 = public, 1 = exchange values private, 2 = all exchanges private
+        :param privacy: Ignored / No longer used.
         :param priority: [50] priority level.. numeric (nominally 0-100), lowest priority resource is loaded first
         :param static: [False] if True, load_all() after initializing
         :param preload_archive: [None] use to assign an existing archive
@@ -176,7 +176,6 @@ class LcResource(object):
         self._interfaces = set()
         self._normalize_interfaces(interfaces)
 
-        self._privacy = int(privacy)
         self._priority = int(priority)
 
         self._internal = kwargs.pop('_internal', False)
@@ -231,10 +230,6 @@ class LcResource(object):
         return self._internal
 
     @property
-    def privacy(self):
-        return self._privacy
-
-    @property
     def priority(self):
         return self._priority
 
@@ -279,7 +274,6 @@ class LcResource(object):
             "dataSourceType": self.ds_type,
             "interfaces": [k for k in self.interfaces],
             "priority": self.priority,
-            "privacy": self.privacy,
             "static": self.static
         }
         j.update(self._args)

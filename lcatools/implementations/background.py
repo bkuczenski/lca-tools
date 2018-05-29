@@ -145,6 +145,8 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
         p = self._archive.retrieve_or_fetch_entity(process)
         lci = self.lci(p, ref_flow=ref_flow)
         res = query_qty.do_lcia(lci, locale=p['SpatialScope'], **kwargs)
+        """
         if self.privacy > 0:
             return res.aggregate('*', entity_id=p.link)
+        """
         return res

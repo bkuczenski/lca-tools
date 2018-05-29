@@ -1,0 +1,81 @@
+==========
+Mon Mar 19 23:19:56 -0700 2018
+
+* brunorocha has quit (Ping timeout: 256 seconds)
+<johnnynyquist> Hi all- I am looking for design advice to put together my first flask app. I don't have an RDBMS, but rather a computation engine that answers queries based on data in memory. I want to use flask to wrap a REST API around the engine. All the examples I've found on the web use dumb 'hello world' routes and hardcoded data so I was hoping for some feedback to help me navigate the docs
+<FunkyBob> johnnynyquist: the general pattern of these things is to map urls to functions which do the work... have your functions do whatever work you need
+<FunkyBob> there are tools around to help make it eaasier if you're just doing, for instance, a REST endpoint server...
+<FunkyBob> currently, we're looking into connexion... seems to have many benefits
+<FunkyBob> you may also want to look at apistar as a solution primarily focussed on APIs [ not flask base ]
+<johnnynyquist> @FunkyBob thanks for the info.. lots to dig into but let me start with your first comment. I am having a hard time because I want to put all the routes in a class but flask seems to prefer standalone fnctions- is a class-based approach discouraged? I would want the class to store e.g. the computation engine. 
+<johnnynyquist> I also want my routes to look like ROOT/<instance>/<route> where all the instances have the same routes but using different data stores-- so the route names would be dynamic
+<johnnynyquist> per your other pointers, connexion definitely looks promising
+<FunkyBob> what benefit do you see coming from putting the handles in a class?
+<FunkyBob> you can parameterise the url patterns... and use that in your handlers to get the right engine, etc
+<FunkyBob> I'm not sure of the full power of Flask routing, as I'm more of a Django user
+<FunkyBob> http://flask.pocoo.org/docs/0.12/api/#url-route-registrations
+<FunkyBob> also -- http://flask.pocoo.org/docs/0.12/api/#class-based-views
+* brunorocha (~brocha@2804:431:b71c:d8a9:3e7f:b09a:175e:b929) has joined
+<FunkyBob> but be careful about your perception of the lifetime of the class instance
+<johnnynyquist> well- with a database, it's running and I can just initiate a connection; but with my engine I need to start it up;; but I guess I can do that just fine in the flask script. I am having a hard time understanding the 'contexts' and the 'blueprints' in the docs... 
+<johnnynyquist> tell me more about lifetime
+<FunkyBob> am reading the docs now... I know in Django a class-based-view instance is created specifically for the request, and discarded at the end of the request
+<FunkyBob> so you're better of, for your stated case, to have a pool of DB engine instances, must like dbms connection pools
+<FunkyBob> remember that it's common practice in web apps to have many threads/processes spread across many servers
+<FunkyBob> and they can start/stop at any time... independantly
+<FunkyBob> looking at it, Flask has the same as_view pattern as Django... so
+<johnnynyquist> ok-- 'views' seem to be more about templating- if my app is just delivering json data to a frontend, then I don't really have/use views. being a web dev newbie I don't have much experience with "common practice"- but I assume those different threads are all talking to a database to service their requests, and the database is persistent. I am thinking more of a container-based persistence for my engine(s)
+<FunkyBob> ... no, it's not about templating
+<FunkyBob> what sort of container do you mean?  like LXC / docker containers?
+<johnnynyquist> yeah- that's what I meant- 
+<FunkyBob> running inside the flask task?  or on its own?
+<johnnynyquist> I figured the container would contain the flask app
+<FunkyBob> when I say "view" [and sometimes when Flask does, too, it seems] I mean "request handling function"
+<FunkyBob> yes, I mean your DB engine... where does that run?
+<FunkyBob> as its own task?  or inside the flask app?
+<johnnynyquist> that's part of what I'm trying to sort
+<johnnynyquist> which comes first
+* jezeniel has quit (Ping timeout: 256 seconds)
+* voodster (~je@95-28-53-143.broadband.corbina.ru) has joined
+<FunkyBob> ...
+* kingarmadillo has quit (Ping timeout: 240 seconds)
+<FunkyBob> you said before your engine runs as a callable inside the app task?
+<FunkyBob> as opposed to a process you talk to via ports/sockets?
+* gtristan (~tristanva@221.147.85.22) has joined
+<johnnynyquist> it's all hypothetical now
+<FunkyBob> ...
+<johnnynyquist> right now it runs in a python instance and I interact with it in a shell
+<FunkyBob> so it doesn't exist yet?
+<FunkyBob> ok
+<johnnynyquist> so I imagined it would spin out these instances, that get served up 
+<FunkyBob> does it take a lot of time/cpu to intialise before querying?
+<johnnynyquist> initialize yes
+<johnnynyquist> but honestly in 'production' it would be a lot less interactive
+* kingarmadillo (~kingarmad@70-139-18-232.lightspeed.hstntx.sbcglobal.net) has joined
+<johnnynyquist> basically the engine has access to a broad set of data, and the individual flask instance uses a narrow slice of that, which is mostly static
+<FunkyBob> ok
+* voodster has quit (Ping timeout: 240 seconds)
+<FunkyBob> and the engine is safe to use multi-thread and/or multi-process?
+<johnnynyquist> the user specifies how to configure that slice and then "publishes" it to an API endpoint where other people can interact with it
+<johnnynyquist> er, not endpoint but root
+<johnnynyquist> yeah I suppose, but I'm speaking from relative ignorance of those things
+<johnnynyquist> but yes. in the grand vision, the engine uses distributed data sources, which are necessarily dynamic; the 'slice' that gets published is a static snapshot
+* kingarmadillo has quit (Ping timeout: 256 seconds)
+<FunkyBob> so... request comes in, url routes determine which function handles it... that function does work and returns a response..... this is the general pattern of Flask [and django, and so many others...]
+<johnnynyquist> right, so in the flask app, I will import an object that knows how to generate responses for the various requests-- where does that object get initialized? 
+<FunkyBob> well, you could do that in the same place you create the flask App instance
+<FunkyBob> again, depends if it's thread safe
+<johnnynyquist> I suppose, if I were going to try to write this tonight, I would set it up in the top of the flask script, so it would belong to that. I don't know how to set it up as a separate task-- i.e. with a unix socket
+<johnnynyquist> ?
+<FunkyBob> yeah, sure
+<johnnynyquist> I suppose that is one reason to use a  DBMS because it has all the infrastructure to ensure transaction integrity 
+<FunkyBob> and a lot more...
+<johnnynyquist> yah
+<johnnynyquist> the first time I did this it was in a .NET on a SQL server and it was just not a good fit- the computations were difficult to squeeze into db queries, the system was super sluggish
+<FunkyBob> it's hard to help when I know so little about your project
+<johnnynyquist> yeah
+<johnnynyquist> thanks for being patient and helpfu
+<johnnynyquist> l
+<FunkyBob> np
+<johnnynyquist> do you know anything about flask blueprints?
+<FunkyBob> only a little... they seem to be like Django apps... fragments of reusable functionality

@@ -90,11 +90,11 @@ class LcForeground(BasicArchive):
             self._load_json_file(self._archive_file)
             self._load_fragments()
 
-    def make_interface(self, iface, privacy=None):
+    def make_interface(self, iface):
         if iface == 'foreground':
-            return ForegroundImplementation(self, privacy=privacy)
+            return ForegroundImplementation(self)
         else:
-            return super(LcForeground, self).make_interface(iface, privacy=privacy)
+            return super(LcForeground, self).make_interface(iface)
 
     def catalog_ref(self, origin, external_ref, entity_type=None):
         ref = self._catalog.fetch(origin, external_ref)

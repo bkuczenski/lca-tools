@@ -20,11 +20,11 @@ class IlcdLcia(IlcdArchive):
     """
     def make_interface(self, iface, privacy=None):
         if iface == 'index':
-            return IlcdIndexImplementation(self, privacy=privacy)
+            return IlcdIndexImplementation(self)
         elif iface == 'quantity':
-            return IlcdQuantityImplementation(self, privacy=privacy)
+            return IlcdQuantityImplementation(self)
         else:
-            return super(IlcdLcia, self).make_interface(iface, privacy=privacy)
+            return super(IlcdLcia, self).make_interface(iface)
 
     def _make_reference_unit(self, o, ns=None):
         """

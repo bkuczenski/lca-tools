@@ -78,13 +78,13 @@ class BasicArchive(EntityStore):
         self.add_entity_and_children(f)
         return f
 
-    def make_interface(self, iface, privacy=None):
+    def make_interface(self, iface):
         if iface == 'basic':
-            return BasicImplementation(self, privacy=privacy)
+            return BasicImplementation(self)
         elif iface == 'quantity':
-            return QuantityImplementation(self, privacy=privacy)
+            return QuantityImplementation(self)
         elif iface == 'index':
-            return IndexImplementation(self, privacy=privacy)
+            return IndexImplementation(self)
 
     def add(self, entity):
         if entity.entity_type not in self._entity_types:

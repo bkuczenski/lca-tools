@@ -118,6 +118,16 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
         for rx in p.reference(ref_flow):
             yield rx  # should be just one exchange
 
+    def is_in_scc(self, process, ref_flow=None, **kwargs):
+        """
+        Distinction between is_in_background and is_in_scc will reveal the proxy nature of the interface
+        :param process:
+        :param ref_flow:
+        :param kwargs:
+        :return:
+        """
+        return False  # proxy has no knowledge of SCCs
+
     def is_in_background(self, process, ref_flow=None, **kwargs):
         self.setup_bm()
         try:

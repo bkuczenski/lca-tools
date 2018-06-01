@@ -64,6 +64,10 @@ class BackgroundManager(object):
         for k in self._be.emissions:
             yield k
 
+    def is_in_scc(self, process, ref_flow=None):
+        product_flow = self._get_product_flow(process, ref_flow=ref_flow)
+        return len(self._tstack.scc(self._tstack.scc_id(product_flow))) > 1
+
     def is_in_background(self, process, ref_flow=None):
         product_flow = self._get_product_flow(process, ref_flow=ref_flow)
         return self._tstack.is_background(product_flow)

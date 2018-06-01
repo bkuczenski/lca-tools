@@ -307,6 +307,13 @@ class FlatBackground(object):
     def ex(self):
         return self._ex
 
+    def is_in_scc(self, process, ref_flow):
+        if self.is_in_background(process, ref_flow):
+            tr = self._bg[self._bg_index[(process, ref_flow)]]
+        else:
+            tr = self._fg[self._fg_index[(process, ref_flow)]]
+        return len(tr.scc_id) > 0
+
     def is_in_background(self, process, ref_flow):
         return (process, ref_flow) in self._bg_index
 

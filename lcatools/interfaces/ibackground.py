@@ -121,6 +121,17 @@ class BackgroundInterface(AbstractQuery):
         return self._perform_query(_interface, 'foreground', BackgroundRequired('No knowledge of background'),
                                    process, ref_flow=ref_flow, **kwargs)
 
+    def is_in_scc(self, process, ref_flow=None, **kwargs):
+        """
+        Returns True if the identified productflow is part of a strongly connected component (including the background)
+        :param process:
+        :param ref_flow:
+        :param kwargs:
+        :return:
+        """
+        return self._perform_query(_interface, 'is_in_scc', BackgroundRequired('No knowledge of background'),
+                                   process, ref_flow=ref_flow, **kwargs)
+
     def is_in_background(self, process, ref_flow=None, **kwargs):
         """
 

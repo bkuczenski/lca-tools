@@ -44,6 +44,9 @@ class TarjanBackgroundImplementation(BackgroundImplementation):
             f = self[ex.flow_ref]
             yield ExteriorFlow(self.origin, f, ex.direction, c)
 
+    def is_in_scc(self, process, ref_flow=None, **kwargs):
+        return self._flat.is_in_scc(process, ref_flow)
+
     def is_in_background(self, process, ref_flow=None, **kwargs):
         # ref_flow = self._ensure_ref_flow(ref_flow)
         return self._flat.is_in_background(process, ref_flow)

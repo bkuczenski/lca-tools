@@ -182,3 +182,19 @@ The current approach is a complete kludge (obviously). Here's how we fix it:
  3c. so the LcBackground will present as an LcArchive because it will BE an LcArchive.
 
  3d. The current BackgroundManager and BackgroundProxy will go away.
+
+==========
+Sat Jun 09 17:16:09 -0700 2018
+
+Debugging the flat background implementation with ecoinvent and we're running into all kinds of sloppy problems:
+
+ 1- goddamn no reference found for nitrogen venting, softwood, etc-- leading to premature cutoffs which may or may not be problems
+    a. why is this happening? need to validate behavior using a direct ecospold2 archive
+    b. does it even matter? this is at the bottom of the stack, only to be hit when/if the lci testing fails
+
+ 2- on the first time through, when the flatbackground is created, encountered a key error in the lci_test method when we lookup z = lci_check[i.key]
+
+ 3- on subsequent time through, we fail because there is no true index and self[x.flow] is coming up empty
+
+For all of these issues we need an interactive session. and more patience than I have right now.
+

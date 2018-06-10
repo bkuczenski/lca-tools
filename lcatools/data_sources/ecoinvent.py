@@ -61,7 +61,7 @@ class Ecoinvent3Base(DataSource):
         if ref in self._lci_ref:
             yield self._make_resource(ref, self.lci_source, interfaces='inventory', prefix='datasets')
         elif ref in self._inv_ref:
-            yield self._make_resource(ref, self.inv_source, interfaces='inventory', prefix='datasets')
+            yield self._make_resource(ref, self.inv_source, interfaces=('index', 'inventory'), prefix='datasets')
 
     @property
     def inv_file(self):

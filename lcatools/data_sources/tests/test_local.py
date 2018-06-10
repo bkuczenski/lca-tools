@@ -35,8 +35,10 @@ class LocalCatalog(unittest.TestCase):
         cls._configs = dict()
         cls._cat = LcCatalog(CATALOG_ROOT)
         for k, d in RESOURCES_CONFIG.items():
-            obj = d.pop('source')
-            cls._configs[k] = obj(**d)
+            if d.pop('enable_test', False):
+                print('data source %s enabled' % k)
+                obj = d.pop('source')
+                cls._configs[k] = obj(**d)
 
     def test_folders(self):
         self.assertTrue(os.path.isdir(CATALOG_ROOT))

@@ -38,8 +38,13 @@ class ProductFlow(object):
         if process is None:
             raise TypeError('No termination? should be a cutoff.')
 
-        ref_exch = process.reference(flow)
         self._hash = (flow.external_ref, process.external_ref)
+
+        try:
+            ref_exch = process.reference(flow)
+        except StopIteration:
+            print('##! flow %s - termination %s : no reference found!##' % self._hash)
+            raise NoMatchingReference
 
         self._inbound_ev = {'Input': -1.0,
                             'Output': 1.0}[ref_exch.direction]  # required to account for self-dependency

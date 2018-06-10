@@ -666,11 +666,11 @@ class BackgroundEngine(object):
             if i is None:
                 # not visited -- need to visit
                 i = self._create_product_flow(exch.flow, term)
-                if i.debug:
-                    print('Parent: %s' % parent.process)
                 if i is None:
                     print('Cutting off at Parent process: %s\n%s\n' % (parent.process.external_ref, parent))
                     continue
+                if i.debug:
+                    print('Parent: %s' % parent.process)
                 try:
                     self._traverse_term_exchanges(i, multi_term, default_allocation, net_coproducts)
                 except TerminationError:

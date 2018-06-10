@@ -427,15 +427,13 @@ class LcCatalog(LciaEngine):
     Main data accessor
     '''
 
-    def gen_interfaces(self, origin, itype=None, strict=False, create_background=True):
+    def gen_interfaces(self, origin, itype=None, strict=False):
         """
         Generator of interfaces by spec
 
         :param origin:
         :param itype: single interface or iterable of interfaces
         :param strict: passed to resolver
-        :param create_background: [True] attempt to dynamically create a background using existing inventory + index
-         for the specified origin
         :return:
         """
         if itype is None:
@@ -445,8 +443,9 @@ class LcCatalog(LciaEngine):
             res.check(self)
             yield res.make_interface(itype)
 
-        if itype == 'background' and create_background:
-            yield self._background_for_origin(origin)
+        if itype == 'background':
+            if origin.startswith('local') or origin.startswith('test'):
+                yield self._background_for_origin(origin)
 
         '''
         # no need for this because qdb is (a) listed in the resolver and (b) upstream of everything

@@ -21,7 +21,7 @@ from lcatools.tools import archive_from_json
 
 from lcatools.interfaces import EntityNotFound
 
-from lcatools.data_sources.local import CATALOG_ROOT, run_ecoinvent
+from lcatools.data_sources.local import CATALOG_ROOT, check_enabled
 from lcatools.providers.lc_archive import LcArchive
 
 EcoinventNode = namedtuple('EcoinventNode', ['version', 'model', 'node'])
@@ -29,9 +29,9 @@ _debug = True
 
 
 if __name__ == '__main__':
-    _run_ecoinvent = run_ecoinvent
+    _run_ecoinvent = check_enabled('ecoinvent')
 else:
-    _run_ecoinvent = run_ecoinvent or _debug
+    _run_ecoinvent = check_enabled('ecoinvent') or _debug
 
 
 if _run_ecoinvent:
@@ -103,7 +103,7 @@ def _extract_and_reduce_lci(node):
     exchs = random.sample([_x for _x in p_ref.inventory(ref_flow=p_rx)], 100)
 
     p_slim = LcProcess(p_ref.uuid, Name=p_ref['Name'])
-    p_slim.add_exchange(p_rx.flow, p_rx.direction, value=p_rx.value)
+    p_slim.add_exchange(p_rx.flow, p_rx.direction, value=p_ref.reference_value(p_rx.flow))
     p_slim.add_reference(p_rx.flow, p_rx.direction)
 
     for x in exchs:
@@ -115,8 +115,8 @@ def _extract_and_reduce_lci(node):
 
 class EcoinventLciTest(unittest.TestCase):
     _nodes = {
-        EcoinventNode('3.2', 'apos', '18085d22-72d0-4588-9c69-7dbeb24f8e2f'),
-        EcoinventNode('3.2', 'apos', 'ca4a6d8a-2399-4645-ac20-17343c694f2b'),  # potato seed, for setting- fg scc member
+        #EcoinventNode('3.2', 'apos', '18085d22-72d0-4588-9c69-7dbeb24f8e2f'),
+        #EcoinventNode('3.2', 'apos', 'ca4a6d8a-2399-4645-ac20-17343c694f2b'),  # potato seed, for setting- fg scc member
         EcoinventNode('3.2', 'conseq', '6b0f32fe-329d-4c1f-9205-0ea78f4f42e5')
     }
 
@@ -151,7 +151,7 @@ class EcoinventLciTest(unittest.TestCase):
         for node in self.nodes():
             lci_result = cat.query(test_ref(node.version, node.model)).get(node.node)
             rx = lci_result.reference()
-            challenge = cat.query('local.ecoinvent.%s.%s' % (node.version, node.model)).get(node.node)
+            challenge = cat.query('local.ecoinvent.%s.%s' % (node.version, node.model), debug=True).get(node.node)
 
             c_lci = challenge.lci(ref_flow=rx.flow.external_ref, threshold=1e-10)
             lci_check = {x.key: x for x in c_lci}

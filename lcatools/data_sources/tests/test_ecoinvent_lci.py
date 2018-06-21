@@ -151,7 +151,7 @@ class EcoinventLciTest(unittest.TestCase):
         for node in self.nodes():
             lci_result = cat.query(test_ref(node.version, node.model)).get(node.node)
             rx = lci_result.reference()
-            challenge = cat.query('local.ecoinvent.%s.%s' % (node.version, node.model), debug=True).get(node.node)
+            challenge = cat.query('local.ecoinvent.%s.%s' % (node.version, node.model), debug=False).get(node.node)
 
             c_lci = challenge.lci(ref_flow=rx.flow.external_ref, threshold=1e-10)
             lci_check = {x.key: x for x in c_lci}

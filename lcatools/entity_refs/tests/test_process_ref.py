@@ -1,13 +1,20 @@
 import unittest
+import os
 
-from lcatools import LcCatalog
-from lcatools.data_sources.local import CATALOG_ROOT
+from lcatools import LcCatalog, from_json
+from lcatools.providers import LcArchive
+from lcatools.data_sources.local import TEST_ROOT
 
-cat = LcCatalog(CATALOG_ROOT)
+cat = LcCatalog(TEST_ROOT)
 
-test_ref = 'local.ecoinvent.3.2.apos'
 blast_furnace = '00420798-e9d1-4de9-8745-09bd85f31db8'
 blast_furnace_gas = 'b254bbdf-fb2b-4878-aec9-2a7820f3f32e'
+
+alt_archive_path = os.path.join(os.path.dirname(__file__), 'blast_furnace_test.json.gz')
+ar = LcArchive.from_dict(from_json(alt_archive_path))
+test_ref = ar.ref
+
+cat.add_existing_archive(ar, interfaces='inventory', store=False)
 
 
 class ProcessRefTest(unittest.TestCase):
@@ -23,7 +30,7 @@ class ProcessRefTest(unittest.TestCase):
     """
     @classmethod
     def setUpClass(cls):
-        cls._ar = cat.get_archive(test_ref, 'inventory')
+        cls._ar = ar
 
     def test_rxref_is_ref(self):
         """

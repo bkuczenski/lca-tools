@@ -1,7 +1,7 @@
 from .basic import BasicImplementation
 from lcatools.interfaces import ConfigureInterface
 from lcatools.exchanges import Exchange
-from lcatools.entities import MissingAllocation
+# from lcatools.entities import MissingAllocation
 
 
 class ConfigureImplementation(BasicImplementation, ConfigureInterface):
@@ -130,11 +130,14 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
                 p.remove_allocation(rf)
         else:
             for rf in p.reference_entity:
+                is_alloc |= p.is_allocated(rf)
+                '''
                 try:
                     is_alloc |= p.is_allocated(rf)
                 except MissingAllocation:
                     is_alloc = True
                     break
+                '''
 
         # now apply the allocation
         if is_alloc:

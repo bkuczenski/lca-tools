@@ -115,7 +115,7 @@ def _extract_and_reduce_lci(node):
 
 class EcoinventLciTest(unittest.TestCase):
     _nodes = {
-        #EcoinventNode('3.2', 'apos', '18085d22-72d0-4588-9c69-7dbeb24f8e2f'),
+        EcoinventNode('3.2', 'apos', '18085d22-72d0-4588-9c69-7dbeb24f8e2f'),
         #EcoinventNode('3.2', 'apos', 'ca4a6d8a-2399-4645-ac20-17343c694f2b'),  # potato seed, for setting- fg scc member
         EcoinventNode('3.2', 'conseq', '6b0f32fe-329d-4c1f-9205-0ea78f4f42e5')
     }

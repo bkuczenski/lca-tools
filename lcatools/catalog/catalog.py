@@ -244,6 +244,28 @@ class LcCatalog(LciaEngine):
         self._resolver.add_resource(resource, store=store)
         # self._ensure_resource(resource)
 
+    def delete_resource(self, resource, delete_source=None):
+        """
+        Removes the resource from the resolver and also removes the serialization. Also deletes the resource's
+        source (and source cache, if present) under the following circumstances:
+         (resource is internal AND resources_with_source(resource.source) is empty AND resource.source is a file)
+        This can be overridden using he delete_source param (see below)
+        :param resource: an LcResource
+        :param delete_source: [None] If None, follow default behavior. If True, delete the source even if it is
+         not internal (source will not be deleted if other resources refer to it OR if it is not a file). If False,
+         do not delete the source.
+        :return:
+        """
+        self._resolver.delete_resource(resource)
+        if delete_source is False or not os.path.isfile(resource.source):
+            return
+        if len([t for t in self._resolver.resources_with_source(resource.source)]) > 0:
+            return
+        if resource.internal or delete_source:
+            os.remove(resource.source)
+            if os.path.exists(self.cache_file(resource.source)):
+                os.remove(self.cache_file(resource.source))
+
     def add_existing_archive(self, archive, interfaces=None, store=True, **kwargs):
         """
         Makes a resource record out of an existing archive.  by default, saves it in the catalog's resource dir
@@ -317,6 +339,7 @@ class LcCatalog(LciaEngine):
         new_ref = res.make_index(inx_file)
         self._resolver.new_resource(new_ref, inx_file, 'json', priority=priority, store=stored, interfaces='index',
                                     _internal=True, static=True, preload_archive=res.archive)
+        return new_ref
 
     def index_resource(self, origin, interface=None, source=None, priority=10, force=False):
         """
@@ -335,7 +358,7 @@ class LcCatalog(LciaEngine):
         :return:
         """
         source = self._find_single_source(origin, interface, source=source)
-        self._index_source(source, priority, force=force)
+        return self._index_source(source, priority, force=force)
 
     def create_source_cache(self, source, static=False):
         """
@@ -355,9 +378,10 @@ class LcCatalog(LciaEngine):
         res.make_cache(self.cache_file(source))
 
     def _background_for_origin(self, ref):
-        bk_file = os.path.join(self.archive_dir, '%s_background' % ref)
-        bk = LcResource(ref, bk_file, 'Background', interfaces='background', priority=99,
-                        save_after=True, filetype='.mat')
+        inx_ref = self.index_resource(ref, interface='inventory')
+        bk_file = os.path.join(self.archive_dir, '%s_background' % inx_ref)
+        bk = LcResource(inx_ref, bk_file, 'Background', interfaces='background', priority=99,
+                        save_after=True, filetype='.mat', _internal=True)
         bk.check(self)  # ImportError if resource not found
         self.add_resource(bk)
         return bk.make_interface('background')  # when the interface is returned, it will trigger setup_bm

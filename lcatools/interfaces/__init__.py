@@ -1,3 +1,4 @@
+from .abstract_query import UnknownOrigin
 from .catalog_query import CatalogQuery, PrivateArchive, EntityNotFound
 
 from .iconfigure import ConfigureInterface

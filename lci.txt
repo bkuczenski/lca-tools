@@ -195,6 +195,33 @@ Debugging the flat background implementation with ecoinvent and we're running in
  2- on the first time through, when the flatbackground is created, encountered a key error in the lci_test method when we lookup z = lci_check[i.key]
 
  3- on subsequent time through, we fail because there is no true index and self[x.flow] is coming up empty
+    - solution: properly index the archive before doing background
 
 For all of these issues we need an interactive session. and more patience than I have right now.
+
+Wed 2018-06-20 13:22:25 -0700
+
+First time looking at this since 6/09...
+
+"properly index the archive"...
+_background_for_origin takes only an origin as input-- creates a 'background' resource that is self-instantiating
+
+then we check() the resource--> which calls _instantiate() which calls create_archive() which calls archive_factory() which ultimately imports and calls  antelope_background.background.init_fcn(source, ref=ref, save_after=True, filetype='.mat')
+
+Need to do this interactively..
+
+Wed 2018-06-20 23:16:30 -0700
+
+need to come up with a way to remove resources-- and purge sources if they are internal
+recurrent bug today was because of a stale resource entry (after I had manually purged sources)
+
+specify by source-- then it finds the resource with source, and deletes it-- which needs to be written
+- then, if the resource that was deleted was internal, AND if resources with source is now empty, then delete the source
+
+that is easy enough
+but not easy enough to do right now
+
+Thu 2018-06-21 10:50:31 -0700
+
+Wrong. The argument of delete resource should be a resource- it shouldn't be a query.
 

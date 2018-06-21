@@ -74,6 +74,16 @@ class LcCatalogResolver(object):
         self.add_resource(new_res, store=store)
         return new_res
 
+    def delete_resource(self, resource):
+        ref = resource.reference
+        res = self._resources[ref]
+        if resource not in res:
+            raise KeyError('Resource not found by resolver')
+        res.remove(resource)
+        self._write_or_delete_resource_file(ref, res)
+        if len(res) == 0:
+            self._resources.pop(ref)
+
     def known_source(self, source):
         try:
             next(self.resources_with_source(source))
@@ -141,8 +151,14 @@ class LcCatalogResolver(object):
             raise KeyError('no resource found')
         return matches[0]
 
+    def _write_or_delete_resource_file(self, ref, resources):
+        j = [k.serialize() for k in resources if k.exists(self._resource_dir)]
+        if len(j) == 0:
+            os.remove(os.path.join(self._resource_dir, ref))
+            return
+        with open(os.path.join(self._resource_dir, ref), 'w') as fp:
+            json.dump(fp, {ref: j})
+
     def write_resource_files(self):
         for ref, resources in self._resources.items():
-            j = [k.serialize() for k in resources]
-            with open(os.path.join(self._resource_dir, ref), 'w') as fp:
-                json.dump(fp, {ref: j})
+            self._write_or_delete_resource_file(ref, resources)

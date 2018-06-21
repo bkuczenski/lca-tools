@@ -1,4 +1,6 @@
 
+from lcatools.data_sources.local import TEST_ROOT
+
 from lcatools.catalog.catalog import LcCatalog
 from lcatools.catalog.lc_resource import LcResource
 from lcatools.interfaces.catalog_query import CatalogQuery, READONLY_INTERFACE_TYPES
@@ -22,7 +24,7 @@ uslci_bg = LcResource('test.uslci.allocated', '/data/GitHub/lca-tools-datafiles/
                       priority=90,
                       static=True)
 
-work_dir = os.path.join(os.path.dirname(__file__), 'scratch')
+work_dir = TEST_ROOT
 
 
 class LcCatalogFixture(unittest.TestCase):
@@ -30,7 +32,7 @@ class LcCatalogFixture(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        os.makedirs(cls.work_dir)
+        os.makedirs(cls.work_dir, exist_ok=True)
         cls._cat = LcCatalog(cls.work_dir)
         cls._cat.add_resource(uslci_fg)
         cls._cat.add_resource(uslci_bg)
@@ -59,6 +61,27 @@ class LcCatalogFixture(unittest.TestCase):
         :return:
         """
         pass
+
+    def test_add_delete_resource_1(self):
+        """
+        This adds a resource
+        :return:
+        """
+        r = self._cat.new_resource('test.my.dummy', '/dev/null', 'LcArchive')
+        self.assertIn('basic', r.interfaces)
+        self.assertIn('test.my.dummy', self._cat.references)
+        self.assertNotIn('test.my.doofus', self._cat.references)
+
+    def test_add_delete_resource_2(self):
+        """
+        This deletes the resource
+        :return:
+        """
+        r = self._cat.get_resource('test.my.dummy')
+        self.assertEqual(r.source, '/dev/null')
+        self._cat.delete_resource(r)
+        self.assertNotIn('test.my.dummy', self._cat.references)
+        self.assertFalse(os.path.exists(os.path.join(self._cat.resource_dir, r.reference)))
 
 
 if __name__ == '__main__':

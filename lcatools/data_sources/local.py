@@ -48,8 +48,8 @@ from .ecoinvent import EcoinventConfig
 
 '''CATALOG_ROOT specifies the local folder that stores the reference catalog
 '''
-CATALOG_ROOT = '/data/LCI/cat-test/'  # persistent
-TEST_ROOT = '/data/LCI/cat-demo/'  # volatile
+CATALOG_ROOT = '/data/LCI/cat-demo/'  # persistent
+TEST_ROOT = '/data/LCI/cat-test/'  # volatile
 
 '''RESOURCES_CONFIG 
 provides enabling and configuration information to the various data resource

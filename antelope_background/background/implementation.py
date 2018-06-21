@@ -87,5 +87,5 @@ class TarjanBackgroundImplementation(BackgroundImplementation):
     def lci(self, process, ref_flow=None, **kwargs):
         # ref_flow = self._ensure_ref_flow(ref_flow)
         node = self[process]
-        for x in self._direct_exchanges(node, self._flat.lci(process, ref_flow)):
+        for x in self._direct_exchanges(node, self._flat.lci(process, ref_flow, **kwargs)):
             yield x

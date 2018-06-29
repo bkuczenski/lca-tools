@@ -14,6 +14,8 @@ class ProcessRef(EntityRef):
     def __init__(self, external_ref, query, reference_entity, **kwargs):
         if reference_entity is None:
             reference_entity = []
+        for rx in reference_entity:
+            rx.process = self
         reference_entity = tuple(reference_entity)  # non mutable
         super(ProcessRef, self).__init__(external_ref, query, reference_entity, **kwargs)
         self._default_rx = None

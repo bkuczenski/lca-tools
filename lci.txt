@@ -225,3 +225,101 @@ Thu 2018-06-21 10:50:31 -0700
 
 Wrong. The argument of delete resource should be a resource- it shouldn't be a query.
 
+Thu 2018-06-21 16:22:57 -0700
+
+ugh. Inversion errors. I cannot even tell which of the two senses is correct.
+
+Summary of the problem:
+ * Comparing computed LCI result (challenge) against ecoinvent-distributed LCI result (lci_result)
+   = lci_result is delivered via the inventory interface
+   = challenge is delivered via the background interface (computed via the flat background)
+
+   - test case is APOS 18085d22-72d0-4588-9c69-7dbeb24f8e2f, "treatment of poultry manure, drying, pelleting"
+   - rx is 4aeb622f-8675-4449-889b-bca8bbb3d44a "Poultry manure, fresh" [Output]
+   - rx value is -1.0
+
+   = lci_result.inventory(rx) delivers a list of positive-valued exchanges
+   = challenge.lci(ref_flow=rx.flow.external_ref) delivers a list of negative-valued exchanges
+   ? but the problem is that the lci doesn't seem to know the normative sign of the reference node-- the tarjan algorithm knows but the flat bg doesn't
+
+   = it does have an index interface, so it can ask and normalize- but is that even correct?
+
+tbd.
+
+Fri 2018-06-22 09:59:09 -0700
+
+Correction- it's an inventory question, the magnitude of the reference flow- but the bg obviously needs complete index AND inventory information in order to build the matrix. I think the correct thing to do is to normalize- possibly just LCI, possibly every query.
+
+But hold on. The A matrix is formed by processing incoming MatrixEntries, which already involves normalizing by the parent's inbound_ev.
+
+What this means is, each column is properly signed with respect to other processes' invocations of it.  If it's a waste column, then ... well, let's look and see.
+
+What processes use the poultry manure process? how do I even detect?
+ - challenge.is_in_background(): False
+ - so I need to identify entries in Af whose row is equal to challenge's column
+   = and then look at the exchange values in the inventory and in the Af matrix and see if they are the same (1) magnitude and (2) sign
+   - obtain access to the FlatBackground, which is owned by the TarjanBackground, which is the archive attached to the background resource
+   -> cat.get_archive(challenge.origin, 'background') fails because the resource is internal and FOR SOME REASON we filter those out.
+   --> so we probably need a way around that; but for now, cat._resolver.resolve(challenge.origin, 'background') works.
+
+   * OK, so (1), nothing depends on the poultry manure process.
+     (2), the ad and bf methods return the SAME (i.e. non-normalized) sign, which I suppose is surprising
+     	  -- INTERESTING. The inbound EV is not queried! it's only assumed from the DIRECTION of the rx. This seems BAD. Do we query it anywhere? this is going to bollocks up the USLCI.
+	  -- moreover, if we FIX this it's not clear that ecoinvent will still be computed properly-- given that it's working correctly NOW.
+	  -- we need to find a transformation process that invokes a treatment process as a dependency
+	  
+
+Fri 2018-06-22 10:58:33 -0700
+
+OK, we've traced one back.
+ = ei32a process ref 64e3063e-66bf-444d-ad3f-760f5c4bdbac, coal-fired electricity [TZ], generates coal ash as a waste.
+ = That waste exchange is a NEGATIVELY-VALUED Input, meaning it will invert the signs of the dependency.
+ = The dependency is market for coal ash treatment (bg index: 497) [which is TRANSPARENTLY incorrect as TZ is not exporting its coal ash]
+ = The A-matrix column 497 is negatively-sensed, meaning it is CORRECTLY encoded to be INVERTED at computation time
+   - 2 transport processes have negative exchange values
+   - 26 supply processes have positive exchange values
+ ==> So that's the first positive conclusive finding: the inventory IS getting normalized by the reference WITHIN the A matrix
+     -- explanation is that we're using exch[rx] to get the exchange value- normalization happens there
+
+ = Anyway, continuing: the negatively-valued waste input INVERTS the market process, so we end up with positively valued transport and negatively-valued supplier processes
+ = The supplier process (column 3337) is also negatively-sensed, meaning both its A-matrix exchange values are negative (landfill; process-specific burdens)
+   - both of those processes are non-treatment (i.e. positively sensed) so all is normal after that
+ = The emissions are also uniformly negative, so they also become positive in the multiplication.
+
+What does all this mean? It means:
+(a) the matrix multiplication routine is CORRECT and NEEDS NO CHANGES -- this is confirmed by the LCI validation being NUMERICALLY correct.
+(b) HOWEVER, when the flat matrix data are exposed to the outside world via the background interface, the negatively-sensed columns need to be adjusted.
+
+What do we EXPECT to happen? Let's think of this from the perspective of the user.
+
+We want to know about one process; let's use the poultry manure treatment process since it's already on hand.
+This describes the inventory for TREATING 1 kg of poultry manure. The nominal direction of this exchange is INPUT.  (That's NOT what ecoinvent reports)
+-- indeed, when we look at the reference exchange for poultry manure it shows 'Output: (*) [--- [kg]] ...'
+-- this is ALREADY wrong.
+-- however, the issue is that catalog access is required in order to ensure that the exchange value field can be determined (because processes from non-value archives may be used to originate RxRefs)
+
+And RxRefs wrongly store native processes and not process refs. The reason for this is that the RxRef is an input argument to the ProcessRef definition.
+This being python, we can cheat- and create a method to post-populate the RxRef with a pointer to the ProcessRef as it's being instantiated. THEN on string output we can use the reference_value() function to correctly populate the exchange value (if inventory interface is available)
+
+OK. Let's do that real quick.
+
+Anyway, now (after this fix) when we take an RxRef for an ecoinvent treatment process and print it, we'll get: 'Output: (*) [-1.0 [kg]] ...'
+When, however, we run an inventory(rx) we'll get normalized outputs, which would be the "avoided" inputs of an actual Output of 1.0 kg.
+Arguably, what we want would be the non-inverted (though still normalized) inventory for an Input of 1.0 kg.
+
+Except that doesn't help us solve our current problem, which is the behavior of the background interface.
+
+The real question is whether we keep background as it is and make a manual correction of the lci_result data, or whether we make a correction of the background data
+
+The answer depends on how we plan to use the background data.
+
+Nominally, we want to use them for foreground building.  That means, we have an output of poultry manure, and we want to terminate it-- and immediately we fail because no ecoinvent process will terminate an outflow of poultry manure, whereas three processes terminate an input of poultry manure.
+
+The termination is handled by the index interface- but the naive ecospold2 index simply assumes 'output' since that is the normative mode.
+
+Anyway, ignoring that and saying we terminate with an undoctored ecoinvent treatment process, the term and fragment will have noncomplementary directions- which negates the exchange- but the inbound ev will be -1 which negates it again.  So the termination activity level will be positive.
+
+Then , when we build child flows, this shit hits the fan because we use term.inventory(term.term_flow), which will normalize all the flows to the reference exchange-- that is, it will generate exchange values consistent with an OUTPUT of 1kg (normalized to the rx).
+
+Both inventory(rx) and ad(rx.flow.external_ref) do this-- except ad flips the signs and directions of the exchanges to be positively-valued.
+

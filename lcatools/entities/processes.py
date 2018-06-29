@@ -6,7 +6,7 @@ import uuid
 # from collections import namedtuple
 
 from lcatools.entities.entities import LcEntity
-# from lcatools.entities.flows import LcFlow
+from lcatools.interfaces import InventoryRequired
 from lcatools.exchanges import (Exchange, ExchangeValue, DuplicateExchangeError, AmbiguousReferenceError,
                                 NoReferenceFound)
 from lcatools.lcia_results import LciaResult, LciaResults
@@ -40,19 +40,25 @@ class RxRef(object):
     A placeholder object to store reference exchange info for process_refs.  It can be modified to interoperate in
     places where exchanges are expected, e.g by having equivalent equality tests, hashes, etc., as needed.
     """
-    def __init__(self, process, flow, direction):
-        self._origin = process.origin
-        self._process = process
+    def __init__(self, process_uuid, flow, direction):
+        self._process_ref = None
         self._flow_ref = flow
         self._direction = direction
         # self._value = value
         # self._hash_tuple = (process.uuid, flow.external_ref, direction, None)
-        self._hash = hash((process.uuid, flow.external_ref, direction, None))
+        self._hash = hash((process_uuid, flow.external_ref, direction, None))
         # self._is_alloc = process.is_allocated(self)
 
     @property
     def process(self):
-        return self._process
+        return self._process_ref
+
+    @process.setter
+    def process(self, value):
+        if self._process_ref is None:
+            self._process_ref = value
+        else:
+            raise AttributeError('Process ref already set!')
 
     @property
     def flow(self):
@@ -77,13 +83,12 @@ class RxRef(object):
     def is_reference(self):
         return True
 
-    '''
     @property
-    def value_string(self):
-        if self._value is None:
+    def _value_string(self):
+        try:
+            return '%.3g' % self.process.reference_value(self.flow.external_ref)
+        except InventoryRequired:
             return ' --- '
-        return '%.3g' % self._value
-    '''
 
     @property
     def entity_type(self):
@@ -105,7 +110,7 @@ class RxRef(object):
 
     @property
     def link(self):
-        return '%s/%s/reference/%s' % (self._origin, self.process.external_ref, self._flow_ref.external_ref)
+        return '%s/reference/%s' % (self.process.link, self._flow_ref.external_ref)
 
     def __hash__(self):
         return self._hash
@@ -121,7 +126,7 @@ class RxRef(object):
 
     def __str__(self):
         ref = '(*)'
-        return '%6.6s: %s [--- %s] %s' % (self.direction, ref, self.flow.unit(), self.flow)
+        return '%6.6s: %s [%s %s] %s' % (self.direction, ref, self._value_string, self.flow.unit(), self.flow)
 
 
 class LcProcess(LcEntity):
@@ -171,7 +176,7 @@ class LcProcess(LcEntity):
             self._d['Classifications'] = []
 
     def _make_ref_ref(self, query):
-        return [RxRef(self, x.flow.make_ref(query), x.direction) for x in self.references()]
+        return [RxRef(self.uuid, x.flow.make_ref(query), x.direction) for x in self.references()]
 
     def __str__(self):
         return '%s [%s]' % (self._d['Name'], self._d['SpatialScope'])

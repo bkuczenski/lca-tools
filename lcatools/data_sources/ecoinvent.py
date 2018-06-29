@@ -14,13 +14,14 @@ import os
 
 from .data_source import DataSource
 
-
-ECOINVENT_VERSIONS = ('3.2', )
+FILE_PREFIX = ('current_Version_', 'ecoinvent ')
+FILE_EXT = ('7z', 'zip')
+ECOINVENT_VERSIONS = ('3.2', '3.4')
 ECOINVENT_SYS_MODELS = ('apos', 'conseq', 'cutoff')
 MODELMAP = {
-    'apos': 'apos',
-    'conseq': 'consequential_longterm',
-    'cutoff': 'cutoff'
+    'apos': ('apos',),
+    'conseq': ('consequential', 'consequential_longterm'),
+    'cutoff': ('cutoff',)
 }
 
 
@@ -28,23 +29,22 @@ class Ecoinvent3Base(DataSource):
 
     _ds_type = 'EcospoldV2Archive'
 
-    def __init__(self, ecoinvent_root, version, model, inv_ext='7z', lci_ext='7z'):
+    def __init__(self, ecoinvent_root, version, model, **kwargs):
         assert version in ECOINVENT_VERSIONS
         assert model in ECOINVENT_SYS_MODELS
-        self._exts = {'inv': inv_ext,
-                      'lci': lci_ext}
         self._root = ecoinvent_root
         self._version = version
         self._model = model
+        self._kwargs = kwargs
 
     @property
     def _lci_ref(self):
-        if os.path.exists(self.lci_source):
+        if self.lci_source is not None:
             yield 'local.ecoinvent.lci.%s.%s' % (self._version, self._model)
 
     @property
     def _inv_ref(self):
-        if os.path.exists(self.inv_source):
+        if self.inv_source is not None:
             yield 'local.ecoinvent.%s.%s' % (self._version, self._model)
 
     @property
@@ -63,21 +63,25 @@ class Ecoinvent3Base(DataSource):
         elif ref in self._inv_ref:
             yield self._make_resource(ref, self.inv_source, interfaces=('index', 'inventory'), prefix='datasets')
 
-    @property
-    def inv_file(self):
-        return 'current_Version_%s_%s_ecoSpold02.%s' % (self._version, MODELMAP[self._model], self._exts['inv'])
-
-    @property
-    def lci_file(self):
-        return 'current_Version_%s_%s_lci_ecoSpold02.%s' % (self._version, MODELMAP[self._model], self._exts['lci'])
+    def _fname(self, ftype=None):
+        for pf in FILE_PREFIX:
+            for mod in MODELMAP[self._model]:
+                for ext in FILE_EXT:
+                    if ftype is None:
+                        fname = '%s%s_%s_ecoSpold02.%s' % (pf, self._version, mod, ext)
+                    else:
+                        fname = '%s%s_%s_%s_ecoSpold02.%s' % (pf, self._version, mod, ftype, ext)
+                    source = os.path.join(self._root, self._version, fname)
+                    if os.path.exists(source):
+                        return source
 
     @property
     def inv_source(self):
-        return os.path.join(self._root, self._version, self.inv_file)
+        return self._fname()
 
     @property
     def lci_source(self):
-        return os.path.join(self._root, self._version, self.lci_file)
+        return self._fname('lci')
 
 
 class EcoinventConfig(DataSource):

@@ -51,6 +51,7 @@ class Archive(object):
             archive = Archive7z(fp)
         except:
             archive = False
+            raise
         return archive
 
     @staticmethod

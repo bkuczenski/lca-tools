@@ -160,7 +160,7 @@ class EcoinventLciTest(unittest.TestCase):
             inverted = []
             fail = []
 
-            for i in lci_result.inventory(rx):
+            for i in lci_result.inventory(rx):  # inventory method normalizes in ExchangeValue.from_allocated
                 count += 1
                 z = lci_check[i.key]
                 if isclose(i.value, z.value, rel_tol=1e-6):

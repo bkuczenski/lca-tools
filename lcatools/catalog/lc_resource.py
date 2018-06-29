@@ -76,7 +76,7 @@ class LcResource(object):
         self._archive = create_archive(self.source, self.ds_type, catalog=catalog, ref=self.reference,
                                        # upstream=catalog.qdb,
                                        **self.init_args)
-        if os.path.exists(catalog.cache_file(self.source)):
+        if catalog is not None and os.path.exists(catalog.cache_file(self.source)):
             update_archive(self._archive, catalog.cache_file(self.source))
         if self.static and self.ds_type.lower() != 'json':
             self._archive.load_all()  # static json archives are by convention saved in complete form

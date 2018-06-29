@@ -64,7 +64,6 @@ RESOURCES_CONFIG = {
     'ecoinvent': {
         'source': EcoinventConfig,
         'ecoinvent_root': '/data/LCI/Ecoinvent/',
-        'inv_ext': 'zip',
         'enable_test': True
     }
 }

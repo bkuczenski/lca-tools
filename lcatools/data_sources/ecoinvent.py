@@ -66,11 +66,15 @@ class Ecoinvent3Base(DataSource):
     def _fname(self, ftype=None):
         for pf in FILE_PREFIX:
             for mod in MODELMAP[self._model]:
+                if ftype is None:
+                    pname = '%s%s_%s_ecoSpold02' % (pf, self._version, mod)
+                else:
+                    pname = '%s%s_%s_%s_ecoSpold02' % (pf, self._version, mod, ftype)
+                dsource = os.path.join(self._root, self._version, pname)
+                if os.path.isdir(dsource):
+                    return dsource
                 for ext in FILE_EXT:
-                    if ftype is None:
-                        fname = '%s%s_%s_ecoSpold02.%s' % (pf, self._version, mod, ext)
-                    else:
-                        fname = '%s%s_%s_%s_ecoSpold02.%s' % (pf, self._version, mod, ftype, ext)
+                    fname = '%s.%s' % (pname, ext)
                     source = os.path.join(self._root, self._version, fname)
                     if os.path.exists(source):
                         return source

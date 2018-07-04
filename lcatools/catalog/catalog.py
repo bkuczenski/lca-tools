@@ -234,6 +234,9 @@ class LcCatalog(LciaEngine):
         """
         return self._resolver.new_resource(*args, store=store, **kwargs)  # explicit store= for doc purposes
 
+    def has_resource(self, res):
+        return self._resolver.has_resource(res)
+
     def add_resource(self, resource, store=True):
         """
         Add an existing LcResource to the catalog.

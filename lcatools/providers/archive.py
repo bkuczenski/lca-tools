@@ -117,7 +117,11 @@ class Archive(object):
 
         if os.path.isdir(path):
             # print('Path points to a directory. Assuming expanded archive')
-            self.path = os.path.abspath(path) + os.path.sep  # abs reference plus trailing slash
+            if self._internal_prefix is None:
+                self.path = os.path.abspath(path) + os.path.sep  # abs reference plus trailing slash
+            else:
+                self.path = os.path.join(os.path.abspath(path), internal_prefix) + os.path.sep
+                self._internal_prefix = None
             self.compressed = False
             self._archive = None
             self.OK = os.access(path, os.R_OK)

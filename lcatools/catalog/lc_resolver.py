@@ -62,12 +62,15 @@ class LcCatalogResolver(object):
         :param store: [True] if False, add the resource to memory only
         :return:
         """
-        if resource.exists(self._resource_dir):
+        if resource.exists(self._resource_dir) or self.has_resource(resource):
             # do nothing
             return
         if store:
             resource.write_to_file(self._resource_dir)
         self._resources[resource.reference].append(resource)
+
+    def has_resource(self, resource):
+        return resource in self._resources[resource.reference]
 
     def new_resource(self, ref, source, ds_type, store=True, **kwargs):
         new_res = LcResource(ref, source, ds_type, **kwargs)

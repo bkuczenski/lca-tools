@@ -4,6 +4,11 @@ Deals with ILCD namespaces
 """
 
 import re
+from collections import defaultdict
+
+
+class XmlWidgetError(Exception):
+    pass
 
 
 def find_ns(nsmap, dtype):
@@ -35,7 +40,8 @@ def find_common(o, tag):
 
 
 def _convert_variable_ref(el):
-    return re.sub('{{([\w]+)}}', '%(\\1)s', str(el))
+    el = re.sub('%', '%%', str(el))
+    return re.sub('{{([A-Za-z0-9_]+)}}', '%(\\1)s', el)
 
 
 def render_text_block(el, ns=None):
@@ -46,7 +52,17 @@ def render_text_block(el, ns=None):
     :param ns: [None] namespace
     :return:
     """
-    variables = {a.attrib['name']: a.text for a in find_tags(el, 'variable', ns=ns)}
+    vs = find_tags(el, 'variable', ns=ns)
+    variables = defaultdict(str)
+    if vs != ['']:
+        try:
+            for a in vs:
+                variables[a.attrib['name']] = a.text
+            # variables = {a.attrib['name']: a.text for a in vs}
+        except AttributeError:
+            print(vs)
+            raise
+    ts = find_tags(el, 'text', ns=ns)
     texts = [_convert_variable_ref(t) % variables
-             for t in sorted(find_tags(el, 'text', ns=ns), key=lambda a: a.attrib['index'])]
+             for t in sorted(ts, key=lambda _a: _a.attrib['index'])]
     return '\n'.join(texts)

@@ -230,6 +230,31 @@ class EcospoldV2Archive(LcArchive):
 
         return f
 
+    @staticmethod
+    def _get_process_comment(ad, ud):
+        if 1:
+            gc = find_tag(ad, 'generalComment')
+            if gc == '':
+                # print('activity ID %s: no comment' % ud)
+                return 'no comment.'
+            try:
+                c = render_text_block(gc)
+            except KeyError:
+                print(ud)
+                raise
+            except XmlWidgetError:
+                print(ud)
+                raise
+            return c
+        try:
+            c = find_tag(ad, 'generalComment')['text'].text
+        except TypeError:
+            c = 'no comment.'
+        except AttributeError:
+            print('activity ID %s: no comment' % ud)
+            c = 'no comment.'
+        return c
+
     def _create_process_entity(self, o):
         """
         Constructs the process without populating exchanges
@@ -244,13 +269,9 @@ class EcospoldV2Archive(LcArchive):
             return self[u]
 
         n = find_tag(ad, 'activityName').text
-        try:
-            c = find_tag(ad, 'generalComment')['text'].text
-        except TypeError:
-            c = 'no comment.'
-        except AttributeError:
-            print('activity ID %s: no comment' % u)
-            c = 'no comment.'
+
+        c = self._get_process_comment(ad, u)
+
         g = find_tag(ad, 'geography').shortname.text
 
         tp = find_tag(ad, 'timePeriod')

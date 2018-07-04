@@ -196,7 +196,7 @@ class LcResource(object):
             with open(filename, 'r') as fp:
                 j = json.load(fp)
 
-            if any([self._matches(k) for k in j[self.reference]]):
+            if any([self.matches(k) for k in j[self.reference]]):
                 return True
         return False
 
@@ -282,7 +282,7 @@ class LcResource(object):
         j['config'] = self._serialize_config()
         return j
 
-    def _matches(self, k):
+    def matches(self, k):
         """
         Pretty cheesy.  When we serialize a set of resources, we need to make sure not to include self twice.
         We were using dataSource as a unique identifier for resource entries; but the introduction of download links
@@ -312,7 +312,7 @@ class LcResource(object):
             with open(filename, 'r') as fp:
                 j = json.load(fp)
 
-            resources = [k for k in j[self.reference] if not self._matches(k)]
+            resources = [k for k in j[self.reference] if not self.matches(k)]
             resources.append(self.serialize())
         else:
             resources = [self.serialize()]

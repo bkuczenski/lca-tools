@@ -168,7 +168,6 @@ class LcFragment(LcEntity):
         self._conserved_quantity = None
 
         self._exchange_values = _new_evs()
-        self.cached_ev = exchange_value
 
         self._terminations = dict()
         if termination is None:
@@ -183,6 +182,7 @@ class LcFragment(LcEntity):
                 except NoCatalog:
                     self._d['StageName'] = ''
 
+        self.cached_ev = exchange_value
         self.__dbg_threshold = -1  # higher number is more verbose
 
     def set_debug_threshold(self, level):
@@ -399,6 +399,8 @@ class LcFragment(LcEntity):
     def cached_ev(self, value):
         if self.cached_ev != 1.0:
             raise CacheAlreadySet('Set Value: %g (new: %g)' % (self.cached_ev, value))
+        if value == self.cached_ev:
+            return
         self.set_exchange_value(0, value)
 
     def reset_cache(self):

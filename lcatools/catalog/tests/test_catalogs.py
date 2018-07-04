@@ -18,6 +18,20 @@ uslci_fg = LcResource('test.uslci', '/data/LCI/USLCI/USLCI_Processes_ecospold1.z
                       prefix='USLCI_Processes_ecospold1/USLCI_Processes_ecospold1')
 
 
+uslci_fg_dup = LcResource('test.uslci', '/data/LCI/USLCI/USLCI_Processes_ecospold1.zip', 'ecospold',
+                          interfaces='inventory',
+                          priority=40,
+                          static=False,
+                          prefix='USLCI_Processes_ecospold1/USLCI_Processes_ecospold1')
+
+
+uslci_fg_bad = LcResource('test.uslci', '/data/LCI/USLCI/junk.zip', 'ecospold',
+                          interfaces='inventory',
+                          priority=40,
+                          static=False,
+                          prefix='USLCI_Processes_ecospold1/USLCI_Processes_ecospold1')
+
+
 uslci_bg = LcResource('test.uslci.allocated', '/data/GitHub/lca-tools-datafiles/catalogs/uslci_clean_allocated.json.gz',
                       'json',
                       interfaces=READONLY_INTERFACE_TYPES,
@@ -82,6 +96,14 @@ class LcCatalogFixture(unittest.TestCase):
         self._cat.delete_resource(r)
         self.assertNotIn('test.my.dummy', self._cat.references)
         self.assertFalse(os.path.exists(os.path.join(self._cat.resource_dir, r.reference)))
+
+    def test_has_resource(self):
+        """
+        If a resource matches one that exists, has_resource should return True
+        :return:
+        """
+        self.assertTrue(self._cat.has_resource(uslci_fg_dup))
+        self.assertFalse(self._cat.has_resource(uslci_fg_bad))
 
 
 if __name__ == '__main__':

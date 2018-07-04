@@ -70,7 +70,8 @@ class LcCatalogResolver(object):
         self._resources[resource.reference].append(resource)
 
     def has_resource(self, resource):
-        return resource in self._resources[resource.reference]
+        s = resource.serialize()
+        return any(k.matches(s) for k in self._resources[resource.reference])
 
     def new_resource(self, ref, source, ds_type, store=True, **kwargs):
         new_res = LcResource(ref, source, ds_type, **kwargs)

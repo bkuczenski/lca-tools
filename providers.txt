@@ -52,6 +52,12 @@ Entity uuids are either supplied directly via LcEntity(), or computed from the n
 
 In the ILCD (and ecospold2) case, UUIDs identify flows (or intermediate or elementary exchanges), which are flowable + context.  We want to store these too, right? so ILCD archives (and maybe ecoinvent archives too) have a _flow_list dict, which maps uuid to a flow+context pair for quick retrieval.  We can investigate whether this should be a more general purpose feature, but I think it should only be used in instances where archives already have stable UUIDs that we want to preserve-- but these will not be serialized.
 
+I.0 Accessing root data
+
+Archives are also the framework that should be used to provide generalized access to source data (e.g. execute XML queries).. still need to figure this out, but there should be some way to ask an archive to perform an operation on the source file for a given entity-- the implementation would have to be subclass-specific since obviously flows and quantities don't have universal representation in different archive subclasses.
+
+Well, the xml-based ones [unevenly] implement .objectify() so that at least gets us the raw info.
+
 I.1 Characteristics of Entity Types:
 
 Context:

@@ -171,17 +171,36 @@ class Exchange(object):
         return comp_dir(self.direction)
 
     @property
-    def tflow(self):
+    def terminates_to(self):
+        if self.termination is not None:
+            if self.termination == self.process.uuid:
+                return 'self'
+            elif False:  # hook for elementary flow implementation
+                return 'context'
+            else:
+                return 'node'
+        return 'cutoff'
+
+    @property
+    def _tflow(self):
         """
-        indicates if an exchange is terminated with '(#)'
+        indicates how an exchange is terminated:
+         - cutoff: nothing
+         - elementary flow: with (-) [NOTIMPLEMENTED]
+         - self: with (o)
+         - to process: with '(#)'
         :return:
         """
-        if self.termination is not None:
-            return str(self.flow) + ' (#)'
-        return str(self.flow)
+        tmark = {
+            'cutoff': '    ',
+            'self': '(o) ',
+            'context': '(-) ',
+            'node': '(#) '
+        }[self.terminates_to]
+        return tmark + str(self.flow)
 
     def __str__(self):
-        return '%s has %s: %s %s' % (self.process, self.direction, self.tflow, self.unit)
+        return '%s has %s: %s %s' % (self.process, self.direction, self._tflow, self.unit)
 
     def f_view(self):
         return '%s of %s' % (self.direction, self.process)
@@ -407,7 +426,7 @@ class ExchangeValue(Exchange):
                 ref = '{*}'
             else:
                 ref = '   '
-        return '%6.6s: %s [%s %s] %s' % (self.direction, ref, self.value_string, self.unit, self.tflow)
+        return '%6.6s: %s [%s %s] %s' % (self.direction, ref, self.value_string, self.unit, self._tflow)
 
     def f_view(self):
         return '%6.6s: [%s %s] %s' % (self.direction, self.value_string, self.unit, self.process)

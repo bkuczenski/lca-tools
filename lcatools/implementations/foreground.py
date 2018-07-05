@@ -371,6 +371,16 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         return frag
 
     def _create_fragment_from_node(self, process, ref_flow=None, include_elementary=False, observe=True):
+        """
+        Interior process used recursively to create a fragment.
+
+        The tree cannot include
+        :param process:
+        :param ref_flow:
+        :param include_elementary:
+        :param observe:
+        :return:
+        """
         if process.uuid in self._recursion_check:
             raise FragRecursionError('Encountered the same process!')
         self._recursion_check.add(process.uuid)

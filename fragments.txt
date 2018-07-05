@@ -1,0 +1,98 @@
+==========
+Wed Jul 04 00:04:43 -0700 2018
+
+Thoughts about fragments and terminations for this emission factors project using ecoinvent.X
+
+I am going to take the position that "background inventories are always normalized" whereas "foreground inventories are always literal"
+
+This is for good reasons:
+
+ 1- Fragments are literal foreground inventories with non-normalized reference exchanges
+ 2- ecoinvent "undefined" processes are non-normalized and may be used as foreground inventories
+
+The implication of this is that (a) any non-background termination MAY have a non-unity inbound ev; (b) only background terminations MUST have a unity inbound ev; (c) the client code that uses inventory methods must apply a reference flow in the background case and apply NO reference flow in the foreground case.
+
+
+----
+
+Now then.  Since The Dawn Of Time, fragment traversal has always correctly handled self-consumption. But it doesn't now and I can't remember how it worked nor figure out how to implement it.
+
+Probably ever since I rejiggered the traversal routine for AUOMA, it hasn't.
+
+Now that I am looking at the current results for this project and I can see that it doesn't. There are a couple possible reasons why, and it's important to figure out which one applies:
+
+(1) it does work correctly-- somewhere in group_ios-- but requires the flows to hash the same as dictionary keys.  In the present case, the reference flow is a flow_ref but the cutoff flow is an LcFlow, and/so they don't.
+(2) it doesn't work correctly, and needs to be implemented in new code.
+(3) somewhere in between those two options.
+
+The only way to do this is to step through the traversal routine and determine by reflection where and how it should happen.
+
+Maybe I should go all the way back to July of 2016, back when it was actually working with the USLCI natural gas pipeline process, and see hwo it worked.
+
+The question now is, how SHOULD it work? what SHOULD the test case be?
+
+
+
+Thu 2018-07-05 11:26:21 -0700
+
+The fact is, this IS still working-- case (1) was representative, and the solution was to (a) implement make_ref for exchange objects and (b) require that foregrounds only store refs and not native entities, unless the entities are local.  This is actually a VERY GOOD NORMATIVE CHANGE because it is easily enforced and makes clear conceptual sense.
+
+SO with that change, group_ios works correctly and reports less-than-unity of the reference flow, and it is up to the subfragment traversal to adjust the downstream activity level, which happens in _traverse_subfragment
+
+...
+push that onto the stack and let's deal with this foreground | background thing.  We have ONE way of specifying that a fragment is a background fragment, and that is a property of the fragment.  From there we have TWO ways of specifying whether a TERMINATION is background: whether its parent is background; whether its term node is background.  Currently we test for those in two different ways and it's not clear when we should use which one.
+
+Current audit:
+
+ @property LcFragment.is_background(self): set by modeler
+  used 8 times: 
+-   0-a: in __str__(), to draw the fragment as '(B) ref'
+  * 0-b: to END TRAVERSAL ** THIS IS THE DEFINITIVE USE **
+-   0-c: to set FlowTermination.is_bg
+-   0-d: in FlowTermination.serialize(), to save unit scores
+-   0-e: in FragmentEditor.clone_fragment()
+ #  0-f: in LcFragment.cutoffs(), to add cutoffs from subfragments that remain un-traversed per 0-b
+-   0-g: in LcForeground.fragments() in sorting fragments
+-   0-h: in LcForeground._fragments() in selecting fragments
+
+
+
+ @property FlowTermination.is_bg(self): true if _parent.is_background
+  used 8 times:
+  * 1-a: redundantly with term_is_bg in is_subfrag [ either disqualifies ]
+  * 1-b: if is_bg, inbound exchange value is forced to 1.0 [this seems FALSE]
+  * 1-c: in _unobserved_exchanges, to determine whether to use inventory() or lci() [formerly emissions().... but I have doubts here]
+  0 1-d: in compute_unit_score, to determine whether to use fg_lcia() or bg_lcia() for PRIVATE ARCHIVES ONLY
+-   1-e: in __str__(), to output -B* for background processes
+-   1-f: in LcFragment.show_tree(), redundantly with term_is_bg in sorting child frags
+-   1-g: in TeXAuthor.frag_layout_recurse() in sorting child frags
+-   1-h: in TeXAuthor.frag_layout_recurse() in spacing child frags
+
++   1+i: in compute_unit_score(), if term is a fragment, do bg_lcia
+
+ redirecting to 30 Oct 2017 notes in catalog.txt when this is addressed
+
+ @property FlowTermination.term_is_bg(self): true if term_node.is_background
+  used  times:
+-   2-a: in __str__(), to output either --C or -B for background subfragments
+  * 2-b: (see 1-a) to disqualify is_subfrag
+  * 2-c: in LcFragment._traverse_subfragment(), GIVEN 0-b, to substitute parent fragment for background subfragment
+-   2-d: (see 1-f) in sorting
+-   2-e: in TeXAuthor.frag_layout_traverse() in drawing bg or cutoff children
+
++   2+f: in _unobserved_exchanges(), if term node is bg it will have no unobserved exchanges
+
+
+So all of this appears to be in order [with a possible exception], so let's clarify:
+
+ - A modeler sets a fragment as background to indicate that TRAVERSAL SHOULD END (0-b)
+   ==> if the node is a process, the unit score is computed via lci() (1-c)
+       - here we use ref_flow=self.term_flow so the expectation that the inbound ev is 1 is CORRECT
+   ==> if the node is a subfragment, we need to run bg_lcia on the subfragment, which is not currently supported. (1+i, new)
+       - WHEN IMPLEMENTED, we shall have to normalize to unit inbound ev to make 1-b CORRECT
+
+ - if a fragment is TERMINATED to a background fragment, then we want to go ahead and use the background fragment's termination instead of duplicate it (2-c). BUT in this case we should not bother to do lcia locally. (2+f)
+
+There is some room here to use is_subfrag more efficiently, because the above is essentially a re-implementation of aggregate_subfragments() (1-a)(2-b)
+
+OK. we passed the regression with non-trivial code changes. The upshot is, I am ready to APPROVE the evaluation that term.is_bg => inbound_ev = 1.0

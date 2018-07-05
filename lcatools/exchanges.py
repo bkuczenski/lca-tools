@@ -73,6 +73,17 @@ class Exchange(object):
         self._is_reference = False
 
     @property
+    def origin(self):
+        return self._process.origin
+
+    @property
+    def is_entity(self):
+        return self.process.is_entity
+
+    def make_ref(self, query):
+        return Exchange(self._process.make_ref(query), self._flow.make_ref(query), self.direction, self.termination)
+
+    @property
     def is_reference(self):
         return self._is_reference
 
@@ -282,6 +293,10 @@ class ExchangeValue(Exchange):
             self._value_dict = dict()  # keys must live in self.process.reference_entity
         else:
             self._value_dict = value_dict
+
+    def make_ref(self, query):
+        return ExchangeValue(self._process.make_ref(query), self._flow.make_ref(query), self.direction,
+                             self.termination, value=self._value, value_dict=self._value_dict)
 
     @property
     def value(self):

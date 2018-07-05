@@ -68,12 +68,10 @@ class RxRef(object):
     def direction(self):
         return self._direction
 
-    '''
     @property
     def value(self):
         # print('ACCESSING RxRef VALUE')  # need to be cautious about when / why this is used
-        return self._value
-    '''
+        return self.process.reference_value(self.flow)
 
     @property
     def termination(self):

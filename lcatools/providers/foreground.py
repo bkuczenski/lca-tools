@@ -19,6 +19,13 @@ class FragmentNotFound(Exception):
     pass
 
 
+class NonLocalEntity(Exception):
+    """
+    Foregrounds should store only local entities and references to remote entities
+    """
+    pass
+
+
 class LcForeground(BasicArchive):
     """
     An LcForeground is defined by being anchored to a physical directory, which is used to serialize the non-fragment
@@ -110,11 +117,15 @@ class LcForeground(BasicArchive):
         """
         if entity.entity_type not in entity_types:
             raise ValueError('%s is not a valid entity type' % entity.entity_type)
+        if entity.is_entity and entity.origin is not None and entity.origin != self.ref:
+            entity.show()
+            print('my ref: %s' % self.ref)
+            raise NonLocalEntity(entity)
         try:
             self._add(entity)
         except KeyError:
             # merge incoming entity's properties with existing entity
-            current = self[entity.get_uuid()]
+            current = self[entity.uuid]
             current.merge(entity)
 
     def _add_children(self, entity):
@@ -178,7 +189,7 @@ class LcForeground(BasicArchive):
 
     def _recurse_frags(self, frag):
         frags = [frag]
-        for x in sorted(frag.child_flows, key=lambda z: z.get_uuid()):
+        for x in sorted(frag.child_flows, key=lambda z: z.uuid):
             frags.extend(self._recurse_frags(x))
         return frags
 
@@ -186,7 +197,7 @@ class LcForeground(BasicArchive):
         current_files = os.listdir(self._fragment_dir)
         for r in self._fragments():
             frags = [t.serialize(save_unit_scores=save_unit_scores) for t in self._recurse_frags(r)]
-            fname = r.get_uuid() + '.json'
+            fname = r.uuid + '.json'
             if fname in current_files:
                 current_files.remove(fname)
             tgt_file = os.path.join(self._fragment_dir, fname)
@@ -259,7 +270,7 @@ class LcForeground(BasicArchive):
         :return:
         """
         if strict:
-            k = [f for f in self.fragments(show_all=True) if f.get_uuid().startswith(string.lower())]
+            k = [f for f in self.fragments(show_all=True) if f.uuid.startswith(string.lower())]
             if len(k) > 1:
                 for i in k:
                     print('%s' % i)
@@ -269,7 +280,7 @@ class LcForeground(BasicArchive):
             except IndexError:
                 raise StopIteration
         else:
-            return next(f for f in self.fragments(show_all=True) if f.get_uuid().startswith(string.lower()))
+            return next(f for f in self.fragments(show_all=True) if f.uuid.startswith(string.lower()))
 
     def draw(self, string, **kwargs):
         if not isinstance(string, LcFragment):

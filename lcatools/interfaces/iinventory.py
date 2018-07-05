@@ -18,8 +18,9 @@ class InventoryInterface(AbstractQuery):
         :param process:
         :return:
         """
-        return self._perform_query(_interface, 'exchanges',
-                                   InventoryRequired('No access to exchange data'), process, **kwargs)
+        for x in self._perform_query(_interface, 'exchanges',
+                                     InventoryRequired('No access to exchange data'), process, **kwargs):
+            yield self.make_ref(x)
 
     def exchange_values(self, process, flow, direction=None, termination=None, **kwargs):
         """
@@ -30,9 +31,10 @@ class InventoryInterface(AbstractQuery):
         :param termination: [None] if none, return all terminations
         :return:
         """
-        return self._perform_query(_interface, 'exchange_values',
-                                   InventoryRequired('No access to exchange data'),
-                                   process, flow, direction=direction, termination=termination, **kwargs)
+        for x in self._perform_query(_interface, 'exchange_values',
+                                     InventoryRequired('No access to exchange data'),
+                                     process, flow, direction=direction, termination=termination, **kwargs):
+            yield self.make_ref(x)
 
     def inventory(self, process, ref_flow=None, **kwargs):
         """
@@ -46,8 +48,9 @@ class InventoryInterface(AbstractQuery):
         :param ref_flow:
         :return:
         """
-        return self._perform_query(_interface, 'inventory', InventoryRequired('No access to exchange data'),
-                                   process, ref_flow=ref_flow, **kwargs)
+        for x in self._perform_query(_interface, 'inventory', InventoryRequired('No access to exchange data'),
+                                     process, ref_flow=ref_flow, **kwargs):
+            yield self.make_ref(x)
 
     def exchange_relation(self, process, ref_flow, exch_flow, direction, termination=None, **kwargs):
         """

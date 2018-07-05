@@ -618,7 +618,7 @@ class LcFragment(LcEntity):
                 self.terminate(self, scenario=scenario, inbound_ev=value)
         else:
             if scenario == 0 or scenario == '0' or scenario is None:
-                self.cached_ev = value
+                self._exchange_values[0] = value
             elif scenario == 1 or scenario == '1':
                 self._exchange_values[1] = value
             else:
@@ -972,10 +972,6 @@ class LcFragment(LcEntity):
          * every flow appears with only one direction
          * the fragment's reference flow will appear with a direction relative to the fragment.
 
-        normalized to the reference of a
-        *net unit* of self's flow.  Raises an error if the net direction of the flow is inconsistent with self's
-        direction (i.e. if the fragment consumes more reference flow than it generates).
-
         Created to encapsulate a traversal problem.
 
         :param scenario:
@@ -1118,6 +1114,16 @@ class LcFragment(LcEntity):
         for sub-fragments, the flow magnitudes are determined at the time of traversal and must be pushed out to
          child flows
         for LOCAL background flows, the background ff should replace the current ff, maintaining self as fragment
+
+        subfragment activity level is determined as follows:
+         - if the subfragment is a background fragment, it MUST have a unity inbound_exchange_value; this is enforced:
+           - for background processes, because FlowTermination._unobserved_exchanges() uses term_node.lci(ref_flow)
+           - for background fragments, in the yet-to-be-implemented bg_lcia method  (part of the foreground interface??)
+           in any case, the background term is swapped into the foreground node.
+
+         - otherwise, the subfragment inventory is taken and grouped, and the matching flow is found, and the magnitude
+           of the matching flow is used to normalize the downstream node weight.
+
 
         :param ff:
         :param scenario:

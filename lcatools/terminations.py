@@ -432,6 +432,9 @@ class FlowTermination(object):
             x = ExchangeValue(self._parent, self._parent.flow, self._parent.direction,
                               value=self.node_weight_multiplier)
             yield x
+        elif self.term_is_bg:
+            for x in []:
+                yield x
         # elif self.is_frag:  # fragments can have unobserved exchanges too!
         #     for x in []:
         #         yield x
@@ -441,7 +444,7 @@ class FlowTermination(object):
             for c in self._parent.child_flows:
                 children.add((c.flow, c.direction))
             if self.is_bg:
-                iterable = self.term_node.emissions(ref_flow=self.term_flow)
+                iterable = self.term_node.lci(ref_flow=self.term_flow)
             else:
                 iterable = self.term_node.inventory()
             for x in iterable:
@@ -465,12 +468,11 @@ class FlowTermination(object):
             else:
                 raise SubFragmentAggregation  # to be caught
 
-        '''
-        if self._parent.is_background:
+        if self.is_bg and self.is_frag:
             # need bg_lcia method for FragmentRefs
-            res = self.term_node.bg_lcia(lcia_qty=quantity_ref, ref_flow=self.term_flow.external_ref, **kwargs)
-        else:
-        '''
+            # this is probably not currently supported
+            return self.term_node.bg_lcia(lcia_qty=quantity_ref, ref_flow=self.term_flow.external_ref, **kwargs)
+
         try:
             locale = self.term_node['SpatialScope']
         except KeyError:
@@ -485,7 +487,6 @@ class FlowTermination(object):
                 res = self.term_node.fg_lcia(quantity_ref, ref_flow=self.term_flow.external_ref, **kwargs)
                 print('terminations.compute_unit_score UNTESTED for private fg archives!')
                 # res.set_scale(self.inbound_exchange_value)
-        self._score_cache[quantity_ref.uuid] = res
         return res
 
     def score_cache(self, quantity=None, **kwargs):
@@ -494,7 +495,9 @@ class FlowTermination(object):
         if quantity.uuid in self._score_cache:
             return self._score_cache[quantity.uuid]
         else:
-            return self.compute_unit_score(quantity, **kwargs)
+            res = self.compute_unit_score(quantity, **kwargs)
+            self._score_cache[quantity.uuid] = res
+            return res
 
     def score_cache_items(self):
         return self._score_cache.items()

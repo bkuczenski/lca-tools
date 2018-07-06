@@ -68,6 +68,20 @@ def find_lci_ref(version, model):
 
 
 def _extract_and_reduce_lci(node):
+    """
+    This function performs the (surpassingly slow) task of extracting reduced aggregated LCI results from the large
+    bundled ecoinvent 7z LCI archives.  (The operation is slow on RAM-limited machines because the 7z algorithm requires
+    tremendous memory)
+
+    The routine requires the process inventory test case to be selected manually.
+
+    The selected inventory is loaded, and then one hundred exchanges are selected at random and the rest are removed.
+    This reduces the file size (and load time) of the generated archives without sacrificing the representativeness of
+    the computation.
+
+    :param node:
+    :return:
+    """
     filename = lci_cache_file(node.version, node.model)
     ref = test_ref(node.version, node.model)
     if os.path.exists(filename):

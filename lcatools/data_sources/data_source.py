@@ -7,6 +7,10 @@ class DataSource(object):
     """
     _ds_type = None
 
+    def __init__(self, data_root=None, **kwargs):
+        self._root = data_root
+        self._kwargs = kwargs
+
     def _make_resource(self, ref, source, ds_type=None, **kwargs):
         if ds_type is None:
             ds_type = self._ds_type
@@ -67,3 +71,35 @@ class DataSource(object):
 
     def _quantity_test_params(self, ref):
         pass
+
+
+class DataCollection(DataSource):
+    """
+    A container for a number of related data sources.  Uses a factory to generate the data sources, and then spools
+    out their results.
+    """
+    def factory(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def __init__(self, *args, **kwargs):
+        self._sources = dict()
+        for b in self.factory(*args, **kwargs):
+            for r in b.references:
+                if r in self._sources:
+                    raise KeyError('Duplicate reference %s' % r)
+                self._sources[r] = b
+
+    @property
+    def references(self):
+        for s in self._sources.keys():
+            yield s
+
+    def interfaces(self, ref):
+        b = self._sources[ref]
+        for i in b.interfaces(ref):
+            yield i
+
+    def make_resources(self, ref):
+        b = self._sources[ref]
+        for m in b.make_resources(ref):
+            yield m

@@ -44,6 +44,7 @@ TO ADD A NEW DATA SOURCE:
 """
 
 from .ecoinvent import EcoinventConfig
+from .traci import TraciConfig
 
 
 '''CATALOG_ROOT specifies the local folder that stores the reference catalog
@@ -56,14 +57,20 @@ provides enabling and configuration information to the various data resource
 classes defined elsewhere in this package.  Each key should match a python module name, and each value should
 be a dict.
  
-The contents of the module dict are resource-specific but must include a 'source' field which maps to a config object.
+The contents of the module dict are resource-specific but must include a 'source' field which maps to a config object,
+and a 'data_root' which maps to the _root variable in the DataSource.
 The remaining args are passed as init args to the object.
 '''
 
 RESOURCES_CONFIG = {
     'ecoinvent': {
         'source': EcoinventConfig,
-        'ecoinvent_root': '/data/LCI/Ecoinvent/',
+        'data_root': '/data/LCI/Ecoinvent/',
+        'enable_test': True
+    },
+    'traci': {
+        'source': TraciConfig,
+        'data_root': '/data/LCI/TRACI/',
         'enable_test': True
     }
 }
@@ -72,6 +79,11 @@ RESOURCES_CONFIG = {
 '''OPERATIONAL CONFIG
 Code below this line is used by the local init machinery to setup catalogs / testing
 '''
+
+
+def make_config(data_source):
+    d = RESOURCES_CONFIG[data_source]
+    return d['source'](**{k: v for k, v in d.items() if k != 'source'})
 
 
 def check_enabled(resource):

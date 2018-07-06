@@ -100,6 +100,8 @@ class EntityStore(object):
 
     def _key_to_id(self, key):
         """
+        This method always returns a valid key to _entities.
+
         in the base class, the key is the uuid-- this can get overridden
         by default, to_uuid just returns a string matching the regex, or failing that, tries to generate a string
         using uuid.UUID(key)
@@ -468,23 +470,19 @@ class EntityStore(object):
         except KeyError:
             return None
 
-    def _add(self, entity):
-        u = to_uuid(entity.uuid)
-        if u is None:
-            raise ValueError('Key must be a valid UUID')
-
-        if u in self._entities:
-            raise KeyError('Entity already exists: %s' % u)
+    def _add(self, entity, key):
+        if key in self._entities:
+            raise KeyError('Entity already exists: %s' % key)
 
         if entity.validate():
             if self._quiet is False:
                 print('Adding %s entity with %s: %s' % (entity.entity_type, u, entity['Name']))
             if entity.origin is None:
-                assert self._key_to_id(entity.external_ref) == u, 'New entity uuid must match origin repository key!'
+                assert self._key_to_id(entity.external_ref) == key, 'New entity uuid must match origin repository key!'
                 entity.origin = self.ref
-            self._entities[u] = entity
+            self._entities[key] = entity
             self._counter[entity.entity_type] += 1
-            self._ents_by_type[entity.entity_type].add(u)  # it's not ok to change an entity's type
+            self._ents_by_type[entity.entity_type].add(key)  # it's not ok to change an entity's type
 
         else:
             raise ValueError('Entity fails validation.')

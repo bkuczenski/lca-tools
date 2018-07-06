@@ -5,6 +5,8 @@ import json
 import os
 import re
 
+from collections import defaultdict
+
 from lcatools.entity_store import to_uuid
 from lcatools.entities import LcFragment, entity_types, BasicArchive
 from lcatools.entity_refs import CatalogRef
@@ -57,13 +59,13 @@ class LcForeground(BasicArchive):
         :param key:
         :return:
         """
-        i = to_uuid(key)
-        if i is None:
-            try:
-                i = self._ext_ref_mapping[key]
-            except KeyError:
-                i = None
-        return i
+        if key in self._entities:
+            return key
+        elif key in self._ext_ref_mapping:
+            return self._ext_ref_mapping[key]
+        elif key in self._uuid_map:
+            return next(k for k in self._uuid_map[key])
+        return None
 
     @property
     def _archive_file(self):
@@ -83,6 +85,7 @@ class LcForeground(BasicArchive):
         :param kwargs:
         """
         super(LcForeground, self).__init__(fg_path, **kwargs)
+        self._uuid_map = defaultdict(set)
         self._catalog = catalog
         self._ext_ref_mapping = dict()
         if not os.path.isdir(self.source):
@@ -117,7 +120,9 @@ class LcForeground(BasicArchive):
         """
         if entity.entity_type not in entity_types:
             raise ValueError('%s is not a valid entity type' % entity.entity_type)
-        if entity.is_entity and entity.origin is not None and entity.origin != self.ref:
+        if entity.origin is None:
+            entity.origin = self.ref
+        elif entity.is_entity and entity.origin != self.ref:
             entity = entity.make_ref(self._catalog.query(entity.origin))
             '''
             entity.show()
@@ -125,7 +130,8 @@ class LcForeground(BasicArchive):
             raise NonLocalEntity(entity)
             '''
         try:
-            self._add(entity)
+            self._add(entity, entity.link)
+            self._uuid_map[entity.uuid].add(entity.link)
         except KeyError:
             # merge incoming entity's properties with existing entity
             current = self[entity.uuid]
@@ -147,8 +153,7 @@ class LcForeground(BasicArchive):
     def name_fragment(self, frag, name):
         if self[frag.external_ref] is None:
             raise FragmentNotFound(frag)
-        k = self._key_to_id(name)
-        if k is not None:
+        if self._key_to_id(name) is not None:
             raise ValueError('Name is already taken')
         frag.external_ref = name  # will raise PropertyExists if already set
         self._ext_ref_mapping[name] = frag.uuid

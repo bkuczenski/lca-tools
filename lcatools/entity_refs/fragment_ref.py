@@ -50,6 +50,9 @@ class FragmentRef(EntityRef):
     def is_conserved_parent(self):
         return None
 
+    def set_name(self, name, **kwargs):
+        return self._query.name_fragment(self, name, **kwargs)
+
     def inventory(self, scenario=None, **kwargs):
         return self._query.inventory(self.external_ref, ref_flow=scenario, **kwargs)
 

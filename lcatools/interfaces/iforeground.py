@@ -35,6 +35,15 @@ class ForegroundInterface(AbstractQuery):
         """
         return self._perform_query(_interface, 'new_fragment', ForegroundRequired, *args, **kwargs)
 
+    def name_fragment(self, fragment, name, **kwargs):
+        """
+
+        :param fragment:
+        :param name:
+        :return:
+        """
+        return self._perform_query(_interface, 'name_fragment', ForegroundRequired, fragment, name, **kwargs)
+
     def find_or_create_term(self, exchange, background=None):
         """
         Finds a fragment that terminates the given exchange

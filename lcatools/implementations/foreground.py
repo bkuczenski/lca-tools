@@ -97,6 +97,9 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         self._archive.add_entity_and_children(frag)
         return frag
 
+    def name_fragment(self, fragment, name):
+        self._archive.name_fragment(fragment, name)
+
     def find_or_create_term(self, exchange, background=None):
         """
         Finds a fragment that terminates the given exchange

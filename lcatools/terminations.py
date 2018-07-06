@@ -446,7 +446,17 @@ class FlowTermination(object):
             if self.is_bg:
                 iterable = self.term_node.lci(ref_flow=self.term_flow)
             else:
-                iterable = self.term_node.inventory()
+                if len(self.term_node.reference_entity) > 1:
+                    print('WARNING: see _unobserved_exchanges')
+                    '''
+                    This will cause a wrong result in the following situation:
+                     * termination is built with a multi-output process 
+                     * inbound_exchange_value was set to a non-unity value, either manually or in set_term_params
+                     
+                    '''
+                    iterable = self.term_node.inventory(self.term_flow)
+                else:
+                    iterable = self.term_node.inventory()
             for x in iterable:
                 if (x.flow, x.direction) not in children:
                     yield x

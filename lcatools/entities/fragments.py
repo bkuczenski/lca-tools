@@ -259,6 +259,10 @@ class LcFragment(LcEntity):
         return self._terminations[None]
 
     @property
+    def name(self):
+        return self.external_ref
+
+    @property
     def dirn(self):
         return {
             'Input': '-<-',
@@ -358,6 +362,13 @@ class LcFragment(LcEntity):
                 print('%20.20s: %s %s %s' % (k, v, desc, v.term_node))
 
     def show_tree(self, scenario=None, observed=False, prefix=''):
+        """
+        THIS WHOLE FUNCTION is deprecated-- need to use live traversal results and not recurse over static data
+        :param scenario:
+        :param observed:
+        :param prefix:
+        :return:
+        """
         children = [c for c in self.child_flows]
         term = self.termination(scenario)
         if len(children) > 0 and term.is_null:
@@ -1088,9 +1099,13 @@ class LcFragment(LcEntity):
             try:
                 child_ff, cons = f.traverse_node(node_weight, scenario, observed=observed,
                                                  frags_seen=set(frags_seen), conserved_qty=self._conserved_quantity)
-                if cons is not None:
+                if cons is None:
+                    self.dbg_print('%.3s -- returned cons_value' % self.uuid, level=3)
+                else:
+                    self.dbg_print('%.3s %g returned cons_value' % (self.uuid, cons), level=2)
                     stock += cons
             except BalanceFlowError:
+                self.dbg_print('%.3s bal flow on %.3s' % (self.uuid, f.uuid), level=3)
                 bal_f = f
                 child_ff = []
 

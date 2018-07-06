@@ -28,6 +28,10 @@ class ProcessRef(EntityRef):
             print('reference: %s' % i)
 
     @property
+    def name(self):
+        return '%s [%s]' % (self._d['Name'], self._d['SpatialScope'])
+
+    @property
     def default_rx(self):
         """
         The 'primary' reference exchange of a process CatalogRef.  This is an external_ref for a flow

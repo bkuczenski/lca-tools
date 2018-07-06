@@ -149,7 +149,7 @@ class LcForeground(BasicArchive):
             raise FragmentNotFound(frag)
         k = self._key_to_id(name)
         if k is not None:
-            raise ValueError('Name is already taken')
+            raise ValueError('Name is already taken: "%s"' % name)
         frag.external_ref = name  # will raise PropertyExists if already set
         self._ext_ref_mapping[name] = frag.uuid
 

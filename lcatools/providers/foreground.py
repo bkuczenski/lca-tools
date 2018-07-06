@@ -151,12 +151,16 @@ class LcForeground(BasicArchive):
             super(LcForeground, self).check_counter(entity_type='fragment')
 
     def name_fragment(self, frag, name):
-        if self[frag.external_ref] is None:
+        if self[frag.link] is None:
             raise FragmentNotFound(frag)
         if self._key_to_id(name) is not None:
             raise ValueError('Name is already taken')
+        oldname = frag.link
         frag.external_ref = name  # will raise PropertyExists if already set
-        self._ext_ref_mapping[name] = frag.uuid
+        self._ext_ref_mapping[name] = frag.link
+        self._entities[frag.link] = self._entities[oldname]
+        self._uuid_map[frag.uuid].remove(oldname)
+        self._uuid_map[frag.uuid].add(frag.link)
 
     '''
     Save and load the archive
@@ -165,7 +169,7 @@ class LcForeground(BasicArchive):
         for f in fragments:
             frag = LcFragment.from_json(self, f)
             if frag.external_ref != frag.uuid:
-                self._ext_ref_mapping[frag.external_ref] = frag.uuid
+                self._ext_ref_mapping[frag.external_ref] = frag.link
             self.add(frag)
 
         for f in fragments:

@@ -304,6 +304,8 @@ class ExchangeValue(Exchange):
         unallocated value
         :return:
         """
+        if self._value is None and len(self._value_dict) == 1:
+            return next(v for v in self._value_dict.values())
         return self._value
 
     @property

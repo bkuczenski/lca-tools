@@ -118,9 +118,12 @@ class LcForeground(BasicArchive):
         if entity.entity_type not in entity_types:
             raise ValueError('%s is not a valid entity type' % entity.entity_type)
         if entity.is_entity and entity.origin is not None and entity.origin != self.ref:
+            entity = entity.make_ref(self._catalog.query(entity.origin))
+            '''
             entity.show()
             print('my ref: %s' % self.ref)
             raise NonLocalEntity(entity)
+            '''
         try:
             self._add(entity)
         except KeyError:

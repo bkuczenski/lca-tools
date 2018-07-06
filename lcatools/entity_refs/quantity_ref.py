@@ -24,7 +24,10 @@ class QuantityRef(EntityRef):
         return j
 
     def is_lcia_method(self):
-        ind = self.get_item('Indicator')
+        try:
+            ind = self.get_item('Indicator')
+        except KeyError:
+            return False
         if ind is None:
             return False
         elif len(ind) == 0:

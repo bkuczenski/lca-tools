@@ -124,6 +124,20 @@ class ProcessRef(EntityRef):
         rx = self.reference(flow)
         return sum(x.value for x in self.exchange_values(rx.flow, direction=rx.direction))
 
+    def get_exchange(self, key):
+        try:
+            return next(x for x in self.reference_entity if x.key == key)
+        except StopIteration:
+            raise KeyError
+
+    @property
+    def alloc_qty(self):
+        """
+        This is hugely kludgely. What should be the expected behavior of a process ref asked to perform allocation?
+        :return:
+        """
+        return None
+
     '''
     Background queries
     '''

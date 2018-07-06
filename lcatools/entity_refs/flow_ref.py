@@ -65,7 +65,8 @@ class FlowRef(EntityRef):
             if isinstance(value, dict):
                 c.update_values(**value)
             else:
-                c.add_value(value=value, overwrite=False, **kwargs)
+                kwargs['overwrite'] = kwargs.pop('overwrite', False)
+                c.add_value(value=value, **kwargs)
         return c
 
     def characterizations(self):
@@ -94,13 +95,19 @@ class FlowRef(EntityRef):
         return self._query.originate(self.external_ref, direction, **kwargs)
 
     def cf(self, query_quantity, locale='GLO', **kwargs):
-        quant = self._query.get(query_quantity)
-        u = quant.uuid
+        if isinstance(query_quantity, str):
+            query_quantity = self._query.get(query_quantity)
+        u = query_quantity.uuid
         if u in self._characterizations:
             return self._characterizations[u][locale]
         val = self._query.cf(self.external_ref, query_quantity, locale=locale, **kwargs)
-        self.add_characterization(quant, value=val, location=locale)
+        self.add_characterization(query_quantity, value=val, location=locale)
         return val
+
+    def factor(self, quantity):
+        if quantity.uuid in self._characterizations:
+            return self._characterizations[quantity.uuid]
+        return Characterization(self, quantity)
 
     def profile(self, show=False, **kwargs):
         """

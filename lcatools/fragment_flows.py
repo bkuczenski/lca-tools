@@ -143,7 +143,7 @@ class FragmentFlow(object):
             name = self.fragment['Name']
         else:
             term = '-# '
-            name = self.term.term_node['Name']
+            name = self.term.term_node.name
         return '%.5s  %10.3g [%6s] %s %s' % (self.fragment.uuid, self.node_weight, self.fragment.direction,
                                              term, name)
 

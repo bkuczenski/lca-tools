@@ -5,7 +5,7 @@ from .iconfigure import ConfigureInterface
 from .iinventory import InventoryInterface, InventoryRequired
 from .iindex import IndexInterface
 from .ibackground import BackgroundInterface, BackgroundRequired
-from .iquantity import QuantityInterface
+from .iquantity import QuantityInterface, QuantityRequired
 from .iforeground import ForegroundInterface, ForegroundRequired
 
 import re

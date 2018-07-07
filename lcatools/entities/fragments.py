@@ -260,6 +260,8 @@ class LcFragment(LcEntity):
 
     @property
     def name(self):
+        if self._external_ref is None:
+            return self['Name']
         return self.external_ref
 
     @property

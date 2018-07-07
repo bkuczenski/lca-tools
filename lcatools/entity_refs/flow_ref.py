@@ -1,5 +1,5 @@
 from .base import EntityRef
-from lcatools.interfaces import trim_cas
+from lcatools.interfaces import trim_cas, QuantityRequired
 from lcatools.characterizations import Characterization
 
 '''
@@ -100,7 +100,11 @@ class FlowRef(EntityRef):
         u = query_quantity.uuid
         if u in self._characterizations:
             return self._characterizations[u][locale]
-        val = self._query.cf(self.external_ref, query_quantity, locale=locale, **kwargs)
+        try:
+            val = self._query.cf(self.external_ref, query_quantity, locale=locale, **kwargs)
+        except QuantityRequired:
+            print('!Unable to lookup flow CF\nflow: %s\nquantity: %s' %(self.link, query_quantity.link))
+            val = 0.0
         self.add_characterization(query_quantity, value=val, location=locale)
         return val
 

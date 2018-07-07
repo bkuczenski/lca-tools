@@ -447,7 +447,8 @@ class FlowTermination(object):
                 iterable = self.term_node.lci(ref_flow=self.term_flow)
             else:
                 if len(self.term_node.reference_entity) > 1:
-                    print('WARNING: see _unobserved_exchanges')
+                    # TODO: figure out a better solution for this
+                    # print('WARNING: see _unobserved_exchanges')
                     '''
                     This will cause a wrong result in the following situation:
                      * termination is built with a multi-output process 

@@ -128,7 +128,8 @@ class LcEntity(object):
         :return:
         """
         if self._external_ref is None:
-            self._external_ref = ref
+            if ref != self.uuid:  # don't bother setting if it's the same as the UUID
+                self._external_ref = ref
         else:
             raise PropertyExists('External Ref already set to %s' % self._external_ref)
 

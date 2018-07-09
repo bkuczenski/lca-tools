@@ -78,7 +78,7 @@ class LcForeground(BasicArchive):
 
         :param fg_path:
         :param catalog: A foreground archive requires a catalog to deserialize saved fragments. If None, archive will
-        still initialize (and will even be able to save fragments) but loading fragments will fail.
+        still initialize (and will even be able to save fragments) but non-locally terminated fragments will fail.
         :param ns_uuid: Foreground archives may not use ns_uuids, so any namespace uuid provided will be ignored.
         :param kwargs:
         """

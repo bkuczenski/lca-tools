@@ -24,8 +24,7 @@ flow_json = {
     'Compartment': ['Intermediate Flows']
 }
 
-frag_json = [
-    {
+frag_json = [{
     'entityId': a_different_frag_uuid,
     'externalId': a_different_frag_ref,
     'entityType': 'fragment',

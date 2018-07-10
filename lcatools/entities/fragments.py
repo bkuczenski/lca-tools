@@ -85,7 +85,7 @@ class LcFragment(LcEntity):
         if flow is None:
             flow = LcFlow(j['flow'], Name=j['tags']['Name'], Compartment=['Intermediate Flows', 'Fragments'])
             fg.add(flow)
-        frag = cls(j['entityId'], flow, j['direction'], parent=parent,
+        frag = cls(j['entityId'], flow, j['direction'], origin=fg.ref, parent=parent,
                    exchange_value=j['exchangeValues'].pop('0'),
                    private=j['isPrivate'],
                    balance_flow=j['isBalanceFlow'],

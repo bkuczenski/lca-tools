@@ -5,11 +5,11 @@ from uuid import uuid4
 
 from lcatools.entities.editor import FragmentEditor
 from lcatools.providers.foreground import LcForeground
-from lcatools.entity_refs import CatalogRef, EntityRefMergeError
+from lcatools.entity_refs import CatalogRef  # , EntityRefMergeError  ## merge error no longer!
 
 WORKING_DIR = os.path.join(os.path.dirname(__file__), 'test-foreground')
 
-local_ref = 'test.foreground'
+test_ref = 'test.foreground'
 flow_uuid = str(uuid4())
 frag_uuid = str(uuid4())
 frag_ext_name = 'the bodacious reference fragment'
@@ -20,7 +20,7 @@ a_different_frag_ref = 'a completely separate reference fragment'
 flow_json = {
     'externalId': flow_uuid,
     'entityType': 'flow',
-    'origin': local_ref,
+    'origin': test_ref,
     'CasNumber': '',
     'Compartment': ['Intermediate Flows']
 }
@@ -29,7 +29,7 @@ frag_json = [{
     'entityId': a_different_frag_uuid,
     'externalId': a_different_frag_ref,
     'entityType': 'fragment',
-    'origin': local_ref,
+    'origin': test_ref,
     'flow': flow_uuid,
     'direction': 'Input',
     'parent': None,
@@ -74,7 +74,7 @@ class LcForegroundTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.ed = FragmentEditor()
-        cls.fg = LcForeground(WORKING_DIR, ref=local_ref)
+        cls.fg = LcForeground(WORKING_DIR, ref=test_ref)
         cls.fg.entity_from_json(flow_json)
 
     def test_1_make_fragment(self):
@@ -109,9 +109,13 @@ class LcForegroundTestCase(unittest.TestCase):
         q_ref_1 = CatalogRef('fictitious.origin.v1', my_id, entity_type='quantity')
         q_ref_2 = CatalogRef('fictitious.origin.v2', my_id, entity_type='quantity')
         self.fg.add(q_ref_1)
+        '''
         with self.assertRaises(EntityRefMergeError):
             # this will give an error that CatalogRefs can't merge
             self.fg.add(q_ref_2)
+        '''
+        self.fg.add(q_ref_2)
+        self.assertIs(self.fg[q_ref_2.link], q_ref_2)
 
     @classmethod
     def tearDownClass(cls):

@@ -1,5 +1,5 @@
 import re
-from lcatools.entity_store import EntityStore, SourceAlreadyKnown
+from lcatools.entity_store import EntityStore, SourceAlreadyKnown, to_uuid
 from lcatools.implementations import BasicImplementation, IndexImplementation, QuantityImplementation
 from .quantities import LcQuantity, LcUnit
 from .flows import LcFlow
@@ -89,7 +89,7 @@ class BasicArchive(EntityStore):
     def add(self, entity):
         if entity.entity_type not in self._entity_types:
             raise ValueError('%s is not a valid entity type' % entity.entity_type)
-        self._add(entity)
+        self._add(entity, entity.uuid)
 
     def _add_children(self, entity):
         if entity.entity_type == 'quantity':
@@ -175,14 +175,12 @@ class BasicArchive(EntityStore):
         """
         if 'tags' in e:
             raise OldJson('This file type is no longer supported.')
-        e_id = e.pop('entityId', None)
+        uid = e.pop('entityId', None)
         ext_ref = e.pop('externalId')
-        if e_id is None:
-            uid = self._key_to_id(ext_ref)
+        if uid is None:
+            uid = to_uuid(ext_ref)
             if uid is None:
                 raise OldJson('This entity has no UUID and an invalid external ref')
-        else:
-            uid = self._key_to_id(e_id)
         etype = e.pop('entityType')
         origin = e.pop('origin')
 

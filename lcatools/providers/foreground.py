@@ -5,6 +5,8 @@ import json
 import os
 import re
 
+from collections import defaultdict
+
 from lcatools.entity_store import to_uuid
 from lcatools.entities import LcFragment, entity_types, BasicArchive
 from lcatools.entity_refs import CatalogRef
@@ -54,16 +56,34 @@ class LcForeground(BasicArchive):
         in the archive using a uuid as its internal key.
 
         Open question: should this be a general feature?  currently only NsUuidArchives allow arbitrary external_refs.
+        Answer: no. uuids are still king (for now)
+
+        This function is a little different from other EntityStore subclasses because it (uniquely) needs to handle
+        entities from a variety of origins. Therefore we use the link and not the uuid as an identifer.  However, we
+        still need to support retrieval by UUID.  **WE WANT TO DO THIS WITHOUT HAVING TO OVERRIDE __getitem__**.
+        So the operation is as follows:
+
+         * _key_to_id transmits the user's heterogeneous input into a valid key to self._entities, or None
+           - if the key is already a known link, it's easy
+           - if the key is a custom name, it's almost as easy
+           - if the key CONTAINS a uuid known to the db, then a link for an entity with that UUID is
+              NONDETERMINISTICALLY returned
+         * __getitem__ uses _key_to_id to translate the users input into a key
+
+        For the thorns around renaming fragments, see self.name_fragment() below
+
         :param key:
         :return:
         """
-        i = to_uuid(key)
-        if i is None:
-            try:
-                i = self._ext_ref_mapping[key]
-            except KeyError:
-                i = None
-        return i
+        if key in self._entities:
+            return key
+        elif key in self._ext_ref_mapping:
+            return self._ext_ref_mapping[key]
+        else:
+            uid = to_uuid(key)
+            if uid in self._uuid_map:
+                return next(k for k in self._uuid_map[uid])
+        return None
 
     @property
     def _archive_file(self):
@@ -83,6 +103,7 @@ class LcForeground(BasicArchive):
         :param kwargs:
         """
         super(LcForeground, self).__init__(fg_path, **kwargs)
+        self._uuid_map = defaultdict(set)
         self._catalog = catalog
         self._ext_ref_mapping = dict()
         if not os.path.isdir(self.source):
@@ -117,7 +138,9 @@ class LcForeground(BasicArchive):
         """
         if entity.entity_type not in entity_types:
             raise ValueError('%s is not a valid entity type' % entity.entity_type)
-        if entity.is_entity and entity.origin is not None and entity.origin != self.ref:
+        if entity.origin is None:
+            entity.origin = self.ref
+        elif entity.is_entity and entity.origin != self.ref:
             entity = entity.make_ref(self._catalog.query(entity.origin))
             '''
             entity.show()
@@ -125,7 +148,8 @@ class LcForeground(BasicArchive):
             raise NonLocalEntity(entity)
             '''
         try:
-            self._add(entity)
+            self._add(entity, entity.link)
+            self._uuid_map[entity.uuid].add(entity.link)
         except KeyError:
             # merge incoming entity's properties with existing entity
             current = self[entity.uuid]
@@ -145,13 +169,38 @@ class LcForeground(BasicArchive):
             super(LcForeground, self).check_counter(entity_type='fragment')
 
     def name_fragment(self, frag, name):
-        if self[frag.external_ref] is None:
+        """
+        This function is complicated because we have so many dicts:
+         _entities maps link to entity
+         _ext_ref_mapping maps custom name to link
+         _uuid_map maps UUID to a set of links that share the uuid
+         _ents_by_type keeps a set of links by entity type
+
+        So, when we name a fragment, we want to do the following:
+         - ensure the fragment is properly in the _entities dict
+         - ensure the name is not already taken
+         - set the fragment entity's name
+         * pop the old link and replace its object with the new link in _entities
+         * remove the old link and replace it with the new link in the uuid map
+         * remove the old link and replace it with the new link in ents_by_type['fragment']
+         * add the name with the new link to the ext ref mapping
+        :param frag:
+        :param name:
+        :return:
+        """
+        if self[frag.link] is not frag:
             raise FragmentNotFound(frag)
-        k = self._key_to_id(name)
-        if k is not None:
+        if self._key_to_id(name) is not None:
             raise ValueError('Name is already taken: "%s"' % name)
+        oldname = frag.link
         frag.external_ref = name  # will raise PropertyExists if already set
-        self._ext_ref_mapping[name] = frag.uuid
+        self._ext_ref_mapping[name] = frag.link
+        self._entities[frag.link] = self._entities.pop(oldname)
+
+        self._uuid_map[frag.uuid].remove(oldname)
+        self._uuid_map[frag.uuid].add(frag.link)
+        self._ents_by_type['fragment'].remove(oldname)
+        self._ents_by_type['fragment'].add(frag.link)
 
     '''
     Save and load the archive
@@ -160,7 +209,7 @@ class LcForeground(BasicArchive):
         for f in fragments:
             frag = LcFragment.from_json(self, f)
             if frag.external_ref != frag.uuid:
-                self._ext_ref_mapping[frag.external_ref] = frag.uuid
+                self._ext_ref_mapping[frag.external_ref] = frag.link
             self.add(frag)
 
         for f in fragments:

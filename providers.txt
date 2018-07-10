@@ -25,6 +25,28 @@ LcForeground inherits from BasicArchive and adds fragments and ForegroundImpleme
 
 When new flows are created, they may be renamed in the foreground- which is why nsuuid should not be used to generate uuids; instead uuid4 should be used.
 
+0.1.1 Transitioning Foregrounds to use link instead of uuid
+
+In order for foregrounds to store entities from multiple origins with the same uuid or external ref, foregrounds will start using links as the default keys.  This should not be too hard to deal with, with the proviso that if multiple entities have the same external ref, one will be picked nondeterministically.
+
+Maybe we should transform the entire system to use links instead of uuids.  What is the advantage of uuids, if we consider them to no longer be unique? why do we even have uuids?
+
+ - they are unique within an origin; plus, lots of people already use them.  foregrounds ARE special in that they are designed to hold information from many sources, and in fact they NEED to be able to distinguish between differently-versioned entities in ways that other BasicArchive subclasses don't.
+
+
+The proposed plan is:
+
+ * create a _uuid_map defaultdict that maps uuid to a set of links
+ * _key_to_id returns a valid key to _entities
+   - in LcForeground, it accommodates links, uuids (nondeterministically), or fragment names
+ * change _add signature to _add(entity, key)
+   - update BasicArchive.add() to use entity.uuid as key
+   - update LcForeground.add() to use entity.link as key
+ * some minor plumbing to ensure that _key_to_id returns uuid expectation is not violated in client code
+
+and that's it!
+
+
 0.2 Archives
 
 LcArchive is contained in the resources package-- it provides the ability to handle reference processes, allocations, and compute background systems (with partial ordering and foreground generation).  The main purpose of an archive is to extract tagged entities from a data source, and to store and make available two composite data types:

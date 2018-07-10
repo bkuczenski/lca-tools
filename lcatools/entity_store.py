@@ -252,6 +252,12 @@ class EntityStore(object):
             raise InvalidSemanticReference('%s' % ref)
         for k, s in self._catalog_names.items():
             if source in s and source is not None:
+                if source == self.source and k == local_ref(self.source):
+                    '''if we're trying to add our own source and ref to the name index, and the source is currently
+                    registered to the default local_ref, then we override it
+                    '''
+                    self._catalog_names[ref] = self._catalog_names.pop(k)
+                    return
                 if k == ref:
                     return
                 if rewrite:

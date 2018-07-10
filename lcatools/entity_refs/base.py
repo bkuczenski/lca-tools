@@ -29,13 +29,17 @@ class InvalidQuery(Exception):
     pass
 
 
+class EntityRefMergeError(Exception):
+    pass
+
+
 class BaseRef(object):
     """
     A base class for defining entity references.
     """
     _etype = None
 
-    def __init__(self, origin, external_ref, **kwargs):
+    def __init__(self, origin, external_ref, uuid=None, **kwargs):
         """
 
         :param origin:
@@ -44,6 +48,7 @@ class BaseRef(object):
         """
         self._origin = origin
         self._ref = external_ref
+        self._uuid = uuid
 
         self._d = kwargs
 
@@ -54,6 +59,10 @@ class BaseRef(object):
     @property
     def external_ref(self):
         return self._ref
+
+    @property
+    def uuid(self):
+        return self._uuid or self._ref
 
     @property
     def link(self):
@@ -128,6 +137,18 @@ class BaseRef(object):
     def resolved(self):
         return False
 
+    def merge(self, other):
+        if self.entity_type != other.entity_type:
+            raise EntityRefMergeError('Type mismatch %s vs %s' % (self.entity_type, other.entity_type))
+        if self.link != other.link:
+            if self.external_ref == other.external_ref:
+                if not (self.origin.startswith(other.origin) or other.origin.startswith(self.origin)):
+                    raise EntityRefMergeError('Origin mismatch %s vs %s' % (self.origin, other.origin))
+            else:
+                raise EntityRefMergeError('external_ref mismatch: %s vs %s' % (self.external_ref, other.external_ref))
+        # otherwise fine-- left argument is dominant
+        self._d.update(other._d)
+
     def show(self):
         """
         should be finessed in subclasses
@@ -158,9 +179,13 @@ class EntityRef(BaseRef):
     An EntityRef is a CatalogRef that has been provided a valid catalog query.  the EntityRef is still semi-abstract
     since there is no meaningful reference to an entity that is not typed.
 
-    Must provide a uuid kwarg to avoid a query lookup, though the uuid need not be valid.
+    Must provide a uuid kwarg to avoid a query lookup, though the uuid need not be valid (unless the ref is going
+    to be added to an archive that requires it).
     """
-    def __init__(self, external_ref, query, reference_entity, uuid=None, **kwargs):
+    def make_ref(self, *args):
+        return self
+
+    def __init__(self, external_ref, query, reference_entity, **kwargs):
         """
 
         :param external_ref:
@@ -173,10 +198,8 @@ class EntityRef(BaseRef):
         self._reference_entity = reference_entity
 
         self._query = query
-        self._uuid = uuid or self._query.get_uuid(self.external_ref)
-
-    def make_ref(self, *args):
-        return self
+        if self._uuid is None:
+            self._uuid = self._query.get_uuid(self.external_ref)
 
     def get_reference(self):
         return self._reference_entity
@@ -185,10 +208,6 @@ class EntityRef(BaseRef):
         if self._query is None:
             print(self)
             raise NoCatalog(message)
-
-    @property
-    def uuid(self):
-        return self._uuid
 
     @property
     def reference_entity(self):
@@ -256,18 +275,6 @@ class EntityRef(BaseRef):
 
     def __getitem__(self, item):
         return self.get_item(item)
-
-    def merge(self, other):
-        if self.entity_type != other.entity_type:
-            raise ValueError('Type mismatch %s vs %s' % (self.entity_type, other.entity_type))
-        if self.link != other.link:
-            if self.external_ref == other.external_ref:
-                if not (self.origin.startswith(other.origin) or other.origin.startswith(self.origin)):
-                    raise ValueError('Origin mismatch %s vs %s' % (self.origin, other.origin))
-            else:
-                raise ValueError('external_ref mismatch: %s vs %s' % (self.external_ref, other.external_ref))
-        # otherwise fine-- left argument is dominant
-        self._d.update(other._d)
 
     def serialize(self):
         j = super(EntityRef, self).serialize()

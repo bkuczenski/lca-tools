@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from lcatools.entities.editor import FragmentEditor
 from lcatools.providers.foreground import LcForeground
+from lcatools.entity_refs import CatalogRef, EntityRefMergeError
 
 WORKING_DIR = os.path.join(os.path.dirname(__file__), 'test-foreground')
 
@@ -102,6 +103,15 @@ class LcForegroundTestCase(unittest.TestCase):
         new_fg = LcForeground(WORKING_DIR)
         self.assertEqual(self.fg[flow_uuid], new_fg[flow_uuid])
         self.assertEqual(self.fg[a_different_frag_ref].uuid, new_fg[a_different_frag_uuid].uuid)
+
+    def test_7_different_origins(self):
+        my_id = uuid4()
+        q_ref_1 = CatalogRef('fictitious.origin.v1', my_id, entity_type='quantity')
+        q_ref_2 = CatalogRef('fictitious.origin.v2', my_id, entity_type='quantity')
+        self.fg.add(q_ref_1)
+        with self.assertRaises(EntityRefMergeError):
+            # this will give an error that CatalogRefs can't merge
+            self.fg.add(q_ref_2)
 
     @classmethod
     def tearDownClass(cls):

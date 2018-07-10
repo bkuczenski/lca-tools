@@ -103,6 +103,13 @@ class CatalogRef(BaseRef):
 
         self._asgn_etype = entity_type
 
+    def validate(self):
+        """
+        Always returns true in order to add to an archive. this should probably be fixed.
+        :return:
+        """
+        return True
+
     @property
     def entity_type(self):
         if self._asgn_etype is not None:

@@ -19,6 +19,10 @@ def concatenate(*lists):
     return chain(*lists)
 
 
+class EntityMergeError(Exception):
+    pass
+
+
 class PropertyExists(Exception):
     pass
 
@@ -281,12 +285,12 @@ class LcEntity(object):
 
     def merge(self, other):
         if not isinstance(other, LcEntity):
-            raise ValueError('Incoming is not an LcEntity: %s' % other)
+            raise EntityMergeError('Incoming is not an LcEntity: %s' % other)
         elif self.entity_type != other.entity_type:
-            raise ValueError('Incoming entity type %s mismatch with %s' % (other.entity_type, self.entity_type))
+            raise EntityMergeError('Incoming entity type %s mismatch with %s' % (other.entity_type, self.entity_type))
         elif self.get_external_ref() != other.get_external_ref():
-            raise ValueError('Incoming External ref %s conflicts with existing %s' % (other.get_external_ref(),
-                                                                                      self.get_external_ref()))
+            raise EntityMergeError('Incoming External ref %s conflicts with existing %s' % (other.get_external_ref(),
+                                                                                            self.get_external_ref()))
         else:
             # if self.origin != other.origin:
             #     print('Merging entities with differing origin: \nnew: %s\nexisting: %s'% (other.origin, self.origin))

@@ -10,10 +10,24 @@ more elaborate instances of these charts.
 """
 
 import matplotlib.pyplot as plt
-from lcatools.charts.base import color_range, label_segment, has_pos_neg, has_nonzero, save_plot
+from lcatools.charts.base import color_range, label_segment, has_pos_neg, has_nonzero, save_plot, hue_from_string
 
 
-def _one_bar(ax, pos_y, neg_y, data, hue, units, threshold):
+def _one_bar(ax, pos_y, neg_y, data, hue, units, threshold, legend_labels=None):
+    """
+
+    :param ax:
+    :param pos_y:
+    :param neg_y:
+    :param data:
+    :param hue: if hue is a float-- it's a gradient specifier
+        if hue is a 2-tuple-- it's a gradient specifier with different-colored endpoints
+        if hue is a tuple of 3-tuples-- treat it AS a color specifier
+    :param units:
+    :param threshold:
+    :param legend_labels: if present, use as an iterable to assign labels to bars for legend purposes
+    :return:
+    """
     poss = sum([k for k in data if k > 0])
     negs = sum([k for k in data if k < 0])
 
@@ -22,8 +36,14 @@ def _one_bar(ax, pos_y, neg_y, data, hue, units, threshold):
     left = 0.0
     right = 0.0
 
-    patch_handles = []
-    colors = color_range(len(data), hue)
+    if isinstance(hue, float):
+        colors = color_range(len(data), hue)
+    elif len(hue) == 2 and isinstance(hue[0], float):
+        colors = color_range(len(data), hue)
+    else:
+        for k in hue:
+            assert len(k) == 3, 'invalid color specifier'
+        colors = (k for k in hue)
 
     total_y = None  # where to put the net marker
     total_ha = 'left'  #
@@ -55,16 +75,23 @@ def _one_bar(ax, pos_y, neg_y, data, hue, units, threshold):
 
     for (i, d) in enumerate(data):
         color = next(colors)
+        if legend_labels is None:
+            _thelabel = chr(ord('A') + i)
+        else:
+            _thelabel = ''
         if d > 0:
             patch = ax.barh(pos_y, d, color=color, align='center', left=right, height=1)
-            patch_handles.append(patch)
-            sparse_label_flag_pos = label_segment(patch[0], d, chr(ord('A') + i), threshold, sparse_label_flag_pos)
+            sparse_label_flag_pos = label_segment(patch[0], d, _thelabel, threshold, sparse_label_flag_pos)
             right += d
         elif d < 0:
             left += d
             patch = ax.barh(neg_y, abs(d), color=color, align='center', left=left, height=1)
-            patch_handles.append(patch)
-            sparse_label_flag_neg = label_segment(patch[0], d, chr(ord('A') + i), threshold, sparse_label_flag_neg)
+            sparse_label_flag_neg = label_segment(patch[0], d, _thelabel, threshold, sparse_label_flag_neg)
+        if legend_labels is not None:
+            try:
+                patch.set_label(legend_labels[i])
+            except IndexError:
+                pass
 
     if units is None:
         unitstring = ''
@@ -86,7 +113,7 @@ def _one_bar(ax, pos_y, neg_y, data, hue, units, threshold):
     return neg_y - 0.55
 
 
-def stack_bar(ax, data, hue, units, title='Contribution Analysis', subtitle='by stage'):
+def stack_bar(ax, data, hue, units, title='Contribution Analysis', subtitle='by stage', **kwargs):
     """
     Draws a single stack bar chart on the existing axes.
     ax = axes
@@ -98,10 +125,10 @@ def stack_bar(ax, data, hue, units, title='Contribution Analysis', subtitle='by 
 
     If several stack bar charts are to be shown side by side, they should all have the data ordered the same.
     """
-    stack_bars(ax, [data], hue, [units], title=title, subtitle=subtitle)
+    stack_bars(ax, [data], hue, [units], title=title, subtitle=subtitle, **kwargs)
 
 
-def stack_bars(ax, series, hue, units, labels=None, title='Scenario Analysis', subtitle='by stage'):
+def stack_bars(ax, series, hue, units, labels=None, title='Scenario Analysis', subtitle='by stage', **kwargs):
     """
 
     :param ax:
@@ -137,7 +164,7 @@ def stack_bars(ax, series, hue, units, labels=None, title='Scenario Analysis', s
     # make the plots
     for i, data in enumerate(series):
         neg_y = pos_y - 1
-        btm = _one_bar(ax, pos_y, neg_y, data, hue, units[i], threshold)
+        btm = _one_bar(ax, pos_y, neg_y, data, hue, units[i], threshold, **kwargs)
         if labels is not None:
             ax.text(left, pos_y, '%s  ' % labels[i], ha='right', va='center', fontsize=12)
         pos_y = btm - bar_skip
@@ -166,7 +193,17 @@ def stack_bars(ax, series, hue, units, labels=None, title='Scenario Analysis', s
         ax.set_ylim(btm, 3.6)
 
 
-def stack_bar_figure(results, stages, hues=None):
+def stack_bar_figure(results, stages, hues=None, color_dict=None, legend=False):
+    """
+    Create a stack bar figure.
+    :param results:
+    :param stages:
+    :param hues: by default, each stack bar is a gradient of a single hue- supply an array of hues matching length of
+     results array, or else hue is generated automatically from quantity uuid / ext ref
+    :param color_dict: optionally supply a dict mapping stage name to rgb triple, instead of hue gradient
+    :param legend: [False] if true, draw a legend below the bottom bar
+    :return:
+    """
 
     if hues is None:
         hues = [None] * len(results)
@@ -183,16 +220,44 @@ def stack_bar_figure(results, stages, hues=None):
             height += 0.4
 
     fig = plt.figure(figsize=(8, height))
+
+    if color_dict is None:
+        colors = None
+    else:
+        colors = [color_dict[s] for s in stages]
+
+    ax = []
+
     for i, r in enumerate(results):
-        ax = fig.add_subplot(len(results), 1, i + 1)
+        ax.append(fig.add_subplot(len(results), 1, i + 1))
 
         quantity = r.quantity
 
-        hue = hues[i]
-        if hue is None:
-            hue = int('%.4s' % quantity.get_uuid(), 16) / 65536
+        if colors is None:
+            hue = hues[i]
+            if hue is None:
+                hue = hue_from_string('%.4s' % quantity.uuid)
+        else:
+            hue = colors
 
-        stack_bar(ax, data[i], hue, units[i], quantity['Name'], quantity['Indicator'])
+        stack_bar(ax[i], data[i], hue, units[i], quantity['Name'], quantity['Indicator'], legend_labels=stages)
+
+    def _zero_pos(_a):
+        _xl = _a.get_xlim()
+        return max(_xl) / (max(_xl) - min(_xl))
+
+    _min = min(_zero_pos(a) for a in ax)
+
+    for a in ax:
+        """
+        need to adjust axes limits to align zeros
+        """
+        _xl = a.get_xlim()
+        _low = max(_xl) * (_min - 1.0) / _min
+        a.set_xlim(_low, max(_xl))
+
+    if legend:
+        ax[0].legend(loc='upper right', bbox_to_anchor=(0, 1))
 
     return fig
 
@@ -267,7 +332,7 @@ def scenario_compare_figure(results, stages, hues=None, scenarios=None, savefile
         ax = fig.add_subplot(len(quantities), 1, n + 1)
 
         if hue is None:
-            hue = int('%.4s' % quantity.get_uuid(), 16) / 65536
+            hue = hue_from_string('%.4s' % quantity.uuid)
 
         if scenarios is None:
             series = results[n].contrib_query(stages)

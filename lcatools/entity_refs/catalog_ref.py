@@ -115,3 +115,12 @@ class CatalogRef(BaseRef):
         if self._asgn_etype is not None:
             return self._asgn_etype
         return super(CatalogRef, self).entity_type
+
+    def unit(self):
+        if self.entity_type == 'quantity':
+            if 'Indicator' in self._d:
+                return self._d['Indicator']
+            return 'None'
+        elif self.entity_type == 'flow':
+            return 'None'
+        raise AttributeError('This entity does not have a unit')

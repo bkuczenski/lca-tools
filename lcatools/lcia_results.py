@@ -706,7 +706,7 @@ class LciaResult(object):
             except KeyError:
                 data.append(0)
         if sum(data) != self.total():
-            print('Contributions do not equal total [%g vs total %g]' % (sum(data), self.total()))
+            print('Contributions do not equal total [ratio: %.10f]' % (sum(data) / self.total()))
         return data
 
     def contrib_new(self, *args, autorange=None):

@@ -44,6 +44,16 @@ def color_range(num, hue, sat=0.5):
         yield colorsys.hsv_to_rgb(next(h), sat, next(v))
 
 
+def hue_from_string(string, base=16):
+    try:
+        hue = int(s, base)
+    except ValueError:
+        base = 36
+        hue = int(s, base)
+    return hue / (hue**len(string))
+
+
+
 def _label_bar(patch, value=None, label=None, valueformat='%4.3g', labelformat='%s'):
     bl = patch.get_xy()
     x = 0.5 * patch.get_width() + bl[0]

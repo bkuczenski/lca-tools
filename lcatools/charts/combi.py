@@ -87,6 +87,8 @@ def _one_bar(ax, pos_y, neg_y, data, hue, units, threshold, legend_labels=None):
             left += d
             patch = ax.barh(neg_y, abs(d), color=color, align='center', left=left, height=1)
             sparse_label_flag_neg = label_segment(patch[0], d, _thelabel, threshold, sparse_label_flag_neg)
+        else:  # d == 0
+            continue
         if legend_labels is not None:
             try:
                 patch.set_label(legend_labels[i])
@@ -171,8 +173,8 @@ def stack_bars(ax, series, hue, units, labels=None, title='Scenario Analysis', s
 
     # common to full plot
 
-    ax.text(left, 2.3, subtitle, color=(0.3, 0.3, 0.3), size='small')
-    ax.text(left, 2.8, title, size='large')
+    ax.text(0, 2.3, subtitle, color=(0.3, 0.3, 0.3), size='small')
+    ax.text(0, 2.8, title, size='large')
 
     ax.spines['top'].set_visible(False)
     ax.spines['bottom'].set_visible(False)

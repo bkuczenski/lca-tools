@@ -705,7 +705,7 @@ class LciaResult(object):
                 data.append(self._LciaScores[c].cumulative_result)
             except KeyError:
                 data.append(0)
-        if sum(data) != self.total():
+        if not isclose(sum(data), self.total(), rel_tol=1e-6):
             print('Contributions do not equal total [ratio: %.10f]' % (sum(data) / self.total()))
         return data
 

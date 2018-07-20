@@ -1,7 +1,5 @@
 from .basic import BasicImplementation
 from lcatools.interfaces import ConfigureInterface
-from lcatools.exchanges import Exchange
-# from lcatools.entities import MissingAllocation
 
 
 class ConfigureImplementation(BasicImplementation, ConfigureInterface):
@@ -79,12 +77,12 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
             for p in self._archive.entities_by_type('process'):
                 for x in p.references():
                     if x.flow is fl and x.direction == direction:
-                        x.process.remove_reference(x)
+                        x.process.remove_reference(x.flow, x.direction)
         else:
             pr = self._archive.retrieve_or_fetch_entity(process_ref)
             if direction is None:
                 direction = self._check_direction(pr, fl)
-            pr.remove_reference(Exchange(pr, fl, direction))
+            pr.remove_reference(fl, direction)
 
     def characterize_flow(self, flow_ref, quantity_ref, value, location='GLO', overwrite=False, **kwargs):
         """

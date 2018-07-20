@@ -12,9 +12,8 @@ import os
 from collections import namedtuple
 
 from antelope_background.engine import BackgroundEngine
-from lcatools.exchanges import comp_dir
+from lcatools.interfaces import comp_dir, _CONTEXT_STATUS_
 from lcatools import from_json, to_json
-from lcatools.interfaces import _CONTEXT_STATUS_
 
 
 class NoLciDatabase(Exception):

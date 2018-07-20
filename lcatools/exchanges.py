@@ -1,23 +1,8 @@
-directions = ('Input', 'Output')
-
-
-def comp_dir(direction):
-    if direction in directions:
-        return next(k for k in directions if k != direction)
-    elif direction is None:
-        return None
-    raise InvalidDirection('%s' % direction)
-
-
 class ExchangeError(Exception):
     pass
 
 
 class NoAllocation(Exception):
-    pass
-
-
-class InvalidDirection(Exception):
     pass
 
 

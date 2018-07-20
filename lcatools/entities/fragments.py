@@ -6,9 +6,11 @@
 import uuid
 from collections import defaultdict
 
+from lcatools.interfaces import comp_dir
+
 from lcatools.fragment_flows import group_ios, FragmentFlow, frag_flow_lcia
 from lcatools.entities import LcEntity, LcFlow
-from lcatools.exchanges import comp_dir, ExchangeValue
+from lcatools.exchanges import ExchangeValue
 from lcatools.literate_float import LiterateFloat
 from lcatools.interact import ifinput, parse_math
 from lcatools.terminations import FlowTermination

@@ -6,8 +6,8 @@ as a ProductFlow in lca-matrix, although the FlowTermination is more powerful.  
 either one from the other.
 """
 
-from lcatools.exchanges import comp_dir, ExchangeValue, NoReferenceFound
-from lcatools.interfaces import InventoryRequired, PrivateArchive
+from lcatools.exchanges import ExchangeValue, NoReferenceFound
+from lcatools.interfaces import PrivateArchive, comp_dir
 from lcatools.lcia_results import LciaResult, LciaResults
 
 

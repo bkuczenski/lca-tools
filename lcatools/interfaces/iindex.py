@@ -1,9 +1,23 @@
 from .abstract_query import AbstractQuery
-from lcatools.exchanges import comp_dir
 
 
 class IndexRequired(Exception):
     pass
+
+
+directions = ('Input', 'Output')
+
+
+class InvalidDirection(Exception):
+    pass
+
+
+def comp_dir(direction):
+    if direction in directions:
+        return next(k for k in directions if k != direction)
+    elif direction is None:
+        return None
+    raise InvalidDirection('%s' % direction)
 
 
 _interface = 'index'

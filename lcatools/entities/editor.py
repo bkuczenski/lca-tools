@@ -1,6 +1,6 @@
 from lcatools.interact import ifinput, pick_one, pick_compartment, cyoa, parse_math, menu_list
 from lcatools.entities import LcQuantity, LcFlow, LcFragment
-from lcatools.exchanges import directions, comp_dir
+from lcatools.interfaces import directions, comp_dir
 
 
 class EntityEditor(object):

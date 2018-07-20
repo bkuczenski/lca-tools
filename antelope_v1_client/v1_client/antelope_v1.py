@@ -1,7 +1,7 @@
 import json
 from collections import defaultdict
 
-from lcatools.providers.lc_archive import BasicArchive
+from lcatools.entities import BasicArchive
 from lcatools.interfaces import IndexInterface, InventoryInterface, QuantityInterface
 from lcatools.entity_refs import CatalogRef
 from lcatools.fragment_flows import FragmentFlow

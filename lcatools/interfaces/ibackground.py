@@ -18,8 +18,6 @@ database.
 More plugins are yet imagined.
 """
 
-from collections import namedtuple
-
 from .abstract_query import AbstractQuery
 
 

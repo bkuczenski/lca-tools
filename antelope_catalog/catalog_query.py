@@ -16,7 +16,7 @@ class NoCatalog(Exception):
 class CatalogQuery(IndexInterface, BackgroundInterface, InventoryInterface, QuantityInterface):
     """
     A CatalogQuery is a class that performs any supported query against a supplied catalog.
-    Supported queries are defined in the different kinds of interfaces, which are all abstract.
+    Supported queries are defined in the antelope_core interfaces, which are all abstract.
     Implementations also subclass the abstract classes.
 
     This reduces code duplication (all the catalog needs to do is provide interfaces) and ensures consistent signatures.
@@ -117,7 +117,6 @@ class CatalogQuery(IndexInterface, BackgroundInterface, InventoryInterface, Quan
     def get(self, eid, **kwargs):
         """
         Retrieve entity by external Id. This will take any interface and should keep trying until it finds a match.
-        If the full quantitative dataset is required, use the catalog 'fetch' method.
         :param eid: an external Id
         :return:
         """

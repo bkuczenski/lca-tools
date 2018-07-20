@@ -399,7 +399,8 @@ class LcProcess(LcEntity):
         self._set_reference(rx)
         return self._exchanges[rx.key]
 
-    def remove_reference(self, reference):
+    def remove_reference(self, flow, dirn):
+        reference = Exchange(self, flow, dirn)
         self._exchanges[reference.key].unset_ref(self)
         self.remove_allocation(reference)
         if reference in self.reference_entity:

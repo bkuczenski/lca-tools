@@ -1,6 +1,5 @@
 from .basic import BasicImplementation
-from lcatools.interfaces import ForegroundInterface, BackgroundRequired
-from lcatools.exchanges import comp_dir
+from lcatools.interfaces import ForegroundInterface, BackgroundRequired, comp_dir
 
 
 from lcatools.entities.editor import FragmentEditor
@@ -97,7 +96,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         self._archive.add_entity_and_children(frag)
         return frag
 
-    def name_fragment(self, fragment, name):
+    def name_fragment(self, fragment, name, **kwargs):
         self._archive.name_fragment(fragment, name)
 
     def find_or_create_term(self, exchange, background=None):

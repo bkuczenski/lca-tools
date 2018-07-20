@@ -30,10 +30,10 @@ import os
 import csv
 from collections import namedtuple
 
-from lcatools.catalog.lc_resource import LcResource
-from lcatools.catalog.catalog import LcCatalog
+from ..lc_resource import LcResource
+from .. import LcCatalog
 from lcatools.entities.editor import FragmentEditor
-from lcatools.exchanges import comp_dir
+from lcatools.interfaces import comp_dir
 
 
 SemanticRoot = namedtuple('SemanticRoot', ('path', 'root', 'privacy', 'priority'))

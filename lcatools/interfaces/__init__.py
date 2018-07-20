@@ -1,8 +1,15 @@
+"""
+Antelope Interface Definitions
+
+The abstract classes in this sub-package define what information is made available via a stateless query to an Antelope
+resource of some kind.  The interfaces must be instantiated in order to be used.  In the core package
+"""
+
 from .abstract_query import UnknownOrigin, PrivateArchive, EntityNotFound
 
 from .iconfigure import ConfigureInterface
 from .iinventory import InventoryInterface, InventoryRequired
-from .iindex import IndexInterface, IndexRequired
+from .iindex import IndexInterface, IndexRequired, comp_dir, directions
 from .ibackground import BackgroundInterface, BackgroundRequired
 from .iquantity import QuantityInterface, QuantityRequired
 from .iforeground import ForegroundInterface, ForegroundRequired

@@ -1,5 +1,5 @@
 import unittest
-from lcatools.testbed import app_factory
+from ...testbed import app_factory
 
 
 # @unittest.skip('Flask testbed is under construction')

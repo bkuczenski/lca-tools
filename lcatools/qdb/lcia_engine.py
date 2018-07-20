@@ -1,4 +1,4 @@
-from lcatools.tables.flowables import FlowablesGrid
+# from antelope_reports import FlowablesGrid
 from .qdb import Qdb
 
 
@@ -21,6 +21,7 @@ class LciaEngine(object):
     def quantities(self, **kwargs):
         return self._qdb.search(entity_type='quantity', **kwargs)
 
+    '''
     def flows_table(self, *args, **kwargs):
         """
         Creates a new flowables grid using the local Qdb and gives it to the user.
@@ -29,7 +30,7 @@ class LciaEngine(object):
         :return:
         """
         return FlowablesGrid(self._qdb, *args, **kwargs)
-
+    '''
     """
     Qdb interaction
     """

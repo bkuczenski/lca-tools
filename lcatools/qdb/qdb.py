@@ -31,7 +31,7 @@ from lcatools.lcia_results import LciaResult
 from lcatools.entities import BasicArchive
 from lcatools.flowdb.compartments import Compartment, CompartmentManager
 from lcatools.characterizations import Characterization
-from lcatools.dynamic_grid import dynamic_grid
+# from lcatools.dynamic_grid import dynamic_grid
 # from lcatools.interact import pick_one
 from synlist import SynList, Flowables, InconsistentIndices, ConflictingCas, EntityFound
 
@@ -328,6 +328,7 @@ class Qdb(BasicArchive):
                 comps.add(k)
         return sorted(comps, key=lambda x: x.to_list())
 
+    ''' # this needs to get migrated into antelope_reports.tables (or maybe it already is!)
     def cf_table(self, q_ref):
         """
         Draws a retro-style dynamic table of CFs for a quantity-- rows are flowables, columns are compartments.
@@ -346,6 +347,7 @@ class Qdb(BasicArchive):
                      ('CAS Number ', lambda x: self._f.cas(x)),
                      ('Flowable', lambda x: self._f.name(x)),
                      returns_sets=True)
+    '''
 
     def flows_for_quantity(self, q_ref):
         try:

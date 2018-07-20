@@ -1,9 +1,11 @@
 import unittest
 import os
 
-from lcatools import LcCatalog, from_json
+from .. import LcCatalog
+from ...data_sources.local import TEST_ROOT
+
+from lcatools import from_json
 from lcatools.providers import LcArchive
-from lcatools.data_sources.local import TEST_ROOT
 
 cat = LcCatalog(TEST_ROOT)
 

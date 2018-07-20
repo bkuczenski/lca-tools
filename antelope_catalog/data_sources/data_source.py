@@ -1,4 +1,4 @@
-from lcatools.catalog.lc_resource import LcResource
+from ..lc_resource import LcResource
 
 
 class DataSource(object):

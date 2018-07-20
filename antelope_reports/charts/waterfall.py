@@ -9,7 +9,7 @@ from itertools import accumulate
 
 from math import floor
 
-from lcatools.charts.base import save_plot, net_color
+from .base import save_plot, net_color
 
 net_style = {
     'edgecolor': 'none'

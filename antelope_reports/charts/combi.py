@@ -10,7 +10,7 @@ more elaborate instances of these charts.
 """
 
 import matplotlib.pyplot as plt
-from lcatools.charts.base import color_range, label_segment, has_pos_neg, has_nonzero, save_plot, hue_from_string
+from .base import color_range, label_segment, has_pos_neg, has_nonzero, save_plot, hue_from_string
 
 
 def _one_bar(ax, pos_y, neg_y, data, hue, units, threshold, legend_labels=None):

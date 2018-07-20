@@ -3,10 +3,10 @@ import os
 from collections import defaultdict
 from datetime import datetime
 
-from ..foreground import LcForeground
+from .foreground import LcForeground
+from .catalog_query import INTERFACE_TYPES
 
 from lcatools.entity_store import local_ref
-from ..catalog_query import INTERFACE_TYPES
 from lcatools.tools import create_archive, update_archive
 
 

@@ -2,8 +2,8 @@ from collections import defaultdict
 import os
 import json
 
-from lcatools.catalog.lc_resource import LcResource
-from lcatools.interfaces.abstract_query import UnknownOrigin
+from ..lc_resource import LcResource
+from lcatools.interfaces import UnknownOrigin
 
 
 class LcCatalogResolver(object):

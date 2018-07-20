@@ -3,7 +3,7 @@ from flask import Flask, Blueprint
 from flask_restful import Resource, Api
 from marshmallow import Schema, fields
 
-from lcatools import LcCatalog
+from antelope_catalog import LcCatalog
 
 
 

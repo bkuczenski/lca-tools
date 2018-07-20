@@ -28,14 +28,13 @@ import hashlib
 from shutil import rmtree
 # from collections import defaultdict
 
-from lcatools.qdb import LciaEngine
+from lcatools.qdb import LciaEngine, REF_QTYS
 
 
 from lcatools.interfaces import EntityNotFound
 from ..catalog_query import CatalogQuery, INTERFACE_TYPES
 from .lc_resolver import LcCatalogResolver
-from .lc_resource import LcResource
-from lcatools.qdb import REF_QTYS
+from ..lc_resource import LcResource
 from lcatools.flowdb.compartments import REFERENCE_INT  # reference intermediate flows
 from lcatools.entity_store import local_ref
 from ..data_sources.local import TEST_ROOT

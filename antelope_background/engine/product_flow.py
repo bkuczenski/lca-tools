@@ -1,6 +1,3 @@
-from lcatools.exchanges import comp_dir
-
-
 class NoMatchingReference(Exception):
     pass
 

@@ -2,7 +2,7 @@
 from ...data_sources.local import TEST_ROOT
 
 from .. import LcCatalog
-from ..lc_resource import LcResource
+from ...lc_resource import LcResource
 from ...catalog_query import CatalogQuery, READONLY_INTERFACE_TYPES
 
 

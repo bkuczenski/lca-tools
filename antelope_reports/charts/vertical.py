@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
-from lcatools.charts.base import standard_labels, label_vbar, prefab_colors, net_color, wrap
+from .base import standard_labels, label_vbar, prefab_colors, net_color, wrap
 
 
 def spread_bars(ax, data, color_gen, hi=None, lo=None, y_lim=None, barwidth=0.65, x_offset=0, labels=True, **kwargs):

@@ -125,9 +125,10 @@ test_json = {
 
 
 def setUpModule():
-    with open(test_file, 'w') as fp:
-        print('writing to %s' % test_file)
-        json.dump(test_json, fp, indent=2, sort_keys=True)
+    if not os.path.exists(test_file):
+        with open(test_file, 'w') as fp:
+            print('writing to %s' % test_file)
+            json.dump(test_json, fp, indent=2, sort_keys=True)
 
 
 class LcArchiveTest(unittest.TestCase):

@@ -8,8 +8,8 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 
-from lcatools.charts.base import save_plot, net_color, open_ylims, standard_labels
-from lcatools.waterfall import random_color
+from .base import save_plot, net_color, open_ylims, standard_labels
+from .waterfall import random_color
 from lcatools.autorange import AutoRange
 
 

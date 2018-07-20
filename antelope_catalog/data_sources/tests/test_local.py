@@ -12,8 +12,8 @@ import unittest
 import os
 import json
 
-from lcatools.data_sources.local import CATALOG_ROOT, RESOURCES_CONFIG
-from lcatools.catalog import LcCatalog
+from ..local import CATALOG_ROOT, RESOURCES_CONFIG
+from ...catalog import LcCatalog
 
 resource_dir = os.path.join(CATALOG_ROOT, 'resources')
 

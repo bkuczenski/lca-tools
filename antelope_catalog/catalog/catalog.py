@@ -36,7 +36,7 @@ from .lc_resource import LcResource
 from lcatools.qdb import REF_QTYS
 from lcatools.flowdb.compartments import REFERENCE_INT  # reference intermediate flows
 from lcatools.entity_store import local_ref
-from lcatools.data_sources.local import TEST_ROOT
+from ..data_sources.local import TEST_ROOT
 
 
 class DuplicateEntries(Exception):

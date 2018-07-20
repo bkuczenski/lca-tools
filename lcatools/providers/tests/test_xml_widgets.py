@@ -1,4 +1,4 @@
-from lcatools.providers.xml_widgets import render_text_block, find_tag
+from ..xml_widgets import render_text_block, find_tag
 from lxml import objectify
 import unittest
 

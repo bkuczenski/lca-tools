@@ -1,7 +1,7 @@
 import unittest
 from datetime import datetime
 
-from lcatools.entity_store import EntityStore
+from ...entity_store import EntityStore
 
 
 phony_source = '/path/to/phony/source.gz'

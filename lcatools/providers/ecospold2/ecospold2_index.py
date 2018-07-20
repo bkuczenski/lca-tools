@@ -1,4 +1,4 @@
-from lcatools.implementations import IndexImplementation
+from ...implementations import IndexImplementation
 
 
 class EcoSpold2IndexImplementation(IndexImplementation):

@@ -8,9 +8,9 @@ from __future__ import print_function, unicode_literals
 import six
 import os
 
-from lcatools.entities import LcEntity, LcProcess, BasicArchive
-from lcatools.from_json import from_json
-from lcatools.implementations import InventoryImplementation, BackgroundImplementation, ConfigureImplementation
+from ..entities import LcEntity, LcProcess, BasicArchive
+from ..from_json import from_json
+from ..implementations import InventoryImplementation, BackgroundImplementation, ConfigureImplementation
 
 if six.PY2:
     bytes = str

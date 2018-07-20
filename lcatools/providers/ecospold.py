@@ -17,15 +17,15 @@ import re
 from lxml import objectify
 # from lxml.etree import tostring
 
-from lcatools.providers.lc_archive import LcArchive
-from lcatools.providers.archive import Archive
-from lcatools.entities import LcQuantity, LcFlow, LcProcess
+from .lc_archive import LcArchive
+from .archive import Archive
+from ..entities import LcQuantity, LcFlow, LcProcess
 # from lcatools.exchanges import DirectionlessExchangeError
 
-from lcatools.providers import tail
-from lcatools.providers.xml_widgets import find_tag
-from lcatools.interact import parse_math
+from .xml_widgets import find_tag
+from ..interact import parse_math
 
+tail = re.compile('/([^/]+)$')
 
 """
 Used to install conversion factors between different flow reference units.  Satisfies the requirement:

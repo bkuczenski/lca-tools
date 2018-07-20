@@ -1,8 +1,8 @@
 import os
 
 from .ilcd import grab_flow_name
-from lcatools.providers.xml_widgets import *
-from providers.ilcd.ilcd_lcia import IlcdLcia
+from ..xml_widgets import *
+from .ilcd_lcia import IlcdLcia
 
 ELCD = os.path.join('/data', 'LCI', 'ELCD', 'ELCD3.2.zip')
 

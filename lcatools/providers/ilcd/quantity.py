@@ -1,6 +1,6 @@
 from .ilcd import uuid_regex
 
-from lcatools.implementations import QuantityImplementation
+from ...implementations import QuantityImplementation
 
 
 class IlcdQuantityImplementation(QuantityImplementation):

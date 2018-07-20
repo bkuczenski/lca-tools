@@ -1,9 +1,9 @@
 import json
 import os
 
-from lcatools.entities import *
-from lcatools.providers.lc_archive import LcArchive
-from lcatools.providers.archive import Archive
+from ..entities import *
+from .lc_archive import LcArchive
+from .archive import Archive
 
 
 valid_types = {'processes', 'flows', 'flow_properties'}

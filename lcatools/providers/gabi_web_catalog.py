@@ -1,5 +1,5 @@
 
-from lcatools.providers.ilcd import IlcdArchive
+from .ilcd import IlcdArchive
 from bs4 import BeautifulSoup
 
 import os

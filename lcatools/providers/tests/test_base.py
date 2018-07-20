@@ -1,5 +1,5 @@
-from lcatools.providers.lc_archive import LcArchive
-from lcatools.from_json import from_json
+from ..lc_archive import LcArchive
+from ...from_json import from_json
 
 import os
 import json

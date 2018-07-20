@@ -3,9 +3,9 @@ This implements a quantity interface
 """
 
 import xlrd
-from lcatools.providers.xl_dict import XlDict
-from lcatools.entities import LcQuantity, LcFlow, BasicArchive
-from lcatools.characterizations import Characterization, DuplicateCharacterizationError
+from ..xl_dict import XlDict
+from ...entities import LcQuantity, LcFlow, BasicArchive
+from ...characterizations import Characterization, DuplicateCharacterizationError
 
 from .q_info import ns_uuid_21 as t_uuid
 from .quantity import Traci21QuantityImplementation, transform_numeric_cas, CAS_regexp, q_info

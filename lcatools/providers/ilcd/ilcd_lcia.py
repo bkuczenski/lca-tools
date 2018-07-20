@@ -1,6 +1,6 @@
 from .ilcd import IlcdArchive, typeDirs, get_flow_ref, uuid_regex, dtype_from_nsmap
-from lcatools.providers.xml_widgets import *
-from lcatools.entities import LcEntity, LcQuantity, LcUnit
+from ..xml_widgets import *
+from ...entities import LcEntity, LcQuantity, LcUnit
 from .quantity import IlcdQuantityImplementation
 from .index import IlcdIndexImplementation
 

@@ -1,8 +1,8 @@
 import os
 import re
 
-from lcatools.providers.ecospold2 import EcospoldV2Archive
-from lcatools.providers.xml_widgets import find_tags
+from .ecospold2 import EcospoldV2Archive
+from .xml_widgets import find_tags
 
 
 ECOSPOLD = os.path.join('/data', 'Dropbox', 'data', 'Ecoinvent', '3.2', 'current_Version_3.2_cutoff_lci_ecoSpold02.7z')

@@ -1,6 +1,6 @@
 import re
 
-from lcatools.implementations import QuantityImplementation
+from ...implementations import QuantityImplementation
 from .q_info import q_info_21 as q_info
 
 

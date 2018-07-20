@@ -1,11 +1,10 @@
 from __future__ import print_function, unicode_literals
 
-from lcatools.providers.lc_archive import LcArchive, LcArchive
-from lcatools.providers.xl_dict import XlDict
-from lcatools.entities import LcProcess, LcFlow, LcQuantity
-from lcatools.providers.ecospold2 import EcospoldV2Archive
-from lcatools.interact import pick_reference
-from lcatools.lcia_results import LciaResults
+from .lc_archive import LcArchive
+from .xl_dict import XlDict
+from ..entities import LcProcess, LcFlow, LcQuantity
+from .ecospold2 import EcospoldV2Archive
+from ..interact import pick_reference
 
 from lcatools.from_json import from_json
 

@@ -19,7 +19,6 @@ from lcatools.providers.ecospold2 import EcospoldV2Archive
 from lcatools.providers.ecoinvent_spreadsheet import EcoinventSpreadsheet
 from lcatools.providers.ecospold import EcospoldV1Archive
 from lcatools.providers.ecoinvent_lcia import EcoinventLcia
-from lcatools.providers.foreground import LcForeground
 from lcatools.providers.openlca_jsonld import OpenLcaJsonLdArchive
 from lcatools.providers.traci import Traci21Factors
 # from lcatools.providers.antelope.antelope_v1 import AntelopeV1Client
@@ -34,9 +33,6 @@ catalog_dir = '/data/GitHub/lca-tools-datafiles/catalogs'
 
 class ArchiveError(Exception):
     pass
-
-
-needs_catalog = {'foreground', 'lcforeground', 'antelope', 'antelopev1', 'antelopev1archive', 'antelopev1client'}
 
 
 def gz_files(path):
@@ -58,9 +54,6 @@ def create_archive(source, ds_type, catalog=None, **kwargs):
     """
     if ds_type.lower() == 'json':
         a = archive_from_json(source, catalog=catalog, **kwargs)
-    elif ds_type.lower() in needs_catalog:
-        # LcForeground needs a catalog
-        a = archive_factory(source, ds_type, catalog=catalog, **kwargs)
     else:
         a = archive_factory(source, ds_type, **kwargs)
     return a
@@ -85,10 +78,6 @@ def archive_factory(source, ds_type, **kwargs):
         'ilcd': IlcdArchive,
         'ilcdlcia': IlcdLcia,
         'ilcd_lcia': IlcdLcia,
-#        'antelope': AntelopeV1Client,
-#        'antelopev1': AntelopeV1Client,
-#        'antelopev1archive': AntelopeV1Client,
-#        'antelopev1client': AntelopeV1Client,
         'ecospoldv1archive': EcospoldV1Archive,
         'ecospold': EcospoldV1Archive,
         'ecospoldv2archive': EcospoldV2Archive,
@@ -101,8 +90,6 @@ def archive_factory(source, ds_type, **kwargs):
         'openlca_jsonld': OpenLcaJsonLdArchive,
         'olca': OpenLcaJsonLdArchive,
         'olca_jsonld': OpenLcaJsonLdArchive,
-        'foreground': LcForeground,
-        'lcforeground': LcForeground,
         'traci2': Traci21Factors,
         'traci': Traci21Factors,
         'traci21factors': Traci21Factors

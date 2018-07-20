@@ -1,9 +1,8 @@
-from .abstract_query import UnknownOrigin
-from .catalog_query import CatalogQuery, PrivateArchive, EntityNotFound
+from .abstract_query import UnknownOrigin, PrivateArchive, EntityNotFound
 
 from .iconfigure import ConfigureInterface
 from .iinventory import InventoryInterface, InventoryRequired
-from .iindex import IndexInterface
+from .iindex import IndexInterface, IndexRequired
 from .ibackground import BackgroundInterface, BackgroundRequired
 from .iquantity import QuantityInterface, QuantityRequired
 from .iforeground import ForegroundInterface, ForegroundRequired

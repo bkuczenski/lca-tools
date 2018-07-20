@@ -7,9 +7,7 @@ I can use the reference as a proxy for the entity itself.
 
 Design principles:
 1. References should be lightweight and should not require importing anything. Of course, references are useless
-without access to a catalog, and right now the catalog is the heaviest thing in the repo (because it imports
-create_archive, which imports all the providers).  An implication is that the next thing I will need to implement
-is a web client that will allow me to perform queries to a remote catalog without running my own catalog locally.
+without access to a query object that can implement the various methods.
 
 2. Un-grounded references are useless except for collecting metadata about entities.
 

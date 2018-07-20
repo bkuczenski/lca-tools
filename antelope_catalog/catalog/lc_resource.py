@@ -3,9 +3,10 @@ import os
 from collections import defaultdict
 from datetime import datetime
 
+from ..foreground import LcForeground
 
 from lcatools.entity_store import local_ref
-from lcatools.interfaces.catalog_query import INTERFACE_TYPES
+from ..catalog_query import INTERFACE_TYPES
 from lcatools.tools import create_archive, update_archive
 
 
@@ -73,9 +74,12 @@ class LcResource(object):
                 self.write_to_file(catalog.resource_dir)  # update resource file
             else:
                 raise AttributeError('Resource has no source specified and no download information')
-        self._archive = create_archive(self.source, self.ds_type, catalog=catalog, ref=self.reference,
-                                       # upstream=catalog.qdb,
-                                       **self.init_args)
+        if self.ds_type.lower() in ('foreground', 'lcforeground'):
+            self._archive = LcForeground(self.source, catalog=catalog, ref=self.reference, **self.init_args)
+        else:
+            self._archive = create_archive(self.source, self.ds_type, catalog=catalog, ref=self.reference,
+                                           # upstream=catalog.qdb,
+                                           **self.init_args)
         if catalog is not None and os.path.exists(catalog.cache_file(self.source)):
             update_archive(self._archive, catalog.cache_file(self.source))
         if self.static and self.ds_type.lower() != 'json':

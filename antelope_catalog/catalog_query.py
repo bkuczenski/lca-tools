@@ -2,24 +2,14 @@
 Query Interface -- used to operate catalog refs
 """
 
-from .iindex import IndexInterface, IndexRequired
-from .ibackground import BackgroundInterface
-from .iinventory import InventoryInterface
-from .iquantity import QuantityInterface
+from lcatools.interfaces import (EntityNotFound, IndexRequired,
+                                 IndexInterface, BackgroundInterface, InventoryInterface, QuantityInterface)
 
 INTERFACE_TYPES = {'basic', 'index', 'inventory', 'background', 'quantity', 'foreground'}
 READONLY_INTERFACE_TYPES = {'basic', 'index', 'inventory', 'background', 'quantity'}
 
 
 class NoCatalog(Exception):
-    pass
-
-
-class EntityNotFound(Exception):
-    pass
-
-
-class PrivateArchive(Exception):
     pass
 
 

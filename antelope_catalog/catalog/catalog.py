@@ -30,7 +30,9 @@ from shutil import rmtree
 
 from lcatools.qdb import LciaEngine
 
-from lcatools.interfaces.catalog_query import CatalogQuery, EntityNotFound, INTERFACE_TYPES
+
+from lcatools.interfaces import EntityNotFound
+from ..catalog_query import CatalogQuery, INTERFACE_TYPES
 from .lc_resolver import LcCatalogResolver
 from .lc_resource import LcResource
 from lcatools.qdb import REF_QTYS

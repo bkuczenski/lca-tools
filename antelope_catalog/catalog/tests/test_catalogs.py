@@ -1,9 +1,9 @@
 
-from lcatools.data_sources.local import TEST_ROOT
+from ...data_sources.local import TEST_ROOT
 
-from lcatools.catalog.catalog import LcCatalog
-from lcatools.catalog.lc_resource import LcResource
-from lcatools.interfaces.catalog_query import CatalogQuery, READONLY_INTERFACE_TYPES
+from .. import LcCatalog
+from ..lc_resource import LcResource
+from ...catalog_query import CatalogQuery, READONLY_INTERFACE_TYPES
 
 
 import os

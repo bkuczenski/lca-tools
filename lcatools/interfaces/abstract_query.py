@@ -11,6 +11,14 @@ class ValidationError(Exception):
     pass
 
 
+class PrivateArchive(Exception):
+    pass
+
+
+class EntityNotFound(Exception):
+    pass
+
+
 class AbstractQuery(object):
     """
     Abstract base class for executing queries

@@ -7,7 +7,7 @@ from .foreground import LcForeground
 from .catalog_query import INTERFACE_TYPES
 
 from lcatools.entity_store import local_ref
-from lcatools.tools import create_archive, update_archive
+from lcatools.providers import create_archive, update_archive
 
 
 new_date = datetime.now().strftime('%Y%m%d')

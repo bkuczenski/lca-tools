@@ -4,7 +4,7 @@ from shutil import rmtree
 from uuid import uuid4
 
 from lcatools.entities.editor import FragmentEditor
-from lcatools.providers.foreground import LcForeground
+from .. import LcForeground
 from lcatools.entity_refs import CatalogRef  # , EntityRefMergeError  ## merge error no longer!
 
 WORKING_DIR = os.path.join(os.path.dirname(__file__), 'test-foreground')

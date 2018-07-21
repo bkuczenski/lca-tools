@@ -2,7 +2,6 @@ import json
 from collections import defaultdict
 
 from lcatools.entities import BasicArchive
-from lcatools.interfaces import IndexInterface, InventoryInterface, QuantityInterface
 from lcatools.entity_refs import CatalogRef
 from lcatools.fragment_flows import FragmentFlow
 
@@ -10,6 +9,8 @@ from lcatools.fragment_flows import FragmentFlow
 from .inventory import AntelopeInventoryImplementation
 from .quantity import AntelopeQuantityImplementation
 from .exceptions import AntelopeV1Error
+
+from ..antelope_v1_query import AntelopeV1Query
 
 try:
     from urllib.request import urlopen, urljoin
@@ -28,12 +29,12 @@ def remote_ref(url):
     return ref
 
 
-class AntelopeV1Client(BasicArchive, IndexInterface, InventoryInterface, QuantityInterface):
+class AntelopeV1Client(BasicArchive):
     """
     Provider class for .NET-era Antelope servers.  The basic function is to rely on the interface whenever possible
     but also to cache inventory and LCIA results locally as catalog refs.
     """
-    def __init__(self, source, ref=None, catalog=None, **kwargs):
+    def __init__(self, source, ref=None, **kwargs):
         """
 
         :param source:
@@ -45,9 +46,7 @@ class AntelopeV1Client(BasicArchive, IndexInterface, InventoryInterface, Quantit
 
         super(AntelopeV1Client, self).__init__(source, ref=ref, **kwargs)
 
-        if catalog is None:
-            raise AntelopeV1Error('A Catalog is required for AntelopeV1Client')
-        self._query = catalog.query(self.ref)
+        self._query = AntelopeV1Query(self)
 
         # a set of dicts where the key is a string-formatted integer and the value is an entity_ref
         self._endpoints = dict()

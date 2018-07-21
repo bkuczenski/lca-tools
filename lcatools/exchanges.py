@@ -1,3 +1,6 @@
+from interfaces import comp_dir
+
+
 class ExchangeError(Exception):
     pass
 
@@ -419,7 +422,7 @@ class ExchangeValue(Exchange):
 
     def __str__(self):
         if self.process.entity_type == 'fragment':
-            if self.flow == self.process.flow and self.direction == comp_dir(self.process.direction):
+            if self.flow == self.process.flow and self.comp_dir == self.process.direction:
                 ref = '{*}'
             else:
                 ref = '   '

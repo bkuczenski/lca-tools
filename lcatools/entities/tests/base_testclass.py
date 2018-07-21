@@ -2,7 +2,7 @@ import unittest
 import os
 
 from lcatools.from_json import from_json
-from lcatools.providers.lc_archive import LcArchive
+from lcatools.providers import LcArchive
 
 
 refinery_archive = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_archive.json')

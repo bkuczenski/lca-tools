@@ -192,7 +192,7 @@ class SummaryLciaResult(object):
 
     def __hash__(self):
         try:
-            h = self.entity.get_uuid()
+            h = self.entity.uuid
         except AttributeError:
             h = self.entity
         return hash(h)

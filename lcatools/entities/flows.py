@@ -2,7 +2,7 @@ from __future__ import print_function, unicode_literals
 import uuid
 
 from lcatools.characterizations import Characterization
-from lcatools.entities.entities import LcEntity
+from .entities import LcEntity
 # from lcatools.entities.quantities import LcQuantity
 from lcatools.interfaces import trim_cas
 

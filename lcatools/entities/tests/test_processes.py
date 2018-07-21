@@ -1,5 +1,5 @@
 import unittest
-from lcatools.entities.tests.base_testclass import BasicEntityTest
+from .base_testclass import BasicEntityTest
 
 
 class ProcessesTest(BasicEntityTest):

@@ -1,6 +1,5 @@
-from .basic import BasicImplementation
+from lcatools.implementations import BasicImplementation
 from lcatools.interfaces import ForegroundInterface, BackgroundRequired, comp_dir
-
 
 from lcatools.entities.editor import FragmentEditor
 

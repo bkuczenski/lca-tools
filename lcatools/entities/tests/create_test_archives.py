@@ -5,7 +5,7 @@ catalog at the location specified
 """
 import os
 
-from lcatools import LcCatalog
+from antelope_catalog import LcCatalog
 from lcatools.providers.lc_archive import LcArchive
 
 # CUSTOMIZE THESE ENTRIES AS NEEDED

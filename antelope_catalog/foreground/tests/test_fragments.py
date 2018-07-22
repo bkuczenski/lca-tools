@@ -1,4 +1,4 @@
-from lcatools.entities import LcFragment
+from ..fragments import LcFragment
 
 import unittest
 

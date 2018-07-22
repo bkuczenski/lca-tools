@@ -1,7 +1,7 @@
 from lcatools.implementations import BasicImplementation
 from lcatools.interfaces import ForegroundInterface, BackgroundRequired, comp_dir
 
-from lcatools.entities.editor import FragmentEditor
+from ..foreground.fragment_editor import FragmentEditor
 
 
 class FragRecursionError(Exception):

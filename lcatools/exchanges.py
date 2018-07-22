@@ -1,4 +1,4 @@
-from interfaces import comp_dir
+from .interfaces import comp_dir
 
 
 class ExchangeError(Exception):

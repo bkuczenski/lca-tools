@@ -3,7 +3,7 @@ import os
 from shutil import rmtree
 from uuid import uuid4
 
-from lcatools.entities.editor import FragmentEditor
+from ..fragment_editor import FragmentEditor
 from .. import LcForeground
 from lcatools.entity_refs import CatalogRef  # , EntityRefMergeError  ## merge error no longer!
 

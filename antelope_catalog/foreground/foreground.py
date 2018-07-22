@@ -15,7 +15,7 @@ from .fragments import LcFragment
 from lcatools.entity_refs import CatalogRef
 
 
-FOREGROUND_ENTITY_TYPES = BASIC_ENTITY_TYPES + ('fragments', )
+FOREGROUND_ENTITY_TYPES = BASIC_ENTITY_TYPES + ('fragment', )
 
 
 class AmbiguousReference(Exception):
@@ -141,7 +141,7 @@ class LcForeground(BasicArchive):
         :param entity:
         :return:
         """
-        if entity.entity_type not in entity_types:
+        if entity.entity_type not in self._entity_types:
             raise ValueError('%s is not a valid entity type' % entity.entity_type)
         if entity.origin is None:
             entity.origin = self.ref

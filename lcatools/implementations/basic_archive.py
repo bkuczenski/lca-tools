@@ -1,8 +1,8 @@
 import re
-from lcatools.implementations import EntityStore, SourceAlreadyKnown, to_uuid
+from lcatools.implementations.entity_store import EntityStore, SourceAlreadyKnown
+from lcatools.interfaces import to_uuid
 from lcatools.implementations import BasicImplementation, IndexImplementation, QuantityImplementation
-from .quantities import LcQuantity, LcUnit
-from .flows import LcFlow
+from lcatools.entities import LcQuantity, LcUnit, LcFlow
 
 
 class OldJson(Exception):

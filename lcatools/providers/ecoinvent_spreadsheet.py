@@ -1,6 +1,6 @@
 from __future__ import print_function, unicode_literals
 
-from .lc_archive import LcArchive
+from lcatools.implementations import LcArchive
 from .xl_dict import XlDict
 from ..entities import LcProcess, LcFlow, LcQuantity
 from .ecospold2 import EcospoldV2Archive

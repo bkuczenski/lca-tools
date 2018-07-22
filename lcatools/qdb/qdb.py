@@ -28,7 +28,7 @@ from .quantity import QdbQuantityImplementation
 
 from lcatools.from_json import from_json
 from lcatools.lcia_results import LciaResult
-from lcatools.entities import BasicArchive
+from lcatools.implementations import BasicArchive
 from lcatools.flowdb.compartments import Compartment, CompartmentManager
 from lcatools.characterizations import Characterization
 # from lcatools.dynamic_grid import dynamic_grid

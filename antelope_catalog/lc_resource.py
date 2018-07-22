@@ -6,7 +6,6 @@ from datetime import datetime
 from .foreground import LcForeground
 from .catalog_query import INTERFACE_TYPES
 
-from lcatools.entity_store import local_ref
 from lcatools.providers import create_archive, update_archive
 
 
@@ -26,10 +25,7 @@ class LcResource(object):
     @classmethod
     def from_archive(cls, archive, interfaces, **kwargs):
         source = archive.source
-        if source in archive.get_names():
-            ref = archive.get_names()[source]
-        else:
-            ref = local_ref(source)
+        ref = archive.ref
         ds_type = archive.__class__.__name__  # static flag indicates whether archive is complete
         kwargs.update(archive.init_args)
         static = kwargs.pop('static', archive.static)

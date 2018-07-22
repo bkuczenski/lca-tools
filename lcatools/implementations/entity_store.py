@@ -1,16 +1,10 @@
 """
-This file defines a set of abstract classes that act as interfaces for the data providers.
 
-The data providers are expected to inherit from this class, which will reply "not implemented"
-for all the interface methods. Then the data providers can override whichever ones do get implemented.
 
-On the calling side, the interface definitions function as documentation-only, since python uses
-duck typing and doesn't require strict interface definitions.
 """
 from __future__ import print_function, unicode_literals
 
 import uuid
-from os.path import splitext
 import re
 import json
 import gzip as gz
@@ -20,6 +14,7 @@ from datetime import datetime
 
 from collections import defaultdict
 
+from ..interfaces import to_uuid, local_ref
 
 LD_CONTEXT = 'https://bkuczenski.github.io/lca-tools-datafiles/context.jsonld'
 
@@ -27,7 +22,6 @@ LD_CONTEXT = 'https://bkuczenski.github.io/lca-tools-datafiles/context.jsonld'
 # CatalogRef = namedtuple('CatalogRef', ['archive', 'id'])
 
 
-uuid_regex = re.compile('([0-9a-f]{8}.?([0-9a-f]{4}.?){3}[0-9a-f]{12})', flags=re.IGNORECASE)
 ref_regex = re.compile('[a-z0-9_]+(\.[a-z0-9_]+)*', flags=re.IGNORECASE)
 
 
@@ -39,56 +33,8 @@ class InvalidSemanticReference(Exception):
     pass
 
 
-def to_uuid(_in):
-    if _in is None:
-        return _in
-    if isinstance(_in, int):
-        return None
-    try:
-        g = uuid_regex.search(_in)  # using the regexp test is 50% faster than asking the UUID library
-    except TypeError:
-        if isinstance(_in, uuid.UUID):
-            return str(_in)
-        g = None
-    if g is not None:
-        return g.groups()[0]
-    # no regex match- let's see if uuid.UUID can handle the input
-    try:
-        _out = uuid.UUID(_in)
-    except ValueError:
-        return None
-    return str(_out)
-
-
-def local_ref(source):
-    """
-    Create a semantic ref for a local filename.  Just uses basename.  what kind of monster would access multiple
-    different files with the same basename without specifying ref?
-
-    alternative is splitext(source)[0].translate(maketrans('/\\','..'), ':~') but ugghh...
-
-    Okay, FINE.  I'll use the full path.  WITH leading '.' removed.
-
-    Anyway, to be clear, local semantic references are not supposed to be distributed.
-    :param source:
-    :return:
-    """
-    xf = source.translate(str.maketrans('/\\', '..', ':~'))
-    while splitext(xf)[1] in {'.gz', '.json', '.zip', '.txt', '.spold', '.7z'}:
-        xf = splitext(xf)[0]
-    while xf[0] == '.':
-        xf = xf[1:]
-    while xf[-1] == '.':
-        xf = xf[:-1]
-    return '.'.join(['local', xf])
-
-
 class EntityStore(object):
-    """
-    An abstract interface has nothing but a reference
-
-    """
-    _entity_types = ()
+    _entity_types = ()  # must be overridden
     '''
     _ns_uuid_required: specifies whether the archive must be supplied an ns_uuid (generally, archives that are
     expected to generate persistent, deterministic IDs must have an externally specified ns_uuid)
@@ -100,7 +46,7 @@ class EntityStore(object):
 
     def _key_to_id(self, key):
         """
-        This method always returns a valid key to _entities.
+        This method always returns a valid key into _entities.
 
         in the base class, the key is the uuid-- this can get overridden
         by default, to_uuid just returns a string matching the regex, or failing that, tries to generate a string
@@ -150,13 +96,10 @@ class EntityStore(object):
     def __init__(self, source, ref=None, quiet=True, upstream=None, static=False, dataReference=None, ns_uuid=None,
                  **kwargs):
         """
-        An archive is a provenance structure for a collection of entities.  Ostensibly, an archive has a single
-        source from which entities are collected.  However, archives can also collect entities from multiple sources,
-        either by specifying an upstream archive that is subsequently truncated, or by the entity being added
-        explicitly.
-
-        The source is a resolvable URI that indicates a data resource from which entities can be extracted.  The
-        exact manner of extracting data from resources is left to the subclasses.
+        An EntityStore is a provenance structure for a collection of entities.  Ostensibly, an archive has a single
+        source from which entities are collected.  The source is a resolvable URI that indicates a data resource from
+        which data describing the entities can be extracted.  The exact manner of extracting data from resources is
+        subclass-dependent.
 
         Internally, all entities are stored with UUID keys.  If the external references do not contain UUIDs, it is
         recommended to derive a UUID3 using an archive-specific, stable namespace ID.  The NsUuidArchive subclass
@@ -176,8 +119,9 @@ class EntityStore(object):
         user's computer.  In principle, if the semantic reference for two archives is the same, the archives should
         contain excerpts of the same data, even if drawn from different sources.
 
-        An entity is uniquely identified by its origin and a stable reference known as an 'external_ref'.  An entity's
-        canonical identifier fits the pattern 'origin/external_ref'.  Examples:
+        An entity is uniquely identified by its link property, which is made from concatenating the semantic origin and
+        a stable reference known as an 'external_ref', as 'origin/external_ref'.  The first slash is the delimiter
+        between origin and reference. Examples:
 
         elcd.3.2/processes/00043bd2-4563-4d73-8df8-b84b5d8902fc
         uslci.ecospold/Acetic acid, at plant
@@ -286,7 +230,10 @@ class EntityStore(object):
 
     @property
     def ref(self):
-        return next(k for k, s in self._catalog_names.items() if self.source in s)
+        try:
+            return next(k for k, s in self._catalog_names.items() if self.source in s)
+        except StopIteration:
+            return local_ref(self.source)
 
     @property
     def catalog_names(self):
@@ -480,6 +427,9 @@ class EntityStore(object):
         if key in self._entities:
             raise KeyError('Entity already exists: %s' % key)
 
+        if entity.entity_type not in self._entity_types:
+            raise TypeError('Entity type %s not valid!' % entity.entity_type)
+
         if entity.validate():
             if self._quiet is False:
                 print('Adding %s entity with %s: %s' % (entity.entity_type, key, entity['Name']))
@@ -635,10 +585,10 @@ class EntityStore(object):
         if gzip is True:
             if not bool(re.search('\.gz$', filename)):
                 filename += '.gz'
-            try:  # python3
+            if six.PY3:  # python3
                 with gz.open(filename, 'wt') as fp:
                     json.dump(s, fp, indent=2, sort_keys=True)
-            except ValueError:  # python2
+            else:  # python2
                 with gz.open(filename, 'w') as fp:
                     json.dump(s, fp, indent=2, sort_keys=True)
         else:

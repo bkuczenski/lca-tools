@@ -8,9 +8,14 @@ from __future__ import print_function, unicode_literals
 import six
 import os
 
-from ..entities import LcEntity, LcProcess, BasicArchive
+from ..entities import LcEntity, LcProcess
 from ..from_json import from_json
 from ..implementations import InventoryImplementation, BackgroundImplementation, ConfigureImplementation
+from ..implementations.basic_archive import BasicArchive, BASIC_ENTITY_TYPES
+
+
+LC_ENTITY_TYPES = BASIC_ENTITY_TYPES + ('process', )
+
 
 if six.PY2:
     bytes = str
@@ -24,7 +29,7 @@ class LcArchive(BasicArchive):
 
     To support processes, adds inventory, background, and configure interfaces.
     """
-    _entity_types = {'quantity', 'flow', 'process'}
+    _entity_types = set(LC_ENTITY_TYPES)
 
     def __getitem__(self, item):
         """

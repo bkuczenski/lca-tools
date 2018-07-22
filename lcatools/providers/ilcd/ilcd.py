@@ -17,11 +17,11 @@ except ImportError:  # python2
     str = unicode
 
 
-from ..lc_archive import LcArchive
+from lcatools.implementations import LcArchive
 from ..archive import Archive
 from ..xml_widgets import *
 from ...entities import LcFlow, LcProcess, LcQuantity, LcUnit
-from ...entity_store import uuid_regex
+from ...interfaces import uuid_regex
 from ...characterizations import DuplicateCharacterizationError
 
 typeDirs = {'Process': 'processes',

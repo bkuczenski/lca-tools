@@ -1,7 +1,7 @@
 import unittest
 from datetime import datetime
 
-from ...entity_store import EntityStore
+from ..entity_store import EntityStore
 
 
 phony_source = '/path/to/phony/source.gz'

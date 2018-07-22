@@ -1,4 +1,4 @@
-from ..lc_archive import LcArchive
+from lcatools.implementations import LcArchive
 from ...from_json import from_json
 
 import os

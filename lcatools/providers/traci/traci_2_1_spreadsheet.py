@@ -4,7 +4,8 @@ This implements a quantity interface
 
 import xlrd
 from ..xl_dict import XlDict
-from ...entities import LcQuantity, LcFlow, BasicArchive
+from ...implementations import BasicArchive
+from ...entities import LcQuantity, LcFlow
 from ...characterizations import Characterization, DuplicateCharacterizationError
 
 from .q_info import ns_uuid_21 as t_uuid

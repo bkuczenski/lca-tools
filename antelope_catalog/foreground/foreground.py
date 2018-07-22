@@ -9,9 +9,13 @@ from collections import defaultdict
 
 from ..implementations import ForegroundImplementation
 
-from lcatools.entity_store import to_uuid
-from lcatools.entities import LcFragment, entity_types, BasicArchive
+from lcatools.interfaces import to_uuid
+from lcatools.implementations.basic_archive import BasicArchive, BASIC_ENTITY_TYPES
+from .fragments import LcFragment
 from lcatools.entity_refs import CatalogRef
+
+
+FOREGROUND_ENTITY_TYPES = BASIC_ENTITY_TYPES + ('fragments', )
 
 
 class AmbiguousReference(Exception):
@@ -43,7 +47,7 @@ class LcForeground(BasicArchive):
 
     Foreground models can be constructed flow by flow (observed from unit process inventories
     """
-    _entity_types = entity_types
+    _entity_types = set(FOREGROUND_ENTITY_TYPES)
     _ns_uuid_required = None
 
     def _load_json_file(self, filename):

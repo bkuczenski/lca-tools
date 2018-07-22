@@ -2,8 +2,8 @@ import unittest
 import os
 from uuid import uuid4
 
-from lcatools.entity_store import local_ref
-from lcatools.entities.basic_archive import BasicArchive
+from lcatools.interfaces import local_ref
+from ..basic_archive import BasicArchive
 from lcatools.entity_refs import CatalogRef
 
 WORKING_FILE = os.path.join(os.path.dirname(__file__), 'test-basic-archive.json')

@@ -15,7 +15,58 @@ from .iquantity import QuantityInterface, QuantityRequired
 from .iforeground import ForegroundInterface, ForegroundRequired
 
 import re
+import uuid
+from os.path import splitext
+
 from collections import namedtuple
+
+
+uuid_regex = re.compile('([0-9a-f]{8}.?([0-9a-f]{4}.?){3}[0-9a-f]{12})', flags=re.IGNORECASE)
+
+def to_uuid(_in):
+    if _in is None:
+        return _in
+    if isinstance(_in, int):
+        return None
+    try:
+        g = uuid_regex.search(_in)  # using the regexp test is 50% faster than asking the UUID library
+    except TypeError:
+        if isinstance(_in, uuid.UUID):
+            return str(_in)
+        g = None
+    if g is not None:
+        return g.groups()[0]
+    # no regex match- let's see if uuid.UUID can handle the input
+    try:
+        _out = uuid.UUID(_in)
+    except ValueError:
+        return None
+    return str(_out)
+
+
+def local_ref(source):
+    """
+    Create a semantic ref for a local filename.  Just uses basename.  what kind of monster would access multiple
+    different files with the same basename without specifying ref?
+
+    alternative is splitext(source)[0].translate(maketrans('/\\','..'), ':~') but ugghh...
+
+    Okay, FINE.  I'll use the full path.  WITH leading '.' removed.
+
+    Anyway, to be clear, local semantic references are not supposed to be distributed.
+    :param source:
+    :return:
+    """
+    xf = source.translate(str.maketrans('/\\', '..', ':~'))
+    while splitext(xf)[1] in {'.gz', '.json', '.zip', '.txt', '.spold', '.7z'}:
+        xf = splitext(xf)[0]
+    while xf[0] == '.':
+        xf = xf[1:]
+    while xf[-1] == '.':
+        xf = xf[:-1]
+    return '.'.join(['local', xf])
+
+
 
 
 """

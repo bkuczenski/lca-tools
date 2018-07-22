@@ -22,7 +22,7 @@ from lcatools.providers import archive_from_json
 from lcatools.interfaces import EntityNotFound
 
 from ..local import CATALOG_ROOT, check_enabled
-from lcatools.providers.lc_archive import LcArchive
+from lcatools.implementations import LcArchive
 
 EcoinventNode = namedtuple('EcoinventNode', ['version', 'model', 'node'])
 _debug = True

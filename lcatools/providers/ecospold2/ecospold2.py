@@ -11,14 +11,14 @@ import six
 from lxml import objectify
 from lxml.etree import XMLSyntaxError
 
-from ...entity_store import uuid_regex
+from ...interfaces import uuid_regex
 from ...characterizations import Characterization
 from ...entities import LcQuantity, LcFlow, LcProcess
 from ...exchanges import ExchangeValue, DirectionlessExchangeError
 from ...lcia_results import LciaResult, LciaResults
 from ..ecospold import tail
 from ..archive import Archive
-from ..lc_archive import LcArchive
+from lcatools.implementations import LcArchive
 from ..xml_widgets import *
 
 from .ecospold2_index import EcoSpold2IndexImplementation

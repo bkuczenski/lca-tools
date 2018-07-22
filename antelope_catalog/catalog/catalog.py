@@ -31,12 +31,11 @@ from shutil import rmtree
 from lcatools.qdb import LciaEngine, REF_QTYS
 
 
-from lcatools.interfaces import EntityNotFound
+from lcatools.interfaces import local_ref, EntityNotFound
 from ..catalog_query import CatalogQuery, INTERFACE_TYPES
 from .lc_resolver import LcCatalogResolver
 from ..lc_resource import LcResource
 from lcatools.flowdb.compartments import REFERENCE_INT  # reference intermediate flows
-from lcatools.entity_store import local_ref
 from ..data_sources.local import TEST_ROOT
 
 

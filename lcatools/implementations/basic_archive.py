@@ -1,5 +1,5 @@
 import re
-from lcatools.entity_store import EntityStore, SourceAlreadyKnown, to_uuid
+from lcatools.implementations import EntityStore, SourceAlreadyKnown, to_uuid
 from lcatools.implementations import BasicImplementation, IndexImplementation, QuantityImplementation
 from .quantities import LcQuantity, LcUnit
 from .flows import LcFlow
@@ -11,6 +11,10 @@ class OldJson(Exception):
 
 class EntityExists(Exception):
     pass
+
+
+BASIC_ENTITY_TYPES = ('quantity', 'flow')
+
 
 '''
 LcArchive Stored Configuration.
@@ -27,7 +31,7 @@ class BasicArchive(EntityStore):
     The BasicArchive should be used for all archives that only contain flows and quantities (and contexts in the future)
 
     """
-    _entity_types = {'quantity', 'flow'}
+    _entity_types = set(BASIC_ENTITY_TYPES)
 
     @classmethod
     def from_dict(cls, j):

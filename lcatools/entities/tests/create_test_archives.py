@@ -6,7 +6,7 @@ catalog at the location specified
 import os
 
 from antelope_catalog import LcCatalog
-from lcatools.providers.lc_archive import LcArchive
+from lcatools.implementations import LcArchive
 
 # CUSTOMIZE THESE ENTRIES AS NEEDED
 CAT_FOLDER = '/data/LCI/cat-food/'

@@ -209,9 +209,6 @@ class LcEntity(object):
 
     def validate(self):
         valid = True
-        if self.entity_type not in entity_types:
-            print('Entity type %s not valid!' % self.entity_type)
-            valid = False
         if self.reference_entity is not None:
             try:
                 self._validate_reference(self.reference_entity)
@@ -219,7 +216,7 @@ class LcEntity(object):
                 print("Reference entity type %s is wrong for %s (%s)" %
                       (self.reference_entity.entity_type,
                        self.entity_type,
-                       entity_types[self.entity_type]))
+                       entity_refs[self.entity_type]))
                 valid = False
         for i in self.signature_fields():
             try:

@@ -17,7 +17,7 @@ from ...entities import LcQuantity, LcFlow, LcProcess
 from ...exchanges import ExchangeValue, DirectionlessExchangeError
 from ...lcia_results import LciaResult, LciaResults
 from ..ecospold import tail
-from ..archive import Archive
+from ..file_store import FileStore
 from lcatools.implementations import LcArchive
 from ..xml_widgets import *
 
@@ -76,7 +76,7 @@ class EcospoldV2Archive(LcArchive):
         if prefix is not None:
             self._serialize_dict['prefix'] = prefix
 
-        self._archive = Archive(self.source, internal_prefix=prefix)
+        self._archive = FileStore(self.source, internal_prefix=prefix)
         self._linked = linked
         self._process_flow_map = defaultdict(set)
         self._terminations = defaultdict(set)

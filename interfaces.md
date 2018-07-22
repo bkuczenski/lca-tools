@@ -407,7 +407,7 @@ PART 1: EXISTING INTERFACES, empirical
 --- Data File Storage and Retrieval
 
 
-Archive: ('physical' layer)
+FileStore: ('physical' layer)
  + init: path, query string (remotes: append to request), cache (remotes: dl local copy)
    + cache is a recursive physical archive
  - listfiles(in_prefix) (local only)

@@ -3,7 +3,7 @@ import os
 
 from ..entities import *
 from lcatools.implementations import LcArchive
-from .archive import Archive
+from .file_store import FileStore
 
 
 valid_types = {'processes', 'flows', 'flow_properties'}
@@ -29,7 +29,7 @@ class OpenLcaJsonLdArchive(LcArchive):
 
     def __init__(self, source, prefix=None, skip_index=False, **kwargs):
         super(OpenLcaJsonLdArchive, self).__init__(source, **kwargs)
-        self._archive = Archive(source, internal_prefix=prefix)
+        self._archive = FileStore(source, internal_prefix=prefix)
 
         self._type_index = None
         if not skip_index:

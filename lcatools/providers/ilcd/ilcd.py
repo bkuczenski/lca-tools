@@ -18,7 +18,7 @@ except ImportError:  # python2
 
 
 from lcatools.implementations import LcArchive
-from ..archive import Archive
+from ..file_store import FileStore
 from ..xml_widgets import *
 from ...entities import LcFlow, LcProcess, LcQuantity, LcUnit
 from ...interfaces import uuid_regex
@@ -155,16 +155,16 @@ class IlcdArchive(LcArchive):
         if prefix is not None:
             self._serialize_dict['prefix'] = prefix
 
-        self._archive = Archive(self.source, internal_prefix=prefix)
+        self._archive = FileStore(self.source, internal_prefix=prefix)
 
         if not self._archive.OK:
             print('Trying local ELCD reference')
-            self._archive = Archive(elcd3_local_fallback)
+            self._archive = FileStore(elcd3_local_fallback)
             if self._archive.OK:
                 self._source = elcd3_local_fallback
         if not self._archive.OK:
             print('Falling back to ELCD Remote Reference')
-            self._archive = Archive(elcd3_remote_fallback, query_string='format=xml')
+            self._archive = FileStore(elcd3_remote_fallback, query_string='format=xml')
             if self._archive.OK:
                 self._source = elcd3_remote_fallback
         if not self._archive.remote:

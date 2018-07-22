@@ -18,7 +18,7 @@ from lxml import objectify
 # from lxml.etree import tostring
 
 from lcatools.implementations import LcArchive
-from .archive import Archive
+from .file_store import FileStore
 from ..entities import LcQuantity, LcFlow, LcProcess
 # from lcatools.exchanges import DirectionlessExchangeError
 
@@ -86,7 +86,7 @@ class EcospoldV1Archive(LcArchive):
         if prefix is not None:
             self._serialize_dict['prefix'] = prefix
         self._q_dict = dict()
-        self._archive = Archive(self.source, internal_prefix=prefix)
+        self._archive = FileStore(self.source, internal_prefix=prefix)
 
     def list_datasets(self):
         assert self._archive.remote is False, "Cannot list objects for remote archives"

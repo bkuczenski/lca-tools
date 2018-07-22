@@ -32,7 +32,7 @@ def get_ext(fname):
             raise ValueError('No filename extension and unsupported file type %s' % typ)
 
 
-class Archive(object):
+class FileStore(object):
     """
     A strictly local archive of files to be used as a repository
     """
@@ -64,7 +64,7 @@ class Archive(object):
 
     def __init__(self, path, internal_prefix=None, query_string=None, cache=True):
         """
-        Create an Archive object from a path.  Basically encapsulates the compression algorithm and presents
+        Create a FileStore object from a path.  Basically encapsulates the compression algorithm and presents
         a common interface to client code:
         self.listfiles()
         self.countfiles()
@@ -94,19 +94,19 @@ class Archive(object):
             self._archive = None
             self.OK = True
             self._internal_subfolders = []
-            print('Archive refers to a web address using protocol %s' % self.ext)
+            print('FileStore refers to a web address using protocol %s' % self.ext)
             self.query_string = query_string
             if self.query_string is not None:
                 print(' with query string %s' % self.query_string)
             self.cache = cache
             if self.cache:
-                self._cache = Archive(self._create_cache_dir(self.path), internal_prefix=internal_prefix)
+                self._cache = FileStore(self._create_cache_dir(self.path), internal_prefix=internal_prefix)
                 print(' caching files locally in %s' % self._cache.path)
             return
 
         self.remote = False
         if not os.path.exists(path):
-            print('WARNING: path does not resolve.  Archive will be non-functional.')
+            print('WARNING: path does not resolve.  FileStore will be non-functional.')
             self.remote = True
             self.compressed = False
             self._archive = None

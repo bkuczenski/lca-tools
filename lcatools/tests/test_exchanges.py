@@ -2,7 +2,7 @@ import unittest
 import os
 
 from lcatools.from_json import from_json
-from lcatools.implementations import LcArchive
+from lcatools.archives import LcArchive
 from lcatools.exchanges import AmbiguousReferenceError, DuplicateExchangeError, ExchangeError
 
 

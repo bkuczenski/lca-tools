@@ -18,7 +18,7 @@ from ...exchanges import ExchangeValue, DirectionlessExchangeError
 from ...lcia_results import LciaResult, LciaResults
 from ..ecospold import tail
 from ..file_store import FileStore
-from lcatools.implementations import LcArchive
+from lcatools.archives import LcArchive
 from ..xml_widgets import *
 
 from .ecospold2_index import EcoSpold2IndexImplementation
@@ -352,9 +352,9 @@ class EcospoldV2Archive(LcArchive):
             if 'impactIndicator' in cf.tag:
                 m = cf.impactMethodName.text
                 c = cf.impactCategoryName.text
-                i = cf.name.text
+                x = cf.name.text
                 v = float(cf.get('amount'))
-                scores.append(EcospoldLciaResult(m, c, i, v))
+                scores.append(EcospoldLciaResult(m, c, x, v))
 
         return scores
 

@@ -11,7 +11,7 @@ import os
 from ..entities import LcEntity, LcProcess
 from ..from_json import from_json
 from ..implementations import InventoryImplementation, BackgroundImplementation, ConfigureImplementation
-from ..implementations.basic_archive import BasicArchive, BASIC_ENTITY_TYPES
+from .basic_archive import BasicArchive, BASIC_ENTITY_TYPES
 
 
 LC_ENTITY_TYPES = BASIC_ENTITY_TYPES + ('process', )

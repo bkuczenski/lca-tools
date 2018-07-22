@@ -6,7 +6,7 @@
 import importlib
 
 from ..from_json import from_json
-from ..implementations import LcArchive
+from ..archives import LcArchive
 
 from .ilcd import IlcdArchive, IlcdLcia
 from .ecospold2 import EcospoldV2Archive

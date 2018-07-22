@@ -17,7 +17,7 @@ import re
 from lxml import objectify
 # from lxml.etree import tostring
 
-from lcatools.implementations import LcArchive
+from lcatools.archives import LcArchive
 from .file_store import FileStore
 from ..entities import LcQuantity, LcFlow, LcProcess
 # from lcatools.exchanges import DirectionlessExchangeError

@@ -24,7 +24,7 @@ class AbstractQuery(object):
     Abstract base class for executing queries
     """
     _debug = False
-    _validated = None  # how much of a style violation is it to put these as class variables? I think, none at all
+    _validated = None
 
     def on_debug(self):
         self._debug = True

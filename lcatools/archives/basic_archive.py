@@ -1,5 +1,5 @@
 import re
-from lcatools.implementations.entity_store import EntityStore, SourceAlreadyKnown
+from .entity_store import EntityStore, SourceAlreadyKnown
 from lcatools.interfaces import to_uuid
 from lcatools.implementations import BasicImplementation, IndexImplementation, QuantityImplementation
 from lcatools.entities import LcQuantity, LcUnit, LcFlow

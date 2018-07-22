@@ -2,7 +2,7 @@ import json
 import os
 
 from ..entities import *
-from lcatools.implementations import LcArchive
+from lcatools.archives import LcArchive
 from .file_store import FileStore
 
 

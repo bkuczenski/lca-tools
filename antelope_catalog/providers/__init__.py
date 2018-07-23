@@ -15,6 +15,7 @@ from .ecospold import EcospoldV1Archive
 from .ecoinvent_lcia import EcoinventLcia
 from .openlca_jsonld import OpenLcaJsonLdArchive
 from .traci import Traci21Factors
+from .v1_client import AntelopeV1Client
 
 
 class ArchiveError(Exception):
@@ -70,7 +71,11 @@ def archive_factory(source, ds_type, **kwargs):
         'olca_jsonld': OpenLcaJsonLdArchive,
         'traci2': Traci21Factors,
         'traci': Traci21Factors,
-        'traci21factors': Traci21Factors
+        'traci21factors': Traci21Factors,
+        'v1_client': AntelopeV1Client,
+        'antelope_v1_client': AntelopeV1Client,
+        'antelopev1client': AntelopeV1Client,
+        'antelopev1': AntelopeV1Client
     }
     try:
         init_fcn = init_map[ds_type]

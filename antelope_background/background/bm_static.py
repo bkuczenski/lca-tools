@@ -4,7 +4,7 @@ LcArchive subclass that supports rich background computations by providing a Fla
 
 import os
 
-from lcatools.providers import LcArchive
+from lcatools.archives import LcArchive
 from .flat_background import FlatBackground
 from .implementation import TarjanBackgroundImplementation
 

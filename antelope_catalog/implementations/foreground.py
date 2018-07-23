@@ -1,5 +1,5 @@
-from lcatools.implementations import BasicImplementation
-from lcatools.interfaces import ForegroundInterface, BackgroundRequired, comp_dir
+from antelope_interface import BasicImplementation, ForegroundInterface, comp_dir
+from antelope_interface.interfaces import BackgroundRequired
 
 from ..foreground.fragment_editor import FragmentEditor
 

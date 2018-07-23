@@ -10,7 +10,7 @@ import os
 
 from ..entities import LcEntity, LcProcess
 from ..from_json import from_json
-from ..implementations import InventoryImplementation, BackgroundImplementation, ConfigureImplementation
+from antelope_interface import InventoryImplementation, BackgroundImplementation, ConfigureImplementation
 from .basic_archive import BasicArchive, BASIC_ENTITY_TYPES
 
 

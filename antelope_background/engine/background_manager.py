@@ -1,6 +1,6 @@
 from .background_engine import BackgroundEngine
 from lcatools.exchanges import ExchangeValue
-from lcatools.interfaces import comp_dir
+from antelope_interface import comp_dir
 
 
 class TerminationNotFound(Exception):

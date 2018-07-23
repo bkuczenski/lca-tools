@@ -1,4 +1,5 @@
-from lcatools.from_json import from_json, to_json
+from .from_json import from_json, to_json
+from .basic_query import BasicQuery, LcQuery
 
 
 def enum(_listss):

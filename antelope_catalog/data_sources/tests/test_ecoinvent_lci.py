@@ -17,12 +17,12 @@ from math import isclose
 
 from ... import LcCatalog
 from lcatools.entities import LcProcess
-from lcatools.providers import archive_from_json
+from ...providers import archive_from_json
 
-from lcatools.interfaces import EntityNotFound
+from antelope_interface.interfaces import EntityNotFound
 
 from ..local import CATALOG_ROOT, check_enabled
-from lcatools.implementations import LcArchive
+from lcatools.archives import LcArchive
 
 EcoinventNode = namedtuple('EcoinventNode', ['version', 'model', 'node'])
 _debug = True

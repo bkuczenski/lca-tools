@@ -31,7 +31,7 @@ from shutil import rmtree
 from lcatools.qdb import LciaEngine, REF_QTYS
 
 
-from lcatools.interfaces import local_ref, EntityNotFound
+from antelope_interface.interfaces import local_ref, EntityNotFound
 from ..catalog_query import CatalogQuery, INTERFACE_TYPES
 from .lc_resolver import LcCatalogResolver
 from ..lc_resource import LcResource

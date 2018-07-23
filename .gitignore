@@ -61,7 +61,7 @@ target/
 
 
 # remote archive cache
-lcatools/providers/web_cache/
+antelope_catalog/providers/web_cache/
 
 # pycharm config
 .idea/

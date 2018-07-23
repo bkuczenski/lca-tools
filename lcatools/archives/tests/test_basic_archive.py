@@ -2,7 +2,7 @@ import unittest
 import os
 from uuid import uuid4
 
-from lcatools.interfaces import local_ref
+from antelope_interface import local_ref
 from ..basic_archive import BasicArchive
 from lcatools.entity_refs import CatalogRef
 

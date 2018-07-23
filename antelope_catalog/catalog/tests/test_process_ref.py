@@ -5,7 +5,7 @@ from .. import LcCatalog
 from ...data_sources.local import TEST_ROOT
 
 from lcatools import from_json
-from lcatools.providers import LcArchive
+from lcatools.archives import LcArchive
 
 cat = LcCatalog(TEST_ROOT)
 

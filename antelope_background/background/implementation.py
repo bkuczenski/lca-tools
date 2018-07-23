@@ -1,5 +1,4 @@
-from lcatools.implementations import BackgroundImplementation
-from lcatools.interfaces import ProductFlow, ExteriorFlow
+from antelope_interface import BackgroundImplementation, ProductFlow, ExteriorFlow
 from lcatools.exchanges import ExchangeValue
 
 

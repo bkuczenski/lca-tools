@@ -3,7 +3,7 @@ import os
 import json
 
 from ..lc_resource import LcResource
-from lcatools.interfaces import UnknownOrigin
+from antelope_interface.interfaces import UnknownOrigin
 
 
 class LcCatalogResolver(object):

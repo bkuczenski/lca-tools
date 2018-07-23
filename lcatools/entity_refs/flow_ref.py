@@ -1,5 +1,7 @@
 from .base import EntityRef
-from lcatools.interfaces import trim_cas, QuantityRequired
+
+from antelope_interface.interfaces import trim_cas, QuantityRequired
+
 from lcatools.characterizations import Characterization
 
 '''

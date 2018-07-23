@@ -1,4 +1,4 @@
-from lcatools.implementations import QuantityImplementation
+from antelope_interface import QuantityImplementation
 
 
 class QdbQuantityImplementation(QuantityImplementation):

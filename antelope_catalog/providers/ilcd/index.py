@@ -1,4 +1,4 @@
-from antelope_interface import IndexImplementation
+from lcatools.implementations import IndexImplementation
 
 
 class IlcdIndexImplementation(IndexImplementation):

@@ -1,6 +1,6 @@
 from .fragments import LcFragment
 
-from antelope_interface import directions, comp_dir
+from lcatools.interfaces import directions, comp_dir
 from lcatools.interact import parse_math, cyoa, ifinput
 from lcatools.entities.editor import EntityEditor
 

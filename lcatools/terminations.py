@@ -6,7 +6,7 @@ as a ProductFlow in lca-matrix, although the FlowTermination is more powerful.  
 either one from the other.
 """
 
-from antelope_interface.interfaces import PrivateArchive, comp_dir
+from .interfaces import PrivateArchive, comp_dir
 
 from lcatools.exchanges import ExchangeValue, NoReferenceFound
 from lcatools.lcia_results import LciaResult, LciaResults

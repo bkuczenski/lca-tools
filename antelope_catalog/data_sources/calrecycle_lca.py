@@ -33,7 +33,7 @@ from collections import namedtuple
 from ..lc_resource import LcResource
 from .. import LcCatalog
 from ..foreground.fragment_editor import FragmentEditor
-from antelope_interface import comp_dir
+from lcatools.interfaces import comp_dir
 
 
 SemanticRoot = namedtuple('SemanticRoot', ('path', 'root', 'privacy', 'priority'))

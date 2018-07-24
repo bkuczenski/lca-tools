@@ -1,7 +1,7 @@
 import re
 from .entity_store import EntityStore, SourceAlreadyKnown
-from antelope_interface.interfaces import to_uuid
-from antelope_interface import BasicImplementation, IndexImplementation, QuantityImplementation
+from ..interfaces import to_uuid
+from ..implementations import BasicImplementation, IndexImplementation, QuantityImplementation
 from lcatools.entities import LcQuantity, LcUnit, LcFlow
 
 

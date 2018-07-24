@@ -3,14 +3,12 @@ The main import.
 """
 
 
-from .process_ref import ProcessRef
-from .flow_ref import FlowRef
-from .quantity_ref import QuantityRef
-from .fragment_ref import FragmentRef
-
+from ..interfaces import EntityNotFound
 from .base import BaseRef
-
-from antelope_interface.interfaces import EntityNotFound
+from .flow_ref import FlowRef
+from .fragment_ref import FragmentRef
+from .process_ref import ProcessRef
+from .quantity_ref import QuantityRef
 
 
 class CatalogRef(BaseRef):

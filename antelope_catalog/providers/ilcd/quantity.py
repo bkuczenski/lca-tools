@@ -1,6 +1,6 @@
 from .ilcd import uuid_regex
 
-from antelope_interface import QuantityImplementation
+from lcatools.implementations import QuantityImplementation
 
 
 class IlcdQuantityImplementation(QuantityImplementation):

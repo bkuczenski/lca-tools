@@ -9,7 +9,7 @@ from collections import defaultdict
 
 from ..implementations import ForegroundImplementation
 
-from antelope_interface.interfaces import to_uuid
+from lcatools.interfaces import to_uuid
 from lcatools.archives import BasicArchive, BASIC_ENTITY_TYPES
 from .fragments import LcFragment
 from lcatools.entity_refs import CatalogRef

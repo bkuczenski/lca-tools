@@ -12,8 +12,8 @@ import os
 from collections import namedtuple
 
 from ..engine import BackgroundEngine
-from antelope_interface import comp_dir, _CONTEXT_STATUS_
-from lcatools import from_json, to_json
+from lcatools.interfaces import CONTEXT_STATUS_
+from lcatools import from_json, to_json, comp_dir
 
 
 class NoLciDatabase(Exception):
@@ -393,7 +393,7 @@ class FlatBackground(object):
             term = enumeration[rows[i]]
             dat = data_vec.data[i]
             dirn = comp_dir(term.direction)
-            if _CONTEXT_STATUS_ == 'compat':
+            if CONTEXT_STATUS_ == 'compat':
                 _term = None
             else:
                 _term = term.term_ref

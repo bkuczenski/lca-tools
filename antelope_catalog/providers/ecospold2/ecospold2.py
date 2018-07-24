@@ -11,7 +11,7 @@ import six
 from lxml import objectify
 from lxml.etree import XMLSyntaxError
 
-from antelope_interface import uuid_regex
+from lcatools.interfaces import uuid_regex
 from lcatools.characterizations import Characterization
 from lcatools.entities import LcQuantity, LcFlow, LcProcess
 from lcatools.exchanges import ExchangeValue, DirectionlessExchangeError

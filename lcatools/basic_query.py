@@ -1,5 +1,5 @@
-from antelope_interface import (IndexInterface, InventoryInterface, QuantityInterface, BackgroundInterface,
-                                ConfigureInterface)
+from .interfaces import (IndexInterface, InventoryInterface, QuantityInterface, BackgroundInterface,
+                         ConfigureInterface)
 # , EntityNotFound, IndexRequired
 
 

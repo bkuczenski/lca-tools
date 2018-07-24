@@ -1,6 +1,6 @@
 import re
 
-from antelope_interface import QuantityImplementation
+from lcatools.implementations import QuantityImplementation
 from .q_info import q_info_21 as q_info
 
 

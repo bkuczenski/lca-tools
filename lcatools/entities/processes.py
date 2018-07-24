@@ -5,7 +5,7 @@ import uuid
 
 # from collections import namedtuple
 
-from antelope_interface.interfaces import InventoryRequired
+from ..interfaces import InventoryRequired
 
 from lcatools.entities.entities import LcEntity
 from lcatools.exchanges import (Exchange, ExchangeValue, DuplicateExchangeError, AmbiguousReferenceError,

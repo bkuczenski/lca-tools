@@ -1,5 +1,6 @@
 from .from_json import from_json, to_json
 from .basic_query import BasicQuery, LcQuery
+from .interfaces import directions, comp_dir
 
 
 def enum(_listss):

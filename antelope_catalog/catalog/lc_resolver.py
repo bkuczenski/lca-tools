@@ -1,9 +1,9 @@
-from collections import defaultdict
-import os
 import json
+import os
+from collections import defaultdict
 
+from lcatools.interfaces import UnknownOrigin
 from ..lc_resource import LcResource
-from antelope_interface.interfaces import UnknownOrigin
 
 
 class LcCatalogResolver(object):

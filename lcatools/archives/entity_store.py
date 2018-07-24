@@ -14,7 +14,7 @@ from datetime import datetime
 
 from collections import defaultdict
 
-from antelope_interface.interfaces import to_uuid, local_ref
+from ..interfaces import to_uuid, local_ref
 
 LD_CONTEXT = 'https://bkuczenski.github.io/lca-tools-datafiles/context.jsonld'
 

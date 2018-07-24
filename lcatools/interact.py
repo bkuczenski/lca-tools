@@ -5,7 +5,7 @@ catalogs.  Things like menus, input processing, and etc.
 
 from string import ascii_uppercase
 from math import log10, ceil
-from eight import input
+from eight import *
 
 from itertools import groupby
 

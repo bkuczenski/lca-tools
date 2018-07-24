@@ -19,7 +19,7 @@ from ... import LcCatalog
 from lcatools.entities import LcProcess
 from ...providers import archive_from_json
 
-from antelope_interface.interfaces import EntityNotFound
+from interfaces import EntityNotFound
 
 from ..local import CATALOG_ROOT, check_enabled
 from lcatools.archives import LcArchive

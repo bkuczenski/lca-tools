@@ -80,11 +80,11 @@ advantages of normalizing the definition of the exchange, reducing the number of
 simplifying the process of seeking compatibility between databases.
 
 The new Flat Background already implements context-as-termination, but the mainline code has not yet been 
-changed. So we introduce this flag _CONTEXT_STATUS_ to express to client code which one to do. It should take
+changed. So we introduce this flag CONTEXT_STATUS_ to express to client code which one to do. It should take
 either of the two values: 'compat' means "old style" (flows have Compartments) and 'new' means use the new data
 model (exchange terminations are contexts) 
 """
-_CONTEXT_STATUS_ = 'compat'  # 'compat': context = flow['Compartment']; 'new': context = exch.termination
+CONTEXT_STATUS_ = 'compat'  # 'compat': context = flow['Compartment']; 'new': context = exch.termination
 
 
 ExteriorFlow = namedtuple('ExteriorFlow', ('origin', 'flow', 'direction', 'termination'))

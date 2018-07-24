@@ -1,7 +1,7 @@
 from math import isclose
 
-from antelope_interface import InventoryImplementation
-from antelope_interface.interfaces import EntityNotFound
+from lcatools.implementations import InventoryImplementation
+from lcatools.interfaces import EntityNotFound
 
 from lcatools.exchanges import ExchangeValue
 from lcatools.characterizations import Characterization

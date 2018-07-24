@@ -6,7 +6,7 @@
 import uuid
 from collections import defaultdict
 
-from antelope_interface import comp_dir
+from lcatools.interfaces import comp_dir
 
 from lcatools.fragment_flows import group_ios, FragmentFlow, frag_flow_lcia
 from lcatools.entities import LcEntity, LcFlow

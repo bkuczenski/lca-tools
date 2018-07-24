@@ -4,7 +4,7 @@ import uuid
 from lcatools.characterizations import Characterization
 from .entities import LcEntity
 # from lcatools.entities.quantities import LcQuantity
-from antelope_interface import trim_cas
+from ..interfaces import trim_cas
 
 
 class MissingFactor(Exception):

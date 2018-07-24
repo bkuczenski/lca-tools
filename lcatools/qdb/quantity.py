@@ -1,4 +1,4 @@
-from antelope_interface import QuantityImplementation
+from ..implementations import QuantityImplementation
 
 
 class QdbQuantityImplementation(QuantityImplementation):

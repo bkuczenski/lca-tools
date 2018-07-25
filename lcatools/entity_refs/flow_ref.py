@@ -132,15 +132,18 @@ class FlowRef(EntityRef):
             out.append(cf)
             seen.add(cf.quantity.uuid)
         if not self._cfs_fetched:
-            for cf in self._query.profile(self.external_ref, **kwargs):
-                if cf.quantity.uuid in seen:
-                    continue
-                if show:
-                    print('%2d %s' % (len(out), cf.q_view()))
-                out.append(cf)
-                seen.add(cf.quantity.uuid)
-                self.add_characterization(cf.quantity, value={l: cf[l] for l in cf.locations()})
-            self._cfs_fetched = True
+            try:
+                for cf in self._query.profile(self.external_ref, **kwargs):
+                    if cf.quantity.uuid in seen:
+                        continue
+                    if show:
+                        print('%2d %s' % (len(out), cf.q_view()))
+                    out.append(cf)
+                    seen.add(cf.quantity.uuid)
+                    self.add_characterization(cf.quantity, value={l: cf[l] for l in cf.locations()})
+                self._cfs_fetched = True
+            except QuantityRequired:
+                pass  # return empty; keep checking on subsequent queries
         return out
 
     '''

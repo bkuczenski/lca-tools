@@ -9,11 +9,16 @@ class BasicQuery(IndexInterface, InventoryInterface, QuantityInterface):
         self._debug = debug
 
     def _iface(self, itype, strict=False):
+        if itype is None:
+            itype = 'basic'
         yield self._archive.make_interface(itype)
 
     @property
     def origin(self):
         return self._archive.ref
+
+    def validate(self):
+        return self.origin
 
     '''
     I think that's all I need to do!

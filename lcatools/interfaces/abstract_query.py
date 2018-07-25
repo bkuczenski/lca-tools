@@ -51,7 +51,7 @@ class AbstractQuery(object):
                 result = getattr(iface, attrname)(*args, **kwargs)
             except NotImplementedError:
                 continue
-            except type(exc):
+            except exc.__class__:
                 continue
             if result is not None:
                 return result
@@ -95,3 +95,22 @@ class AbstractQuery(object):
             except ValidationError:
                 self._validated = False
         return self._validated
+
+    def get_item(self, external_ref, item):
+        """
+        access an entity's dictionary items
+        :param external_ref:
+        :param item:
+        :return:
+        """
+        return self._perform_query(None, 'get_item', EntityNotFound('%s/%s' % (self.origin, external_ref)),
+                                   external_ref, item)
+
+    def get_reference(self, external_ref):
+        return self._perform_query(None, 'get_reference', EntityNotFound('%s/%s' % (self.origin, external_ref)),
+                                   external_ref)
+
+    def get_uuid(self, external_ref):
+        return self._perform_query(None, 'get_uuid', EntityNotFound('%s/%s' % (self.origin, external_ref)),
+                                   external_ref)
+

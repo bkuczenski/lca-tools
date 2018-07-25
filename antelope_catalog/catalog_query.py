@@ -96,24 +96,6 @@ class CatalogQuery(IndexInterface, BackgroundInterface, InventoryInterface, Quan
         for k in self._iface(itype, strict=strict):
             print('%s' % k)
 
-    def get_item(self, external_ref, item):
-        """
-        access an entity's dictionary items
-        :param external_ref:
-        :param item:
-        :return:
-        """
-        return self._perform_query(None, 'get_item', EntityNotFound('%s/%s' % (self.origin, external_ref)),
-                                   external_ref, item)
-
-    def get_reference(self, external_ref):
-        return self._perform_query(None, 'get_reference', EntityNotFound('%s/%s' % (self.origin, external_ref)),
-                                   external_ref)
-
-    def get_uuid(self, external_ref):
-        return self._perform_query(None, 'get_uuid', EntityNotFound('%s/%s' % (self.origin, external_ref)),
-                                   external_ref)
-
     def get(self, eid, **kwargs):
         """
         Retrieve entity by external Id. This will take any interface and should keep trying until it finds a match.

@@ -3,8 +3,8 @@ from flask import Flask, Blueprint
 from flask_restful import Resource, Api
 from marshmallow import Schema, fields
 
-from antelope_catalog import LcCatalog
 
+query = LcQuery
 
 
 
@@ -74,7 +74,5 @@ def app_factory(cat_root=None):
     app = Flask(__name__)
 
     app.register_blueprint(hw_bp)
-
-    cat = LcCatalog(cat_root)
 
     return app

@@ -43,8 +43,8 @@ class StringResultSchema(ResultSchema):
 
 class LciaResultSchema(ResultSchema):
     lcia_method = fields.Relationship(
-        related_url='/{link}',
-        related_url_kwargs={'link': '<quantity.link>'},
+        related_url='/{ref_link}',
+        related_url_kwargs={'ref_link': '<quantity.link>'},
         dump_to='lciaMethod'
     )
 
@@ -128,9 +128,15 @@ class EntitySchema(Schema):
     uuid = fields.Str()
     origin = fields.Str()
     entity_type = fields.Str(dump_to='entityType')
+    link = fields.Str()
 
     name = fields.Str()
     comment = fields.Str()
+
+    class Meta:
+        strict = True
+        self_url = '/{ref_link}'
+        self_url_kwargs = {'ref_link': '<link>'}
 
 
 # R1 - three different types
@@ -138,11 +144,8 @@ class QuantitySchema(EntitySchema):
     reference_entity = fields.Str(attribute='unit', dump_to='referenceUnit')
 
     class Meta:
-        strict = True
-        self_url = '/{link}'
-        self_url_kwargs = {'link': '<link>'}
         type_ = 'quantity'
-        self_url_many = '/{origin}/quantities/'
+        self_url_many = '/quantities/'
 
 
 class FlowSchema(EntitySchema):
@@ -150,25 +153,21 @@ class FlowSchema(EntitySchema):
     casNumber = fields.Str(attribute='CasNumber')
 
     reference_entity = fields.Relationship(
-        related_url='/{origin}/{q_id}',
-        related_url_kwargs={'origin': '<origin>',
-                            'q_id': '<reference_entity.external_ref>'}
+        related_url='/{ref_link}',
+        related_url_kwargs={'ref_link': '<reference_entity.link>'}
     )
 
     profile = fields.Relationship(
-        self_url='/{origin}/{id}/profile',
-        self_url_kwargs={'id': '<external_ref>', 'origin': '<origin>'},
+        self_url='/{ref_link}/profile',
+        self_url_kwargs={'ref_link': '<link>'},
         many=True, include_resource_linkage=True,
         type_='characterization',
         id_field='quantity.external_ref'
     )
 
     class Meta:
-        strict = True
-        self_url = '/{link}'
-        self_url_kwargs = {'link': '<link>'}
         type_ = 'flow'
-        self_url_many = '/{origin}/flows/'
+        self_url_many = '/flows/'
 
 
 class ProcessSchema(EntitySchema):
@@ -177,10 +176,10 @@ class ProcessSchema(EntitySchema):
     Classification = fields.List(fields.Str())
 
     reference_entity = fields.Relationship(
-        self_url='/{link}/reference',
-        self_url_kwargs={'link': '<link>'},
-        related_url='/{link}',
-        related_url_kwargs={'link': '<link>'},
+        self_url='/{ref_link}/reference',
+        self_url_kwargs={'ref_link': '<link>'},
+        related_url='/{ref_link}',
+        related_url_kwargs={'ref_link': '<link>'},
         many=True, include_resource_linkage=True,
         type_='reference_exchange',
         id_field='link',
@@ -194,12 +193,8 @@ class ProcessSchema(EntitySchema):
     )
 
     class Meta:
-        strict = True
-        self_url = '/{origin}/{id}'
-        self_url_kwargs = {'origin': '<origin>',
-                           'id': '<externalId>'}
         type_ = 'process'
-        self_url_many = '/{origin}/processes/'
+        self_url_many = '/processes/'
 
 
 class FlowTermination(Schema):

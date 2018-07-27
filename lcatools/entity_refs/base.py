@@ -79,8 +79,8 @@ class BaseRef(object):
     def _localitem(self, item):
         if item in self._d:
             return self._d[item]
-        if 'Local%s' % item in self._d:
-            return self._d['Local%s' % item]
+        if 'local_%s' % item in self._d:
+            return self._d['local_%s' % item]
         return None
 
     def __getitem__(self, item):
@@ -95,8 +95,9 @@ class BaseRef(object):
         return self._localitem(item) is not None
 
     def __setitem__(self, key, value):
-        if not key.startswith('Local'):
-            key = 'Local%s' % key
+        key = key.lower()
+        if not key.startswith('local_'):
+            key = 'local_%s' % key
         self._d[key] = value
 
     @property
@@ -260,7 +261,7 @@ class EntityRef(BaseRef):
 
     def get_item(self, item, force_query=False):
         if not force_query:
-            # check local first.  return Localitem if present.
+            # check local first.  return local_item if present.
             loc = self._localitem(item)
             if loc is not None:
                 return loc
@@ -269,7 +270,7 @@ class EntityRef(BaseRef):
         if val is not None and val != '':
             self._d[item] = val
             return val
-        return None
+        return None  # TODO: are we sure we don't want to raise a KeyError here?
 
     def __getitem__(self, item):
         return self.get_item(item)

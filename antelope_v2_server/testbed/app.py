@@ -4,10 +4,6 @@ from flask_restful import Resource, Api
 from marshmallow import Schema, fields
 
 
-query = LcQuery
-
-
-
 phony_flows = [
     'local.uslci/301',
     'local.uslci/1400',

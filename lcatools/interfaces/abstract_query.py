@@ -32,6 +32,10 @@ class AbstractQuery(object):
     def off_debug(self):
         self._debug = False
 
+    @property
+    def origin(self):
+        return None
+
     def _iface(self, itype, strict=False):
         """
         Pseudo-abstract method to generate interfaces of the specified type upon demand.  Must be reimplemented
@@ -95,6 +99,16 @@ class AbstractQuery(object):
             except ValidationError:
                 self._validated = False
         return self._validated
+
+    def get(self, eid, **kwargs):
+        """
+        Basic entity retrieval-- must be overridden by basic implementation
+        :param eid:
+        :param kwargs:
+        :return:
+        """
+        return self._perform_query(None, 'get', EntityNotFound('%s/%s' % (self.origin, eid)), eid,
+                                   **kwargs)
 
     def get_item(self, external_ref, item):
         """

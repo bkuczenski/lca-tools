@@ -441,7 +441,7 @@ class EntityStore(object):
             self._ents_by_type[entity.entity_type].add(key)  # it's not ok to change an entity's type
 
         else:
-            raise ValueError('Entity fails validation.')
+            raise ValueError('Entity fails validation: %s' % repr(entity))
 
     def check_counter(self, entity_type=None):
         if entity_type is None:

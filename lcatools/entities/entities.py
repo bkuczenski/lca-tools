@@ -5,6 +5,8 @@ from itertools import chain
 from numbers import Number
 from lcatools.entity_refs import CatalogRef
 
+from .lower_dict import LowerDict
+
 
 entity_types = ('process', 'flow', 'quantity', 'fragment')
 entity_refs = {
@@ -42,7 +44,7 @@ class LcEntity(object):
             self._uuid = str(entity_uuid)
         else:
             self._uuid = str(uuid.UUID(entity_uuid))
-        self._d = dict()
+        self._d = LowerDict()
 
         self._entity_type = entity_type
         self.reference_entity = None

@@ -5,7 +5,7 @@ from antelope_catalog import LcCatalog
 from .lc_pub import AntelopeV1Pub, AntelopeV2Pub
 
 
-class AntelopeCatalog(LcCatalog):
+class CatalogServer(LcCatalog):
     """
     Catalog subclass that is enabled to generate publications (both v1 and v2)
 
@@ -21,7 +21,7 @@ class AntelopeCatalog(LcCatalog):
 
     @property
     def _dirs(self):
-        for x in super(AntelopeCatalog, self)._dirs:
+        for x in super(CatalogServer, self)._dirs:
             yield x
         yield self._antelope_path
 
@@ -62,7 +62,7 @@ class AntelopeCatalog(LcCatalog):
         self._register_server(pub)
 
     def __init__(self, *args, **kwargs):
-        super(AntelopeCatalog, self).__init__(*args, **kwargs)
+        super(CatalogServer, self).__init__(*args, **kwargs)
         self._servers = dict()
 
         for res in os.listdir(self._antelope_path):

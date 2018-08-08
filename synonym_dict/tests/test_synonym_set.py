@@ -3,6 +3,10 @@ import unittest
 
 
 class SynonymSetTest(unittest.TestCase):
+    def test_empty(self):
+        s = SynonymSet()
+        self.assertListEqual([k for k in s.terms], [])
+
     def test_terms(self):
         s = SynonymSet('hello', 'aloha', 'Ni hao')
         self.assertListEqual(['Ni hao', 'aloha', 'hello'], [k for k in s.terms])

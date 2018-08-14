@@ -9,6 +9,10 @@ class RemoveNameError(Exception):
     pass
 
 
+class ChildNotFound(Exception):
+    pass
+
+
 class SynonymSet(object):
     """
 
@@ -36,6 +40,11 @@ class SynonymSet(object):
                     seen.add(t)
 
     @property
+    def children(self):
+        for c in self._children:
+            yield c
+
+    @property
     def object(self):
         """
         The thing that the synonyms signify.  In the base class, it is just the name.  Create a Subclass to return
@@ -45,7 +54,7 @@ class SynonymSet(object):
         return self._name
 
     def add_term(self, term):
-        if isinstance(term, SynonymSet):
+        if hasattr(term, 'terms'):
             self.add_child(term)
         else:
             s = str(term)
@@ -56,15 +65,35 @@ class SynonymSet(object):
     def add_child(self, other):
         """
         This method stores the child as a subsidiary of the current object.  The child's terms will show up after the
-        parent's terms.  Repeated terms will not be shown twice.  Child can still be modified.  There is no way to
-        un-add a child.
+        parent's terms.  Repeated terms will not be shown twice.  Child can still be modified.
         :param other:
         :return:
         """
-        if isinstance(other, SynonymSet):
+        if hasattr(other, 'terms'):
             self._children.add(other)
         else:
             raise TypeError('Argument is not a synonym set (type %s)' % type(other))
+
+    def remove_child(self, child):
+        if child in self._children:
+            self._children.remove(child)
+        else:
+            raise ChildNotFound('%s has no child %s' % (self, child))
+
+    def children_with_term(self, term):
+        """
+        Returns all child sets having the given term
+        :param term:
+        :return: a tuple containing all child sets that contain the term
+        """
+        found = []
+        for c in self._children:
+            if term in c:
+                found.append(c)
+        return tuple(found)
+
+    def has_child(self, other):
+        return other in self._children
 
     def remove_term(self, term):
         s = str(term)
@@ -83,6 +112,9 @@ class SynonymSet(object):
 
     def __hash__(self):
         return hash(self._id)
+
+    def __contains__(self, item):
+        return item in self.terms
 
     def __eq__(self, other):
         if hasattr(other, 'terms'):

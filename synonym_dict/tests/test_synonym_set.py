@@ -36,8 +36,14 @@ class SynonymSetTest(unittest.TestCase):
         t = SynonymSet('bonjour', 'hola', 'hello', 'Hi')
         s.add_term(t)
         terms = [k for k in s.terms]
+        self.assertTrue(s.has_child(t))
         self.assertEqual(len(terms), 6)
         self.assertSetEqual(set(terms), {'hello', 'aloha', 'Ni hao', 'bonjour', 'hola', 'Hi'})
+
+    def test_contains(self):
+        s = SynonymSet('hello', 'aloha', 'Ni hao')
+        self.assertTrue('aloha' in s)
+        self.assertFalse('greetings' in s)
 
     def test_hashable(self):
         s = SynonymSet('hello', 'aloha', 'Ni hao')

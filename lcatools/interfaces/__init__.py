@@ -23,6 +23,7 @@ from collections import namedtuple
 
 uuid_regex = re.compile('([0-9a-f]{8}.?([0-9a-f]{4}.?){3}[0-9a-f]{12})', flags=re.IGNORECASE)
 
+
 def to_uuid(_in):
     if _in is None:
         return _in

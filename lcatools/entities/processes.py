@@ -182,6 +182,8 @@ class LcProcess(LcEntity):
 
     def _validate_reference(self, ref_set):
         for x in ref_set:
+            if x.termination is not None:
+                return False
             if not super(LcProcess, self)._validate_reference(x):
                 return False
         return True

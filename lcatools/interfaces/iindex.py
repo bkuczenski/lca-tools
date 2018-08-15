@@ -13,11 +13,15 @@ class InvalidDirection(Exception):
 
 
 def comp_dir(direction):
-    if direction in directions:
-        return next(k for k in directions if k != direction)
-    elif direction is None:
-        return None
-    raise InvalidDirection('%s' % direction)
+    try:
+        cd = {'input': 'Output',
+              'output': 'Input',
+              'source': 'Input',
+              'sink': 'Output',
+              None: None}[direction.lower()]
+    except KeyError:
+        raise InvalidDirection('%s' % direction)
+    return cd
 
 
 _interface = 'index'

@@ -1,4 +1,117 @@
 ==========
+Tue Aug 07 11:51:45 -0700 2018
+
+This is all terrible. I am going around in circles.  Why should I reimplement SynList AND compartments AND compartment manager? because those are all terrible.
+
+We also want to create a CasNumber object.
+
+What problem am I trying to solve?
+
+2x2 different problems.
+
+Type I problems: antelope v2 listings of flowables and contexts for generic archives
+
+Type II problems: disambiguating flowables and contexts for LCIA
+
+I.1: managing flowables in an archive requires:
+ - when we add a flow, make note of the flowable
+   : should the flowable be an object? probably
+   : should allow multiple CAS numbers
+   : should be case insensitive
+   : should (or should not?) have a fixed reference quantity
+
+ - When we want to retrieve a flowable, it should be sufficient to put in any one of the synonyms known for it-- but what does it give back?
+
+I.2: managing contexts in an archive requires:
+ - when we add a flow, if it has a 'Compartment' then create / retrieve context
+ - Contexts should / should not be hierarchical
+ - Contexts should / should not be limited to elementary exchanges
+ - Contexts should / should not have a reference direction / orientation as source or sink
+ - source or sink may / must be inferred by the context's parent being resources or emissions
+
+ - When we add an exchange, the flow's context becomes the termination
+
+
+II.1: performing LCIA- collecting CFs
+ - Preparing the Qdb for a given LCIA method means loading all that method's CFs into memory
+ - the LciaEngine should have canonical lists of contexts and flowables, and should report which flowables have been encountered that are not found in the canonical lists
+ - the LciaEngine should ? provide a way to manage the canonical lists? no, that should be separate
+
+
+II.2: performing LCIA- looking up exchanges
+
+==========
+Mon Jul 30 14:08:36 -0700 2018
+
+OK, so antelope is "working"-- only 8 months on-- but now it is time to do the context refactor.  So here is the plan:
+
+ - Context is NOT an entity.  A context is primordial and universal and common to all archives.
+
+ - Context's unique identifier is a plain string
+
+ - Context has a reference DIRECTION and a set of parents, which are zero or more contexts that fully contain it.
+
+ - Every archive has a context manager which keeps
+   1- a list of all the canonical elementary contexts
+   2- a list of contexts encountered in the archive
+   3- the ability to assign synonym relationships- ie. merge
+
+what is needed to serialize a context manager? just a list of new entries, of the form 'reference name': { 'direction': None or source or sink,
+                         'synonyms': ['alternate name 1', ...] }
+
+The context manager takes in a context name and returns the reference name, canonical or not.  This way the user can introduce synonym relationships and still have the context lookup behave in a normal way.
+
+An implicaation of this is that context MAY NOT BE USED AS A KEY OR HASH. This is turning out to be a problem, since we don't have any way to organize characterizations w r t a flow. Also cme to think of it, terminations are part of exchange hash.  So that just means that we can end up with duplicate exchanges that appear distinct, because they may have the same flow + dir and different terminations that are synonyms.
+
+Maybe that's not the worst thing.  I mean, where is it written that exchanges must be uniquely determined by process, flowable, direction, and termination? I'll tell you where-- in LcProcess and nowhere else. And that's only because we use termination as a hash.
+
+So fine, we can use contexts as terminations and wind up with multiple duplicative exchanges but that's not necessarily a bad thing (except when we want to retrieve terminations and we know only the canonical compartment and not necessarily the synonyms-- but the exchange_values interface method is a generator, so it will simply return all of them and not any one particular one, so that is proper.)
+
+What about characterizations?  There are a whole bunch of weirdnesses here:
+ - we want (for some reason) to be able to tell users which contexts are known for a given flow, just so they can be comfortable.
+ - we want users to be able to retrieve a flowable given a flow-and-context
+   = this can be managed by the context manager, BUT:
+ - when we are adding exchanges, we now need to specify both flow and context== can this be done if the uuid that references the flow-and-context returns only the flowable?  ans: not really.  However, the ONLY place we add exchanges is with LcProcess.add_exchange() so we can simply audit these usages, of which there are 11:
+   : 3 in process from json (!!! do we want to be back-compatible?)
+   : 1 in olca JSON-LD
+   : 2 in ecospold2
+   : 1 in ilcd
+   : 1 in ecoinvent spreadsheet (only ref- drop)
+   : 1 in ecospold1
+   : 2 in tests
+
+So we really need to decide about this-- do we want to emulate or do we want to refactor?  It might be easiest to completely masquerade, so that a flow with a compartment is treated as a flowable+context IN add_exchange().
+
+this is a promising direction..... gdmit this is sloppy and shitty. I wish I had more tests written.
+
+
+
+
+The only place contexts are used is in exchanges / LCIA.  An exchange is always terminated to a string that looks up to something in the archive- first check contexts, then check entities.
+
+We DO have a new entity which is a FlowInContext
+
+this is a flow entity and a valid context name, and a set of characterizations
+
+where 'reference name' may or may not be one of the canonical contexts, but the alternative names are required to not be known
+
+
+
+
+- Context is a new Entity subclass whose reference property is a string which must be either 'source' or 'sink' (since origin is already a reserved term)
+   = comp_dir should also return the direction that is *complementary* to source (being input) or sink (->output)
+
+ - BasicArchives, which introduce interfaces, and which support only flows and quantities as entity types, also introduce a context manager
+   = context manager intercepts getitem and add requests
+   = the only role of context manager is to recognize plain-string contexts and flowables
+     == 
+
+ - LcFlow is changed to only be a flowable-- Compartment is disallowed and is reserved
+   = we still want uuids associated with "flow+compartment" to resolve, and so we implement this in the context manager
+
+
+
+==========
 Wed 2017-12-06 11:26:00 -0800
 
 OK, so here's where we're at.  And keep in mind, this is going to be another thoroughgoing refactor.

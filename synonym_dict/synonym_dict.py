@@ -1,6 +1,8 @@
 from .lower_dict import LowerDict
 from .synonym_set import SynonymSet, ChildNotFound
 
+from collections import defaultdict
+
 
 class TermExists(Exception):
     """
@@ -13,6 +15,17 @@ class MergeError(Exception):
     """
     Thrown when a merge would result in merging two separate sets
     """
+    pass
+
+
+class RemoveTermError(Exception):
+    """
+    thrown when something wrong happens removing from the dict
+    """
+    pass
+
+
+class ParentNotFound(Exception):
     pass
 
 
@@ -40,8 +53,10 @@ class SynonymDict(object):
         """
         if ignore_case:
             self._d = LowerDict()
+            self._l = defaultdict(LowerDict)  # reverse mapping
         else:
             self._d = dict()
+            self._l = defaultdict(dict)  # reverse mapping
 
         if syn_type is None:
             syn_type = SynonymSet
@@ -50,9 +65,17 @@ class SynonymDict(object):
     def _throw_term_exists(self, term):
         raise TermExists('%s -> %s' % (term, self._d[term]))
 
-    def _check_term(self, term, obj=None):
+    def _check_term(self, term, check_obj=None):
+        """
+        If term is not known to the dict, returns None
+        if check_obj is provided and term does NOT map to check_obj, throw a TermExists error
+        if otherwise, return the object that term maps to
+        :param term:
+        :param check_obj:
+        :return:
+        """
         if term in self._d:
-            if obj is not None and self._d[term] is not obj:
+            if check_obj is not None and self._d[term] is not check_obj:
                 self._throw_term_exists(term)
             return self._d[term]
 
@@ -61,6 +84,15 @@ class SynonymDict(object):
             raise TypeError('Object is not a %s (%s)' % (type(self._syn_type), type(obj)))
         self._check_term(term, obj)
         self._d[term] = obj
+        self._l[obj][term] = term
+
+    def _remove_term(self, term, remove_from_object=False):
+        obj = self._d.pop(term)
+        cterm = self._l[obj].pop(term)
+        if remove_from_object:
+            obj.remove_term(cterm)
+        if len(self._l[obj]) == 0:
+            self._l.pop(obj)
 
     def _match_set(self, terms):
         """
@@ -69,6 +101,15 @@ class SynonymDict(object):
         :return:
         """
         return set(k for k in filter(None, (self._check_term(t) for t in terms)))
+
+    @property
+    def objects(self):
+        """
+        Yield all distinct objects in the dict
+        :return:
+        """
+        for k in sorted(self._l.keys(), key=str):
+            yield k
 
     def new_object(self, *args, merge=True, create_child=True, **kwargs):
         """
@@ -91,13 +132,12 @@ class SynonymDict(object):
             elif len(mg) == 1:
                 s = mg.pop()
                 if create_child:
-                    s.add_child(obj)
-                    for t in obj.terms:
-                        self._add_term(t, s)
+                    self._add_child(s, obj)
                 else:
                     for t in obj.terms:
                         try:
                             self._add_term(t, s)
+                            s.add_term(t)
                         except TermExists:
                             pass
             else:
@@ -109,6 +149,23 @@ class SynonymDict(object):
             for t in obj.terms:
                 self._add_term(t, obj)
 
+    def _add_child(self, existing_object, child):
+        if existing_object not in self._l.keys():
+            raise ParentNotFound('Object %s not known' % existing_object)
+        existing_object.add_child(child)
+        for t in child.terms:
+            self._add_term(t, existing_object)
+
+    def remove_object(self, obj):
+        """
+        remove an object and all of its terms from the dictionary, without altering the object itself
+        :param obj:
+        :return:
+        """
+        remove_terms = [t for t in self._l[obj].keys()]
+        for t in remove_terms:
+            self._remove_term(t)
+
     def merge(self, first, second):
         """
         Merge the sets containing the two terms, installing the second set as a child of the first.
@@ -118,9 +175,8 @@ class SynonymDict(object):
         """
         ob1 = self._d[first]
         ob2 = self._d[second]
-        ob1.add_child(ob2)
-        for k in ob2.terms:
-            self._d[k] = ob1
+        self.remove_object(ob2)
+        self._add_child(ob1, ob2)
 
     def unmerge_child(self, obj):
         """
@@ -130,7 +186,7 @@ class SynonymDict(object):
         :return:
         """
         try:
-            parent = next(v for v in self._d.values() if v.has_child(obj))
+            parent = next(v for v in self.objects if v.has_child(obj))
         except StopIteration:
             raise ChildNotFound('No set found containing child %s' % obj)
         parent.remove_child(obj)
@@ -139,7 +195,8 @@ class SynonymDict(object):
             parent.add_child(obj)
             raise TermExists('Terms duplicated in parent: %s' % '; '.join(dups))
         for k in obj.terms:
-            self._d[k] = obj
+            self._remove_term(k)
+        self.add_object(obj, merge=False)
 
     def add_synonym(self, term, syn):
         """
@@ -153,16 +210,28 @@ class SynonymDict(object):
         self._add_term(term, obj)
 
     def del_term(self, term):
-        obj = self._d.pop(term)
-        obj.remove_term(term)
+        """
+        Delete a term from the dictionary and from the object itself
+        :param term:
+        :return:
+        """
+        self._remove_term(term, remove_from_object=True)
 
     def set_name(self, term):
-        if term not in self._d:
+        if term not in self:
             raise KeyError('Unknown term %s' % term)
-        self._d[term].set_name(term)
+        obj = self._d[term]
+        cterm = self._l[obj][term]  # necessary for case-insensitive dictionaries
+        obj.set_name(cterm)
 
-    def get(self, term):
-        return self.__getitem__(term)
+    def get(self, term, default=None):
+        try:
+            return self.__getitem__(term)
+        except KeyError:
+            return default
+
+    def __contains__(self, item):
+        return item in self._d
 
     def __getitem__(self, term):
         return self._d[term].object

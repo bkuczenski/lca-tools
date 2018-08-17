@@ -10,6 +10,10 @@ class LcEntityTest(unittest.TestCase):
         with self.assertRaises(KeyError):
             print(e['d'])
 
+    def test_get(self):
+        e = LowerDict(Quorum=42, Comment='')
+        self.assertEqual(e.get('Quorum'), 42)
+
     def test_case(self):
         e = LowerDict(Quorum=42, Comment='')
         self.assertEqual(e['quorum'], 42)
@@ -22,6 +26,13 @@ class LcEntityTest(unittest.TestCase):
         self.assertTrue('dOmAiN' in e.keys())
         self.assertFalse('SoCiEtY' in e.keys())
         self.assertFalse('annotat' in e.keys())
+
+    def test_pop(self):
+        e = LowerDict(Quorum=42, comment='no comment.')
+        self.assertEqual(e.pop('quorum'), 42)
+        self.assertIsNone(e.get('Quorum'))
+        self.assertEqual(e.pop('COMMENT'), 'no comment.')
+        self.assertIsNone(e.get('comment'))
 
 
 if __name__ == '__main__':

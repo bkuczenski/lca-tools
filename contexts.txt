@@ -1,4 +1,49 @@
 ==========
+Wed Aug 15 23:18:39 -0700 2018
+
+Where we at?
+
+First off- I decided to call them 'compartments' because then I can have a 'compartment manager', since "context manager" was already taken as a reserved term.
+
+So that's kind of annoying but whatever.
+
+Second-- SynonymSet and SynonymDict are new and improved and nicely logical.  Compartments, CAS numbers, and Flowables are subclasses.
+
+Contexts and the Context manager (read as compartment) are implemented, testing, and apparently working. The strategy is:
+ - In normal archives the compartment manager is just a collector, gathering compartments encountered in flows. Easy, peasy, unit tested.
+ - in an LciaEngine, the compartment manager is seeded with the canonical set- CFs and exchanges given to the engine are then disambiguated by looking them up there.
+
+Flowables are getting interesting- the idea here is that Flowable is a SynonymSet which contains a set of flow entities, which remain as-is (except compartment and CAS number become optional properties).
+
+And the Flowables dict is where the real action is, to wit:
+ - when a new flow comes in, create a flowable from it
+ - only CAS numbers are permitted to be children of flowables
+  = flowables can easily enumerate their associated CAS numbers by listing their child sets
+  = flowables can easily possess multiple CAS numbers
+  = but CAS numbers cannot represent multiple flowables
+  = move NotSupported to SynonymSet and use it liberally
+  = for every term added to a flowable, we need to come up with a way to check if it is a CAS number (presumably by instantiatng a CasNumber)-
+ - we need a stronger way in SynonymSet to prevent adding duplicate child sets- I suppose we could test equality with all the other children, but that is O(n*m) where n is the number of child sets and m is the number of terms in the incoming set.  But if the sets are CAS numbers than m is always 4 and n is likely small.
+ - that said, in the FlowablesDict we should follow the procedure:
+   : new flow, create flowable
+   : flowable has CAS number children for all its valid CAS number synonyms
+   : then add the flowable to the dict with merge
+   : if the merge set is 1, add the CAS children (modulo duplicate checking above)
+   : then add the terms individually to the existing
+   : and add the flow object to the existing
+ - flowables can easily generate their referent flows (and their referent flows' contexts)
+
+So that essentially solves the flowables problem -- then it's simply a matter of generating a canonical flowable list and serializing it (omitting UUIDs, I think)
+
+and then refactoring exchanges and LCIA computations
+
+and then testing
+and then and then and then....
+
+
+
+
+==========
 Tue Aug 07 11:51:45 -0700 2018
 
 This is all terrible. I am going around in circles.  Why should I reimplement SynList AND compartments AND compartment manager? because those are all terrible.
@@ -39,6 +84,9 @@ II.1: performing LCIA- collecting CFs
 
 
 II.2: performing LCIA- looking up exchanges
+
+
+
 
 ==========
 Mon Jul 30 14:08:36 -0700 2018

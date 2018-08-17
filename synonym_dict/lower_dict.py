@@ -51,3 +51,13 @@ class LowerDict(dict):
 
     def keys(self):
         return LowerDictKeys(super(LowerDict, self).keys())
+
+    def get(self, key, default=None):
+        try:
+            return self.__getitem__(key)
+        except KeyError:
+            return default
+
+    def pop(self, key, default=None):
+        key = self.Key(key)
+        return super(LowerDict, self).pop(key, default=default)

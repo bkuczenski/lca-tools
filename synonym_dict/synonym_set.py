@@ -13,6 +13,14 @@ class ChildNotFound(Exception):
     pass
 
 
+class DuplicateChild(Exception):
+    pass
+
+
+class NotSupported(Exception):
+    pass
+
+
 class SynonymSet(object):
     """
 
@@ -62,14 +70,19 @@ class SynonymSet(object):
                 self._name = s
             self._terms.add(s)
 
-    def add_child(self, other):
+    def add_child(self, other, force=False):
         """
         This method stores the child as a subsidiary of the current object.  The child's terms will show up after the
         parent's terms.  Repeated terms will not be shown twice.  Child can still be modified.
         :param other:
+        :param force: override restriction against having duplicate child sets (since child sets may still be
+        individually updated
         :return:
         """
         if hasattr(other, 'terms'):
+            if not force:
+                if any(t == other for t in self._children) and len(other) > 0:
+                    raise DuplicateChild('Child members match existing child')
             self._children.add(other)
         else:
             raise TypeError('Argument is not a synonym set (type %s)' % type(other))
@@ -109,6 +122,9 @@ class SynonymSet(object):
 
     def __str__(self):
         return self._name
+
+    def __len__(self):
+        return len([t for t in self.terms])
 
     def __hash__(self):
         return hash(self._id)

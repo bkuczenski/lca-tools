@@ -28,7 +28,13 @@ class SynonymDictTest(unittest.TestCase):
         self.assertEqual(g['hello'], g['hallo'])
 
     def test_explicit_merge(self):
-        pass
+        g = SynonymDict()
+        o = g.new_object('hello', 'hola', 'hi', 'aloha')
+        g.new_object('Hello', 'HELLO', 'Hi', 'HI')
+        self.assertNotEqual(g['hi'], g['HI'])
+        g.merge('hi', 'HI')
+        self.assertEqual(g['hi'], g['HI'])
+        self.assertListEqual([k for k in g.objects], [o])  # sort order by string
 
     def test_child(self):
         g = SynonymDict()
@@ -38,6 +44,12 @@ class SynonymDictTest(unittest.TestCase):
         ob3 = g.new_object('greetings', 'salutations', 'hello', create_child=False)
         self.assertFalse(ob1.has_child(ob3))
         self.assertEqual(g.get('greetings'), 'hello')
+
+    def test_objects(self):
+        g = SynonymDict()
+        o1 = g.new_object('hello', 'hola', 'hi', 'aloha')
+        o2 = g.new_object('Hello', 'HELLO', 'Hi', 'HI')
+        self.assertListEqual([k for k in g.objects], [o2, o1])  # sort order by string
 
     def test_remove_child(self):
         g = SynonymDict()
@@ -53,12 +65,33 @@ class SynonymDictTest(unittest.TestCase):
         ob2.remove_term('hi')
         g.unmerge_child(ob2)
         self.assertNotEqual(g['hello'], g['hallo'])
+        self.assertEqual(g['Ni hao'], str(ob2))
 
     def test_case_insensitive(self):
         g = SynonymDict(ignore_case=True)
         g.new_object('hello', 'hola', 'hi', 'aloha')
         g.new_object('Hi', 'Bonjour')
         self.assertEqual(g['bonjour'], 'hello')
+
+    def test_remove_term_case_insensitive(self):
+        g = SynonymDict(ignore_case=True)
+        o = g.new_object('hello', 'hola', 'hi', 'aloha')
+        self.assertIn('Hi', g)
+        self.assertIn('hi', o)
+        self.assertNotIn('Hi', o)
+        g.del_term('Hi')
+        self.assertNotIn('Hi', g)
+        self.assertNotIn('hi', o)
+
+    def test_remove_object(self):
+        g = SynonymDict()
+        o1 = g.new_object('hello', 'hola', 'hi', 'aloha')
+        o2 = g.new_object('Hello', 'HELLO', 'Hi', 'HI')
+        self.assertEqual(g['HELLO'], str(o2))
+        g.remove_object(o2)
+        self.assertListEqual([k for k in g.objects], [o1])
+        with self.assertRaises(KeyError):
+            _ = g['HELLO']
 
 
 if __name__ == '__main__':

@@ -1,4 +1,4 @@
-from ..synonym_set import SynonymSet, RemoveNameError
+from ..synonym_set import SynonymSet, RemoveNameError, DuplicateChild
 import unittest
 
 
@@ -50,6 +50,17 @@ class SynonymSetTest(unittest.TestCase):
         t = SynonymSet('bonjour', 'hola', 'hello', 'Hi')
         g = {s, t}
         self.assertEqual(len(g), 2)
+
+    def test_avoid_duplicate_subsets(self):
+        s = SynonymSet('hello', 'hi', 'greetings', 'salutations')
+        t = SynonymSet('bonjour', 'aloha', 'ni hao', 'hola')
+        u = SynonymSet('hola', 'bonjour', 'ni hao', 'aloha')
+        s.add_term(t)
+        self.assertEqual(len(s._children), 1)
+        with self.assertRaises(DuplicateChild):
+            s.add_term(u)
+        self.assertEqual(len(s._children), 1)
+        self.assertFalse(s.has_child(u))
 
 
 if __name__ == '__main__':

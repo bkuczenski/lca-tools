@@ -97,7 +97,7 @@ class Compartment(SynonymSet):
     @property
     def self_and_subcompartments(self):
         yield self
-        for k in self._subcompartments:
+        for k in sorted(self._subcompartments, key=str):
             for t in k.self_and_subcompartments:
                 yield t
 

@@ -60,4 +60,4 @@ class LowerDict(dict):
 
     def pop(self, key, default=None):
         key = self.Key(key)
-        return super(LowerDict, self).pop(key, default=default)
+        return super(LowerDict, self).pop(key, default)

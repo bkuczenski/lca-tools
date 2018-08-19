@@ -111,7 +111,7 @@ class SynonymDict(object):
         for k in sorted(self._l.keys(), key=str):
             yield k
 
-    def new_object(self, *args, merge=True, create_child=True, **kwargs):
+    def new_object(self, *args, merge=True, create_child=False, **kwargs):
         """
         The input arguments are passed directly to the constructor
         :param args: args to pass to constructor
@@ -121,10 +121,10 @@ class SynonymDict(object):
         :return:
         """
         obj = self._syn_type(*args, **kwargs)
-        self.add_object(obj, merge=merge, create_child=create_child)
+        self.add_or_update_object(obj, merge=merge, create_child=create_child)
         return obj
 
-    def add_object(self, obj, merge=True, create_child=True):
+    def add_or_update_object(self, obj, merge=True, create_child=False):
         if merge:
             mg = self._match_set(obj.terms)
             if len(mg) > 1:
@@ -134,12 +134,7 @@ class SynonymDict(object):
                 if create_child:
                     self._add_child(s, obj)
                 else:
-                    for t in obj.terms:
-                        try:
-                            self._add_term(t, s)
-                            s.add_term(t)
-                        except TermExists:
-                            pass
+                    self._merge(s, obj)
             else:
                 for t in obj.terms:
                     self._add_term(t, obj)
@@ -156,6 +151,13 @@ class SynonymDict(object):
         for t in child.terms:
             self._add_term(t, existing_object)
 
+    def _merge(self, existing_object, obj):
+        for c in obj.children:
+            self._add_child(existing_object, c)
+        for t in obj.base_terms:
+            self._add_term(t, existing_object)
+            existing_object.add_term(t)
+
     def remove_object(self, obj):
         """
         remove an object and all of its terms from the dictionary, without altering the object itself
@@ -166,17 +168,21 @@ class SynonymDict(object):
         for t in remove_terms:
             self._remove_term(t)
 
-    def merge(self, first, second):
+    def merge(self, first, second, child=False):
         """
-        Merge the sets containing the two terms, installing the second set as a child of the first.
+        Merge the sets containing the two terms
         :param first:
         :param second:
+        :param child: [False] if true, preserve the second object as a child, rather than merging its content
         :return:
         """
         ob1 = self._d[first]
         ob2 = self._d[second]
         self.remove_object(ob2)
-        self._add_child(ob1, ob2)
+        if child:
+            self._add_child(ob1, ob2)
+        else:
+            self._merge(ob1, ob2)
 
     def unmerge_child(self, obj):
         """
@@ -196,7 +202,7 @@ class SynonymDict(object):
             raise TermExists('Terms duplicated in parent: %s' % '; '.join(dups))
         for k in obj.terms:
             self._remove_term(k)
-        self.add_object(obj, merge=False)
+        self.add_or_update_object(obj, merge=False)
 
     def add_synonym(self, term, syn):
         """

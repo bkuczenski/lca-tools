@@ -38,7 +38,7 @@ class SynonymSet(object):
     @property
     def terms(self):
         seen = set()
-        for s in sorted(self._terms):
+        for s in self.base_terms:
             yield s
             seen.add(s)
         for c in self._children:
@@ -46,6 +46,11 @@ class SynonymSet(object):
                 if t not in seen:
                     yield t
                     seen.add(t)
+
+    @property
+    def base_terms(self):
+        for s in sorted(self._terms):
+            yield s
 
     @property
     def children(self):

@@ -13,7 +13,7 @@ class SynonymDictTest(unittest.TestCase):
         g = SynonymDict()
         g.new_object('hello', 'hola', 'hi')
         s = SynonymSet('goodbye', 'au revoir', 'adios')
-        g.add_object(s)
+        g.add_or_update_object(s)
         self.assertEqual(g.get('adios'), 'goodbye')
 
     def test_implicit_merge(self):
@@ -39,11 +39,11 @@ class SynonymDictTest(unittest.TestCase):
     def test_child(self):
         g = SynonymDict()
         ob1 = g.new_object('hello', 'hola', 'hi', 'aloha')
-        ob2 = g.new_object('hi', 'Ni hao', 'hallo')
+        ob2 = g.new_object('hi', 'Ni hao', 'hallo', create_child=True)
         self.assertTrue(ob1.has_child(ob2))
-        ob3 = g.new_object('greetings', 'salutations', 'hello', create_child=False)
+        ob3 = g.new_object('greetings', 'salutations', 'hello')
         self.assertFalse(ob1.has_child(ob3))
-        self.assertEqual(g.get('greetings'), 'hello')
+        self.assertEqual(g.get('greetings'), g.get('hola'))
 
     def test_objects(self):
         g = SynonymDict()
@@ -54,7 +54,7 @@ class SynonymDictTest(unittest.TestCase):
     def test_remove_child(self):
         g = SynonymDict()
         ob1 = g.new_object('hello', 'hola', 'hi', 'aloha')
-        ob2 = g.new_object('hi', 'Ni hao', 'hallo')
+        ob2 = g.new_object('hi', 'Ni hao', 'hallo', create_child=True)
         self.assertEqual(g['hello'], g['hallo'])
         with self.assertRaises(TermExists):
             g.unmerge_child(ob2)

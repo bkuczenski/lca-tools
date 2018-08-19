@@ -3,19 +3,16 @@ accept a variety of inputs; store synonyms for a CAS number of the canonical for
 """
 
 import re
-from ..synonym_set import SynonymSet
+from ..synonym_set import SynonymSet, NotSupported
 
 
-cas_regex = re.compile('^0*([0-9]{2,6})-?([0-9]{2})-?([0-9])$')
+cas_regex = re.compile('^0*([0-9]{2,6})\W?([0-9]{2})\W?([0-9])$')
 
 
 class InvalidCasNumber(Exception):
     """
     raised when input cannot be deciphered as a valid CasNumber
     """
-
-
-class NotSupported(Exception):
     pass
 
 
@@ -58,7 +55,7 @@ class CasNumber(SynonymSet):
         """
         Accept the following forms:
          - integer satisfying 10**4 <= x <= 10**8 (124389 = 124-38-9 Carbon Dioxide)
-         - string matching the cas_regex '^0*([0-9]{2,6})-?([0-9]{2})-?([0-9])$'
+         - string matching the cas_regex '^0*([0-9]{2,6})\W?([0-9]{2})\W?([0-9])$'
          - 3-tuple containing either number or string having (6 or fewer digits, 2 digits, 1 digit)
          - 3 positional arguments that make up a 3-tuple according to above
 

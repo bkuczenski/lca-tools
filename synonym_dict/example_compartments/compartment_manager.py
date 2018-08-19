@@ -60,7 +60,7 @@ class CompartmentManager(SynonymDict):
 
     @property
     def top_level_compartments(self):
-        for v in self._d.values():
+        for v in self.objects:
             if v.parent is None:
                 yield v
 

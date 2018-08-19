@@ -11,13 +11,21 @@ class CasNumberTest(unittest.TestCase):
         self.assertSetEqual(set([k for k in g.terms]), co2_set)
         self.assertEqual(str(g), '124-38-9')
 
+    def test_invalid(self):
+        with self.assertRaises(InvalidCasNumber):
+            CasNumber(1234)
+        with self.assertRaises(InvalidCasNumber):
+            CasNumber(55, 89, 47, 2)
+        with self.assertRaises(InvalidCasNumber):
+            CasNumber('37205.543.1')
+
     def test_equal(self):
         g = CasNumber(124389)
         h = CasNumber('124-38-9')
         self.assertEqual(g, h)
 
     def test_pad_input(self):
-        g = CasNumber('00124-38-9')
+        g = CasNumber('00124+38+9')
         self.assertSetEqual(set([k for k in g.terms]), co2_set)
 
     def test_tuple_input(self):

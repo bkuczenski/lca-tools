@@ -1,4 +1,4 @@
-from ..synonym_dict import SynonymDict, SynonymSet
+from ..synonym_dict import SynonymSet
 
 
 class InvalidSense(Exception):
@@ -55,19 +55,19 @@ class Compartment(SynonymSet):
 
     @property
     def sense(self):
-        if self._parent is None:
+        if self.parent is None:
             return self._sense
-        return self._parent.sense
+        return self.parent.sense
 
     @sense.setter
     def sense(self, value):
         sense = valid_sense(value)
         if self.sense is not None and self.sense != sense:
             raise InconsistentSense('Value %s conflicts with current sense %s' % (sense, self.sense))
-        if self._parent is None:
+        if self.parent is None:
             self._sense = valid_sense(value)
         else:
-            self._parent.sense = value
+            self.parent.sense = value
 
     @property
     def parent(self):

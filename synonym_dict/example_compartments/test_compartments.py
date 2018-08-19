@@ -57,10 +57,15 @@ class CompartmentManagerTest(unittest.TestCase):
              'parent': 'emissions'}
         self.cm._add_from_dict(d)
         self.assertEqual(str(self.cm['water']), 'water emissions')
+        self.assertEqual(self.cm['water'].sense, 'Sink')
 
     def test_add_hier(self):
         self.cm.add_compartments(['emissions', 'emissions to air', 'emissions to urban air'])
         self.assertIs(self.cm['emissions to air'], self.cm['emissions to urban air'].parent)
+
+    def test_toplevel(self):
+        self.cm.add_compartments(['social hotspots', 'labor', 'child labor'])
+        self.assertIn('social hotspots', (str(x) for x in self.cm.top_level_compartments))
 
 
 if __name__ == '__main__':

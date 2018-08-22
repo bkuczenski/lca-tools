@@ -270,6 +270,12 @@ class LcEntity(object):
             # don't catch KeyErrors here-- leave that to subclasses
             return self._d[item]
 
+    def get(self, item):
+        try:
+            return self.__getitem__(item)
+        except KeyError:
+            return None
+
     def __setitem__(self, key, value):
         if key == 'EntityType':
             raise ValueError('Entity Type cannot be changed')

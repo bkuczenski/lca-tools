@@ -11,7 +11,7 @@ class Characterization(object):
 
     entity_type = 'characterization'
 
-    def __init__(self, flow, quantity, **kwargs):
+    def __init__(self, flow, quantity, context=None, **kwargs):
         """
 
         :param flow:
@@ -26,6 +26,7 @@ class Characterization(object):
 
         self.flow = flow
         self.quantity = quantity
+        self._context = context
         self._locations = dict()
         self._origins = dict()
 
@@ -44,6 +45,13 @@ class Characterization(object):
         return org
 
     @property
+    def context(self):
+        if self._context is None:
+            return self.flow.context
+        return self._context
+
+    '''
+    @property
     def natural_direction(self):
         return self._natural_dirn
 
@@ -57,6 +65,7 @@ class Characterization(object):
             self._natural_dirn = 'Input'
         else:
             self._natural_dirn = False
+    '''
 
     @property
     def is_null(self):
@@ -108,9 +117,11 @@ class Characterization(object):
         self[location] = value
         self._origins[location] = origin
 
+    '''
     def scale(self, factor):
         for k, v in self._locations.items():
             self._locations[k] = v * factor
+    '''
 
     def locations(self):
         return self._locations.keys()
@@ -119,13 +130,13 @@ class Characterization(object):
         return '; '.join([k for k in self.locations()])
 
     def __hash__(self):
-        return hash((self.flow.get_uuid(), self.quantity.get_uuid()))
+        return hash((self.flow.uuid, self.quantity.uuid))
 
     def __eq__(self, other):
         if other is None:
             return False
-        return ((self.flow.get_uuid() == other.flow.get_uuid()) &
-                (self.quantity.get_uuid() == other.quantity.get_uuid()))
+        return ((self.flow.uuid == other.flow.uuid) &
+                (self.quantity.uuid == other.quantity.uuid))
 
     def __str__(self):
         if self.is_null:

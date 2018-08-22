@@ -64,50 +64,6 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         for cf in f.characterizations():
             yield cf
 
-    def synonyms(self, item, **kwargs):
-        """
-        Return a list of synonyms for the object -- quantity, flowable, or compartment
-        :param item:
-        :return: list of strings
-        """
-        raise NotImplemented
-
-    def flowables(self, quantity=None, compartment=None, **kwargs):
-        """
-        Return a list of flowable strings. Use quantity and compartment parameters to narrow the result
-        set to those characterized by a specific quantity, those exchanged with a specific compartment, or both
-        :param quantity:
-        :param compartment:
-        :return: list of pairs: CAS number, name
-        """
-        if quantity is not None:
-            quantity = self._archive[quantity]
-        fb = set()
-        for f in self._archive.flows():
-            if compartment is not None:
-                if f['Compartment'] != compartment:
-                    continue
-            if quantity is not None:
-                if not f.has_characterization(quantity):
-                    continue
-            fb.add(self._fb.index(f['Name']))
-        for n in sorted(list(fb), key=lambda x: self._fb.name(x)):
-            yield self._fb.cas(n), self._fb.name(n)
-
-    def compartments(self, quantity=None, flowable=None, **kwargs):
-        """
-        Return a list of compartment strings. Use quantity and flowable parameters to narrow the result
-        set to those characterized for a specific quantity, those with a specific flowable, or both
-        :param quantity:
-        :param flowable:
-        :return: list of strings
-        """
-        comps = set()
-        for f in self._archive.flows():
-            comps.add(f['Compartment'])
-        for n in comps:
-            yield str(n)
-
     def factors(self, quantity, flowable=None, compartment=None, **kwargs):
         """
         Return characterization factors for the given quantity, subject to optional flowable and compartment

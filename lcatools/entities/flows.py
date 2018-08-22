@@ -5,13 +5,18 @@ from lcatools.characterizations import Characterization
 from .entities import LcEntity
 # from lcatools.entities.quantities import LcQuantity
 from ..interfaces import trim_cas
+from synonym_dict.example_compartments import Context
 
 
 class MissingFactor(Exception):
     pass
 
 
-class DeleteReference(Exception):
+class FlowWithoutContext(Exception):
+    pass
+
+
+class RefQuantityError(Exception):
     pass
 
 
@@ -35,6 +40,7 @@ class LcFlow(LcEntity):
         self._characterizations = dict()
 
         self._local_unit = None
+        self._context = None
 
         for k in self._new_fields:
             if k not in self._d:
@@ -50,10 +56,39 @@ class LcFlow(LcEntity):
         if local_unit is not None:
             self.set_local_unit(local_unit)
 
+    @property
+    def context(self):
+        """
+        A flow's context needs to be set by its containing archive.  It should be an actual Context object.
+        :return:
+        """
+        if self._context is None:
+            raise FlowWithoutContext('Context was not set for flow %s!' % self)
+        return self._context
+
+    def set_context(self, context_manager):
+        """
+        A flow will set its own context- but it needs a context manager to do so.
+        :param context_manager:
+        :return:
+        """
+        if self.has_property('Compartment'):
+            _c = context_manager.add_compartments(self['Compartment'])
+        elif self.has_property('Category'):
+            _c = context_manager.add_compartments(self['Category'])
+        else:
+            raise AttributeError('Flow has no contextual attribute! %s' % self)
+        if not isinstance(_c, Context):
+            raise TypeError('Context manager did not return a context! %s (%s)' %(_c, type(_c)))
+        self._context = _c
+
     def _set_reference(self, ref_entity):
         if self.reference_entity is not None:
-            if self.reference_entity.get_uuid() == ref_entity.get_uuid():
+            if self.reference_entity.uuid == ref_entity.uuid:
                 return
+            '''
+            ## THIS IS NOT ALLOWED! There is no way to adjust exchange values that use this flow, so it would not
+            ## be permissible to change the flow's reference quantity
             # need to do a conversion
             print('Changing reference quantity for flow %s' % self)
             print('reference >>%s<<' % self.reference_entity)
@@ -64,6 +99,8 @@ class LcFlow(LcEntity):
             adj = 1.0 / inc
             for v in self._characterizations.values():
                 v.scale(adj)
+            '''
+            raise RefQuantityError('Cannot change reference quantities for a flow!')
         super(LcFlow, self)._set_reference(ref_entity)
 
     def unit(self):
@@ -135,13 +172,12 @@ class LcFlow(LcEntity):
                 self.get_external_ref() == other.get_external_ref())
 
     def __str__(self):
-        cas = self._d['CasNumber']
+        cas = self.get('CasNumber')
         if cas is None:
             cas = ''
         if len(cas) > 0:
             cas = ' (CAS ' + cas + ')'
-        comp = self._d['Compartment'][-1]  # '', '.join((i for i in self._d['Compartment'] if i is not None))
-        return '%s%s [%s]' % (self._d['Name'], cas, comp)
+        return '%s%s [%s]' % (self.get('Name'), cas, self.context)
 
     def profile(self):
         print('%s' % self)
@@ -213,7 +249,7 @@ class LcFlow(LcEntity):
 
     def del_characterization(self, quantity):
         if quantity is self.reference_entity:
-            raise DeleteReference('Cannot delete reference quantity')
+            raise RefQuantityError('Cannot delete reference quantity')
         self._characterizations.pop(quantity.uuid)
 
     def characterizations(self):

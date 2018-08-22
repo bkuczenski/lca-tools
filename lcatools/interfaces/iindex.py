@@ -59,6 +59,38 @@ class IndexInterface(AbstractQuery):
         for i in self._perform_query(_interface, 'flows', IndexRequired('Index access required'), **kwargs):
             yield self.make_ref(i)
 
+
+    def synonyms(self, item, **kwargs):
+        """
+        Return a list of synonyms for the object -- quantity, flowable, or compartment
+        :param item:
+        :return: list of strings
+        """
+        return self._perform_query(_interface, 'synonyms', IndexRequired('Index interface required'), item,
+                                   ** kwargs)
+
+    def flowables(self, quantity=None, compartment=None, **kwargs):
+        """
+        Return a list of flowable strings. Use quantity and compartment parameters to narrow the result
+        set to those characterized by a specific quantity, those exchanged with a specific compartment, or both
+        :param quantity:
+        :param compartment:
+        :return: list of pairs: CAS number, name
+        """
+        return self._perform_query(_interface, 'flowables', IndexRequired('Index interface required'),
+                                   quantity=quantity, compartment=compartment, **kwargs)
+
+    def compartments(self, quantity=None, flowable=None, **kwargs):
+        """
+        Return a list of compartment strings. Use quantity and flowable parameters to narrow the result
+        set to those characterized for a specific quantity, those with a specific flowable, or both
+        :param quantity:
+        :param flowable:
+        :return: list of strings
+        """
+        return self._perform_query(_interface, 'compartments', IndexRequired('Index interface required'),
+                                   quantity=quantity, flowable=flowable, **kwargs)
+
     def quantities(self, **kwargs):
         """
         Generate quantities

@@ -1,7 +1,18 @@
 from __future__ import print_function, unicode_literals
 import uuid
+from collections import defaultdict
+
 
 from lcatools.entities.entities import LcEntity
+from .clookup import CLookup
+
+
+class ConversionReferenceMismatch(Exception):
+    pass
+
+
+class NoFactorsFound(Exception):
+    pass
 
 
 class LcQuantity(LcEntity):
@@ -20,6 +31,23 @@ class LcQuantity(LcEntity):
 
     def __init__(self, entity_uuid, **kwargs):
         super(LcQuantity, self).__init__('quantity', entity_uuid, **kwargs)
+        self._cm = None
+        self._qlookup = defaultdict(CLookup)
+
+    def set_context(self, cm):
+        self._cm = cm
+
+    def register_cf(self, cf):
+        """
+        Allows the quantity to keep a list of local characterizations that use it
+        :param cf: a Characterization
+        :return:
+        """
+        if cf.quantity is self:
+            if cf.origin == self.origin:
+                if cf.flow.context is None:
+                    cf.flow.set_context(self._cm)
+                self._qlookup[cf.flow['Name']].add(cf)
 
     def unit(self):
         return self.reference_entity.unitstring
@@ -29,6 +57,59 @@ class LcQuantity(LcEntity):
 
     def is_lcia_method(self):
         return 'Indicator' in self.keys()
+
+    def _factors_for_flowable(self, flowable, compartment=None, dist=1):
+        if compartment is None:
+            clookup = self._qlookup[flowable]
+            for cf in clookup.cfs():
+                yield cf
+        else:
+            comp = self._cm[compartment]
+            for cf in self._qlookup[flowable].find(comp, dist=dist):
+                yield cf
+
+    def factors(self, flowable=None, compartment=None, dist=1):
+        if flowable is not None:
+            for cf in self._factors_for_flowable(flowable, compartment=compartment, dist=dist):
+                yield cf
+        else:
+            for f in self._qlookup.keys():
+                for cf in self._factors_for_flowable(f, compartment=compartment, dist=dist):
+                    yield cf
+
+    def quantity_relation(self, ref_quantity, flowable, compartment, locale='GLO', strategy='highest', **kwargs):
+        cfs = [cf for cf in self.factors(flowable, compartment, **kwargs)]
+        cfs_1 = [cf for cf in cfs if locale in cf.locations()]
+        if len(cfs_1) > 1:
+            cfs = cfs_1
+        values = []
+        if len(cfs) == 0:
+            raise NoFactorsFound('%s [%s] %s', (flowable, compartment, self))
+        for cf in cfs:
+            if cf.flow.reference_entity is not ref_quantity:
+                try:
+                    factor = cf.flow.reference_entity.quantity_relation(ref_quantity, cf.flow['Name'], None, **kwargs)
+                except NoFactorsFound:
+                    try:
+                        factor = ref_quantity.convert(from_unit=cf.flow.unit())
+                    except KeyError:
+                        raise ConversionReferenceMismatch('Flow %s\nfrom %s\nto %s' % (cf.flow,
+                                                                                       cf.flow.reference_entity,
+                                                                                       ref_quantity))
+                values.append(cf[locale] * factor)
+            else:
+                values.append(cf[locale])
+        if len(values) > 1:
+            if strategy == 'highest':
+                return max(values)
+            elif strategy == 'lowest':
+                return min(values)
+            elif strategy == 'average':
+                return sum(values) / len(values)
+            else:
+                raise ValueError('Unknown strategy %s' % strategy)
+        else:
+            return values[0]
 
     def convert(self, from_unit=None, to=None):
         """
@@ -59,23 +140,12 @@ class LcQuantity(LcEntity):
         if from_unit is None:
             from_unit = self.reference_entity.unitstring
 
-        try:
-            inbound = uc_table[from_unit]
-        except KeyError:
-            print('Inbound unit %s not found in unit conversion table.' % from_unit)
-            return None
+        inbound = uc_table[from_unit]
 
         if to is None:
             to = self.reference_entity.unitstring
 
-        try:
-            outbound = uc_table[to]
-        except KeyError:
-            if to is self.reference_entity:
-                outbound = 1.0
-            else:
-                print('Outbound unit %s not found in unit conversion table.' % to)
-                return None
+        outbound = uc_table[to]
 
         return outbound / inbound
 

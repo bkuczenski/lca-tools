@@ -32,37 +32,6 @@ class QuantityInterface(AbstractQuery):
                                                  QuantityRequired('Quantity interface required'),
                                                  quantity, **kwargs))
 
-    def synonyms(self, item, **kwargs):
-        """
-        Return a list of synonyms for the object -- quantity, flowable, or compartment
-        :param item:
-        :return: list of strings
-        """
-        return self._perform_query(_interface, 'synonyms', QuantityRequired('Quantity interface required'), item,
-                                   ** kwargs)
-
-    def flowables(self, quantity=None, compartment=None, **kwargs):
-        """
-        Return a list of flowable strings. Use quantity and compartment parameters to narrow the result
-        set to those characterized by a specific quantity, those exchanged with a specific compartment, or both
-        :param quantity:
-        :param compartment:
-        :return: list of pairs: CAS number, name
-        """
-        return self._perform_query(_interface, 'flowables', QuantityRequired('Quantity interface required'),
-                                   quantity=quantity, compartment=compartment, **kwargs)
-
-    def compartments(self, quantity=None, flowable=None, **kwargs):
-        """
-        Return a list of compartment strings. Use quantity and flowable parameters to narrow the result
-        set to those characterized for a specific quantity, those with a specific flowable, or both
-        :param quantity:
-        :param flowable:
-        :return: list of strings
-        """
-        return self._perform_query(_interface, 'compartments', QuantityRequired('Quantity interface required'),
-                                   quantity=quantity, flowable=flowable, **kwargs)
-
     def factors(self, quantity, flowable=None, compartment=None, **kwargs):
         """
         Return characterization factors for the given quantity, subject to optional flowable and compartment

@@ -1,4 +1,4 @@
-from .compartment import Compartment, InvalidSense, InconsistentSense
+from .context import Context, InvalidSense, InconsistentSense
 from .compartment_manager import CompartmentManager
 import unittest
 
@@ -6,18 +6,18 @@ import unittest
 class CompartmentTest(unittest.TestCase):
 
     def test_sense(self):
-        c = Compartment('emissions to air', sense='sink')
+        c = Context('emissions to air', sense='sink')
         self.assertEqual(c.sense, 'Sink')
         with self.assertRaises(InvalidSense):
-            Compartment('emissions to Mars', sense='extraterrestrial')
+            Context('emissions to Mars', sense='extraterrestrial')
         with self.assertRaises(InconsistentSense):
-            Compartment('resources from urban air', parent=c, sense='source')
+            Context('resources from urban air', parent=c, sense='source')
 
     def test_parent(self):
-        c = Compartment('emissions', sense='sink')
-        d = Compartment('emissions to air', parent=c)
-        e = Compartment('emissions to urban air', parent=d)
-        f = Compartment('emissions to rural air', 'emissions from high stacks', parent=d)
+        c = Context('emissions', sense='sink')
+        d = Context('emissions to air', parent=c)
+        e = Context('emissions to urban air', parent=d)
+        f = Context('emissions to rural air', 'emissions from high stacks', parent=d)
         self.assertEqual(e.sense, 'Sink')
         self.assertSetEqual(set(i for i in d.subcompartments), {e, f})
         self.assertListEqual([str(k) for k in c.self_and_subcompartments], ['emissions', 'emissions to air',
@@ -25,8 +25,8 @@ class CompartmentTest(unittest.TestCase):
                                                                             'emissions to urban air'])
 
     def test_serialize(self):
-        c = Compartment('emissions', sense='sink')
-        d = Compartment('emissions to air', parent=c)
+        c = Context('emissions', sense='sink')
+        d = Context('emissions to air', parent=c)
         j = d.serialize()
         self.assertEqual(j['name'], 'emissions to air')
         self.assertSetEqual(set(j.keys()), {'name', 'synonyms', 'parent'})

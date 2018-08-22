@@ -118,13 +118,19 @@ class SynonymDict(object):
         :param merge: [True] if synonyms are found in an existing object, merge the new terms according to create_child
         :param create_child: [True] if true, add new object as a child; otherwise, add terms to the existing object
         :param kwargs: kwargs to pass to constructor
-        :return:
+        :return: the object that contains the new terms
         """
         obj = self._syn_type(*args, **kwargs)
-        self.add_or_update_object(obj, merge=merge, create_child=create_child)
-        return obj
+        return self.add_or_update_object(obj, merge=merge, create_child=create_child)
 
     def add_or_update_object(self, obj, merge=True, create_child=False):
+        """
+        Returns the object that contains the input argument's terms
+        :param obj:
+        :param merge:
+        :param create_child:
+        :return: the object that contains all of obj's terms
+        """
         if merge:
             mg = self._match_set(obj.terms)
             if len(mg) > 1:
@@ -133,16 +139,20 @@ class SynonymDict(object):
                 s = mg.pop()
                 if create_child:
                     self._add_child(s, obj)
+                    return obj
                 else:
                     self._merge(s, obj)
+                    return s
             else:
                 for t in obj.terms:
                     self._add_term(t, obj)
+                return obj
         else:
             for t in obj.terms:
                 self._check_term(t, obj)
             for t in obj.terms:
                 self._add_term(t, obj)
+            return obj
 
     def _add_child(self, existing_object, child):
         if existing_object not in self._l.keys():
@@ -155,8 +165,9 @@ class SynonymDict(object):
         for c in obj.children:
             self._add_child(existing_object, c)
         for t in obj.base_terms:
-            self._add_term(t, existing_object)
-            existing_object.add_term(t)
+            if self._check_term(t) is None:
+                self._add_term(t, existing_object)
+                existing_object.add_term(t)
 
     def remove_object(self, obj):
         """
@@ -202,7 +213,7 @@ class SynonymDict(object):
             raise TermExists('Terms duplicated in parent: %s' % '; '.join(dups))
         for k in obj.terms:
             self._remove_term(k)
-        self.add_or_update_object(obj, merge=False)
+        return self.add_or_update_object(obj, merge=False)
 
     def add_synonym(self, term, syn):
         """
@@ -235,6 +246,11 @@ class SynonymDict(object):
             return self.__getitem__(term)
         except KeyError:
             return default
+
+    def synonyms(self, term):
+        obj = self._d[term]
+        for t in sorted(self._l[obj].values()):
+            yield t
 
     def __contains__(self, item):
         return item in self._d

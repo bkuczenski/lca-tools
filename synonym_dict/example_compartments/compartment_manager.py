@@ -8,7 +8,7 @@ So I'm going to bow to the reserved keyword and call these things compartments i
 """
 
 from ..synonym_dict import SynonymDict
-from .compartment import Compartment
+from .context import Context
 import json
 
 
@@ -66,20 +66,20 @@ class CompartmentManager(SynonymDict):
 
     def new_object(self, *args, parent=None, **kwargs):
         if parent is not None:
-            if not isinstance(parent, Compartment):
+            if not isinstance(parent, Context):
                 parent = self._d[parent]
         return super(CompartmentManager, self).new_object(*args, parent=parent, **kwargs)
 
     def __init__(self, source_file=None):
-        super(CompartmentManager, self).__init__(ignore_case=True, syn_type=Compartment)
+        super(CompartmentManager, self).__init__(ignore_case=True, syn_type=Context)
         self._filename = source_file
         self.load()
 
     def add_compartments(self, comps):
         """
-        comps should be a list of Compartment objects or strings, in descending order
+        comps should be a list of Context objects or strings, in descending order
         :param comps:
-        :return:
+        :return: the last (most specific) Context created
         """
         current = None
         for c in comps:
@@ -88,3 +88,4 @@ class CompartmentManager(SynonymDict):
             else:
                 new = self.new_object(c, parent=current)
             current = new
+        return current

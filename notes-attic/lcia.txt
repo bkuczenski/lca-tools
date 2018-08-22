@@ -1,0 +1,208 @@
+==========
+Thu Jan 11 10:26:15 -0800 2018
+
+Since last September, we have considerably reworked [simplified] the interfaces system, but we are NOT DONE YET.
+
+The following two major changes need to be made, both of which strongly affect LCIA:
+
+ (1) 'flow' as a base entity needs to be abandoned in favor of 'flowable'-- reduce by 10x the number of entities in the db-- and 'context' needs to be added as a new entity.  Flow['Compartment'] is no longer A Thing; instead, an exchange terminates in a context:
+ process-flowable-direction-context for elementary flows;
+ process-flowable-direction-process for terminated intermediate flows;
+ process-flowable-direction-None for cutoff flows (and reference flows)
+
+This vastly simplifies the QuantityInterface implementation.
+
+Moreover-- we have been talking about abandoning Qdb but I think the thing to do is retain Qdb-- and YES, give every antelope container its own private Qdb that it POPULATES by querying a public Qdb-- and have the DetailedLciaResult LOOKUP the factor in the Qdb when the exchange is specified.
+
+Well, maybe that's a bridge too far. But it would be kind of neat if LciaResults were spun out by LciaEngines.
+
+I wonder- let's enumerate all the places LciaResult()s are created, and see if a Qdb is accessible to (m)any of them:
+
+* in LciaResult:
++  - add() 
++  - aggregate()
++  - flatten()
+* in LciaResults:
+  - __getitem__ [for null]
+  - apply_weighting()
+* in fragment_flows:
+  - frag_flow_lcia() --> replaces traversal_to_lcia(); should be part of LciaEngine?
+* in FlowTermination:
+  - compute_unit_score [for null]
+  - _deserialize_score_cache
+* in LcProcess:
+  - lcia()
+* in EcospoldV2Archive:
+  - retrieve_lcia_scores()
+* in Qdb:
+  - do_lcia()
+* in AntelopeV1Client:
+  - fragment_lcia()
+  - lcia()
+  
+
+X in traversal_to_lcia() ==> moved to fragment_flows; unused
+
+OK... we'll look that over a bit later and see if we can shrink that down.  But remember: in cases where the quantity arg is a catalog ref, the Qdb is available via the catalog.
+
+Thu 2018-01-11 13:14:50 -0800
+
+Thinking about this further.... giving the antelope container a Qdb causes problems as well: does it provide a quantity interface? I guess it does- to validate that its factors are the same as a reference.
+
+The whole function of the Qdb is to abstract flow and container descriptors into "flowable" and "context" objects with synonyms.  If we give up the Qdb then we have to re-implement that functionality.
+
+Instead, when we receive a quantity spec- we check to see if it's in our local set of lcia methods- and if not, we retrieve it from our reference Qdb- over the web via the antelope 2.0 interface.  So an antelope client is required to implement the antelope server? that seems dangerous.
+
+They will be different subclasses of LciaEngine-- one for static archives and one for catalogs.  That's the part for me to work on right now.  
+
+The only difference is in load_lcia_factors(). The Static Archive version implements load_lcia_factors(qid) by querying a stored remote Qdb resource.  The Catalog version works as currently written.
+
+
+
+
+
+----------
+==========
+----------
+
+BELOW IS OUT OF DATE
+
+==========
+Tue Sep 19 16:42:04 -0700 2017
+
+Complete mess right about now.
+
+Here's the situation:
+
+ - LcCatalog implements lcia() but this should be done by the catalog ref, in the inventory interface, for either process or fragment.
+ - ForegroundCatalog implements fragment_lcia() but this should be done by the catalog_ref, in the inventory interface, with observed=True being hardcoded (cached vs observed values are only used under the hood)
+ - Qdb implements do_lcia() but this should be done by the quantity catalog ref.  It uses Qdb.convert() but this should, again, be provided by the quantity catalog ref as quantity_relation()
+ - CatalogRef should be subclassed. It should instantiate the subclass upon lookup- basically as soon as it knows the entity_type of the reference.
+ - Qdb.get_canonical_quantity() appears to be totally useless, its usage pattern is deeply confused, and anyway it is functionally redundant to Qdb.get_quantity()
+
+Other issues:
+ - FlowTermination currently logs subfragments, but these should be part of the FragmentFlow, because they are determined at traversal time, and to store them in the entity just begs for synchronicity problems.
+
+Given all these, there remains more or less NO core utility to ForegroundCatalog AT ALL.
+
+OK.  So it looks like we are shifting more stuff to the implementations- that is good- but the quantity one needs some thought.
+
+First: compare and contrast the signature for quantity_relation() with the signature for Qdb.convert()--
+
+Before we even get into that, keep in mind that Qdb.convert() is sprawling and occupies a considerable amount of Qdb.  The whole POINT of Qdb is convert().  and it CANNOT be localized to the quantity because it requires knowledge of other quantities. it REQUIRES Qdb.
+
+A Quantity doesn't implement the QuantityInterface-- a provider implements the interface.  A quantity merely accesses it.  I think I am getting [more] confused.
+Look- ONLY the Qdb fully implements the quantity interface.  The point of the catalog ref is to anchor the query entity to the provider.
+
+But let's go ahead with the comparison:
+
+self is anything that implements the  QuantityInterface:
+def quantity_relation(self, ref_quantity, flowable, compartment, query_quantity, locale='GLO', **kwargs): 
+
+self is Qdb:
+def convert(self, flow=None, flowable=None, compartment=None, reference=None, query=None, query_q_ind=None, locale='GLO',
+                quell_biogenic_co2=None):
+
+They are identical, except that convert is flexible between a flow and [flowable, compartment, reference] and between query and query_q_ind, and convert accommodates quell_biogenic_co2
+
+The point is, ONLY the Qdb is supposed to be able to implement the quantity_relation.  That was the whole reason for creating the Qdb.  The quantity merely provides a convenient way to access it-- but really that should be from the flow and not the quantity.  Or rather it COULD be from the flow just as easily as from the quantity.
+
+ok.
+
+routing, then:
+the user, through query, identifies a flow[able + compartment] with a known reference quantity and wishes to know its characterization w.r.t. a given query quantity.
+IF a proper flow entity is primary, the query would look like:
+origin/flow-ref/cf/q-ref/locale -- where q-ref is a shorthand known to the catalog, and 'cf' is literal.  The implicit origin is self. 
+
+The catalog needs to lookup the query quantity-- there has to be some way to get from the q-ref to a data source:
+ * if the Qdb knows the quantity, then the q-ref should bring up an entity, which the catalog can use to track down a resource providing the quantity interface for the entity's origin.  So for that to work, the quantity would need to be present in the Qdb's quantity SynList.  That's fine- the SynList is maintainable.
+ * if the Qdb does not know the quantity, then it can't lookup the cf.
+
+On the other hand, maybe the user specifies the query quantity as primary: 
+
+qdb/origin/qty-ref/convert/ref-qty/flowable/compartment/locale
+
+that's an awfully complicated query statement.
+
+Tue 2017-09-19 17:14:19 -0700
+whatever whatever.
+
+For now let's just leave do_lcia() as part of the Qdb, and only refactor how it gets accessed-- namely, by the implementation of the InventoryInterface for processes and flows, and internally by the BackgroundInterface for bg_lcia (as already done).
+
+BasicImplementation.characterize() and its counterpart in BackgroundImplementation.bg_lcia(): these exist in order to use a specified, non-native Qdb to perform LCIA of a local inventory.  It doesn't make any sense for bg_lcia() to use this-- bg_lcia will need to know the CFs locally.  The thing to do is to add them to the local Qdb, not to specify a remote source on-the-fly.
+
+To mix and match sources requires a runtime environment anyway-- the user can add a new resource to her resolver that will allow the quantity's factors to be retrieved and loaded locally.
+The downside of that is if there is a collision in the quantity SynList.  Presently, the external_ref, link, ['Name'], and __str__ are used-- so if any of those collide-- in particular the external_ref and ['Name'] preclude the knowledge of different versions of the same quantity.  It may be that the q-SynList should only track links.
+
+I could work around that simply by setting merge=False in Qdb.add_new_quantity() on the call to add_set()-- then the name and external ref will be bound to the first entry, but the alternate cfs will still be accessible using the full link.
+
+This means that _get_q_ind will need to find fully-specified links first.  That just means that _q_terms should be sequenced differently.
+Done.
+
+ok.
+
+oy oy oy.
+
+Tue 2017-09-19 17:27:57 -0700
+So-- 3 minutes to wrap this up:
+ - RESTful implementation of the quantity relation is still a bit sketchy
+ - but local implementation should still be fine.
+ - steps required:
+   X get rid of get_canonical_quantity
+   X move LcCatalog.lcia() into InventoryInterface-- scratch that-- no, unscratch it
+   X move ForegroundCatalog.fragment_lcia() into InventoryInterface
+   X move aggregate_subfragments() into FragmentFlow
+   * then work on subclassing CatalogRef.
+
+Tue 2017-09-19 17:31:17 -0700
+
+
+==========
+Tue Sep 19 22:23:37 -0700 2017
+
+Let's think this through a LITTLE bit more.
+
+We can't move lcia() into the InventoryInterface because the InventoryImplementation doesn't have access to the catalog's (private) Qdb.  BUT- both Quantity and Background already require qdbs; in both cases they just use the catalog's own.  Why not simply make the qdb publicly accessible?
+
+Tue 2017-09-19 23:15:02 -0700
+
+ok... checked that off... tomorrow is the testing.
+
+==========
+Wed Sep 20 15:12:04 -0700 2017
+
+Today, that is.
+
+Let's look into subclassing CatalogRef.
+On the one hand, this doesn't seem like it would work because we want to be able to create a catalog ref without knowing what kind of entity it corresponds to.  Once we create it, we can't exactly morph it into a subclass.
+
+One option is to have CatalogRef create subclasses through the use of class methods.  This seems trick because we can just replace invocations of CatalogRef() with CatalogRef.new().  This seems like it would be prone to circular dependencies-- we would have to have all the subclasses in the same file because the constructors would need to be able to see each other.  That is basically exchanging one antipattern (having all the tricks in one class) with a slightly less obviously broken antipattern (having all the tricks in one file).  Plus it's contrived.
+
+Another option is to have the catalog generate the ref-- but that is undesirable because the whole genius OF the CatalogRef was its lack of dependency (currently, catalog_ref.py imports literally nothing)
+
+So what's the problem with the status quo, exactly?  We have to police all the methods. Every method needs to check for entity_type compatibility before executing.  NEEDS TO is maybe too strong a term, but it certainly provides a courtesy to the user.
+
+I mean, the function is not THAT long, and it grows slowly.
+
+Let's audit:
+
+lines 0-20: Exception classes
+lines 21-26: Class definition + basic doc
+lines 27-42: from_json(), accepting 'entity_type', 'origin' OR 'source', and 'externalId'
+lines 43-90: __init__(), including 20 lines of doc
+lines 91-95: _check_query() -- ERR_CHECK
+lines 96-122: query access methods
+lines 123-166: properties (including the somewhat concerning default_rx)
+
+
+OK there are two different things going on, and these are the things that should be split into separate classes- and not even subclasses- totally separate classes.
+
+First is the catalog lookup.  I specify an origin and an ID, and the catalog lookup gives me a floating reference that I can use for... well, nothing really.  All it can do is perform the lookup and give me a grounded reference that IS one entity type.
+
+Looking over the code, there are some functions that are only useful if _query is None, and many functions that are only useful if _query is non-None.  And a few things that are ambiguous: like _d access.
+
+I think I will create a new package called catalog_ref and give it:
+
+A base class with origin, external_ref, and _d;
+a set of entity refs that inherit the base class and provide entity-specific functionality, but require the query to be passed as an argument;
+a catalog ref that inherits the base class, imports the entity classes, and provides lookup functionality and RETURNS one of the entity refs.

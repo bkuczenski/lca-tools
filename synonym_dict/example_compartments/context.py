@@ -24,25 +24,25 @@ def valid_sense(sense):
     return v
 
 
-class Compartment(SynonymSet):
+class Context(SynonymSet):
     """
-    A compartment is an environmental or social "context" that exchanges some "flow" with a technological "activity"
+    A context is an environmental or social "compartment" that exchanges some "flow" with a technological "activity"
     in a process-flow product system.  Contexts are defined by a hierarchical structure and each instance has an
     optional 'parent' which is a proper superset, if present.
 
-    A compartment has a natural directional "sense", which is either 'Source', 'Sink', or None.  A Source compartment
+    A context has a natural directional "sense", which is either 'Source', 'Sink', or None.  A Source context
     generates flows which may be inputs to the activity; a Sink context absorbs flows which are output from the
     activity.
 
-    If a compartment has a parent, it inherits the sense of the parent- specifying the opposite sense will raise
+    If a context has a parent, it inherits the sense of the parent- specifying the opposite sense will raise
     an error.
     """
     def __init__(self, *args, parent=None, sense=None):
-        super(Compartment, self).__init__(*args)
+        super(Context, self).__init__(*args)
         self._parent = None
         self._sense = None
         self._subcompartments = set()
-        if isinstance(parent, Compartment):
+        if isinstance(parent, Context):
             self.parent = parent  # use setter
         elif parent is not None:
             raise TypeError('Parent must be a Context, not %s' % type(parent))

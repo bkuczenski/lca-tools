@@ -1,3 +1,180 @@
+See notes-attic/lcia.txt for an archived version of this document
+
+==========
+Mon Aug 20 11:32:40 -0700 2018
+
+OK, we are midway across a foggy wasteland of a conceptual refactor.  We've taken something that sorta worked and broken it, reimpliemented its core (synonym dict) [better than original for sure] but we haven't figured out what we are going to do with it.  We have a minor slough of legacy code (Qdb and CLookup) and we have a completely reorganized, parted-out codebase with which the old slough is incompatible (AntelopeCatalog is required to do any LCIA?)
+
+So.. for the nth time.. let's review the LCIA PROBLEM and figure out how to fix it THIS AFTERNOON.
+
+Mon 2018-08-20 11:44:50 -0700
+
+So, we have the LciaEngine which, drolly, is simply a wrapper for a captive Qdb.  On my bike ride in this morning, I had the mistaken recollection that Qdb was a SUBCLASS of LciaEngine, but no.
+
+Qdb is an archive, and LciaEngine "interfaces" with a Qdb to perform LCIA.
+
+Qdb is already problematic, with its reliance on catalog refs to populate the database, whereas catalogs are supposed to be an add-on.
+
+Here's what I think Qdb should do.  It should implement the Quantity interface.  WHICH- if we complete our context refactor- is about to get a whole lot simpler.  Here's a full list of methods in the quantity interface, and a mapping to the new interface after the refactor (q = qty, i = index):
+
+ -q profile(flow) --> list of Characterizations
+ -q get_canonical(quantity key) --> Quantity Ref
+
+(-i+q? synonyms(any item) --> list of strings)  # ignore this for now
+ -i flowables(quantity=None, compartment=None) --> list of name strings
+ -i compartments(quantity=None, flowable=None) --> list of name strings
+
+ -q factors(quantity, flowable=None, compartment=None) --> list of Characterizations
+ -q cf(flow, quantity, locale=GLO) --> Characterization
+ -q quantity_relation(ref_qty, flowable, compartment, q_qty, locale='GLO') --> float
+
+Basically, anything that's part of the quantity interface returns a quantity, characterization, or float (# ignoring synonyms entry because it's really part of the index)
+
+The main utility here is that characterizations are serialized with flows (or stored any which way); the point of the quantity interface is to regroup all that information around the quantity
+
+A characterization value, again, has FIVE parts:
+ * reference quantity
+ * flowable
+ * context
+ * query quantity
+ * locale
+
+Characterizations with no context apply to the flowable intrinsically
+Characterizations with an external ref apply to 
+
+so we want to implement the following mappings:
+
+flow ID -> list of characterizations having that flow's flowable, ref qty, and context
+flowable, context -> list of characterizations if a flow is found matching that flowable + context
+
+quantity synonym -> canonical quantity ref
+
+quantity, [flowable,] [compartment] -> list of characterizations
+flow, quantity, [locale] -> single characterization
+flowable, quantity, compartment -> single characterization
+ref qty, flowable, compartment, query qty, [locale] -> float conversion
+
+Mon 2018-08-20 12:39:30 -0700
+
+So now we have a question: should a flow's profile be part of a quantity interface?  and I think the answer is NO, because flows exist in all kinds of archives that don't otherwise implement the quantity interface.  And because I am halfway on my way to making the quantity interface THE LCIA engine.,,
+
+er huh?
+
+I have a total lack of clarity about what I am trying to accomplish.
+
+We want to ABSTRACT + ENCAPSULATE the LCIA computation problem inside the quantity interface.   A profile is a collection of information about a FLOW (or a flowable) and not about a quantity per se
+
+On the other hand, YES, because the inventory interface is built on the exchange relation and there's a powerful argument by symmetry that the quantity interface should be built on the quantity relation.
+
+exchanges, exchange values, inventory -> all exchange relation; all part of inventory
+
+(also part of inventory: foreground lcia, traverse, fragment lcia)
+the lcia methods both depend on being given a quantity ref which has the capacity to ensure_lcia(), which means it has a QUERY which implements ensure_lcia_factors(), which really just asks a catalog to load the factors.
+
+THIS is what we are refactoring right now.  How SHOULD it work?
+
+ * Case 0.0: NO CATALOG.  No LCIA Engine.  The process entity's lcia process should be used, and each flow's resident characterization factor should be used in the computation.
+ - how does this work in the new flowable-context world? the exchange has a flow, not a flowable. We are not refactoring the basic data type- only changing how it's used.
+ -- given that, when creating a new exchange, if termination is None and flow has compartment, then the compartment[-1] becomes the termination
+ -- end of story
+ - so if the flows in the archive haven't been characterized, the lcia is bupkis? that doesn't work
+
+I think there should be no interfacial way to access LcProcess.lcia() because that shit doesn't work.
+Instead, the quantity should be the result of a basic query...
+
+here are the 3 ways to do LCIA:
+
+ 0. entity-driven. Load an archive with a process, and the same or another archive with a quantity.  Obtain both process and quantity via basic query.
+ - perform process.lcia(quantity, ref_flow=None)
+ - if quantity is simply an entity, it will not have a do_lcia() method [because quantity-as-entity doesn't know its own characterization factors.  Only quantity-as-reference has access to its own archive's Quantity Interface.
+
+   although we could simply implement that-- when a characterization is added to a flow, add it to the quantity as well.
+
+   True or False: the quantity itself should implement the quantity interface.
+
+   PRO: no other entity type has a dedicated interface- there is no 'flow interface' or 'process interface' or even 'fragment interface'-- although the fragment does in fact implement the fragment-specific parts of the inventory interface.
+
+   Given that we want to create a special quantity-specific lookup object ALREADY, we may as well simply fold it into the quantity entity, which currently doesn't do much.  Then, in the case of a quantity REF, we have to rely on the query mechanism to implement the interface, which it does using the LciaEngine (or subclass)
+
+   CON: well, for one, this kicks profile out, since a quantity can't report CFs for other quantities that happen to be shared by a flow that it may or may not have. WHere would we put flow.profile()? {{ans: on the flow entity, where it ALREADY IS.  You couldn't ask quantity.profile() because that doesn't make sense.  No change required.}}
+
+   It weakens the conceptual meaning of the interface- which has, heretofore, been something invoked ON AN ARCHIVE.  Write out what the interface is for, and see if that writeup makes sense both ways:
+
+The purpose of the interface architecture is to ensure that the parts of an Antelope computation environment work in a predictable and consistent way.  The interface specifies WHAT queries may be asked.  Some of these queries are asked of an archive as a whole (e.g. archive.processes()), whereas others are asked of specific entities (e.g. process.inventory()).  There doesn't seem to be any rhyme or reason to how those things are arranged:
+
+Index has:
+- flows, processes, quantities, lcia_methods, count, contexts, flowables-- all of which are asked of an archive;
+- and terminate() and originate() which are asked of a flow but require an archive
+- and synonyms(), which is asked of anything with synonyms (and not yet implemented)
+
+Inventory has:
+- exchanges, exchange_values, exchange_relation, inventory-- asked of a process (implemented in LcProcess)
+- lcia-- asked of a process over a quantity (implemented in LcProcess)
+- traverse-- asked of a fragment (implemented in LcFragment)
+- fragment_lcia-- asked of a fragment over a quantity (implemented in LcFragment)
+
+Configure: all analogous to existing methods on entities
+
+Background: can only be asked of an archive because the bg matrix must be constructed
+
+Quantity:
+- profile, cf-- asked of a flow (implemented in LcFlow)
+- get_canonical-- asked of an archive
+- factors, quantity_relation-- asked of a quantity (should be
+
+CONCLUSION:
+That's pretty conclusive-- the quantity entity should implement quantity-specific methods found in the quantity interface.  MOREOVER. we should seriously consider serializing characterization factors with quantity and grouped by flowable, rather than with flows.  This means REQUIRING that reference quantities have unity cf and not serializing them at all; and then the flows no longer KNOW their own CFs?  How do we de-serialize? by just using flowables?
+
+This seems like a big drag without any clear upside.  Why not let things proceed exactly as they are, BUT also endow LcQuantities with the ability to be aware of their own CFs?  In principle, if the same characterization is added in both places, there is no issue with concurrency- edits to the object affect the object regardless of how it is referenced.  The only problem is when adding new characterizations- should they be cloned only when both entities have the same origin? to what specificity? only when neither entity is a ref?
+
+Right now we use add_characterization() extensively in do_lcia, as a way to avoid repeating the lookup burden by caching the result. This could be premature- maybe the lookup is fast enough not to matter- but are we ready to abandon it?
+
+If we are rebuilding the LCIA engine from scratch, with testing, which we are, maybe we should proceed with no premature optimization.
+
+Mon 2018-08-20 16:45:53 -0700
+SO-o-o-o-o-oo-- if we do give quantities this magical ability to recall CFs by flowable and context, then quantities can be the basis for learning / caching.
+
+In the 0 case, where entities handle their own LCIA, the quantity lookup should be more or less lightning fast.
+
+In the 1 case, where we are using an LciaEngine, we do the learning there instead of on the quantity  entities themselves. And the QLookup stacks use reference sets of quantities, flowables, and contexts.
+
+and the 2 case is just like the 1 case.  The only difference is.... well maybe there is no difference.
+
+I think this is how it should go.
+
+
+so 1- let's write the TermManager.  What does it do?
+
+ - when a flow is added to the db,
+   (1) index its identifying information into the flowables dict
+   (2) index its compartment information into the compartment manager
+ - when a quantity is added to the db,
+   do nothing. quantities are self-managing
+ - when a characterization is added to the flow:
+   (3) if the flow and quantity have the exact same origin, add the characterization to the quantity as well.
+
+ - when a getitem request is received
+   (a) first check to see if it is synonymous to a known context; if so, return the context
+   (b) then getitem as normal
+
+And that's it.
+
+The TermManager should be used to implement the flowables, compartments, and synonyms methods of the index interface.
+
+
+
+
+ - forget about ensure_lcia() because that doesn't matter
+ - the do_lcia() process is implemented in BasicQuery, and simply runs quantity.convert(flow.reference_entity, flow.flowable, flow.context, locale=process['SpatialScope'])
+ = it is therefore up to the default quantity implementation to efficiently implement convert()
+ = except it will all fail terribly unless both quantity and process use the same flowables and contexts
+
+ 1. LciaEngine. 
+
+
+
+
+
 ==========
 Thu Jan 11 10:26:15 -0800 2018
 
@@ -65,144 +242,3 @@ The only difference is in load_lcia_factors(). The Static Archive version implem
 ==========
 ----------
 
-BELOW IS OUT OF DATE
-
-==========
-Tue Sep 19 16:42:04 -0700 2017
-
-Complete mess right about now.
-
-Here's the situation:
-
- - LcCatalog implements lcia() but this should be done by the catalog ref, in the inventory interface, for either process or fragment.
- - ForegroundCatalog implements fragment_lcia() but this should be done by the catalog_ref, in the inventory interface, with observed=True being hardcoded (cached vs observed values are only used under the hood)
- - Qdb implements do_lcia() but this should be done by the quantity catalog ref.  It uses Qdb.convert() but this should, again, be provided by the quantity catalog ref as quantity_relation()
- - CatalogRef should be subclassed. It should instantiate the subclass upon lookup- basically as soon as it knows the entity_type of the reference.
- - Qdb.get_canonical_quantity() appears to be totally useless, its usage pattern is deeply confused, and anyway it is functionally redundant to Qdb.get_quantity()
-
-Other issues:
- - FlowTermination currently logs subfragments, but these should be part of the FragmentFlow, because they are determined at traversal time, and to store them in the entity just begs for synchronicity problems.
-
-Given all these, there remains more or less NO core utility to ForegroundCatalog AT ALL.
-
-OK.  So it looks like we are shifting more stuff to the implementations- that is good- but the quantity one needs some thought.
-
-First: compare and contrast the signature for quantity_relation() with the signature for Qdb.convert()--
-
-Before we even get into that, keep in mind that Qdb.convert() is sprawling and occupies a considerable amount of Qdb.  The whole POINT of Qdb is convert().  and it CANNOT be localized to the quantity because it requires knowledge of other quantities. it REQUIRES Qdb.
-
-A Quantity doesn't implement the QuantityInterface-- a provider implements the interface.  A quantity merely accesses it.  I think I am getting [more] confused.
-Look- ONLY the Qdb fully implements the quantity interface.  The point of the catalog ref is to anchor the query entity to the provider.
-
-But let's go ahead with the comparison:
-
-self is anything that implements the  QuantityInterface:
-def quantity_relation(self, ref_quantity, flowable, compartment, query_quantity, locale='GLO', **kwargs): 
-
-self is Qdb:
-def convert(self, flow=None, flowable=None, compartment=None, reference=None, query=None, query_q_ind=None, locale='GLO',
-                quell_biogenic_co2=None):
-
-They are identical, except that convert is flexible between a flow and [flowable, compartment, reference] and between query and query_q_ind, and convert accommodates quell_biogenic_co2
-
-The point is, ONLY the Qdb is supposed to be able to implement the quantity_relation.  That was the whole reason for creating the Qdb.  The quantity merely provides a convenient way to access it-- but really that should be from the flow and not the quantity.  Or rather it COULD be from the flow just as easily as from the quantity.
-
-ok.
-
-routing, then:
-the user, through query, identifies a flow[able + compartment] with a known reference quantity and wishes to know its characterization w.r.t. a given query quantity.
-IF a proper flow entity is primary, the query would look like:
-origin/flow-ref/cf/q-ref/locale -- where q-ref is a shorthand known to the catalog, and 'cf' is literal.  The implicit origin is self. 
-
-The catalog needs to lookup the query quantity-- there has to be some way to get from the q-ref to a data source:
- * if the Qdb knows the quantity, then the q-ref should bring up an entity, which the catalog can use to track down a resource providing the quantity interface for the entity's origin.  So for that to work, the quantity would need to be present in the Qdb's quantity SynList.  That's fine- the SynList is maintainable.
- * if the Qdb does not know the quantity, then it can't lookup the cf.
-
-On the other hand, maybe the user specifies the query quantity as primary: 
-
-qdb/origin/qty-ref/convert/ref-qty/flowable/compartment/locale
-
-that's an awfully complicated query statement.
-
-Tue 2017-09-19 17:14:19 -0700
-whatever whatever.
-
-For now let's just leave do_lcia() as part of the Qdb, and only refactor how it gets accessed-- namely, by the implementation of the InventoryInterface for processes and flows, and internally by the BackgroundInterface for bg_lcia (as already done).
-
-BasicImplementation.characterize() and its counterpart in BackgroundImplementation.bg_lcia(): these exist in order to use a specified, non-native Qdb to perform LCIA of a local inventory.  It doesn't make any sense for bg_lcia() to use this-- bg_lcia will need to know the CFs locally.  The thing to do is to add them to the local Qdb, not to specify a remote source on-the-fly.
-
-To mix and match sources requires a runtime environment anyway-- the user can add a new resource to her resolver that will allow the quantity's factors to be retrieved and loaded locally.
-The downside of that is if there is a collision in the quantity SynList.  Presently, the external_ref, link, ['Name'], and __str__ are used-- so if any of those collide-- in particular the external_ref and ['Name'] preclude the knowledge of different versions of the same quantity.  It may be that the q-SynList should only track links.
-
-I could work around that simply by setting merge=False in Qdb.add_new_quantity() on the call to add_set()-- then the name and external ref will be bound to the first entry, but the alternate cfs will still be accessible using the full link.
-
-This means that _get_q_ind will need to find fully-specified links first.  That just means that _q_terms should be sequenced differently.
-Done.
-
-ok.
-
-oy oy oy.
-
-Tue 2017-09-19 17:27:57 -0700
-So-- 3 minutes to wrap this up:
- - RESTful implementation of the quantity relation is still a bit sketchy
- - but local implementation should still be fine.
- - steps required:
-   X get rid of get_canonical_quantity
-   X move LcCatalog.lcia() into InventoryInterface-- scratch that-- no, unscratch it
-   X move ForegroundCatalog.fragment_lcia() into InventoryInterface
-   X move aggregate_subfragments() into FragmentFlow
-   * then work on subclassing CatalogRef.
-
-Tue 2017-09-19 17:31:17 -0700
-
-
-==========
-Tue Sep 19 22:23:37 -0700 2017
-
-Let's think this through a LITTLE bit more.
-
-We can't move lcia() into the InventoryInterface because the InventoryImplementation doesn't have access to the catalog's (private) Qdb.  BUT- both Quantity and Background already require qdbs; in both cases they just use the catalog's own.  Why not simply make the qdb publicly accessible?
-
-Tue 2017-09-19 23:15:02 -0700
-
-ok... checked that off... tomorrow is the testing.
-
-==========
-Wed Sep 20 15:12:04 -0700 2017
-
-Today, that is.
-
-Let's look into subclassing CatalogRef.
-On the one hand, this doesn't seem like it would work because we want to be able to create a catalog ref without knowing what kind of entity it corresponds to.  Once we create it, we can't exactly morph it into a subclass.
-
-One option is to have CatalogRef create subclasses through the use of class methods.  This seems trick because we can just replace invocations of CatalogRef() with CatalogRef.new().  This seems like it would be prone to circular dependencies-- we would have to have all the subclasses in the same file because the constructors would need to be able to see each other.  That is basically exchanging one antipattern (having all the tricks in one class) with a slightly less obviously broken antipattern (having all the tricks in one file).  Plus it's contrived.
-
-Another option is to have the catalog generate the ref-- but that is undesirable because the whole genius OF the CatalogRef was its lack of dependency (currently, catalog_ref.py imports literally nothing)
-
-So what's the problem with the status quo, exactly?  We have to police all the methods. Every method needs to check for entity_type compatibility before executing.  NEEDS TO is maybe too strong a term, but it certainly provides a courtesy to the user.
-
-I mean, the function is not THAT long, and it grows slowly.
-
-Let's audit:
-
-lines 0-20: Exception classes
-lines 21-26: Class definition + basic doc
-lines 27-42: from_json(), accepting 'entity_type', 'origin' OR 'source', and 'externalId'
-lines 43-90: __init__(), including 20 lines of doc
-lines 91-95: _check_query() -- ERR_CHECK
-lines 96-122: query access methods
-lines 123-166: properties (including the somewhat concerning default_rx)
-
-
-OK there are two different things going on, and these are the things that should be split into separate classes- and not even subclasses- totally separate classes.
-
-First is the catalog lookup.  I specify an origin and an ID, and the catalog lookup gives me a floating reference that I can use for... well, nothing really.  All it can do is perform the lookup and give me a grounded reference that IS one entity type.
-
-Looking over the code, there are some functions that are only useful if _query is None, and many functions that are only useful if _query is non-None.  And a few things that are ambiguous: like _d access.
-
-I think I will create a new package called catalog_ref and give it:
-
-A base class with origin, external_ref, and _d;
-a set of entity refs that inherit the base class and provide entity-specific functionality, but require the query to be passed as an argument;
-a catalog ref that inherits the base class, imports the entity classes, and provides lookup functionality and RETURNS one of the entity refs.

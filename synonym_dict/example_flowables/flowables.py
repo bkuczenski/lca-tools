@@ -34,7 +34,7 @@ class FlowablesDict(SynonymDict):
     def add_or_update_object(self, obj, merge=True, create_child=False):
         if create_child is True and not isinstance(obj, CasNumber):
             raise NotSupported('Flowables can only have CAS Number children')
-        super(FlowablesDict, self).add_or_update_object(obj, merge=merge, create_child=create_child)
+        return super(FlowablesDict, self).add_or_update_object(obj, merge=merge, create_child=create_child)
 
     def __getitem__(self, item):
         try:

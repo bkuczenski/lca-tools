@@ -93,6 +93,20 @@ class SynonymDictTest(unittest.TestCase):
         with self.assertRaises(KeyError):
             _ = g['HELLO']
 
+    def test_synonyms(self):
+        g = SynonymDict(ignore_case=True)
+        o1 = g.new_object('hello', 'hola', 'hi', 'aloha')
+        o2 = g.new_object('Hello', 'HELLO', 'Hi', 'HI')
+        self.assertIs(o1, o2)
+        self.assertSetEqual(set(g.synonyms('hello')), set(o1.terms))
+
+    def test_add_synonym(self):
+        g = SynonymDict()
+        o1 = g.new_object('hello', 'hola', 'hi', 'aloha')
+        g.add_synonym('greetings', 'hi')
+        self.assertIn('greetings', o1)
+        self.assertEqual(g['greetings'], g['hello'])
+
 
 if __name__ == '__main__':
     unittest.main()

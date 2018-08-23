@@ -107,6 +107,16 @@ class SynonymDictTest(unittest.TestCase):
         self.assertIn('greetings', o1)
         self.assertEqual(g['greetings'], g['hello'])
 
+    def test_prune(self):
+        g = SynonymDict()
+        o1 = g.new_object('hello', 'hola', 'hi', 'aloha')
+        o2 = g.new_object('goodbye', 'farewell', 'aloha', prune=True)
+        self.assertIn('goodbye', g)
+        self.assertEqual(g['aloha'], 'hello')
+        self.assertEqual(g['farewell'], 'goodbye')
+        self.assertIn('aloha', o1)
+        self.assertIn('aloha', o2)  # note that aloha remains in both sets
+
 
 if __name__ == '__main__':
     unittest.main()

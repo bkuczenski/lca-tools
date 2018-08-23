@@ -111,24 +111,29 @@ class SynonymDict(object):
         for k in sorted(self._l.keys(), key=str):
             yield k
 
-    def new_object(self, *args, merge=True, create_child=False, **kwargs):
+    def new_object(self, *args, merge=True, create_child=False, prune=False, **kwargs):
         """
         The input arguments are passed directly to the constructor
         :param args: args to pass to constructor
         :param merge: [True] if synonyms are found in an existing object, merge the new terms according to create_child
         :param create_child: [True] if true, add new object as a child; otherwise, add terms to the existing object
+        :param prune: [False] If merge is False and a collision exists, simply omit conflicting terms from the new
+         object. Specifying prune=True to new_object will override merge=True.
         :param kwargs: kwargs to pass to constructor
         :return: the object that contains the new terms
         """
         obj = self._syn_type(*args, **kwargs)
-        return self.add_or_update_object(obj, merge=merge, create_child=create_child)
+        if prune:
+            merge = False
+        return self.add_or_update_object(obj, merge=merge, create_child=create_child, prune=prune)
 
-    def add_or_update_object(self, obj, merge=True, create_child=False):
+    def add_or_update_object(self, obj, merge=True, create_child=False, prune=False):
         """
         Returns the object that contains the input argument's terms
         :param obj:
         :param merge:
         :param create_child:
+        :param prune:
         :return: the object that contains all of obj's terms
         """
         if merge:
@@ -147,6 +152,15 @@ class SynonymDict(object):
                 for t in obj.terms:
                     self._add_term(t, obj)
                 return obj
+        elif prune:
+            for t in obj.terms:
+                try:
+                    self._check_term(t, obj)
+                    self._add_term(t, obj)
+                except TermExists:
+                    # maybe I should remove the term from obj? not for now- though may cause problems with serialization
+                    continue
+            return obj
         else:
             for t in obj.terms:
                 self._check_term(t, obj)

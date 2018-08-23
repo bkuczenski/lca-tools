@@ -27,6 +27,10 @@ def create_archive(source, ds_type, catalog=None, **kwargs):
     return a
 
 
+def update_archive(archive, json_file):
+    archive.load_json(from_json(json_file), jsonfile=json_file)
+
+
 def archive_factory(ds_type):
     """
     Returns an archive class

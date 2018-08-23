@@ -181,7 +181,7 @@ class EntityStore(object):
 
         self._serialize_dict['dataReference'] = ref
         if self._ns_uuid is not None:
-            self._serialize_dict['nsUuid'] = str(self._ns_uuid)
+            self._serialize_dict['ns_uuid'] = str(self._ns_uuid)
 
     def _add_name(self, ref, source, rewrite=False):
         """

@@ -2,11 +2,10 @@
   "@context": "https://bkuczenski.github.io/lca-tools-datafiles/context.jsonld",
   "catalogNames": {
     "lcia.ipcc.2007.traci21": [
-      "/data/GitHub/lca-tools/lcatools/entities/tests/ipcc_2007_gwp.json"
+      "/data/GitHub/lca-tools/lcatools/qdb/data/ipcc_2007_gwp.json"
     ]
   },
-  "dataReference": "lcia.ipcc.2007.traci21",
-  "dataSource": "/data/GitHub/lca-tools/lcatools/entities/tests/ipcc_2007_gwp.json",
+  "dataSource": "/data/GitHub/lca-tools/lcatools/qdb/data/ipcc_2007_gwp.json",
   "dataSourceType": "BasicArchive",
   "flows": [
     {
@@ -2103,7 +2102,10 @@
       "externalId": "hfc-152, air"
     }
   ],
-  "nsUuid": "150e35c3-ac4a-485b-826b-a41807ddf43a",
+  "initArgs": {
+    "dataReference": "lcia.ipcc.2007.traci21",
+    "ns_uuid": "150e35c3-ac4a-485b-826b-a41807ddf43a"
+  },
   "quantities": [
     {
       "Comment": "",

@@ -53,8 +53,10 @@ class BasicArchive(EntityStore):
                 return None
             else:
                 ref = None
-        ns_uuid = j.pop('nsUuid', None)
         init_args = j.pop('initArgs', {})
+        ns_uuid = j.pop('nsUuid', None)  # this is for opening legacy files
+        if ns_uuid is None:
+            ns_uuid = init_args.pop('ns_uuid', None)
         kwargs.update(init_args)
         ar = cls(source, ref=ref, ns_uuid=ns_uuid, **kwargs)
         ar.load_json(j, jsonfile=jsonfile)

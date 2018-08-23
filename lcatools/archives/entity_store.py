@@ -560,7 +560,7 @@ class EntityStore(object):
             '@context': LD_CONTEXT,
             'dataSourceType': self.__class__.__name__,
             'dataSource': self.source,
-            'catalogNames': {k: sorted(s) for k, s in self._catalog_names.items()}
+            'catalogNames': {k: sorted(filter(None, s)) for k, s in self._catalog_names.items()}
         }
         j.update(self._serialize_dict)
         return j
@@ -574,10 +574,21 @@ class EntityStore(object):
         return self.serialize(**kwargs)
 
     def write_to_file(self, filename, gzip=False, complete=False, ref_suffix=None, **kwargs):
+        """
+
+        :param filename:
+        :param gzip:
+        :param complete:
+        :param ref_suffix:
+        :param kwargs: whatever is required by the subclass's serialize method
+        :return:
+        """
         if ref_suffix is not None:
             new_ref = '.'.join([self._serialize_dict['dataReference'], ref_suffix])
             self._serialize_dict['dataReference'] = new_ref
             self._set_source(new_ref, filename)
+        elif self._source is None:
+            self._set_source(self.ref, filename)
         if complete:
             s = self._serialize_all(**kwargs)
         else:

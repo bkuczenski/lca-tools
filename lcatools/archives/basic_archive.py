@@ -52,7 +52,8 @@ class BasicArchive(EntityStore):
                 return None
             else:
                 ref = None
-        ar = cls(source, ref=ref)
+        ns_uuid = j.pop('nsUuid', None)
+        ar = cls(source, ref=ref, ns_uuid=ns_uuid)
         ar.load_json(j)
         return ar
 
@@ -186,11 +187,12 @@ class BasicArchive(EntityStore):
             if uid is None:
                 raise OldJson('This entity has no UUID and an invalid external ref')
         etype = e.pop('entityType')
-        origin = e.pop('origin')
+        origin = e.pop('origin', None)
 
         entity = self._make_entity(e, etype, uid)
 
-        entity.origin = origin
+        if origin is not None:
+            entity.origin = origin
         self.add(entity)
         if self[ext_ref] is entity:
             entity.set_external_ref(ext_ref)
@@ -283,21 +285,23 @@ class BasicArchive(EntityStore):
         if upstream and self._upstream is not None:
             self._upstream.search(etype, upstream=upstream, **kwargs)
 
-    def serialize(self, characterizations=False, values=False):
+    def serialize(self, characterizations=False, values=False, domesticate=False):
         """
 
         :param characterizations:
         :param values:
+        :param domesticate: [False] if True, omit entities' origins so that they will appear to be from the new archive
+         upon serialization
         :return:
         """
         j = super(BasicArchive, self).serialize()
-        j['flows'] = sorted([f.serialize(characterizations=characterizations, values=values)
+        j['flows'] = sorted([f.serialize(characterizations=characterizations, values=values, domesticate=domesticate)
                              for f in self.entities_by_type('flow')],
                             key=lambda x: x['entityId'])
-        j['quantities'] = sorted([q.serialize()
+        j['quantities'] = sorted([q.serialize(domesticate=domesticate)
                                   for q in self.entities_by_type('quantity')],
                                  key=lambda x: x['entityId'])
         return j
 
     def _serialize_all(self, **kwargs):
-        return self.serialize(characterizations=True, values=True)
+        return self.serialize(characterizations=True, values=True, **kwargs)

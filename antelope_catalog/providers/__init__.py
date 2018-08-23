@@ -131,14 +131,12 @@ def archive_from_json(fname, static=True, catalog=None, **archive_kwargs):
                 a.set_upstream(upstream)
             except KeyError:
                 print('Upstream reference not found in catalog!')
-                a._serialize_dict['upstreamReference'] = j['upstreamReference']
+                a.init_args['upstreamReference'] = j['upstreamReference']
             except ValueError:
                 print('Upstream reference is ambiguous!')
-                a._serialize_dict['upstreamReference'] = j['upstreamReference']
+                a.init_args['upstreamReference'] = j['upstreamReference']
         else:
-            a._serialize_dict['upstreamReference'] = j['upstreamReference']
+            a.init_args['upstreamReference'] = j['upstreamReference']
 
     a.load_json(j, jsonfile=fname)
     return a
-
-

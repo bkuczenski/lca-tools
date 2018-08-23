@@ -560,9 +560,9 @@ class EntityStore(object):
             '@context': LD_CONTEXT,
             'dataSourceType': self.__class__.__name__,
             'dataSource': self.source,
-            'catalogNames': {k: sorted(filter(None, s)) for k, s in self._catalog_names.items()}
+            'catalogNames': {k: sorted(filter(None, s)) for k, s in self._catalog_names.items()},
+            'initArgs': self._serialize_dict
         }
-        j.update(self._serialize_dict)
         return j
 
     def _serialize_all(self, **kwargs):

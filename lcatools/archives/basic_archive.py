@@ -34,13 +34,14 @@ class BasicArchive(EntityStore):
     _entity_types = set(BASIC_ENTITY_TYPES)
 
     @classmethod
-    def from_dict(cls, j):
+    def from_dict(cls, j, jsonfile=None, **kwargs):
         """
         BasicArchive factory from minimal dictionary.  Must include at least one of 'dataSource' or 'dataReference'
         fields and 0 or more flows or quantities; but note that any flow present must have its reference
         quantities included. The method is inherited by LcArchives which permit processes as well; any process must
         have its exchanged flows (and their respective quantities) included.
         :param j:
+        :param jsonfile: if the dict originated in a JSON file, report its path to set_source
         :return:
         """
         source = j.pop('dataSource', None)
@@ -53,8 +54,10 @@ class BasicArchive(EntityStore):
             else:
                 ref = None
         ns_uuid = j.pop('nsUuid', None)
-        ar = cls(source, ref=ref, ns_uuid=ns_uuid)
-        ar.load_json(j)
+        init_args = j.pop('initArgs', {})
+        kwargs.update(init_args)
+        ar = cls(source, ref=ref, ns_uuid=ns_uuid, **kwargs)
+        ar.load_json(j, jsonfile=jsonfile)
         return ar
 
     def _check_key_unused(self, key):

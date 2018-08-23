@@ -102,10 +102,7 @@ class Context(SynonymSet):
                 yield t
 
     def serialize(self):
-        d = {
-            'name': self._name,
-            'synonyms': [t for t in sorted(self._terms) if t != self._name]
-        }
+        d = super(Context, self).serialize()
         if self._parent is None:
             if self.sense is not None:
                 d['sense'] = self.sense

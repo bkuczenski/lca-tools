@@ -40,8 +40,14 @@ class Flowable(SynonymSet):
             yield str(c)
 
     def serialize(self):
-        d = {'name': self._name,
-             'synonyms': [k for k in self._terms if k != self._name]}
+        """
+        Omits child sets to handle manually
+        :return:
+        """
+        d = {
+            'name': self._name,
+            'synonyms': [t for t in sorted(self._terms) if t != self._name]
+        }
         if len(self._children) > 0:
             for c in self.cas_numbers:
                 if c == self._name:

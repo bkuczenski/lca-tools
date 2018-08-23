@@ -2,6 +2,7 @@ from .lower_dict import LowerDict
 from .synonym_set import SynonymSet, ChildNotFound
 
 from collections import defaultdict
+import json
 
 
 class TermExists(Exception):
@@ -33,11 +34,44 @@ class SynonymDict(object):
     """
     A class that allows retrieval of a given object by any of its synonyms.
     """
-    def __init__(self, ignore_case=False, syn_type=None):
+    _entry_group = 'SynonymSets'
+    _syn_type = SynonymSet
+    _ignore_case = False
+
+    def _add_from_dict(self, j):
+        name = j['name']
+        syns = j.pop('synonyms', [])
+        self.new_object(name, *syns, merge=False)
+
+    def load(self, filename=None):
+        if filename is None:
+            if self._filename is None:
+                return
+            filename = self._filename
+        with open(filename, 'r') as fp:
+            fbs = json.load(fp)
+        for fb in fbs[self._entry_group]:
+            self._add_from_dict(fb)
+
+    def _list_objects(self):
+        return [f.serialize() for f in self.objects]
+
+    def save(self, filename=None):
+        """
+        if filename is specified, it overrules any prior filename
+        :param filename:
+        :return:
+        """
+        if filename is not None:
+            self._filename = filename
+        fb = self._list_objects()
+        with open(filename, 'w') as fp:
+            json.dump({self._entry_group: fb}, fp, indent=2)
+
+    def __init__(self, source_file=None, ignore_case=None):
         """
         Create a synonym dictionary that stores objects of a certain type.
         :param ignore_case: [False] whether the synonyms should be considered case-sensitive
-        :param syn_type: What type links the synonyms to the object. Default SynonymSet.
 
         The object class must support the following API:
           constructor:
@@ -51,6 +85,10 @@ class SynonymDict(object):
             obj.set_name(term): assign the canonical name for the object (by default the first term provided)
             obj.add_child(a): include a's terms with obj's terms
         """
+        self._filename = source_file
+
+        ignore_case = ignore_case or self._ignore_case
+
         if ignore_case:
             self._d = LowerDict()
             self._l = defaultdict(LowerDict)  # reverse mapping
@@ -58,9 +96,7 @@ class SynonymDict(object):
             self._d = dict()
             self._l = defaultdict(dict)  # reverse mapping
 
-        if syn_type is None:
-            syn_type = SynonymSet
-        self._syn_type = syn_type
+        self.load()
 
     def _throw_term_exists(self, term):
         raise TermExists('%s -> %s' % (term, self._d[term]))

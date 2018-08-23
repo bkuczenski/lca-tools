@@ -171,9 +171,10 @@ class Characterization(object):
         }
         if self.quantity == self.flow.reference_entity:
             j['isReference'] = True
-        if values:
-            if self.value is not None:
-                j['value'] = self.value
+        else:  # no need to report the characterization value for the reference quantity
+            if values:
+                if self.value is not None:
+                    j['value'] = self.value
         return j
 
     @classmethod

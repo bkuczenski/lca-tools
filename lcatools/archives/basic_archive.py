@@ -34,13 +34,14 @@ class BasicArchive(EntityStore):
     _entity_types = set(BASIC_ENTITY_TYPES)
 
     @classmethod
-    def from_dict(cls, j):
+    def from_dict(cls, j, jsonfile=None, **kwargs):
         """
         BasicArchive factory from minimal dictionary.  Must include at least one of 'dataSource' or 'dataReference'
         fields and 0 or more flows or quantities; but note that any flow present must have its reference
         quantities included. The method is inherited by LcArchives which permit processes as well; any process must
         have its exchanged flows (and their respective quantities) included.
         :param j:
+        :param jsonfile: if the dict originated in a JSON file, report its path to set_source
         :return:
         """
         source = j.pop('dataSource', None)
@@ -52,8 +53,13 @@ class BasicArchive(EntityStore):
                 return None
             else:
                 ref = None
-        ar = cls(source, ref=ref)
-        ar.load_json(j)
+        init_args = j.pop('initArgs', {})
+        ns_uuid = j.pop('nsUuid', None)  # this is for opening legacy files
+        if ns_uuid is None:
+            ns_uuid = init_args.pop('ns_uuid', None)
+        kwargs.update(init_args)
+        ar = cls(source, ref=ref, ns_uuid=ns_uuid, **kwargs)
+        ar.load_json(j, jsonfile=jsonfile)
         return ar
 
     def _check_key_unused(self, key):
@@ -186,11 +192,12 @@ class BasicArchive(EntityStore):
             if uid is None:
                 raise OldJson('This entity has no UUID and an invalid external ref')
         etype = e.pop('entityType')
-        origin = e.pop('origin')
+        origin = e.pop('origin', None)
 
         entity = self._make_entity(e, etype, uid)
 
-        entity.origin = origin
+        if origin is not None:
+            entity.origin = origin
         self.add(entity)
         if self[ext_ref] is entity:
             entity.set_external_ref(ext_ref)
@@ -283,21 +290,23 @@ class BasicArchive(EntityStore):
         if upstream and self._upstream is not None:
             self._upstream.search(etype, upstream=upstream, **kwargs)
 
-    def serialize(self, characterizations=False, values=False):
+    def serialize(self, characterizations=False, values=False, domesticate=False):
         """
 
         :param characterizations:
         :param values:
+        :param domesticate: [False] if True, omit entities' origins so that they will appear to be from the new archive
+         upon serialization
         :return:
         """
         j = super(BasicArchive, self).serialize()
-        j['flows'] = sorted([f.serialize(characterizations=characterizations, values=values)
+        j['flows'] = sorted([f.serialize(characterizations=characterizations, values=values, domesticate=domesticate)
                              for f in self.entities_by_type('flow')],
                             key=lambda x: x['entityId'])
-        j['quantities'] = sorted([q.serialize()
+        j['quantities'] = sorted([q.serialize(domesticate=domesticate)
                                   for q in self.entities_by_type('quantity')],
                                  key=lambda x: x['entityId'])
         return j
 
     def _serialize_all(self, **kwargs):
-        return self.serialize(characterizations=True, values=True)
+        return self.serialize(characterizations=True, values=True, **kwargs)

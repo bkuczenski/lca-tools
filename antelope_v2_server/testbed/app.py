@@ -4,7 +4,7 @@ from flask_restful import Resource, Api
 from marshmallow import Schema, fields
 
 
-query = LcQuery
+# query = LcQuery
 
 
 

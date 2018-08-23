@@ -82,7 +82,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         int_q = self._archive[quantity.external_ref]  # the truly local quantity
         if flowable is not None:
             flowable = self._fb.index(flowable)
-        for f in self._archive.flows():
+        for f in self._archive.entities_by_type('flow'):
             if not f.has_characterization(int_q):
                 continue
             if flowable is not None:

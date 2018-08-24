@@ -99,6 +99,7 @@ class SynonymDictTest(unittest.TestCase):
         o2 = g.new_object('Hello', 'HELLO', 'Hi', 'HI')
         self.assertIs(o1, o2)
         self.assertSetEqual(set(g.synonyms('hello')), set(o1.terms))
+        self.assertSetEqual(set(g.synonyms(o2)), set(o1.terms))
 
     def test_add_synonym(self):
         g = SynonymDict()
@@ -115,7 +116,16 @@ class SynonymDictTest(unittest.TestCase):
         self.assertEqual(g['aloha'], 'hello')
         self.assertEqual(g['farewell'], 'goodbye')
         self.assertIn('aloha', o1)
-        self.assertIn('aloha', o2)  # note that aloha remains in both sets
+        self.assertNotIn('aloha', o2)
+
+    def test_pruned_set_name_closure(self):
+        g = SynonymDict()
+        g.new_object('hello', 'hola', 'hi', 'aloha')
+        g.new_object('goodbye', 'adios')
+        with self.assertRaises(MergeError):
+            g.new_object('aloha', 'goodbye', 'farewell', 'sayonara')
+        o3 = g.new_object('aloha', 'goodbye', 'farewell', 'sayonara', prune=True)
+        self.assertIn(o3.name, g.synonyms(o3))
 
 
 if __name__ == '__main__':

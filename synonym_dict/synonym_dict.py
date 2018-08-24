@@ -194,8 +194,9 @@ class SynonymDict(object):
                     self._check_term(t, obj)
                     self._add_term(t, obj)
                 except TermExists:
-                    # maybe I should remove the term from obj? not for now- though may cause problems with serialization
-                    continue
+                    if str(t) == obj.name:
+                        obj.set_name(next(k for k in obj.base_terms if k != str(t)))
+                    obj.remove_term(t)
             return obj
         else:
             for t in obj.terms:
@@ -298,7 +299,10 @@ class SynonymDict(object):
             return default
 
     def synonyms(self, term):
-        obj = self._d[term]
+        if isinstance(term, SynonymSet):
+            obj = term
+        else:
+            obj = self._d[term]
         for t in sorted(self._l[obj].values()):
             yield t
 

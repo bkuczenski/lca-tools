@@ -15,6 +15,9 @@ class FlowablesDict(SynonymDict):
     _syn_type = Flowable
     _ignore_case = True
 
+    def set_name(self, term):
+        raise NotSupported('Flowable names must be immutable in order to operate as keys')
+
     def __getitem__(self, item):
         try:
             cas = CasNumber(item)

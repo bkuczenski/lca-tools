@@ -66,6 +66,10 @@ class SynonymSet(object):
         """
         return self._name
 
+    @property
+    def name(self):
+        return self._name
+
     def add_term(self, term):
         if hasattr(term, 'terms'):
             self.add_child(term)

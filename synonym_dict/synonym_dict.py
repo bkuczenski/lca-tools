@@ -54,7 +54,7 @@ class SynonymDict(object):
             self._add_from_dict(fb)
 
     def _list_objects(self):
-        return [f.serialize() for f in self.objects]
+        return [f for f in self.objects]
 
     def save(self, filename=None):
         """
@@ -66,7 +66,7 @@ class SynonymDict(object):
             self._filename = filename
         fb = self._list_objects()
         with open(filename, 'w') as fp:
-            json.dump({self._entry_group: fb}, fp, indent=2)
+            json.dump({self._entry_group: [f.serialize() for f in fb]}, fp, indent=2)
 
     def __init__(self, source_file=None, ignore_case=None):
         """

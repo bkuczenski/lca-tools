@@ -34,6 +34,9 @@ class Flowable(SynonymSet):
         else:
             raise NotSupported('Flowables are only allowed to have CasNumber children')
 
+    def set_name(self, name):
+        raise NotSupported('Flowable names must be immutable in order to operate as keys')
+
     @property
     def cas_numbers(self):
         for c in sorted(self._children, key=str):

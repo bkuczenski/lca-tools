@@ -42,7 +42,7 @@ class CompartmentManager(SynonymDict):
         comps = []
         for tc in self.top_level_compartments:
             for c in tc.self_and_subcompartments:
-                comps.append(c.serialize())
+                comps.append(c)
         return comps
 
     @property

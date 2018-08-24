@@ -1,5 +1,5 @@
 from .context import Context, InvalidSense, InconsistentSense
-from .compartment_manager import CompartmentManager
+from .compartment_manager import CompartmentManager, NonSpecificContext
 import unittest
 
 
@@ -66,6 +66,15 @@ class CompartmentManagerTest(unittest.TestCase):
     def test_toplevel(self):
         self.cm.add_compartments(['social hotspots', 'labor', 'child labor'])
         self.assertIn('social hotspots', (str(x) for x in self.cm.top_level_compartments))
+
+    def test_unspecified(self):
+        c = self.cm.add_compartments(['emissions', 'water', 'unspecified'])
+        self.assertEqual(c.name, 'water, unspecified')
+        self.assertEqual(c.parent.name, 'water')
+
+    def test_top_level_nonspecific(self):
+        with self.assertRaises(NonSpecificContext):
+            self.cm.add_compartments(['unspecified', 'unspecified water'])
 
 
 if __name__ == '__main__':

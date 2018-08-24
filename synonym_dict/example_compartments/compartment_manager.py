@@ -12,6 +12,14 @@ from .context import Context
 import json
 
 
+# these are not-really-subcompartments whose names should be modified if they have parents
+NONSPECIFIC_LOWER = {'unspecified', 'non-specific', 'nonspecific'}
+
+
+class NonSpecificContext(Exception):
+    pass
+
+
 class CompartmentManager(SynonymDict):
 
     _entry_group = 'Compartments'
@@ -44,9 +52,23 @@ class CompartmentManager(SynonymDict):
                 yield v
 
     def new_object(self, *args, parent=None, **kwargs):
+        """
+        If a new object is added with unmodified non-specific synonyms like "unspecified", modify them to include their
+        parents' name
+        :param args:
+        :param parent:
+        :param kwargs:
+        :return:
+        """
         if parent is not None:
             if not isinstance(parent, Context):
                 parent = self._d[parent]
+            pn = parent.name
+            args = tuple([', '.join([pn, k]) if k.lower() in NONSPECIFIC_LOWER else k for k in args])
+        else:
+            for k in args:
+                if k.lower() in NONSPECIFIC_LOWER:
+                    raise NonSpecificContext(k)
         return super(CompartmentManager, self).new_object(*args, parent=parent, **kwargs)
 
     def add_compartments(self, comps):
@@ -63,3 +85,8 @@ class CompartmentManager(SynonymDict):
                 new = self.new_object(c, parent=current)
             current = new
         return current
+
+    def __getitem__(self, item):
+        if item.lower() in NONSPECIFIC_LOWER:
+            raise NonSpecificContext(item)
+        return super(CompartmentManager, self).__getitem__(item)

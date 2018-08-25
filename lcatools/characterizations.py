@@ -34,7 +34,12 @@ class Characterization(object):
             self.add_value(**kwargs)
         self._natural_dirn = None
 
-    def origin(self, location='GLO'):
+    def cf_origin(self, location='GLO'):
+        """
+        Giving this function a different name because origin is generally implemented as a @property
+        :param location:
+        :return:
+        """
         org = None
         if location in self._origins:
             org = self._origins[location]

@@ -1,4 +1,4 @@
-from .flowables import FlowablesDict
+from .flowables import Flowable, FlowablesDict
 import unittest
 import json
 
@@ -30,6 +30,15 @@ flowables_json = '''{
     }
 ]
 }'''
+
+
+class FlowableTest(unittest.TestCase):
+    def test_remove_cas_number(self):
+        f = Flowable('methane', '74-82-8', 'CH4')
+        self.assertIn('74-82-8', f)
+        f.remove_term('000074828')
+        self.assertNotIn('74-82-8', f)
+        self.assertSetEqual(set(f.cas_numbers), set())
 
 
 class FlowablesTest(unittest.TestCase):

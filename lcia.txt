@@ -1,6 +1,15 @@
 See notes-attic/lcia.txt for an archived version of this document
 
 ==========
+Sat Aug 25 01:14:41 -0700 2018
+
+lcia is handled completely by the quantity and is a wrapper for q relation.
+when the catalog is a catalog ref, it uses the root query's lcia engine
+
+still haven't tested any of this or written half of it.
+
+
+==========
 Mon Aug 20 11:32:40 -0700 2018
 
 OK, we are midway across a foggy wasteland of a conceptual refactor.  We've taken something that sorta worked and broken it, reimpliemented its core (synonym dict) [better than original for sure] but we haven't figured out what we are going to do with it.  We have a minor slough of legacy code (Qdb and CLookup) and we have a completely reorganized, parted-out codebase with which the old slough is incompatible (AntelopeCatalog is required to do any LCIA?)

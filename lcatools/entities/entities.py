@@ -19,6 +19,10 @@ def concatenate(*lists):
     return chain(*lists)
 
 
+class EntityInitializationError(Exception):
+    pass
+
+
 class EntityMergeError(Exception):
     pass
 
@@ -36,12 +40,16 @@ class LcEntity(object):
     _ref_field = ''
     _post_fields = ['Comment']
 
-    def __init__(self, entity_type, entity_uuid, origin=None, external_ref=None, **kwargs):
+    def __init__(self, entity_type, entity_uuid=None, origin=None, external_ref=None, **kwargs):
 
-        if isinstance(entity_uuid, uuid.UUID):
-            self._uuid = str(entity_uuid)
-        else:
-            self._uuid = str(uuid.UUID(entity_uuid))
+        if entity_uuid is None and external_ref is None:
+            raise EntityInitializationError('At least one of entity_uuid, external_ref must be provided')
+
+        self._uuid = None
+
+        if entity_uuid is not None:
+            self.uuid = entity_uuid
+
         self._d = dict()
 
         self._entity_type = entity_type
@@ -165,6 +173,15 @@ class LcEntity(object):
     @property
     def uuid(self):
         return self._uuid
+
+    @uuid.setter
+    def uuid(self, key):
+        if self._uuid is not None:
+            raise PropertyExists('UUID has already been specified! %s' % self._uuid)
+        if isinstance(key, uuid.UUID):
+            self._uuid = str(key)
+        else:
+            self._uuid = str(uuid.UUID(key))
 
     @property
     def link(self):

@@ -34,7 +34,7 @@ class LcFlow(LcEntity):
         """
         return cls(uuid.uuid4(), Name=name, ReferenceQuantity=ref_qty, **kwargs)
 
-    def __init__(self, entity_uuid, local_unit=None, **kwargs):
+    def __init__(self, entity_uuid=None, local_unit=None, **kwargs):
         super(LcFlow, self).__init__('flow', entity_uuid, **kwargs)
 
         self._characterizations = dict()
@@ -60,18 +60,26 @@ class LcFlow(LcEntity):
     def context(self):
         """
         A flow's context needs to be set by its containing archive.  It should be an actual Context object.
+
+        Legitimate question about whether this should raise an exception or return None. For now I think the safe thing
+        is to catch the exception whenever it is noncritical.
         :return:
         """
         if self._context is None:
-            raise FlowWithoutContext('Context was not set for flow %s!' % self)
+            raise FlowWithoutContext('Context was not set for flow %s!' % self.link)
         return self._context
 
     def set_context(self, context_manager):
         """
         A flow will set its own context- but it needs a context manager to do so.
+
+        Not sure whether to (a) remove FlowWithoutContext exception and test for None, or (b) allow set_context to
+        abort silently if context is already set. Currently chose (b) because I think I still want the exception.
         :param context_manager:
         :return:
         """
+        if isinstance(self._context, Context):
+            return
         if self.has_property('Compartment'):
             _c = context_manager.add_compartments(self['Compartment'])
         elif self.has_property('Category'):
@@ -79,8 +87,9 @@ class LcFlow(LcEntity):
         else:
             raise AttributeError('Flow has no contextual attribute! %s' % self)
         if not isinstance(_c, Context):
-            raise TypeError('Context manager did not return a context! %s (%s)' %(_c, type(_c)))
+            raise TypeError('Context manager did not return a context! %s (%s)' % (_c, type(_c)))
         self._context = _c
+        context_manager.add_flow(self)
 
     def _set_reference(self, ref_entity):
         if self.reference_entity is not None:
@@ -177,7 +186,11 @@ class LcFlow(LcEntity):
             cas = ''
         if len(cas) > 0:
             cas = ' (CAS ' + cas + ')'
-        return '%s%s [%s]' % (self.get('Name'), cas, self.context)
+        try:
+            context = '[%s]' % self.context
+        except FlowWithoutContext:
+            context = '(cutoff)'
+        return '%s%s %s' % (self.get('Name'), cas, context)
 
     def profile(self):
         print('%s' % self)
@@ -231,6 +244,7 @@ class LcFlow(LcEntity):
                 c.update_values(**value)
             else:
                 c.add_value(value=value, overwrite=overwrite, **kwargs)
+        quantity.register_cf(c)
         return c
 
     def has_characterization(self, quantity, location='GLO'):
@@ -250,7 +264,8 @@ class LcFlow(LcEntity):
     def del_characterization(self, quantity):
         if quantity is self.reference_entity:
             raise RefQuantityError('Cannot delete reference quantity')
-        self._characterizations.pop(quantity.uuid)
+        c = self._characterizations.pop(quantity.uuid)
+        c.quantity.deregister_cf(c)
 
     def characterizations(self):
         for i in self._characterizations.values():

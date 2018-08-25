@@ -25,6 +25,17 @@ class Flowable(SynonymSet):
             return
         super(Flowable, self).add_child(cas)
 
+    def remove_term(self, term):
+        try:
+            cas = CasNumber(term)
+        except InvalidCasNumber:
+            super(Flowable, self).remove_term(str(term))
+            return
+        try:
+            self.remove_child(next(c for c in self.children if str(c) == str(cas)))
+        except StopIteration:
+            pass  # stopgap- we can't remove a CAS multiple times
+
     def add_child(self, other, force=False):
         if isinstance(other, CasNumber):
             try:

@@ -44,10 +44,18 @@ class LcQuantity(LcEntity):
         :return:
         """
         if cf.quantity is self:
-            if cf.origin == self.origin:
-                if cf.flow.context is None:
-                    cf.flow.set_context(self._cm)
+            if cf.cf_origin() is None or cf.cf_origin() == self.origin:
+                cf.flow.set_context(self._cm)
                 self._qlookup[cf.flow['Name']].add(cf)
+            else:
+                print('%% origin mismatch %s != %s' % (cf.cf_origin(), self.origin))
+        else:
+            print('%% not self')
+
+    def deregister_cf(self, cf):
+        if cf.quantity is self:
+            if cf.cf_origin() == self.origin:
+                self._qlookup[cf.flow['Name']].remove(cf)
 
     def unit(self):
         return self.reference_entity.unitstring

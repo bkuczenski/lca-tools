@@ -5,21 +5,15 @@ Interim classes with useful building blocks
 from __future__ import print_function, unicode_literals
 
 
-import six
 import os
 
-from ..entities import LcEntity, LcProcess
+from ..entities import LcProcess
 from ..from_json import from_json
 from ..implementations import InventoryImplementation, BackgroundImplementation, ConfigureImplementation
 from .basic_archive import BasicArchive, BASIC_ENTITY_TYPES
 
 
 LC_ENTITY_TYPES = BASIC_ENTITY_TYPES + ('process', )
-
-
-if six.PY2:
-    bytes = str
-    str = unicode
 
 
 class LcArchive(BasicArchive):
@@ -30,18 +24,6 @@ class LcArchive(BasicArchive):
     To support processes, adds inventory, background, and configure interfaces.
     """
     _entity_types = set(LC_ENTITY_TYPES)
-
-    def __getitem__(self, item):
-        """
-        Note: this user-friendliness check adds 20% to the execution time of getitem-- so avoid it if possible
-        (use _get_entity directly -- especially now that upstream is now deprecated)
-
-        :param item:
-        :return:
-        """
-        if isinstance(item, LcEntity):
-            item = item.uuid
-        return super(LcArchive, self).__getitem__(item)
 
     def make_interface(self, iface):
         if iface == 'inventory':

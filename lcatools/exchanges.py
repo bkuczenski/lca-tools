@@ -172,7 +172,7 @@ class Exchange(object):
     @property
     def terminates_to(self):
         if self.termination is not None:
-            if self.termination == self.process.uuid:
+            if self.termination == self.process.uuid:  # should be external_ref?
                 return 'self'
             elif False:  # hook for elementary flow implementation
                 return 'context'

@@ -51,7 +51,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         :param quantity: external_id of quantity
         :return: quantity entity
         """
-        return self._archive[quantity]
+        return self.get(quantity)
 
     def profile(self, flow, **kwargs):
         """
@@ -60,7 +60,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         :param kwargs:
         :return:
         """
-        f = self._archive.get(flow)
+        f = self.get(flow)
         for cf in f.characterizations():
             yield cf
 
@@ -79,7 +79,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         """
         if isinstance(quantity, str):
             quantity = self.get_canonical(quantity)
-        int_q = self._archive[quantity.external_ref]  # the truly local quantity
+        int_q = self.get(quantity.external_ref)  # the truly local quantity
         if flowable is not None:
             flowable = self._fb.index(flowable)
         for f in self._archive.entities_by_type('flow'):
@@ -102,7 +102,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         :param kwargs:
         :return:
         """
-        return self._archive.get(flow).cf(quantity, locale=locale)
+        return self.get(flow).cf(quantity, locale=locale)
 
     def quantity_relation(self, ref_quantity, flowable, compartment, query_quantity, locale='GLO', **kwargs):
         """

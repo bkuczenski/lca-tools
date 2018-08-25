@@ -1,5 +1,6 @@
 import re
 from .entity_store import EntityStore, SourceAlreadyKnown
+from .term_manager import TermManager
 from ..interfaces import to_uuid
 from ..implementations import BasicImplementation, IndexImplementation, QuantityImplementation
 from lcatools.entities import LcQuantity, LcUnit, LcFlow
@@ -10,6 +11,10 @@ class OldJson(Exception):
 
 
 class EntityExists(Exception):
+    pass
+
+
+class ContextCollision(Exception):
     pass
 
 
@@ -62,6 +67,10 @@ class BasicArchive(EntityStore):
         ar.load_json(j, jsonfile=jsonfile)
         return ar
 
+    def __init__(self, *args, contexts=None, flowables=None, **kwargs):
+        super(BasicArchive, self).__init__(*args, **kwargs)
+        self._tm = TermManager(contexts=contexts, flowables=flowables)
+
     def _check_key_unused(self, key):
         """
         If the key is unused, return the UUID. Else raise EntityExists
@@ -99,7 +108,30 @@ class BasicArchive(EntityStore):
     def add(self, entity):
         if entity.entity_type not in self._entity_types:
             raise ValueError('%s is not a valid entity type' % entity.entity_type)
+        if entity.entity_type in BASIC_ENTITY_TYPES:
+            entity.set_context(self._tm)
+        if entity.uuid is None:  # TODO: eliminate visible UUIDs in favor of NS UUIDs. this will get fleshed out later
+            entity.uuid = self._key_to_id(entity.external_ref)
+        if self._tm[entity.external_ref] is not None:
+            raise ContextCollision('Entity external_ref %s is already known as a context or flowable' %
+                                   entity.external_ref)
         self._add(entity, entity.uuid)
+
+    def __getitem__(self, item):
+        """
+        Note: this user-friendliness check adds 20% to the execution time of getitem-- so avoid it if possible
+        (use _get_entity directly -- especially now that upstream is now deprecated)
+        (note that _get_entity does not get contexts)
+
+        :param item:
+        :return:
+        """
+        cx = self._tm.__getitem__(item)
+        if cx is None:
+            if hasattr(item, 'uuid'):  # TODO: should this be external_ref?
+                item = item.uuid
+            return super(BasicArchive, self).__getitem__(item)
+        return cx
 
     def _add_children(self, entity):
         if entity.entity_type == 'quantity':
@@ -192,12 +224,10 @@ class BasicArchive(EntityStore):
             if uid is None:
                 raise OldJson('This entity has no UUID and an invalid external ref')
         etype = e.pop('entityType')
-        origin = e.pop('origin', None)
+        e['origin'] = e.pop('origin', self.ref)
 
         entity = self._make_entity(e, etype, uid)
 
-        if origin is not None:
-            entity.origin = origin
         self.add(entity)
         if self[ext_ref] is entity:
             entity.set_external_ref(ext_ref)

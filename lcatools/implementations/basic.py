@@ -1,3 +1,6 @@
+from ..interfaces import EntityNotFound
+
+
 class BasicImplementation(object):
     def __init__(self, archive, **kwargs):
         """
@@ -62,7 +65,10 @@ class BasicImplementation(object):
             return None
         if self._archive.static:
             return self._archive[external_ref]
-        return self._archive.retrieve_or_fetch_entity(external_ref, **kwargs)
+        try:
+            return self._archive.retrieve_or_fetch_entity(external_ref, **kwargs)
+        except NotImplementedError:
+            raise EntityNotFound
 
     def lookup(self, external_ref, **kwargs):
         if self._fetch(external_ref, **kwargs) is not None:

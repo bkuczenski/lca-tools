@@ -189,15 +189,20 @@ class SynonymDict(object):
                     self._add_term(t, obj)
                 return obj
         elif prune:
+            prune_terms = []
             for t in obj.terms:
                 try:
                     self._check_term(t, obj)
-                    self._add_term(t, obj)
                 except TermExists:
-                    if str(t) == obj.name:
-                        obj.set_name(next(k for k in obj.base_terms if k != str(t)))
-                    obj.remove_term(t)
-            return obj
+                    prune_terms.append(t)
+            if obj.name in prune_terms:
+                try:
+                    obj.set_name(next(k for k in obj.terms if k not in prune_terms))
+                except StopIteration:
+                    raise RemoveTermError('%s' % obj.name)
+            for k in prune_terms:
+                obj.remove_term(k)
+            return self.add_or_update_object(obj, merge=False, prune=False)
         else:
             for t in obj.terms:
                 self._check_term(t, obj)

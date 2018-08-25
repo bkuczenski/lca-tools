@@ -54,6 +54,9 @@ class BasicArchiveTestCase(unittest.TestCase):
         self.ar.add(CatalogRef('bogus.origin', my_id, entity_type='flow'))
         self.assertEqual(self.ar[my_id].uuid, my_id)
 
+    def test_term_manager(self):
+        pass
+
 
 if __name__ == '__main__':
     unittest.main()

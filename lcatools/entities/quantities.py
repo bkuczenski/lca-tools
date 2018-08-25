@@ -32,7 +32,7 @@ class LcQuantity(LcEntity):
     def __init__(self, entity_uuid, **kwargs):
         super(LcQuantity, self).__init__('quantity', entity_uuid, **kwargs)
         self._cm = None
-        self._qlookup = defaultdict(CLookup)
+        self._qlookup = defaultdict(CLookup)  # maps flowable to Clookup tree
 
     def set_context(self, cm):
         self._cm = cm

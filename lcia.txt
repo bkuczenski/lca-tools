@@ -8,6 +8,44 @@ when the catalog is a catalog ref, it uses the root query's lcia engine
 
 still haven't tested any of this or written half of it.
 
+Sat 2018-08-25 13:13:50 -0700
+
+So what do we need to do really?
+
+ - test term manager but it's basically working
+ - quantity relation is now implemented by the quantity
+   = qlookup maps flowable to clookup
+   = quantity clookup should be strict- errors flagged when a duplicate cf is added
+ - move do_lcia into quantity interface
+   + do_lcia is the only place that creates LciaResults
+   + DetailedLciaResult changes to have the following components:
+     - contextualized exchange or exchange ref
+       	 equivalent to { node ref, flowable term, direction, context, exch val }
+       = factor.value
+       = location='GLO'
+   + input is iterable of exchanges. algorithm is to:
+     = lookup flowable in [quantity's qdict or query's qlookup]
+     = further lookup context in traversing clookup
+     = generate an lcia detailed result from exchange by associating a quantity relation result
+     = lcia result has 3 sets:
+       * Lcia Scores, which have nonzero results
+       * Lcia Zeros, which have non-error zero lookups
+       * Fail, which reports exchanges that either had convert fails or flow / reference qty unknown
+ - lcia engine is reimagined -> qdb will be ditched and replaced by current lcia engine
+   = it's still a basic archive subclass, which reimplements the quantity interface
+   = has its own quantity dict which maps quantity term to qlookup owned by the archive instead
+   = that qlookup maps flowable to a SClookup
+   = SClookup allows multiple cfs for the same flowable/quantity pair and resolves them at query time {i.e. as currently implemented}
+ - all this can then be easily de/serialized for http
+ - then we need to generate the reference context + flowable sets
+ - then qdb is obsolete, it comes out / lcia engine renamed to qdb
+ - then we need to reimplement the flowable / context / synonym in the index interface
+ => and then we pop back to antelope v2
+
+Future: continue phaseout of uuid;
+
+
+
 
 ==========
 Mon Aug 20 11:32:40 -0700 2018

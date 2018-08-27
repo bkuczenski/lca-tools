@@ -15,6 +15,10 @@ class NoFactorsFound(Exception):
     pass
 
 
+class NoUnitConversionTable(Exception):
+    pass
+
+
 class LcQuantity(LcEntity):
 
     _ref_field = 'referenceUnit'
@@ -45,6 +49,8 @@ class LcQuantity(LcEntity):
         """
         if cf.quantity is self:
             if cf.cf_origin() is None or cf.cf_origin() == self.origin:
+                if cf.flow.reference_entity is self:
+                    return
                 cf.flow.set_context(self._cm)
                 self._qlookup[cf.flow['Name']].add(cf)
             else:
@@ -95,15 +101,26 @@ class LcQuantity(LcEntity):
             raise NoFactorsFound('%s [%s] %s', (flowable, compartment, self))
         for cf in cfs:
             if cf.flow.reference_entity is not ref_quantity:
+                convert_fail = False
+                factor = None
                 try:
                     factor = cf.flow.reference_entity.quantity_relation(ref_quantity, cf.flow['Name'], None, **kwargs)
                 except NoFactorsFound:
                     try:
                         factor = ref_quantity.convert(from_unit=cf.flow.unit())
+                    except NoUnitConversionTable:
+                        try:
+                            factor = cf.flow.reference_entity.convert(to=ref_quantity.unit())
+                        except KeyError:
+                            convert_fail = True
                     except KeyError:
+                        convert_fail = True
+                finally:
+                    if convert_fail or factor is None:
                         raise ConversionReferenceMismatch('Flow %s\nfrom %s\nto %s' % (cf.flow,
                                                                                        cf.flow.reference_entity,
                                                                                        ref_quantity))
+
                 values.append(cf[locale] * factor)
             else:
                 values.append(cf[locale])
@@ -142,8 +159,7 @@ class LcQuantity(LcEntity):
         try:
             uc_table = self._d['UnitConversion']
         except KeyError:
-            print('No unit conversion table found.')
-            return None
+            raise NoUnitConversionTable
 
         if from_unit is None:
             from_unit = self.reference_entity.unitstring

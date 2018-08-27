@@ -40,7 +40,8 @@ def archive_factory(ds_type):
     dsl = ds_type.lower()
     init_map = {
         'basicarchive': BasicArchive,
-        'lcarchive': LcArchive,
+        'qdb': BasicArchive,  # do we want / need archive factory to be able to generate an authentic Qdb?
+        'lcarchive': LcArchive
     }
     try:
         init_fcn = init_map[dsl]
@@ -83,4 +84,3 @@ def archive_from_json(fname, static=True, catalog=None, **archive_kwargs):
 
     cls = archive_factory(j.pop('dataSourceType'))
     return cls.from_dict(j, jsonfile=fname, quiet=True, static=static, upstream=upstream, **archive_kwargs)
-

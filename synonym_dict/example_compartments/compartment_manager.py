@@ -13,7 +13,7 @@ import json
 
 
 # these are not-really-subcompartments whose names should be modified if they have parents
-NONSPECIFIC_LOWER = {'unspecified', 'non-specific', 'nonspecific'}
+NONSPECIFIC_LOWER = {'unspecified', 'non-specific', 'nonspecific', 'none'}
 
 
 class NonSpecificContext(Exception):
@@ -25,6 +25,8 @@ class CompartmentManager(SynonymDict):
     _entry_group = 'Compartments'
     _syn_type = Context
     _ignore_case = True
+
+    _null_context = Context.null()
 
     def _add_from_dict(self, j):
         """
@@ -87,6 +89,6 @@ class CompartmentManager(SynonymDict):
         return current
 
     def __getitem__(self, item):
-        if item.lower() in NONSPECIFIC_LOWER:
-            raise NonSpecificContext(item)
+        if str(item).lower() in NONSPECIFIC_LOWER:
+            return self._null_context
         return super(CompartmentManager, self).__getitem__(item)

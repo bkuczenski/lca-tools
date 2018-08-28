@@ -20,14 +20,15 @@ class LowerDictKeys(object):
 class LowerDict(dict):
 
     class Key(str):
-        def __init__(self, key):
-            str.__init__(key)
+        def __new__(cls, key):
+            # perform the transform at instantiation for performance-- why not?
+            return super(LowerDict.Key, cls).__new__(LowerDict.Key, key.strip().lower())
 
         def __hash__(self):
-            return hash(self.lower())
+            return super(LowerDict.Key, self).__hash__()
 
         def __eq__(self, other):
-            return self.lower() == other.lower()
+            return self.lower() == other.strip().lower()
 
     def __init__(self, *args, **kwargs):
         super(LowerDict, self).__init__()

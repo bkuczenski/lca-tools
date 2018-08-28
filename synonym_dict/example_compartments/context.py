@@ -13,6 +13,10 @@ class InvalidSubCompartment(Exception):
     pass
 
 
+class NullContext(Exception):
+    pass
+
+
 def valid_sense(sense):
     if sense is None:
         return None
@@ -37,6 +41,24 @@ class Context(SynonymSet):
     If a context has a parent, it inherits the sense of the parent- specifying the opposite sense will raise
     an error.
     """
+    @classmethod
+    def null(cls):
+        return cls('None')
+
+    @property
+    def is_null(self):
+        return self._terms == {'None'}
+
+    def add_term(self, term):
+        if self.is_null:
+            raise NullContext
+        return super(Context, self).add_term(term)
+
+    def add_child(self, other, force=False):
+        if self.is_null:
+            raise NullContext
+        return super(Context, self).add_child(other, force=force)
+
     def __init__(self, *args, parent=None, sense=None):
         super(Context, self).__init__(*args)
         self._parent = None
@@ -86,6 +108,8 @@ class Context(SynonymSet):
             yield s
 
     def register_subcompartment(self, sub):
+        if self.is_null:
+            raise NullContext
         if sub.parent is not self:
             raise InvalidSubCompartment('Parent %s: relationship does not exist: %s' % (self, sub))
         self._subcompartments.add(sub)

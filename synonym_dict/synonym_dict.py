@@ -71,11 +71,12 @@ class SynonymDict(object):
     def __init__(self, source_file=None, ignore_case=None):
         """
         Create a synonym dictionary that stores objects of a certain type.
-        :param ignore_case: [False] whether the synonyms should be considered case-sensitive
+        :param ignore_case: [False] whether the synonyms should be considered case-sensitive. This setting also causes
+         the dict to ignore leading and trailing whitespace (calls strip().lower())
 
         The object class must support the following API:
           constructor:
-            Obj(*args): no kwargs
+            Obj(*args, **kwargs): kwargs not used for the base SynonymSet
           properties:
             obj.terms: generate a list of synonyms
             obj.object: return the payload object (for SynonymSet, this is a str)
@@ -315,4 +316,6 @@ class SynonymDict(object):
         return item in self._d
 
     def __getitem__(self, term):
+        if isinstance(term, self._syn_type) and term in self._l:
+            return term.object
         return self._d[term].object

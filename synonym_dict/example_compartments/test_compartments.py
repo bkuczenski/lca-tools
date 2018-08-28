@@ -59,6 +59,18 @@ class CompartmentManagerTest(unittest.TestCase):
         self.assertEqual(str(self.cm['water']), 'water emissions')
         self.assertEqual(self.cm['water'].sense, 'Sink')
 
+    def test_idempotent(self):
+        """
+        getting a context should return the context
+        :return:
+        """
+        cx = self.cm['resources']
+        self.assertIs(self.cm[cx], cx)
+
+    def test_null(self):
+        cx = self.cm[None]
+        self.assertIs(cx, self.cm._null_context)
+
     def test_add_hier(self):
         self.cm.add_compartments(['emissions', 'emissions to air', 'emissions to urban air'])
         self.assertIs(self.cm['emissions to air'], self.cm['emissions to urban air'].parent)

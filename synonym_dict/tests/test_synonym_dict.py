@@ -83,6 +83,13 @@ class SynonymDictTest(unittest.TestCase):
         self.assertNotIn('Hi', g)
         self.assertNotIn('hi', o)
 
+    def test_whitespace(self):
+        g = SynonymDict(ignore_case=True)
+        g.new_object('hello', 'bonjour')
+        self.assertEqual(g[' bonjour'], 'hello')
+        g.add_synonym(' GREETINGS  ', 'bonjour ')
+        self.assertEqual(g['greetings'], 'hello')
+
     def test_remove_object(self):
         g = SynonymDict()
         o1 = g.new_object('hello', 'hola', 'hi', 'aloha')

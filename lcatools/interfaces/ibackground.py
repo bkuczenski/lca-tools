@@ -34,7 +34,7 @@ class BackgroundInterface(AbstractQuery):
     """
     def setup_bm(self, index=None):
         """
-        allows a background implementation to obtain an index interface from the catalog
+        allows a background implementation to obtain an index interface from the archive / catalog
         :param index:
         :return:
         """

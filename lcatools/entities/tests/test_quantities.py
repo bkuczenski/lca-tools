@@ -1,7 +1,6 @@
-from .base_testclass import BasicEntityTest, archive_from_json
+from .base_testclass import archive_from_json
 from ..quantities import NoFactorsFound, ConversionReferenceMismatch
 import unittest
-from math import isclose
 
 from ...qdb import IPCC_2007_GWP, REF_QTYS
 
@@ -9,7 +8,7 @@ mass_uuid = '93a60a56-a3c8-11da-a746-0800200b9a66'
 volu_uuid = '93a60a56-a3c8-22da-a746-0800200c9a66'
 
 
-class QuantitiesTest(BasicEntityTest):
+class QuantitiesTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         super(QuantitiesTest, cls).setUpClass()
@@ -35,8 +34,9 @@ class QuantitiesTest(BasicEntityTest):
         mass = self.Q['Mass']
         self.assertEqual(self.gwp.quantity_relation(mass, 'carbon dioxide', 'air'), 1.0)
         self.assertEqual(self.gwp.quantity_relation(mass, 'nitrous oxide', 'air'), 298.0)
+        self.assertEqual(self.gwp.quantity_relation(mass, '10024-97-2', 'air'), 298.0)
         with self.assertRaises(NoFactorsFound):
-            self.gwp.quantity_relation(mass, '10024-97-2', 'air')  # this should be rectified with an LciaEngine
+            self.gwp.quantity_relation(mass, 'carbon dioxide', 'water')
         ilcd_vol = self.I[volu_uuid]
         with self.assertRaises(ConversionReferenceMismatch):
             self.gwp.quantity_relation(ilcd_vol, 'carbon tetrachloride', 'air')

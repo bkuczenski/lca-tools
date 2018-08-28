@@ -52,7 +52,7 @@ class Characterization(object):
     @property
     def context(self):
         if self._context is None:
-            return self.flow.context
+            self._context = self.flow.context
         return self._context
 
     '''
@@ -135,13 +135,16 @@ class Characterization(object):
         return '; '.join([k for k in self.locations()])
 
     def __hash__(self):
-        return hash((self.flow.uuid, self.quantity.uuid))
+        return hash((self.flow.uuid, self.quantity.uuid, self.context))
 
     def __eq__(self, other):
         if other is None:
             return False
-        return ((self.flow.uuid == other.flow.uuid) &
-                (self.quantity.uuid == other.quantity.uuid))
+        if ((self.flow.uuid == other.flow.uuid) &
+                (self.quantity.uuid == other.quantity.uuid)):
+            if all(self[l] == other[l] for l in other.locations()):
+                return True
+        return False
 
     def __str__(self):
         if self.is_null:

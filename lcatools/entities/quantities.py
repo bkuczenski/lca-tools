@@ -1,10 +1,8 @@
 from __future__ import print_function, unicode_literals
 import uuid
-from collections import defaultdict
 
 
 from lcatools.entities.entities import LcEntity
-from .clookup import CLookup
 
 
 class ConversionReferenceMismatch(Exception):
@@ -36,7 +34,6 @@ class LcQuantity(LcEntity):
     def __init__(self, entity_uuid, **kwargs):
         super(LcQuantity, self).__init__('quantity', entity_uuid, **kwargs)
         self._cm = None
-        self._qlookup = defaultdict(CLookup)  # maps flowable to Clookup tree
 
     def set_context(self, cm):
         self._cm = cm
@@ -52,11 +49,13 @@ class LcQuantity(LcEntity):
                 if cf.flow.reference_entity is self:
                     return
                 cf.flow.set_context(self._cm)
-                self._qlookup[cf.flow['Name']].add(cf)
+                self._cm.add_cf(self, cf)
             else:
-                print('%% origin mismatch %s != %s' % (cf.cf_origin(), self.origin))
+                if not self._cm.quiet:
+                    print('%% origin mismatch %s != %s' % (cf.cf_origin(), self.origin))
         else:
-            print('%% not self')
+            if not self._cm.quiet:
+                print('%% not self')
 
     def deregister_cf(self, cf):
         if cf.quantity is self:
@@ -72,24 +71,9 @@ class LcQuantity(LcEntity):
     def is_lcia_method(self):
         return 'Indicator' in self.keys()
 
-    def _factors_for_flowable(self, flowable, compartment=None, dist=1):
-        if compartment is None:
-            clookup = self._qlookup[flowable]
-            for cf in clookup.cfs():
-                yield cf
-        else:
-            comp = self._cm[compartment]
-            for cf in self._qlookup[flowable].find(comp, dist=dist):
-                yield cf
-
-    def factors(self, flowable=None, compartment=None, dist=1):
-        if flowable is not None:
-            for cf in self._factors_for_flowable(flowable, compartment=compartment, dist=dist):
-                yield cf
-        else:
-            for f in self._qlookup.keys():
-                for cf in self._factors_for_flowable(f, compartment=compartment, dist=dist):
-                    yield cf
+    def factors(self, flowable=None, compartment=None, dist=0):
+        for cf in self._cm.factors_for_quantity(self, flowable=flowable, compartment=compartment, dist=dist):
+            yield cf
 
     def quantity_relation(self, ref_quantity, flowable, compartment, locale='GLO', strategy='highest', **kwargs):
         cfs = [cf for cf in self.factors(flowable, compartment, **kwargs)]

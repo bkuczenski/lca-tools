@@ -85,7 +85,8 @@ class LcFlow(LcEntity):
         elif self.has_property('Category'):
             _c = context_manager.add_compartments(self['Category'])
         else:
-            raise AttributeError('Flow has no contextual attribute! %s' % self)
+            _c = context_manager.get(None)
+            # raise AttributeError('Flow has no contextual attribute! %s' % self)
         if not isinstance(_c, Context):
             raise TypeError('Context manager did not return a context! %s (%s)' % (_c, type(_c)))
         self._context = _c

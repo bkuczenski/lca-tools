@@ -101,7 +101,10 @@ class TermManager(object):
         :param dist: [0] only used if compartment is specified. by default report only exact matches.
         :return:
         """
-        fb = self._fm[flowable]
+        try:
+            fb = self._fm[flowable]
+        except KeyError:
+            return
         if quantity is None:
             for q in self._fq_map[fb]:
                 for cf in self.factors_for_flowable(fb, quantity=q, compartment=compartment, dist=dist):
@@ -156,11 +159,11 @@ class TermManager(object):
         Add a flow's terms to the flowables list and link the flow to the flowable
         :param flow:
         :param merge_strategy: overrule default merge strategy
-        :return:
+        :return: the Flowable object to which the flow's terms have been added
         """
         merge_strategy = merge_strategy or self._merge_strategy
         try:
-            self._fm.new_object(*_flowable_terms(flow))
+            fb = self._fm.new_object(*_flowable_terms(flow))
         except MergeError:
             if merge_strategy == 'prune':
                 print('\nPruning entry for %s' % flow)
@@ -178,6 +181,7 @@ class TermManager(object):
                 raise NotImplemented
             else:
                 raise ValueError('merge strategy %s' % self._merge_strategy)
+        return fb
 
     def flowables(self, search=None):
         """

@@ -131,14 +131,6 @@ class SynonymDict(object):
         if len(self._l[obj]) == 0:
             self._l.pop(obj)
 
-    def _match_set(self, terms):
-        """
-        Returns a set of synonym objects that match terms in the input argument.
-        :param terms: iterable
-        :return:
-        """
-        return set(k for k in filter(None, (self._check_term(t) for t in terms)))
-
     @property
     def objects(self):
         """
@@ -164,6 +156,23 @@ class SynonymDict(object):
             merge = False
         return self.add_or_update_object(obj, merge=merge, create_child=create_child, prune=prune)
 
+    def _match_set(self, terms):
+        """
+        Returns a set of synonym objects that match terms in the input argument.
+        :param terms: iterable
+        :return:
+        """
+        return set(k for k in filter(None, (self._check_term(t) for t in terms)))
+
+    def match_object(self, *args):
+        mg = self._match_set(args)
+        if len(mg) > 1:
+            raise MergeError('Found terms in multiple sets: %s' % '; '.join(str(k) for k in mg))
+        elif len(mg) == 1:
+            return mg.pop()
+        else:
+            return None
+
     def add_or_update_object(self, obj, merge=True, create_child=False, prune=False):
         """
         Returns the object that contains the input argument's terms
@@ -174,21 +183,18 @@ class SynonymDict(object):
         :return: the object that contains all of obj's terms
         """
         if merge:
-            mg = self._match_set(obj.terms)
-            if len(mg) > 1:
-                raise MergeError('Found terms in multiple sets: %s' % '; '.join(str(k) for k in mg))
-            elif len(mg) == 1:
-                s = mg.pop()
+            s = self.match_object(*obj.terms)
+            if s is None:
+                for t in obj.terms:
+                    self._add_term(t, obj)
+                return obj
+            else:
                 if create_child:
                     self._add_child(s, obj)
                     return obj
                 else:
                     self._merge(s, obj)
                     return s
-            else:
-                for t in obj.terms:
-                    self._add_term(t, obj)
-                return obj
         elif prune:
             prune_terms = []
             for t in obj.terms:

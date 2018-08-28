@@ -4,7 +4,7 @@ import uuid
 from lcatools.characterizations import Characterization
 from .entities import LcEntity
 # from lcatools.entities.quantities import LcQuantity
-from ..interfaces import trim_cas
+# from ..interfaces import trim_cas
 from synonym_dict.example_compartments import Context
 
 
@@ -41,6 +41,7 @@ class LcFlow(LcEntity):
 
         self._local_unit = None
         self._context = None
+        self._flowable = None
 
         for k in self._new_fields:
             if k not in self._d:
@@ -55,6 +56,12 @@ class LcFlow(LcEntity):
 
         if local_unit is not None:
             self.set_local_unit(local_unit)
+
+    @property
+    def flowable(self):
+        if self._flowable is None:
+            raise FlowWithoutContext('Context was not set for flow %s!' % self.link)
+        return self._flowable.name
 
     @property
     def context(self):
@@ -90,7 +97,7 @@ class LcFlow(LcEntity):
         if not isinstance(_c, Context):
             raise TypeError('Context manager did not return a context! %s (%s)' % (_c, type(_c)))
         self._context = _c
-        context_manager.add_flow(self)
+        self._flowable = context_manager.add_flow(self)
 
     def _set_reference(self, ref_entity):
         if self.reference_entity is not None:
@@ -173,6 +180,7 @@ class LcFlow(LcEntity):
 
     def match(self, other):
         if isinstance(other, str):
+            '''
             return (self.uuid == other or
                     (trim_cas(self['CasNumber']) == trim_cas(other) and len(self['CasNumber']) > 4) or
                     self.external_ref == other)
@@ -180,6 +188,9 @@ class LcFlow(LcEntity):
                 self['Name'].lower() == other['Name'].lower() or
                 (trim_cas(self['CasNumber']) == trim_cas(other['CasNumber']) and len(self['CasNumber']) > 4) or
                 self.get_external_ref() == other.get_external_ref())
+            '''
+            return other in self._flowable
+        return other.flowable in self._flowable
 
     def __str__(self):
         cas = self.get('CasNumber')

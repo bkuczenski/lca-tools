@@ -245,7 +245,7 @@ class LcEntity(object):
 
     def _print_ref_field(self):
         if self.reference_entity is None:
-            return '%s' % None
+            return None
         else:
             return '%s' % self.reference_entity.get_external_ref()
 

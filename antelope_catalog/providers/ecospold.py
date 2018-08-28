@@ -142,7 +142,7 @@ class EcospoldV1Archive(LcArchive):
             q = self._create_quantity(exch.get("unit"))
             c = not_none(exch.get("generalComment"))
             cas = not_none(exch.get("CASNumber"))
-            cat = [exch.get('category'), exch.get('subCategory')]
+            cat = [k for k in filter(None, (exch.get('category'), exch.get('subCategory')))]
 
             f = LcFlow(uid, Name=n, CasNumber=cas, Comment=c, Compartment=cat)
             f.add_characterization(q, reference=True)

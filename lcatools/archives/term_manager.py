@@ -138,6 +138,8 @@ class TermManager(object):
         :param item:
         :return:
         """
+        if item is None:
+            return None
         try:
             return self._cm.__getitem__(item)
         except KeyError:

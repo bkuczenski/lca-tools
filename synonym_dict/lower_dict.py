@@ -22,7 +22,7 @@ class LowerDict(dict):
     class Key(str):
         def __new__(cls, key):
             # perform the transform at instantiation for performance-- why not?
-            return super(LowerDict.Key, cls).__new__(LowerDict.Key, key.strip().lower())
+            return super(LowerDict.Key, cls).__new__(LowerDict.Key, str(key).strip().lower())
 
         def __hash__(self):
             return super(LowerDict.Key, self).__hash__()

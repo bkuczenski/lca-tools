@@ -50,6 +50,9 @@ class Flowable(SynonymSet):
         for c in sorted(self._children, key=str):
             yield str(c)
 
+    def set_name(self, name):
+        raise NotSupported
+
     def serialize(self):
         """
         Omits child sets to handle manually

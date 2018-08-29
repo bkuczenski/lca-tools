@@ -3,18 +3,7 @@ import uuid
 
 
 from lcatools.entities.entities import LcEntity
-
-
-class ConversionReferenceMismatch(Exception):
-    pass
-
-
-class NoFactorsFound(Exception):
-    pass
-
-
-class NoUnitConversionTable(Exception):
-    pass
+from lcatools.interfaces import reduce_cfs, NoFactorsFound, NoUnitConversionTable
 
 
 class LcQuantity(LcEntity):
@@ -77,48 +66,12 @@ class LcQuantity(LcEntity):
 
     def quantity_relation(self, ref_quantity, flowable, compartment, locale='GLO', strategy='highest', **kwargs):
         cfs = [cf for cf in self.factors(flowable, compartment, **kwargs)]
+        if len(cfs) == 0:
+            raise NoFactorsFound('%s [%s] %s', (flowable, compartment, self))
         cfs_1 = [cf for cf in cfs if locale in cf.locations()]
         if len(cfs_1) > 1:
             cfs = cfs_1
-        values = []
-        if len(cfs) == 0:
-            raise NoFactorsFound('%s [%s] %s', (flowable, compartment, self))
-        for cf in cfs:
-            if cf.flow.reference_entity is not ref_quantity:
-                convert_fail = False
-                factor = None
-                try:
-                    factor = cf.flow.reference_entity.quantity_relation(ref_quantity, cf.flow['Name'], None, **kwargs)
-                except NoFactorsFound:
-                    try:
-                        factor = ref_quantity.convert(from_unit=cf.flow.unit())
-                    except NoUnitConversionTable:
-                        try:
-                            factor = cf.flow.reference_entity.convert(to=ref_quantity.unit())
-                        except KeyError:
-                            convert_fail = True
-                    except KeyError:
-                        convert_fail = True
-                finally:
-                    if convert_fail or factor is None:
-                        raise ConversionReferenceMismatch('Flow %s\nfrom %s\nto %s' % (cf.flow,
-                                                                                       cf.flow.reference_entity,
-                                                                                       ref_quantity))
-
-                values.append(cf[locale] * factor)
-            else:
-                values.append(cf[locale])
-        if len(values) > 1:
-            if strategy == 'highest':
-                return max(values)
-            elif strategy == 'lowest':
-                return min(values)
-            elif strategy == 'average':
-                return sum(values) / len(values)
-            else:
-                raise ValueError('Unknown strategy %s' % strategy)
-        else:
-            return values[0]
+        return reduce_cfs(ref_quantity, locale, cfs, strategy=strategy, **kwargs)
 
     def convert(self, from_unit=None, to=None):
         """

@@ -5,7 +5,6 @@ from lcatools.characterizations import Characterization
 from .entities import LcEntity
 # from lcatools.entities.quantities import LcQuantity
 # from ..interfaces import trim_cas
-from synonym_dict.example_compartments import Context
 
 
 class MissingFactor(Exception):
@@ -85,7 +84,7 @@ class LcFlow(LcEntity):
         :param context_manager:
         :return:
         """
-        if isinstance(self._context, Context):
+        if context_manager.is_context(self._context):
             return
         if self.has_property('Compartment'):
             _c = context_manager.add_compartments(self['Compartment'])
@@ -94,7 +93,7 @@ class LcFlow(LcEntity):
         else:
             _c = context_manager.get(None)
             # raise AttributeError('Flow has no contextual attribute! %s' % self)
-        if not isinstance(_c, Context):
+        if not context_manager.is_context(_c):
             raise TypeError('Context manager did not return a context! %s (%s)' % (_c, type(_c)))
         self._context = _c
         self._flowable = context_manager.add_flow(self)

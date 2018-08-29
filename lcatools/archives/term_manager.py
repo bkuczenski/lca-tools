@@ -3,12 +3,23 @@ Term Manager - used to handle string references to entities that are known by se
  - contexts, which are drawn from flows' specified 'Compartment' attributes
  - flowables, which are drawn from flows' uuid, Name, CasNumber, and string representation
 
+The main objective of the TermManager is to enable the use of generalized synonym matching and context determination
+in performing LCIA. It collects two kinds of mapping information: mapping string terms to flowables and contexts; and
+mapping (quantity, flowable, context) tuples to [regionalized] characterization objects.
+
+The mapping is prolific in both cases- adds a flowable-to-flow mapping for every flowable that matches
+(merge_strategy='merge' ensures that this is exactly one flowable), and adds the CF to every flowable that matches.
+
+The term manager's strategy is somewhat nuanced.  In adding a flow, the objective should be to match it with an existing
+(unique) flowable, and to follow the merge vs prune strategy in the event of multiple matches.
+
 The TermManager is captive to a single archive and acts as a context manager as well as a flowables registry.
 
-Quantity disambiguation is excluded from the Term Manager and is instead handled by the Qdb / LciaEngine, because it
-is inherently useful only across data sources.
+LciaEngine adds a Quantity disambiguation layer, which is inherently useful only across data sources, and uses canonical
+lists of flowables and contexts that would be redundant if loaded into individual archives.  Someday, it might make
+sense to expose it as a massive, central graph db.
 """
-from synonym_dict.example_compartments import CompartmentManager
+from synonym_dict.example_compartments import Context, CompartmentManager
 from synonym_dict.example_flowables import FlowablesDict
 from synonym_dict import MergeError
 
@@ -81,6 +92,14 @@ class TermManager(object):
         self._merge_strategy = merge_strategy
         self._quiet = bool(quiet)
 
+    def _print(self, *args):
+        if not self._quiet:
+            print(*args)
+
+    @staticmethod
+    def is_context(cx):
+        return isinstance(cx, Context)
+
     @property
     def quiet(self):
         return self._quiet
@@ -89,9 +108,11 @@ class TermManager(object):
         return self._q_dict[quantity.uuid]
 
     def add_cf(self, quantity, cf):
-        fb = self._fm[cf.flow['Name']]
-        self.qlookup(quantity)[fb].add(cf)  # that some cray shit
-        self._fq_map[fb].add(quantity)
+        self.add_flow(cf.flow, merge_strategy='prune')  # don't want to alter existing flowables
+        fbs = self._fm.matching_flowables(*_flowable_terms(cf.flow))
+        for fb in fbs:
+            self.qlookup(quantity)[fb].add(cf)  # that some cray shit
+            self._fq_map[fb].add(quantity)
 
     def factors_for_flowable(self, flowable, quantity=None, compartment=None, dist=0):
         """
@@ -156,7 +177,7 @@ class TermManager(object):
 
     def add_flow(self, flow, merge_strategy=None):
         """
-        Add a flow's terms to the flowables list and link the flow to the flowable
+        Add a flow's terms to the flowables list and add a flowable-to-flow mapping
         :param flow:
         :param merge_strategy: overrule default merge strategy
         :return: the Flowable object to which the flow's terms have been added
@@ -166,21 +187,29 @@ class TermManager(object):
             fb = self._fm.new_object(*_flowable_terms(flow))
         except MergeError:
             if merge_strategy == 'prune':
-                print('\nPruning entry for %s' % flow)
-                s1 = set(_flowable_terms(flow))
-                fb = self._fm.new_object(*_flowable_terms(flow), prune=True)
-                s2 = set(self._fm.synonyms(fb.name))
-                for k in sorted(s1.union(s2), key=lambda x: x in s2):
-                    if k in s2:
-                        print(k)
-                    else:
-                        print('*%s [%s]' % (k, self._fm[k]))
-                self._flow_map[fb].add(flow)
+                self._print('\nPruning entry for %s' % flow)
+                s1 = tuple([t for t in filter(lambda z: z not in self._fm, _flowable_terms(flow))])
+                if len(s1) == 0:
+                    fb = None
+                    self._print('No unique terms')
+                    s2 = set()
+                else:
+                    fb = self._fm.new_object(*s1, prune=True)
+                    s2 = set(self._fm.synonyms(fb.name))
+                if not self._quiet:
+                    for k in sorted(set(s1).union(s2), key=lambda x: x in s2):
+                        if k in s2:
+                            print(k)
+                        else:
+                            print('*%s [%s]' % (k, self._fm[k]))
+
             elif merge_strategy == 'merge':
-                print('Merging')
+                self._print('Merging')
                 raise NotImplemented
             else:
                 raise ValueError('merge strategy %s' % self._merge_strategy)
+        for _tf in self._fm.matching_flowables(*_flowable_terms(flow)):
+            self._flow_map[_tf].add(flow)
         return fb
 
     def flowables(self, search=None):

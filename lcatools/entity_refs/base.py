@@ -81,7 +81,7 @@ class BaseRef(object):
             return self._d[item]
         if 'Local%s' % item in self._d:
             return self._d['Local%s' % item]
-        return None
+        raise KeyError(item)
 
     def __getitem__(self, item):
         """
@@ -90,6 +90,12 @@ class BaseRef(object):
         :return:
         """
         return self._localitem(item)
+
+    def get(self, item, default=None):
+        try:
+            self.__getitem__(item)
+        except KeyError:
+            return default
 
     def has_property(self, item):
         return self._localitem(item) is not None
@@ -261,7 +267,7 @@ class EntityRef(BaseRef):
     def get_item(self, item, force_query=False):
         if not force_query:
             # check local first.  return Localitem if present.
-            loc = self._localitem(item)
+            loc = super(EntityRef, self).get(item)
             if loc is not None:
                 return loc
         self._check_query('getitem %s' % item)
@@ -269,7 +275,7 @@ class EntityRef(BaseRef):
         if val is not None and val != '':
             self._d[item] = val
             return val
-        return None
+        raise KeyError(item)
 
     def __getitem__(self, item):
         return self.get_item(item)

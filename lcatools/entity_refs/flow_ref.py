@@ -1,7 +1,6 @@
 from .base import EntityRef
 
 from ..interfaces import QuantityRequired
-from synonym_dict.example_compartments import Context
 
 
 from lcatools.characterizations import Characterization
@@ -68,7 +67,7 @@ class FlowRef(EntityRef):
         :param context_manager:
         :return:
         """
-        if isinstance(self._context, Context):
+        if context_manager.is_context(self._context):
             return
         if self.has_property('Compartment'):
             _c = context_manager.add_compartments(self['Compartment'])
@@ -77,7 +76,7 @@ class FlowRef(EntityRef):
         else:
             _c = context_manager.get(None)
             # raise AttributeError('Flow has no contextual attribute! %s' % self)
-        if not isinstance(_c, Context):
+        if not context_manager.is_context(_c):
             raise TypeError('Context manager did not return a context! %s (%s)' % (_c, type(_c)))
         self._context = _c
         self._flowable = context_manager.add_flow(self)
@@ -159,7 +158,7 @@ class FlowRef(EntityRef):
         try:
             val = self._query.cf(self.external_ref, query_quantity, locale=locale, **kwargs)
         except QuantityRequired:
-            print('!Unable to lookup flow CF\nflow: %s\nquantity: %s' %(self.link, query_quantity.link))
+            print('!Unable to lookup flow CF\nflow: %s\nquantity: %s' % (self.link, query_quantity.link))
             val = 0.0
         self.add_characterization(query_quantity, value=val, location=locale)
         return val

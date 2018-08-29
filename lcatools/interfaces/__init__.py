@@ -11,7 +11,9 @@ from .iconfigure import ConfigureInterface
 from .iinventory import InventoryInterface, InventoryRequired
 from .iindex import IndexInterface, IndexRequired, comp_dir, directions
 from .ibackground import BackgroundInterface, BackgroundRequired
-from .iquantity import QuantityInterface, QuantityRequired
+from .iquantity import (reduce_cfs, QuantityInterface, QuantityRequired, NoFactorsFound, NoUnitConversionTable,
+                        ConversionReferenceMismatch)
+
 from .iforeground import ForegroundInterface, ForegroundRequired
 
 import re
@@ -90,11 +92,3 @@ CONTEXT_STATUS_ = 'compat'  # 'compat': context = flow['Compartment']; 'new': co
 
 ExteriorFlow = namedtuple('ExteriorFlow', ('origin', 'flow', 'direction', 'termination'))
 ProductFlow = namedtuple('ProductFlow', ('origin', 'flow', 'direction', 'termination', 'component_id'))
-
-
-def trim_cas(cas):
-    try:
-        return re.sub('^(0*)', '', cas)
-    except TypeError:
-        print('%s %s' % (cas, type(cas)))
-        return ''

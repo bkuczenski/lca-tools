@@ -5,6 +5,59 @@ class QuantityRequired(Exception):
     pass
 
 
+class ConversionReferenceMismatch(Exception):
+    pass
+
+
+class NoFactorsFound(Exception):
+    pass
+
+
+class NoUnitConversionTable(Exception):
+    pass
+
+
+def reduce_cfs(ref_quantity, locale, cfs, strategy, **kwargs):
+    values = []
+    for cf in cfs:
+        if cf.flow.reference_entity is not ref_quantity:
+            convert_fail = False
+            factor = None
+            try:
+                factor = cf.flow.reference_entity.quantity_relation(ref_quantity, cf.flow['Name'], None, **kwargs)
+            except NoFactorsFound:
+                try:
+                    factor = ref_quantity.convert(from_unit=cf.flow.unit())
+                except NoUnitConversionTable:
+                    try:
+                        factor = cf.flow.reference_entity.convert(to=ref_quantity.unit())
+                    except KeyError:
+                        convert_fail = True
+                except KeyError:
+                    convert_fail = True
+            finally:
+                if convert_fail or factor is None:
+                    raise ConversionReferenceMismatch('Flow %s\nfrom %s\nto %s' % (cf.flow,
+                                                                                   cf.flow.reference_entity,
+                                                                                   ref_quantity))
+
+            values.append(cf[locale] * factor)
+        else:
+            values.append(cf[locale])
+    if len(values) > 1:
+        # this is obviously punting
+        if strategy == 'highest':
+            return max(values)
+        elif strategy == 'lowest':
+            return min(values)
+        elif strategy == 'average':
+            return sum(values) / len(values)
+        else:
+            raise ValueError('Unknown strategy %s' % strategy)
+    else:
+        return values[0]
+
+
 _interface = 'quantity'
 
 

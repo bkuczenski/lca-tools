@@ -1,7 +1,7 @@
 from synlist import Flowables, InconsistentIndices
 
 from .basic import BasicImplementation
-from ..interfaces import QuantityInterface
+from ..interfaces import QuantityInterface, EntityNotFound
 
 
 class QuantityImplementation(BasicImplementation, QuantityInterface):
@@ -102,7 +102,10 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         :param kwargs:
         :return:
         """
-        return self.get(flow).cf(quantity, locale=locale)
+        f = self.get(flow)
+        if f is None:
+            raise EntityNotFound(f)
+        return f.cf(quantity, locale=locale)
 
     def quantity_relation(self, ref_quantity, flowable, compartment, query_quantity, locale='GLO', **kwargs):
         """

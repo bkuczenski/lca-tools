@@ -69,6 +69,10 @@ class CatalogRef(BaseRef):
                 return FragmentRef(external_ref, query, reference_entity, **kwargs)
         return cls(query.origin, external_ref, entity_type=etype, reference_entity=reference_entity, **kwargs)
 
+    def set_context(self, context_manager):
+        if self.entity_type == 'flow':  # otherwise pass
+            context_manager.add_flow(self)
+
     def lookup(self, catalog, **kwargs):
         """
         RETURNS a grounded catalogRef matching the current item.  Note that the current item cannot be transformed
@@ -98,6 +102,9 @@ class CatalogRef(BaseRef):
         :param kwargs:
         """
         super(CatalogRef, self).__init__(origin, external_ref, **kwargs)
+
+        if 'Name' not in kwargs:
+            self['Name'] = self.link
 
         self._asgn_etype = entity_type
 

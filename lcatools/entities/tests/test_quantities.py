@@ -1,5 +1,5 @@
 from .base_testclass import archive_from_json
-from ..quantities import NoFactorsFound, ConversionReferenceMismatch
+from ...interfaces import NoFactorsFound, ConversionReferenceMismatch
 import unittest
 
 from ...qdb import IPCC_2007_GWP, REF_QTYS

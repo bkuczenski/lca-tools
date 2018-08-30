@@ -1,3 +1,11 @@
+from collections import namedtuple
+
+
+# namedtuple to store the parameters and result of a quantity-relation lookup
+# the first 4 are input params, 'locale' is as-found if found, as-specified if not; origin and value are results
+
+QRResult = namedtuple('QRResult', ('ref', 'flowable', 'context', 'query', 'locale', 'origin', 'value'))
+
 
 class DuplicateCharacterizationError(Exception):
     pass
@@ -32,7 +40,7 @@ class Characterization(object):
 
         if kwargs:
             self.add_value(**kwargs)
-        self._natural_dirn = None
+        # self._natural_dirn = None
 
     def cf_origin(self, location='GLO'):
         """
@@ -91,18 +99,33 @@ class Characterization(object):
     def value(self, val):
         self._locations['GLO'] = val
 
+    def _lookup(self, locale):
+        found_locale = None
+        if len(self._locations) > 0:
+            if locale in self._locations.keys():
+                found_locale = locale
+            elif 'GLO' in self._locations.keys():
+                found_locale = 'GLO'
+                # today is not the day to write a location best-match finder
+        return found_locale
+
+    def query(self, locale):
+        found = self._lookup(locale)
+        if found is None:
+            return QRResult(self.flow.reference_entity, self.flow.flowable, self.flow.context, self.quantity, locale,
+                            None, None)
+        return QRResult(self.flow.reference_entity, self.flow.flowable, self.flow.context, self.quantity, found,
+                        self.cf_origin(found), self._locations[found])
+
     def __getitem__(self, item):
         if item == 'quantity':  # f%&(@*$ marshmallow hack
             return self.quantity
         if item == 'flow':  # ibid.
             return self.flow
-        if item in self._locations.keys():
-            return self._locations[item]
-        if len(self._locations) == 0:
-            return None
-        if 'GLO' in self._locations.keys():
-            return self._locations['GLO']
-        return 0.0  # today is not the day to write a location best-match finder
+        found = self._lookup(item)
+        if found is None:
+            return 0.0
+        return self._locations[found]
 
     def __setitem__(self, key, value):
         if key in self._locations:
@@ -138,6 +161,11 @@ class Characterization(object):
         return hash((self.flow.uuid, self.quantity.uuid, self.context))
 
     def __eq__(self, other):
+        """
+        Returns true if all of other's location-specific values equal self's values for the same location
+        :param other:
+        :return:
+        """
         if other is None:
             return False
         if ((self.flow.uuid == other.flow.uuid) &

@@ -1,6 +1,15 @@
 See notes-attic/lcia.txt for an archived version of this document
 
 ==========
+Thu Aug 30 12:17:56 -0700 2018
+
+I think today is the day for me to start the LciaResult remodel, as that will dictate how the new exchange world order is supposed to work.
+
+
+
+
+
+==========
 Sat Aug 25 01:14:41 -0700 2018
 
 lcia is handled completely by the quantity and is a wrapper for q relation.
@@ -43,6 +52,21 @@ So what do we need to do really?
  => and then we pop back to antelope v2
 
 Future: continue phaseout of uuid;
+
+Wed Aug 29 15:28:39 -0700 2018
+
+Newest brainstorm: abolish LcFlows in favor of flow references only.
+
+wait but why? can't remember. no good reason.
+
+Well, it stemmed from the desire to take the term manager back out of the quantity, since it is really only talking to itself there. then we could abandon set_context() but we would need ....
+
+dammit I am going in circles. And shit I still have not done any refactoring to add_exchange(), to place context as termination! and I don't even KNOW how I would test that shit.
+
+AND lcia is still pending. AND now USDA is starting up. though I suppose I could bill some of this to that. but I do need the system to be working at some point very soon.
+
+Anyway it's time to go get Noe. mm.
+
 
 
 

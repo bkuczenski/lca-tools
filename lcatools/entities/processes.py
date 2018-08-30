@@ -10,7 +10,7 @@ from ..interfaces import InventoryRequired
 from lcatools.entities.entities import LcEntity
 from lcatools.exchanges import (Exchange, ExchangeValue, DuplicateExchangeError, AmbiguousReferenceError,
                                 NoReferenceFound)
-from lcatools.lcia_results import LciaResult, LciaResults
+# from lcatools.lcia_results import LciaResult, LciaResults
 
 
 class MissingAllocation(Exception):
@@ -584,6 +584,7 @@ class LcProcess(LcEntity):
             self._exchanges[e.key] = e
             return e
 
+    '''
     def lcias(self, quantities, **kwargs):
         results = LciaResults(entity=self)
         for q in quantities:
@@ -601,6 +602,7 @@ class LcProcess(LcEntity):
                 factor = ex.flow.factor(quantity)
                 result.add_score(self.get_uuid(), ex, factor, self['SpatialScope'])
             return result
+    '''
 
     def merge(self, other):
         raise NotImplemented('This should be done via fragment construction + aggregation')

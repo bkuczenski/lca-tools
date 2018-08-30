@@ -67,9 +67,13 @@ class BasicArchive(EntityStore):
         ar.load_json(j, jsonfile=jsonfile)
         return ar
 
-    def __init__(self, *args, contexts=None, flowables=None, **kwargs):
+    def __init__(self, *args, contexts=None, flowables=None, term_manager=None, **kwargs):
         super(BasicArchive, self).__init__(*args, **kwargs)
-        self._tm = TermManager(contexts=contexts, flowables=flowables)
+        self._tm = term_manager or TermManager(contexts=contexts, flowables=flowables, strict_clookup=True)
+
+    @property
+    def tm(self):
+        return self._tm
 
     def _check_key_unused(self, key):
         """

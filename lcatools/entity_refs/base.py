@@ -267,9 +267,11 @@ class EntityRef(BaseRef):
     def get_item(self, item, force_query=False):
         if not force_query:
             # check local first.  return Localitem if present.
-            loc = super(EntityRef, self).get(item)
-            if loc is not None:
+            try:
+                loc = self._localitem(item)
                 return loc
+            except KeyError:
+                pass
         self._check_query('getitem %s' % item)
         val = self._query.get_item(self.external_ref, item)
         if val is not None and val != '':

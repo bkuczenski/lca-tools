@@ -7,10 +7,6 @@ from .entities import LcEntity
 # from ..interfaces import trim_cas
 
 
-class MissingFactor(Exception):
-    pass
-
-
 class FlowWithoutContext(Exception):
     pass
 
@@ -97,6 +93,8 @@ class LcFlow(LcEntity):
             raise TypeError('Context manager did not return a context! %s (%s)' % (_c, type(_c)))
         self._context = _c
         self._flowable = context_manager.add_flow(self)
+        for cf in self.characterizations():
+            context_manager.add_cf(cf.quantity, cf)
 
     def _set_reference(self, ref_entity):
         if self.reference_entity is not None:
@@ -255,7 +253,10 @@ class LcFlow(LcEntity):
                 c.update_values(**value)
             else:
                 c.add_value(value=value, overwrite=overwrite, **kwargs)
-        quantity.register_cf(c)
+        try:
+            quantity.register_cf(c)
+        except FlowWithoutContext:
+            pass  # add when the flow is contextualized
         return c
 
     def has_characterization(self, quantity, location='GLO'):

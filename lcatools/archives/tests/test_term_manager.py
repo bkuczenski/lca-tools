@@ -6,7 +6,7 @@ import unittest
 class TermManagerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.tm = TermManager()
+        cls.tm = TermManager(quiet=False)
         cls.tm.add_compartments(['emissions', 'emissions to air', 'emissions to urban air'])
 
     def test_idempotent_context(self):

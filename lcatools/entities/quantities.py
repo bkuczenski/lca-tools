@@ -3,7 +3,10 @@ import uuid
 
 
 from lcatools.entities.entities import LcEntity
-from lcatools.interfaces import reduce_cfs, NoFactorsFound, NoUnitConversionTable
+
+
+class NoUnitConversionTable(Exception):
+    pass
 
 
 class LcQuantity(LcEntity):
@@ -60,19 +63,6 @@ class LcQuantity(LcEntity):
     def is_lcia_method(self):
         return 'Indicator' in self.keys()
 
-    def factors(self, flowable=None, compartment=None, dist=0):
-        for cf in self._cm.factors_for_quantity(self, flowable=flowable, compartment=compartment, dist=dist):
-            yield cf
-
-    def quantity_relation(self, ref_quantity, flowable, compartment, locale='GLO', strategy='highest', **kwargs):
-        cfs = [cf for cf in self.factors(flowable, compartment, **kwargs)]
-        if len(cfs) == 0:
-            raise NoFactorsFound('%s [%s] %s', (flowable, compartment, self))
-        cfs_1 = [cf for cf in cfs if locale in cf.locations()]
-        if len(cfs_1) > 1:
-            cfs = cfs_1
-        return reduce_cfs(ref_quantity, locale, cfs, strategy=strategy, **kwargs)
-
     def convert(self, from_unit=None, to=None):
         """
         Perform unit conversion within a quantity, using a 'UnitConversion' table stored in the object properties.
@@ -88,6 +78,9 @@ class LcQuantity(LcEntity):
         quantity['UnitConversion'] = { 'kg': 907.2, 'lb': 2000.0, 'ton': 1, 't': 0.9072 }
 
         If the quantity's reference unit is missing from the dict, it is assumed to be 1 implicitly.
+
+        If the quantity is missing a unit conversion property, raises NoUnitConversionTable.  If the quantity does
+        have such a table but one of the specified units is missing from it, raises KeyError
 
         :param from_unit: unit to convert from (default is the reference unit)
         :param to: unit to convert to (default is the reference unit)

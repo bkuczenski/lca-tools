@@ -45,3 +45,6 @@ class QuantityRef(EntityRef):
 
     def do_lcia(self, inventory, **kwargs):
         return self._query.do_lcia(inventory, self, **kwargs)
+
+    def quantity_relation(self, ref_quantity, flowable, compartment, locale='GLO', **kwargs):
+        return self._query.quantity_relation(ref_quantity, flowable, compartment, self, locale=locale, **kwargs)

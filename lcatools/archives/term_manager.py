@@ -108,6 +108,8 @@ class TermManager(object):
         return self._q_dict[quantity.uuid]
 
     def add_cf(self, quantity, cf):
+        if cf.quantity is cf.flow.reference_entity:
+            return
         self.add_flow(cf.flow, merge_strategy='prune')  # don't want to alter existing flowables
         fbs = self._fm.matching_flowables(*_flowable_terms(cf.flow))
         for fb in fbs:

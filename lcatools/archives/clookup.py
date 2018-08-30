@@ -99,7 +99,7 @@ class CLookup(object):
         if found(results):
             return results
 
-        if dist > 2:
+        if dist > 2 and item is not None:
             while item.parent is not None:
                 item = item.parent
                 if item in self._dict.keys():
@@ -125,5 +125,7 @@ class SCLookup(CLookup):
     """
     def add(self, value):
         if len(self._dict[value.context]) > 0:
+            if list(self._dict[value.context])[0] == value:
+                return
             raise FactorCollision('This context already has a CF defined!')
         super(SCLookup, self).add(value)

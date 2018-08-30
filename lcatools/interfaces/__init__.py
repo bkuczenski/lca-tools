@@ -11,8 +11,7 @@ from .iconfigure import ConfigureInterface
 from .iinventory import InventoryInterface, InventoryRequired
 from .iindex import IndexInterface, IndexRequired, comp_dir, directions
 from .ibackground import BackgroundInterface, BackgroundRequired
-from .iquantity import (reduce_cfs, QuantityInterface, QuantityRequired, NoFactorsFound, NoUnitConversionTable,
-                        ConversionReferenceMismatch)
+from .iquantity import QuantityInterface, QuantityRequired, NoFactorsFound, ConversionReferenceMismatch
 
 from .iforeground import ForegroundInterface, ForegroundRequired
 

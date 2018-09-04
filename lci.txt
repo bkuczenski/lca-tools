@@ -1,4 +1,30 @@
 ==========
+Mon Sep 03 16:39:24 -0700 2018
+
+4 months on...
+
+I don't think we ever solved the sign reversal issue-- that is something to revisit as / after we complete the context refactor.
+
+For now- we need to get some LCI results so that we can investigate variability in ecoinvent.
+
+Problem is, the process for doing that is a little convoluted-- so let's recap it here.
+
+1. The components
+
+   * EcospoldV2Archive - source data for inventory interface
+   * BackgroundEngine - performs the ordering with a captive tstack
+   * FlatBackground - stores the results of the ordering as a set of numpy objects
+   * TarjanBackground - wraps the flat background inside of an LcArchive object
+   * TarjanBackgroundImplementation - implements background interface
+     (simply uses archive as a host to hold _flat; all the computations use _flat)
+
+So the key question here is whether we really need a TarjanBackground, or whether instead we can get by with a more strict use of the TarjanBackgroundImplementation. Right now it looks as though the only reason we need to subclass LcArchive is so that we can install TarjanBackgroundImplementation as the output of make_interface('background')
+
+If we abandon that and make the interface ourselves manually, what would that look like?
+
+
+
+==========
 Wed May 02 11:53:08 -0700 2018
 
 On point now: the tarjan algorithm does NOT need to run every time. Instead I should serialize the Tarjan Stack and make that the only thing the bg needs.

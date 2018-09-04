@@ -2,6 +2,8 @@ from lcatools.implementations import BackgroundImplementation
 from lcatools.interfaces import ProductFlow, ExteriorFlow
 from lcatools.exchanges import ExchangeValue
 
+from .flat_background import FlatBackground
+
 
 class TarjanBackgroundImplementation(BackgroundImplementation):
     """
@@ -24,7 +26,10 @@ class TarjanBackgroundImplementation(BackgroundImplementation):
     def setup_bm(self, index=None):
         if self._index is None:
             super(TarjanBackgroundImplementation, self).setup_bm(index)
-            self._flat = self._archive.create_flat_background(index)
+            if hasattr(self._archive, 'create_flat_background'):
+                self._flat = self._archive.create_flat_background(index)
+            else:
+                self._flat = FlatBackground.from_index(index)
 
     def foreground_flows(self, search=None, **kwargs):
         for fg in self._flat.fg:

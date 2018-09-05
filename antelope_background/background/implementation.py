@@ -6,6 +6,20 @@ from .flat_background import FlatBackground
 
 
 class TarjanBackgroundImplementation(BackgroundImplementation):
+
+    @classmethod
+    def from_file(cls, index, savefile, **kwargs):
+        """
+
+        :param index: data resource providing index information
+        :param savefile: serialized flat background
+        :return:
+        """
+        im = cls(index)
+        im._index = index
+        im._flat = FlatBackground.from_file(savefile, **kwargs)
+        return im
+
     """
     basic implementation overrides
     """

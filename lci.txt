@@ -24,6 +24,30 @@ If we abandon that and make the interface ourselves manually, what would that lo
 
 
 
+Wed 2018-09-05 23:04:55 -0700
+
+Interruption: performance failure
+Cause: using an RxRef to query value...
+leads to an interface exchange_values() call
+which leads to _gen_exchanges, which is a terrible way to repeatedly find a reference exchange
+the exchange data could maybe be a lot better as a single, massive sql table
+with select queries.
+
+hm.
+
+
+In this case we can deal with it by changing how _reference_ exchange values are retrieved-- so reimplementing process_ref.reference_value() --> which means changing the interface--
+
+-- really just adding the reference=False kwarg to the signature
+
+-- and leaving _gen_exchanges and the sql backend to the scaling implementation.
+
+
+Thu 2018-09-06 01:13:14 -0700
+
+Anyway, that's sorted and we're back to <30s, profiled, for 3.4 APOS (which has just short of 15,000 nodes).
+
+
 ==========
 Wed May 02 11:53:08 -0700 2018
 

@@ -337,7 +337,8 @@ class LcCatalog(LciaEngine):
         if os.path.exists(inx_file):
             if not force:
                 print('Not overwriting existing index. force=True to override.')
-                return
+                ex_res = next(r for r in self._resolver.resources_with_source(inx_file))
+                return ex_res.reference
             print('Re-indexing %s' % source)
         new_ref = res.make_index(inx_file)
         self._resolver.new_resource(new_ref, inx_file, 'json', priority=priority, store=stored, interfaces='index',

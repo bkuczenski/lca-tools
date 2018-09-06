@@ -343,7 +343,7 @@ class ExchangeValue(Exchange):
         :param item:
         :return:
         """
-        if item in ('process', 'flow', 'termination', 'value'):
+        if isinstance(item, str) and item in ('process', 'flow', 'termination', 'value'):
             return getattr(self, item)  # %*(#%)(* Marshmallow!
         '''
         if len(self._value_dict) == 0:

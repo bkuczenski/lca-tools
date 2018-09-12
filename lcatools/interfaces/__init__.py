@@ -87,6 +87,7 @@ model (exchange terminations are contexts)
 CONTEXT_STATUS_ = 'compat'  # 'compat': context = flow['Compartment']; 'new': context = exch.termination
 
 
+# Containers of information about linked exchanges.  Direction is given with respect to the termination.
 ExteriorFlow = namedtuple('ExteriorFlow', ('origin', 'flow', 'direction', 'termination'))
 ProductFlow = namedtuple('ProductFlow', ('origin', 'flow', 'direction', 'termination', 'component_id'))
 

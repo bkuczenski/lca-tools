@@ -18,7 +18,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
 
     def _init_flowables(self):
         fb = Flowables()
-        for f in self._archive.flows():
+        for f in self._archive.entities_by_type('flow'):
             c = f['CasNumber']
             n = f['Name']
             try:
@@ -83,7 +83,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         if quantity is not None:
             quantity = self._archive[quantity]
         fb = set()
-        for f in self._archive.flows():
+        for f in self._archive.entities_by_type('flow'):
             if compartment is not None:
                 if f['Compartment'] != compartment:
                     continue
@@ -103,7 +103,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         :return: list of strings
         """
         comps = set()
-        for f in self._archive.flows():
+        for f in self._archive.entities_by_type('flow'):
             comps.add(f['Compartment'])
         for n in comps:
             yield str(n)

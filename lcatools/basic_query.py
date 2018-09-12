@@ -1,5 +1,5 @@
 from .interfaces import (IndexInterface, InventoryInterface, QuantityInterface, BackgroundInterface,
-                         ConfigureInterface)
+                         ConfigureInterface, EntityNotFound)
 # , EntityNotFound, IndexRequired
 
 
@@ -19,6 +19,16 @@ class BasicQuery(IndexInterface, InventoryInterface, QuantityInterface):
 
     def validate(self):
         return self.origin
+
+    def get_item(self, external_ref, item):
+        """
+        access an entity's dictionary items
+        :param external_ref:
+        :param item:
+        :return:
+        """
+        return self._perform_query(None, 'get_item', EntityNotFound('%s/%s' % (self.origin, external_ref)),
+                                   external_ref, item)
 
     '''
     I think that's all I need to do!

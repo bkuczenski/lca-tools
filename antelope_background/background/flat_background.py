@@ -12,7 +12,7 @@ import os
 from collections import namedtuple
 
 from ..engine import BackgroundEngine
-from lcatools.interfaces import CONTEXT_STATUS_
+from lcatools.interfaces import CONTEXT_STATUS_, ProductFlow
 from lcatools import from_json, to_json, comp_dir
 
 
@@ -398,6 +398,17 @@ class FlatBackground(object):
             else:
                 _term = term.term_ref
             yield ExchDef(node_ref, term.flow_ref, dirn, _term, dat)
+
+    def consumers(self, process, ref_flow):
+        idx = self.index_of(process, ref_flow)
+        if self.is_in_background(process, ref_flow):
+            for i in self._ad[idx, :].nonzero()[1]:
+                yield self.fg[i]
+            for i in self._A[idx, :].nonzero()[1]:
+                yield self.bg[i]
+        else:
+            for i in self._af[idx, :].nonzero()[1]:
+                yield self.fg[i]
 
     def dependencies(self, process, ref_flow):
         if self.is_in_background(process, ref_flow):

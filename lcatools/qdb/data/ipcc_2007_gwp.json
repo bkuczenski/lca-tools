@@ -1,0 +1,2131 @@
+{
+  "@context": "https://bkuczenski.github.io/lca-tools-datafiles/context.jsonld",
+  "catalogNames": {
+    "lcia.ipcc.2007.traci21": [
+      "/data/GitHub/lca-tools/lcatools/qdb/data/ipcc_2007_gwp.json"
+    ]
+  },
+  "dataSource": "/data/GitHub/lca-tools/lcatools/qdb/data/ipcc_2007_gwp.json",
+  "dataSourceType": "BasicArchive",
+  "flows": [
+    {
+      "CasNumber": "430-66-0",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfc-143",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 353.0
+        }
+      ],
+      "entityId": "0255744f-b2d8-35a9-9824-71843d7df3f9",
+      "entityType": "flow",
+      "externalId": "hfc-143, air"
+    },
+    {
+      "CasNumber": "3822-68-2",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfe-125",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 14900.0
+        }
+      ],
+      "entityId": "03090624-02d4-38a1-b6dd-cbf25c026a83",
+      "entityType": "flow",
+      "externalId": "hfe-125, air"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfe-347mcc3",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 575.0
+        }
+      ],
+      "entityId": "03b64897-b0ff-3082-bfc0-f1861b977c2f",
+      "entityType": "flow",
+      "externalId": "hfe-347mcc3, air"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "trifluoromethyl sulfur pentafluoride",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 17700.0
+        }
+      ],
+      "entityId": "057400da-55f4-3c13-a100-0b530ddb54f9",
+      "entityType": "flow",
+      "externalId": "trifluoromethyl sulfur pentafluoride, air"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfe-236fa",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 487.0
+        }
+      ],
+      "entityId": "08126d1a-97e2-39ba-a291-664b09791736",
+      "entityType": "flow",
+      "externalId": "hfe-236fa, air"
+    },
+    {
+      "CasNumber": "76-16-4",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "pfc-116",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 12200.0
+        }
+      ],
+      "entityId": "0ae12d73-35a6-36dc-8623-6d57e08c7d38",
+      "entityType": "flow",
+      "externalId": "pfc-116, air"
+    },
+    {
+      "CasNumber": "124-38-9",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "carbon dioxide",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 1.0
+        }
+      ],
+      "entityId": "0c80813e-9473-3863-a6cf-82eb14bfe995",
+      "entityType": "flow",
+      "externalId": "carbon dioxide, air"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfe-227ea",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 1540.0
+        }
+      ],
+      "entityId": "0ccc418b-29bb-3a8a-9c19-a7272611f6a5",
+      "entityType": "flow",
+      "externalId": "hfe-227ea, air"
+    },
+    {
+      "CasNumber": "76-19-7",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "pfc-218",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 8830.0
+        }
+      ],
+      "entityId": "0df8566c-e344-37e1-88a2-89f54ab6c7e8",
+      "entityType": "flow",
+      "externalId": "pfc-218, air"
+    },
+    {
+      "CasNumber": "431-89-0",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfc-227ea",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 3220.0
+        }
+      ],
+      "entityId": "0e11a6d6-e376-3f15-b000-64ec3c7b3dd8",
+      "entityType": "flow",
+      "externalId": "hfc-227ea, air"
+    },
+    {
+      "CasNumber": "2837-89-0",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hcfc-124",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 609.0
+        }
+      ],
+      "entityId": "0f3ea641-d81d-3249-ab5b-f89d228d3c0d",
+      "entityType": "flow",
+      "externalId": "hcfc-124, air"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfe-374pc2",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 557.0
+        }
+      ],
+      "entityId": "1099a3ed-2db9-311f-8ea3-469ab4162da6",
+      "entityType": "flow",
+      "externalId": "hfe-374pc2, air"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfe-356pcf2",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 265.0
+        }
+      ],
+      "entityId": "193b800e-bc6f-3dfd-a676-2e61fa85fe6e",
+      "entityType": "flow",
+      "externalId": "hfe-356pcf2, air"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfe-245fa2",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 659.0
+        }
+      ],
+      "entityId": "1b45c049-3a40-3ba2-80c2-fc0b0cd3ade7",
+      "entityType": "flow",
+      "externalId": "hfe-245fa2, air"
+    },
+    {
+      "CasNumber": "690-39-1",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfc-236fa",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 9810.0
+        }
+      ],
+      "entityId": "1b5004b6-50eb-3852-8957-bc9dacfec3e6",
+      "entityType": "flow",
+      "externalId": "hfc-236fa, air"
+    },
+    {
+      "CasNumber": "420-46-2",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfc-143a",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 4470.0
+        }
+      ],
+      "entityId": "20a6f133-a323-3b6f-8c4d-78a37a7d779b",
+      "entityType": "flow",
+      "externalId": "hfc-143a, air"
+    },
+    {
+      "CasNumber": "2314-97-8",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "methane, iodotrifluoro-",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 0.4
+        }
+      ],
+      "entityId": "214e8705-8e83-3e00-94da-bede0427b769",
+      "entityType": "flow",
+      "externalId": "methane, iodotrifluoro-, air"
+    },
+    {
+      "CasNumber": "1511-62-2",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "halon 1201",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 404.0
+        }
+      ],
+      "entityId": "22ee34d8-dbfa-337c-8aae-2dd55dbe9277",
+      "entityType": "flow",
+      "externalId": "halon 1201, air"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfe-236ea2",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 989.0
+        }
+      ],
+      "entityId": "231f1b7b-a6ce-38c8-a919-02d5318d6d90",
+      "entityType": "flow",
+      "externalId": "hfe-236ea2, air"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfe-254cb2",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 359.0
+        }
+      ],
+      "entityId": "231f788a-ccb2-39f8-97c7-16cf577dce6b",
+      "entityType": "flow",
+      "externalId": "hfe-254cb2, air"
+    },
+    {
+      "CasNumber": "1885-48-9",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfe-245fa1",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 286.0
+        }
+      ],
+      "entityId": "2683a1a6-2234-386b-b58e-31f33f07642e",
+      "entityType": "flow",
+      "externalId": "hfe-245fa1, air"
+    },
+    {
+      "CasNumber": "593-53-3",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfc-41",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 92.0
+        }
+      ],
+      "entityId": "291a89de-2679-3c38-b0fd-e3279a8ac2ee",
+      "entityType": "flow",
+      "externalId": "hfc-41, air"
+    },
+    {
+      "CasNumber": "75-46-7",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfc-23",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 14800.0
+        }
+      ],
+      "entityId": "2b6ed5cd-38d3-355a-a43d-11097158b6b5",
+      "entityType": "flow",
+      "externalId": "hfc-23, air"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfe-43-10pccc124",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 1870.0
+        }
+      ],
+      "entityId": "347f7196-378b-3295-a479-293c152fcd83",
+      "entityType": "flow",
+      "externalId": "hfe-43-10pccc124, air"
+    },
+    {
+      "CasNumber": "75-09-2",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "methylenechloride ",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 8.7
+        }
+      ],
+      "entityId": "35e81c3c-42b0-361c-9a16-5ac8dc932e9c",
+      "entityType": "flow",
+      "externalId": "methylenechloride , air"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfe-7200",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 59.0
+        }
+      ],
+      "entityId": "3be3b742-d95e-32d0-bb06-6cafc2bb2a7c",
+      "entityType": "flow",
+      "externalId": "hfe-7200, air"
+    },
+    {
+      "CasNumber": "1691-17-4",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfe-134",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 6320.0
+        }
+      ],
+      "entityId": "3c16fa67-5c84-35b4-8b84-c2c26acd0be9",
+      "entityType": "flow",
+      "externalId": "hfe-134, air"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfe-338pcc13",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 1500.0
+        }
+      ],
+      "entityId": "3d9579ec-a466-3ce7-9486-942ec2359823",
+      "entityType": "flow",
+      "externalId": "hfe-338pcc13, air"
+    },
+    {
+      "CasNumber": "421-14-7",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfe-143a",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 756.0
+        }
+      ],
+      "entityId": "3e8a1177-86cd-3af0-88c7-2042fedaec15",
+      "entityType": "flow",
+      "externalId": "hfe-143a, air"
+    },
+    {
+      "CasNumber": "306-83-2",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hcfc-123",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 77.0
+        }
+      ],
+      "entityId": "413537b0-f123-34ee-adbd-9ec239c54ac9",
+      "entityType": "flow",
+      "externalId": "hcfc-123, air"
+    },
+    {
+      "CasNumber": "56-23-5",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "carbon tetrachloride",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 1400.0
+        }
+      ],
+      "entityId": "43c60bbd-6d1f-3c36-8405-18502af372c6",
+      "entityType": "flow",
+      "externalId": "carbon tetrachloride, air"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfe-347pcf2",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 580.0
+        }
+      ],
+      "entityId": "44f8adc5-c29c-35e6-b045-a40e8b6189d6",
+      "entityType": "flow",
+      "externalId": "hfe-347pcf2, air"
+    },
+    {
+      "CasNumber": "406-78-0",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfe-347mcf2",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 374.0
+        }
+      ],
+      "entityId": "45bf1f2e-500a-3bf4-8860-e83d90c5b354",
+      "entityType": "flow",
+      "externalId": "hfe-347mcf2, air"
+    },
+    {
+      "CasNumber": "431-63-0",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfc-236ea",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 1370.0
+        }
+      ],
+      "entityId": "45f2bc33-eeee-37f4-a870-1335bed25fd6",
+      "entityType": "flow",
+      "externalId": "hfc-236ea, air"
+    },
+    {
+      "CasNumber": "354-33-6",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfc-125",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 3500.0
+        }
+      ],
+      "entityId": "499a022d-c62a-3101-8d27-f4a73fd6887d",
+      "entityType": "flow",
+      "externalId": "hfc-125, air"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfe-338mcf2",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 552.0
+        }
+      ],
+      "entityId": "4faa4f90-5a80-3560-b2f8-ecd1696758fc",
+      "entityType": "flow",
+      "externalId": "hfe-338mcf2, air"
+    },
+    {
+      "CasNumber": "138495-42-8",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfc-43-10mee",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 1640.0
+        }
+      ],
+      "entityId": "5305b984-a989-395a-8448-09a594608d62",
+      "entityType": "flow",
+      "externalId": "hfc-43-10mee, air"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfe-569sf2",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 59.0
+        }
+      ],
+      "entityId": "53445cb6-387a-34de-b470-c21ad3623ace",
+      "entityType": "flow",
+      "externalId": "hfe-569sf2, air"
+    },
+    {
+      "CasNumber": "67-66-3",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "chloroform",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 31.0
+        }
+      ],
+      "entityId": "61056be5-8022-364b-b2a5-9593f199434c",
+      "entityType": "flow",
+      "externalId": "chloroform, air"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hcfe-235da2",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 350.0
+        }
+      ],
+      "entityId": "61d4338b-9660-34a8-a6eb-9bcf6ef3cb75",
+      "entityType": "flow",
+      "externalId": "hcfe-235da2, air"
+    },
+    {
+      "CasNumber": "353-59-3",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "halon 1211",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 1890.0
+        }
+      ],
+      "entityId": "677014a5-c09c-3a04-9f71-aa2697cd0527",
+      "entityType": "flow",
+      "externalId": "halon 1211, air"
+    },
+    {
+      "CasNumber": "75-71-8",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "cfc-12",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 10900.0
+        }
+      ],
+      "entityId": "679a343e-e19d-3809-94b5-91b6c8aef576",
+      "entityType": "flow",
+      "externalId": "cfc-12, air"
+    },
+    {
+      "CasNumber": "355-25-9",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "pfc-3-1-10",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 8860.0
+        }
+      ],
+      "entityId": "69de5b62-26e4-3b9a-9bae-09c7e0c3fcbf",
+      "entityType": "flow",
+      "externalId": "pfc-3-1-10, air"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "propane, perfluorocyclo-",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 17340.0
+        }
+      ],
+      "entityId": "6fd7129b-dfbf-3274-8b5f-0ed09a939876",
+      "entityType": "flow",
+      "externalId": "propane, perfluorocyclo-, air"
+    },
+    {
+      "CasNumber": "75-37-6",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfc-152a",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 124.0
+        }
+      ],
+      "entityId": "701b40e8-7e33-31e5-bf17-871f7bf6f662",
+      "entityType": "flow",
+      "externalId": "hfc-152a, air"
+    },
+    {
+      "CasNumber": "75-73-0",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "carbon tetrafluoride",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 7390.0
+        }
+      ],
+      "entityId": "70611848-2b71-3e0a-bdd7-69af1e5335a1",
+      "entityType": "flow",
+      "externalId": "carbon tetrafluoride, air"
+    },
+    {
+      "CasNumber": "378-16-5",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfe-365mcf3",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 11.0
+        }
+      ],
+      "entityId": "73492764-d4c2-3934-8965-51da990a4208",
+      "entityType": "flow",
+      "externalId": "hfe-365mcf3, air"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfe-356pcc3",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 110.0
+        }
+      ],
+      "entityId": "735564c5-1898-337f-bc35-7571d68f4938",
+      "entityType": "flow",
+      "externalId": "hfe-356pcc3, air"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfe-356mec3",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 101.0
+        }
+      ],
+      "entityId": "7a80253a-6080-3ca0-9de4-47d9c438779e",
+      "entityType": "flow",
+      "externalId": "hfe-356mec3, air"
+    },
+    {
+      "CasNumber": "74-83-9",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "methyl bromide",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 5.0
+        }
+      ],
+      "entityId": "7dfd827e-fae4-34ad-b44f-6c66b01e0b39",
+      "entityType": "flow",
+      "externalId": "methyl bromide, air"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "pfpmie",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 10300.0
+        }
+      ],
+      "entityId": "83e01363-f9eb-3cf8-9ac5-3b05ac268d38",
+      "entityType": "flow",
+      "externalId": "pfpmie, air"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfe-7100",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 297.0
+        }
+      ],
+      "entityId": "85cc478a-d7b5-3c47-a059-2275e1d07bb2",
+      "entityType": "flow",
+      "externalId": "hfe-7100, air"
+    },
+    {
+      "CasNumber": "75-45-6",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hcfc-22",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 1810.0
+        }
+      ],
+      "entityId": "8ede916f-2053-3a4d-b269-f444156693f4",
+      "entityType": "flow",
+      "externalId": "hcfc-22, air"
+    },
+    {
+      "CasNumber": "507-55-1",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hcfc-225cb",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 595.0
+        }
+      ],
+      "entityId": "95fc36f2-0d64-3d88-a07d-b76ef6e6da37",
+      "entityType": "flow",
+      "externalId": "hcfc-225cb, air"
+    },
+    {
+      "CasNumber": "115-10-6",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "dimethylether",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 1.0
+        }
+      ],
+      "entityId": "9a7802ab-e8d9-3357-83e8-de39bb321177",
+      "entityType": "flow",
+      "externalId": "dimethylether, air"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfe-245cb2",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 708.0
+        }
+      ],
+      "entityId": "9a9d183e-a08b-3ea4-b01c-55e06a2c1035",
+      "entityType": "flow",
+      "externalId": "hfe-245cb2, air"
+    },
+    {
+      "CasNumber": "76-13-1",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "cfc-113",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 6130.0
+        }
+      ],
+      "entityId": "a04766df-294d-3abd-a569-219632526244",
+      "entityType": "flow",
+      "externalId": "cfc-113, air"
+    },
+    {
+      "CasNumber": "1717-00-6",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hcfc-141b",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 725.0
+        }
+      ],
+      "entityId": "a0e854bf-2a9d-3403-9546-7209e4441e76",
+      "entityType": "flow",
+      "externalId": "hcfc-141b, air"
+    },
+    {
+      "CasNumber": "75-43-4",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hcfc-21",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 151.0
+        }
+      ],
+      "entityId": "a0fcb893-d96b-38f4-8d0f-b6857cff6491",
+      "entityType": "flow",
+      "externalId": "hcfc-21, air"
+    },
+    {
+      "CasNumber": "306-94-5",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "pfc-9-1-18",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 7500.0
+        }
+      ],
+      "entityId": "a1846201-77e3-3cf4-84f8-1b5aedb39cbf",
+      "entityType": "flow",
+      "externalId": "pfc-9-1-18, air"
+    },
+    {
+      "CasNumber": "2551-62-4",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "sulfur hexafluoride",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 22800.0
+        }
+      ],
+      "entityId": "a1ae9025-c28a-3f93-a270-aa2c2a5cf98a",
+      "entityType": "flow",
+      "externalId": "sulfur hexafluoride, air"
+    },
+    {
+      "CasNumber": "353-36-6",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfc-161",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 12.0
+        }
+      ],
+      "entityId": "a250b200-e2cc-37ef-91e9-b47e0b7c2163",
+      "entityType": "flow",
+      "externalId": "hfc-161, air"
+    },
+    {
+      "CasNumber": "422-56-0",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hcfc-225ca",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 122.0
+        }
+      ],
+      "entityId": "a286f37f-602b-3f8c-bf73-adaa75a6b762",
+      "entityType": "flow",
+      "externalId": "hcfc-225ca, air"
+    },
+    {
+      "CasNumber": "679-86-7",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfc-245ca",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 693.0
+        }
+      ],
+      "entityId": "a3924b5c-4e54-32c3-8aea-3cef2daec1ce",
+      "entityType": "flow",
+      "externalId": "hfc-245ca, air"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfe-329mcc2",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 919.0
+        }
+      ],
+      "entityId": "a59d7f35-c668-3414-a308-aa57cddfc765",
+      "entityType": "flow",
+      "externalId": "hfe-329mcc2, air"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfe-236ca12",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 2800.0
+        }
+      ],
+      "entityId": "a8d5a1e4-dc22-3cba-8ad5-c25e6c6de89c",
+      "entityType": "flow",
+      "externalId": "hfe-236ca12, air"
+    },
+    {
+      "CasNumber": "74-82-8",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "methane",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 25.0
+        }
+      ],
+      "entityId": "a9477fe2-db5f-3589-b290-81016e5b0632",
+      "entityType": "flow",
+      "externalId": "methane, air"
+    },
+    {
+      "CasNumber": "74-87-3",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "methyl chloride",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 13.0
+        }
+      ],
+      "entityId": "ab11bcdf-cd96-3e43-a016-bfb2c0602fcf",
+      "entityType": "flow",
+      "externalId": "methyl chloride, air"
+    },
+    {
+      "CasNumber": "74-95-3",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "methane, dibromo-",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 1.54
+        }
+      ],
+      "entityId": "b06bc0d4-af9d-3f7d-9072-c81cccea1f29",
+      "entityType": "flow",
+      "externalId": "methane, dibromo-, air"
+    },
+    {
+      "CasNumber": "10024-97-2",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "nitrous oxide",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 298.0
+        }
+      ],
+      "entityId": "b5a13290-56af-3730-8d53-cb4e3aa3509a",
+      "entityType": "flow",
+      "externalId": "nitrous oxide, air"
+    },
+    {
+      "CasNumber": "75-68-3",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hcfc-142b",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 2310.0
+        }
+      ],
+      "entityId": "b679415a-a992-3590-9a95-5139cc8ea565",
+      "entityType": "flow",
+      "externalId": "hcfc-142b, air"
+    },
+    {
+      "CasNumber": "460-73-1",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfc-245fa",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 1030.0
+        }
+      ],
+      "entityId": "b95aa5a7-e70a-3a97-bf46-a4b5a41ad4eb",
+      "entityType": "flow",
+      "externalId": "hfc-245fa, air"
+    },
+    {
+      "CasNumber": "355-42-0",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "pfc-5-1-14",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 9300.0
+        }
+      ],
+      "entityId": "bb1f5d96-a515-3314-aa09-6c883d8ce36d",
+      "entityType": "flow",
+      "externalId": "pfc-5-1-14, air"
+    },
+    {
+      "CasNumber": "75-72-9",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "cfc-13",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 14400.0
+        }
+      ],
+      "entityId": "bf19f1fd-6262-3ab2-ae61-e4d17929b5e2",
+      "entityType": "flow",
+      "externalId": "cfc-13, air"
+    },
+    {
+      "CasNumber": "811-97-2",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfc-134a",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 1430.0
+        }
+      ],
+      "entityId": "c2b4b97c-5797-364a-9321-83d7f59bf20d",
+      "entityType": "flow",
+      "externalId": "hfc-134a, air"
+    },
+    {
+      "CasNumber": "75-69-4",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "cfc-11",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 4750.0
+        }
+      ],
+      "entityId": "c565426b-d897-32e5-984d-8275f3243935",
+      "entityType": "flow",
+      "externalId": "cfc-11, air"
+    },
+    {
+      "CasNumber": "75-63-8",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "halon 1301",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 7140.0
+        }
+      ],
+      "entityId": "c7702384-ca8e-3764-bcf4-c7af8c25e2e0",
+      "entityType": "flow",
+      "externalId": "halon 1301, air"
+    },
+    {
+      "CasNumber": "406-58-6",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfc-365mfc",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 794.0
+        }
+      ],
+      "entityId": "d004da35-b456-38df-aaea-0c6859c7d0ed",
+      "entityType": "flow",
+      "externalId": "hfc-365mfc, air"
+    },
+    {
+      "CasNumber": "359-35-3",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfc-134",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 1100.0
+        }
+      ],
+      "entityId": "d0ed09f6-af29-3500-ad82-f2c6c978b3c7",
+      "entityType": "flow",
+      "externalId": "hfc-134, air"
+    },
+    {
+      "CasNumber": "115-25-3",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "perfluorocyclobutane",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 10300.0
+        }
+      ],
+      "entityId": "d1467bf8-1ce4-3d95-9c03-b013c55bacde",
+      "entityType": "flow",
+      "externalId": "perfluorocyclobutane, air"
+    },
+    {
+      "CasNumber": "71-55-6",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "1,1,1-trichloroethane",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 146.0
+        }
+      ],
+      "entityId": "d1c6449d-f92e-32b5-8ca2-6d68d62496a2",
+      "entityType": "flow",
+      "externalId": "1,1,1-trichloroethane, air"
+    },
+    {
+      "CasNumber": "75-10-5",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfc-32",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 675.0
+        }
+      ],
+      "entityId": "d56e8419-064e-3547-8cda-071ba325bf6e",
+      "entityType": "flow",
+      "externalId": "hfc-32, air"
+    },
+    {
+      "CasNumber": "678-26-2",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "pfc-4-1-12",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 9160.0
+        }
+      ],
+      "entityId": "d8a10aff-78f3-3ea2-9f39-095464ceb303",
+      "entityType": "flow",
+      "externalId": "pfc-4-1-12, air"
+    },
+    {
+      "CasNumber": "124-73-2",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "halon 2402",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 1640.0
+        }
+      ],
+      "entityId": "dbc91453-167d-3e91-826d-92807bc28e4f",
+      "entityType": "flow",
+      "externalId": "halon 2402, air"
+    },
+    {
+      "CasNumber": "76-14-2",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "cfc-114",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 10000.0
+        }
+      ],
+      "entityId": "e1f083e4-ee1f-32bd-aaeb-6945b27f79c9",
+      "entityType": "flow",
+      "externalId": "cfc-114, air"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfe-263fb2",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 11.0
+        }
+      ],
+      "entityId": "ef363ef2-1f13-357d-ab7f-97d149f7c085",
+      "entityType": "flow",
+      "externalId": "hfe-263fb2, air"
+    },
+    {
+      "CasNumber": "76-15-3",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "cfc-115",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 7370.0
+        }
+      ],
+      "entityId": "f65ade24-6034-316f-8b6b-a76e5c34484e",
+      "entityType": "flow",
+      "externalId": "cfc-115, air"
+    },
+    {
+      "CasNumber": "677-56-5",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfc-236cb",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 1340.0
+        }
+      ],
+      "entityId": "f6c418ae-4d0b-31f2-a135-7e5f34981c42",
+      "entityType": "flow",
+      "externalId": "hfc-236cb, air"
+    },
+    {
+      "CasNumber": "7783-54-2",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "nitrogen trifluoride",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 17200.0
+        }
+      ],
+      "entityId": "f6e0d68c-24fb-3a8f-840a-7034e9e2e829",
+      "entityType": "flow",
+      "externalId": "nitrogen trifluoride, air"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfe-356pcf3",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 502.0
+        }
+      ],
+      "entityId": "f8579d5d-ccf7-353c-bf53-aa5d72c77243",
+      "entityType": "flow",
+      "externalId": "hfe-356pcf3, air"
+    },
+    {
+      "CasNumber": "624-72-6",
+      "Comment": "",
+      "Compartment": [
+        "air"
+      ],
+      "Name": "hfc-152",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "38786071-ec75-30b7-bd56-cbecd9fb69e4"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "9304410a-9dfc-3c85-8a30-c548893097c3",
+          "value": 53.0
+        }
+      ],
+      "entityId": "f95ddab7-957e-34a1-bd35-9585a040e996",
+      "entityType": "flow",
+      "externalId": "hfc-152, air"
+    }
+  ],
+  "initArgs": {
+    "dataReference": "lcia.ipcc.2007.traci21",
+    "ns_uuid": "150e35c3-ac4a-485b-826b-a41807ddf43a"
+  },
+  "quantities": [
+    {
+      "Comment": "",
+      "Name": "Mass",
+      "entityId": "38786071-ec75-30b7-bd56-cbecd9fb69e4",
+      "entityType": "quantity",
+      "externalId": "Mass",
+      "referenceUnit": "kg"
+    },
+    {
+      "Category": "Global Warming Air",
+      "Comment": "IPCC GWP factors, as implemented in TRACI 2.1 [traci_2_1_2014_dec_10_0.xlsx]\n\nshould probably auto-generate some provenance data here or something...",
+      "Indicator": "kg CO2 eq",
+      "Method": "TRACI 2.1",
+      "Name": "Global Warming Air",
+      "Source": "IPCC Fourth Assessment Report, Working Group I: Technical Summary, table TS-2",
+      "entityId": "9304410a-9dfc-3c85-8a30-c548893097c3",
+      "entityType": "quantity",
+      "externalId": "Global Warming Air",
+      "referenceUnit": "kg CO2 eq"
+    }
+  ]
+}

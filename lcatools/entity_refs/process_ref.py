@@ -103,9 +103,9 @@ class ProcessRef(EntityRef):
     def exchanges(self, **kwargs):
         return self._query.exchanges(self.external_ref, **kwargs)
 
-    def exchange_values(self, flow, direction=None, termination=None, **kwargs):
+    def exchange_values(self, flow, direction=None, termination=None, reference=None, **kwargs):
         return self._query.exchange_values(self.external_ref, flow.external_ref, direction,
-                                           termination=termination, **kwargs)
+                                           termination=termination, reference=reference, **kwargs)
 
     def inventory(self, ref_flow=None, **kwargs):
         # ref_flow = self._use_ref_exch(ref_flow)  # ref_flow=None returns unallocated inventory
@@ -125,8 +125,7 @@ class ProcessRef(EntityRef):
     support process
     '''
     def reference_value(self, flow=None):
-        rx = self.reference(flow)
-        return sum(x.value for x in self.exchange_values(rx.flow, direction=rx.direction))
+        return sum(x.value for x in self.exchange_values(flow, reference=True))
 
     def get_exchange(self, key):
         try:

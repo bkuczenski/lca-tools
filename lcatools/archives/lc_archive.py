@@ -149,16 +149,19 @@ class LcArchive(BasicArchive):
             }[entity_type[0]]
         return super(LcArchive, self).entities_by_type(entity_type)
 
-    def serialize(self, exchanges=False, characterizations=False, values=False):
+    def serialize(self, exchanges=False, characterizations=False, values=False, domesticate=False):
         """
 
         :param exchanges:
         :param characterizations:
         :param values:
+        :param domesticate: [False] if True, omit entities' origins so that they will appear to be from the new archive
+         upon serialization
         :return:
         """
-        j = super(LcArchive, self).serialize(characterizations=characterizations, values=values)
-        j['processes'] = sorted([p.serialize(exchanges=exchanges, values=values)
+        j = super(LcArchive, self).serialize(characterizations=characterizations, values=values,
+                                             domesticate=domesticate)
+        j['processes'] = sorted([p.serialize(exchanges=exchanges, values=values, domesticate=domesticate)
                                  for p in self.entities_by_type('process')],
                                 key=lambda x: x['entityId'])
         if self._descendant:
@@ -166,7 +169,7 @@ class LcArchive(BasicArchive):
         return j
 
     def _serialize_all(self, **kwargs):
-        return self.serialize(exchanges=True, characterizations=True, values=True)
+        return self.serialize(exchanges=True, characterizations=True, values=True, **kwargs)
 
     def _load_all(self, **kwargs):
         if self.source is None:

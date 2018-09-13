@@ -148,7 +148,7 @@ class CLookup(object):
 
 class Qdb(BasicArchive):
     def __init__(self, source=REF_QTYS, quantities=Q_SYNS, flowables=F_SYNS, compartments=None,
-                 quell_biogenic_CO2=False,
+                 quell_biogenic_CO2=False, quell_biogenic_co2=False,
                  ref=None, **kwargs):
         """
 
@@ -196,7 +196,7 @@ class Qdb(BasicArchive):
         self._f_dict = defaultdict(set)  # dict of flowable index to set of characterized quantities (by index)
 
         # following are to implement special treatment for biogenic CO2
-        self._quell_biogenic_co2 = quell_biogenic_CO2
+        self._quell_biogenic_co2 = quell_biogenic_CO2 or quell_biogenic_co2
         self._co2_index = self._f.index('124-38-9')
         self._comp_from_air = self.c_mgr.find_matching('Resources from air')
 

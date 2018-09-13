@@ -89,6 +89,17 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
                 else:
                     yield ExteriorFlow(self._archive.ref, f, 'Output', None)
 
+    def consumers(self, process, ref_flow=None, **kwargs):
+        """
+        Not supported for trivial backgrounds
+        :param process:
+        :param ref_flow:
+        :param kwargs:
+        :return:
+        """
+        for i in []:
+            yield i
+
     def dependencies(self, process, ref_flow=None, **kwargs):
         """
         All processes are LCI, so they have no dependencies

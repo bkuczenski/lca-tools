@@ -7,7 +7,7 @@ Still learning here...
 
 import os
 
-from flask import Flask, jsonify, request, abort
+from flask import Flask, jsonify, request, abort, send_from_directory
 # from flask_jsonapi import Api, ResourceRepository
 
 from .av2_types import FlowSchema, QuantitySchema, ProcessSchema
@@ -90,6 +90,12 @@ def _marshal_right(entity):
               'process': process_schema,
               'quantity': quantity_schema}[entity.entity_type]
     return schema.dump(entity)
+
+
+@app.route('/favicon.ico')
+def _favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static', ),
+                               'antelope-small-ico-v2.ico', mimetype='image/vnd.microsoft.icon')
 
 
 @app.route('/<entity_id>')

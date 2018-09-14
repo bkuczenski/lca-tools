@@ -102,9 +102,6 @@ class AbstractQuery(object):
                 self._validated = False
         return self._validated
 
-
-'''# maybe we don't need these?!
-<<<<<<< HEAD
     def get(self, eid, **kwargs):
         """
         Basic entity retrieval-- must be overridden by basic implementation
@@ -114,6 +111,10 @@ class AbstractQuery(object):
         """
         return self._perform_query(None, 'get', EntityNotFound('%s/%s' % (self.origin, eid)), eid,
                                    **kwargs)
+
+
+'''# maybe we don't need these?!
+<<<<<<< HEAD
 
     def get_item(self, external_ref, item):
         """

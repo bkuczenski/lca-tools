@@ -28,14 +28,14 @@ class InventoryImplementation(BasicImplementation, InventoryInterface):
                     if x.termination == termination:
                         yield x
 
-    def inventory(self, process, ref_flow=None, scenario=None, **kwargs):
+    def inventory(self, process, ref_flow=None, direction=None, scenario=None, **kwargs):
         p = self._archive.retrieve_or_fetch_entity(process)
         if p.entity_type == 'process':
             '''
             for x in sorted(p.inventory(ref_flow=ref_flow),
                             key=lambda t: (not t.is_reference, t.direction, t.value or 0.0)):
             '''
-            for x in p.inventory(ref_flow=ref_flow):
+            for x in p.inventory(ref_flow=ref_flow, direction=direction):
                 yield x
         elif p.entity_type == 'fragment':
             for x in p.inventory(scenario=scenario, observed=True):

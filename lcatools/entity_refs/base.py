@@ -141,8 +141,11 @@ class BaseRef(object):
             raise EntityRefMergeError('Type mismatch %s vs %s' % (self.entity_type, other.entity_type))
         if self.link != other.link:
             if self.external_ref == other.external_ref:
+                pass  # we're going to consider origin mismatches allowable for entity refs
+                '''
                 if not (self.origin.startswith(other.origin) or other.origin.startswith(self.origin)):
                     raise EntityRefMergeError('Origin mismatch %s vs %s' % (self.origin, other.origin))
+                '''
             else:
                 raise EntityRefMergeError('external_ref mismatch: %s vs %s' % (self.external_ref, other.external_ref))
         # otherwise fine-- left argument is dominant
@@ -159,10 +162,19 @@ class BaseRef(object):
         if len(self._d) > 0:
             print('==Local Fields==')
             ml = len(max(self._d.keys(), key=len))
+            named = set()
             for k, v in self._d.items():
+                if k.lower() in named or 'local' + k.lower() in named:
+                    continue
+                named.add(k.lower())
                 print('%*s: %s' % (ml, k, v))
 
-    def serialize(self):
+    def serialize(self, **kwargs):
+        """
+
+        :param kwargs: 'domesticate' has no effect- refs can't be domesticated
+        :return:
+        """
         j = {
             'origin': self.origin,
             'externalId': self.external_ref
@@ -275,7 +287,7 @@ class EntityRef(BaseRef):
     def __getitem__(self, item):
         return self.get_item(item)
 
-    def serialize(self):
-        j = super(EntityRef, self).serialize()
+    def serialize(self, **kwargs):
+        j = super(EntityRef, self).serialize(**kwargs)
         j['entityId'] = self.uuid
         return j

@@ -75,5 +75,4 @@ class FragmentRef(EntityRef):
         if observed is False:
             print('Ignoring false observed flag')
         ffs = self.traverse(scenario=scenario)  # in the future, may want to cache this
-        ffs.append(FragmentFlow.ref_flow(self, scenario=scenario, observed=True, use_ev=ffs[0].magnitude))
         return group_ios(self, ffs)

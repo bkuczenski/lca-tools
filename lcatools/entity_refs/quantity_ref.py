@@ -18,8 +18,8 @@ class QuantityRef(EntityRef):
     def _addl(self):
         return self.unit()
 
-    def serialize(self):
-        j = super(QuantityRef, self).serialize()
+    def serialize(self, **kwargs):
+        j = super(QuantityRef, self).serialize(**kwargs)
         j['referenceUnit'] = self.unit()
         return j
 

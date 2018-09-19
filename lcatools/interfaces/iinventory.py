@@ -11,6 +11,18 @@ _interface = 'inventory'
 class InventoryInterface(AbstractQuery):
     """
     InventoryInterface core methods: individual processes, quantitative data.
+
+    Need to do some thinking here-- the list of methods is very short. In particular there is no way to do any of
+    the following:
+     * retrieve reference exchanges
+     * retrieve cutoff exchanges or only terminated exchanges
+     * retrieve only intermediate or only elementary exchanges [[ pending context refactor :(:( ]]
+       = this is frankly not possible to do, even after the context refactor, because there is no bulletproof way to
+         determine whether a termination is a context or a process or some non-elementary compartment, until you
+         introduce the Lcia Engine with its reference set of contexts, UNLESS you include the reference elementary set
+         in ALL context managers.  Which is feasible- since it's a short list- but still, not done as yet.
+    There's also no access to information from the original source that is not part of the data model, e.g. uncertainty
+    information, arbitrary XML queries, etc.
     """
     def exchanges(self, process, **kwargs):
         """
@@ -26,7 +38,7 @@ class InventoryInterface(AbstractQuery):
         Return a list of exchanges with values matching the specification
         :param process:
         :param flow:
-        :param direction:
+        :param direction: [None] if none,
         :param termination: [None] if none, return all terminations
         :param reference: [None] if True, only find reference exchanges. If false- maybe omit reference exchanges?
         :return:

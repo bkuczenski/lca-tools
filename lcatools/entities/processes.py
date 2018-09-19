@@ -266,6 +266,8 @@ class LcProcess(LcEntity):
     def _gen_exchanges(self, flow=None, direction=None):
         """
         Generate a list of exchanges matching the supplied flow and direction.
+
+        If this is too slow, we could hash the process's exchanges by flow
         :param flow:
         :param direction:
         :return:
@@ -369,17 +371,12 @@ class LcProcess(LcEntity):
                 try:
                     ref = next(rf for rf in self.reference_entity if rf.flow == spec)
                 except StopIteration:
-                    candidates = [x for x in self.exchanges(spec, direction=direction)]
-                    t = len(candidates)
-                    if t == 0:
+                    candidates = [x for x in self.exchanges(spec, direction=direction) if x.termination is None]
+                    if len(candidates) == 0:
                         raise NoReferenceFound('Flow %s not encountered' % spec)
-                    if len(candidates) > 1:
-                        candidates = [c for c in filter(lambda x: x.termination is None, iter(candidates))]
-                    if len(candidates) > 1:
+                    elif len(candidates) > 1:
                         raise AmbiguousReferenceError(
                             '%d un-terminated exchanges found; try specifying direction' % len(candidates))
-                    elif len(candidates) == 0:
-                        raise MultipleReferencesFound('%d non-ref exchanges found; all terminated' % t)
                     ref = candidates[0]
             elif spec.entity_type == 'exchange':
                 if spec in self.reference_entity:

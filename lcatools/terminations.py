@@ -81,9 +81,7 @@ class FlowTermination(object):
 
         direction = j.pop('direction', None)
         descend = j.pop('descend', None)
-        inbound_ev = j.pop('inboundExchangeValue', None)
-        term = cls(fragment, term_node, direction=direction, term_flow=term_flow, descend=descend,
-                   inbound_ev=inbound_ev)
+        term = cls(fragment, term_node, direction=direction, term_flow=term_flow, descend=descend)
         if 'scoreCache' in j.keys():
             term._deserialize_score_cache(fg, j['scoreCache'], scenario)
         return term
@@ -104,7 +102,7 @@ class FlowTermination(object):
     def null(cls, fragment):
         return cls(fragment, None)
 
-    def __init__(self, fragment, entity, direction=None, term_flow=None, descend=True, inbound_ev=None):
+    def __init__(self, fragment, entity, direction=None, term_flow=None, descend=True, **kwargs):
         """
         reference can be None, an entity or a catalog_ref.  It only must have origin, external_ref, and entity_type.
         To use an exchange, use FlowTermination.from_exchange()
@@ -119,7 +117,7 @@ class FlowTermination(object):
         :param direction:
         :param term_flow:
         :param descend:
-        :param inbound_ev:
+        :param inbound_ev: ignored; deprecated
         """
 
         self._parent = fragment
@@ -131,18 +129,11 @@ class FlowTermination(object):
                 entity = fragment
         self._term = entity  # this must have origin, external_ref, and entity_type, and be operable (if ref)
         self._descend = True
-        self.term_flow = None
-        self._cached_ev = 1.0
+        self.term_flow = term_flow or self._parent.flow
         self._score_cache = LciaResults(fragment)
-        if direction is None:
-            self.direction = comp_dir(fragment.direction)
-        else:
-            self.direction = direction
+        self.direction = direction or comp_dir(fragment.direction)
 
         self.descend = descend
-        self.set_term_params(term_flow, inbound_ev)
-        if self._cached_ev is None and not self.is_null:
-            raise ValueError('%s\n%s' % (self._parent, self.term_node))
         self.validate_flow_conversion()
 
     def matches(self, exchange):
@@ -266,7 +257,7 @@ class FlowTermination(object):
 
     def self_terminate(self, term_flow=None):
         self._term = self._parent
-        self.set_term_params(term_flow)
+        self.term_flow = term_flow or self._parent.flow
         self.clear_score_cache()
 
     @property
@@ -324,16 +315,11 @@ class FlowTermination(object):
 
     @property
     def inbound_exchange_value(self):
-        if self.is_bg:
-            return 1.0
-        return self._cached_ev
+        return 1.0
 
     @inbound_exchange_value.setter
     def inbound_exchange_value(self, val):
-        if self.is_fg:
-            self._cached_ev = val
-        else:
-            raise NonConfigurableInboundEV
+        raise NonConfigurableInboundEV
 
     @property
     def node_weight_multiplier(self):
@@ -346,82 +332,6 @@ class FlowTermination(object):
         if self.term_node.entity_type == 'fragment':  # fg, bg, or subfragment
             return '%4g unit' % self.inbound_exchange_value
         return '%4g %s' % (self.inbound_exchange_value, self.term_flow.unit())  # process
-
-    def set_term_params(self, term_flow=None, inbound_ev=None):
-        """
-        Sets the term_flow and cached exchange value by finding a reference exchange that matches the specified flow.
-
-        Direction is as specified in the constructor, but gets overwritten by a successful exchange lookup.
-
-        If both flow and ev are specified, quell catalog lookup and use them.
-
-        If no flow is specified, use the parent's flow. If that fails, use the node's reference flow.
-
-        If the term is a subfragment, the cached ev is always 1.0; default flow is same as child's flow.
-
-        If a reference is found, the direction and cached_ev are set based on the reference, overriding the
-        instantiation parameters.
-
-        :param term_flow: if None, autodetect
-        :param inbound_ev: if None, autodetect
-        :return:
-        """
-        if self.is_null:
-            term_flow = self._parent.flow
-        elif self._term.entity_type == 'fragment':
-            if term_flow is None:
-                # let's try relaxing this
-                # term flow must be sub-fragment's reference flow
-                term_flow = self.term_node.flow
-            # set direction of term to be direction of flow relative to term node
-            if self.is_subfrag:
-                inbound_ev = 1.0
-                if self.term_node.reference_entity is None:
-                    self.direction = comp_dir(self.term_node.direction)
-                else:
-                    self.direction = self.term_node.direction
-        else:
-            if inbound_ev is None or term_flow is None:
-                try:
-                    if term_flow is None:
-                        r_e = self._term.reference(self._parent.flow)
-                    else:
-                        r_e = self._term.reference(term_flow)
-                except NoReferenceFound:
-                    r_e = self._term.reference()  # will raise AmbiguousReferenceError if multiple
-                self.direction = r_e.direction
-                inbound_ev = r_e.value
-                if term_flow is None:
-                    term_flow = r_e.flow
-
-        self.term_flow = term_flow
-        self._cached_ev = inbound_ev or 1.0
-
-    '''
-    def flowdb_results(self, lcia_results):
-        self._score_cache = lcia_results
-
-    def set_score_cache(self, lcia, quantities):
-        """
-
-        :param lcia: a lambda that takes as input a process ref and a ref flow and a list of quantities, and
-        returns a dict of LciaResults
-        fragment LCIA results are not cached, but instead are computed on demand. we'll see if that works for highly
-        nested models. we will have to cache traversals somewhere- but I think that can be done by the manager.
-        :param quantities:
-        :return:
-        """
-        if self.is_null:
-            return
-        q_run = []
-        for q in quantities:
-            if q.uuid not in self._score_cache.keys():
-                q_run.append(q)
-        if len(q_run) != 0:
-            if self.is_fg or self.term_node.entity_type == 'process':
-                results = lcia(self.term_node, self.term_flow, q_run)
-                self._score_cache.update(results)
-    '''
 
     def _unobserved_exchanges(self):
         """
@@ -447,18 +357,7 @@ class FlowTermination(object):
             if self.is_bg:
                 iterable = self.term_node.lci(ref_flow=self.term_flow)
             else:
-                if len(self.term_node.reference_entity) > 1:
-                    # TODO: figure out a better solution for this
-                    # print('WARNING: see _unobserved_exchanges')
-                    '''
-                    This will cause a wrong result in the following situation:
-                     * termination is built with a multi-output process 
-                     * inbound_exchange_value was set to a non-unity value, either manually or in set_term_params
-                     
-                    '''
-                    iterable = self.term_node.inventory(self.term_flow)
-                else:
-                    iterable = self.term_node.inventory()
+                iterable = self.term_node.inventory(ref_flow=self.term_flow)
             for x in iterable:
                 if (x.flow, x.direction) not in children:
                     yield x
@@ -562,8 +461,6 @@ class FlowTermination(object):
             j['direction'] = self.direction
         if self._descend is False:
             j['descend'] = False
-        if self._cached_ev != 1.0:
-            j['inboundExchangeValue'] = self._cached_ev
         if self._parent.is_background and save_unit_scores and len(self._score_cache) > 0:
             j['scoreCache'] = self._serialize_score_cache()
         return j

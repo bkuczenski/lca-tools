@@ -96,3 +96,12 @@ So all of this appears to be in order [with a possible exception], so let's clar
 There is some room here to use is_subfrag more efficiently, because the above is essentially a re-implementation of aggregate_subfragments() (1-a)(2-b)
 
 OK. we passed the regression with non-trivial code changes. The upshot is, I am ready to APPROVE the evaluation that term.is_bg => inbound_ev = 1.0
+
+==========
+Wed Sep 19 13:10:32 -0700 2018
+
+OK, now that we have confirmed that autoconsumption works properly, we have to now face the issue of pass-through processes.  In an earlier code revision I distinguished between these on the basis of the directionality of the flows, but this is FALSE- in fact it is impossible to distinguish between autoconsumption and passthrough fragments on the basis of any concrete attributes of the inventory.  There are some cases where it may be evident: i.e. when a process takes in more than it puts out, autoconsumption would not be valid and it must be a passthrough with e.g. yield losses.  But the inverse is not true: when a process takes in less than it puts out, it could either be autoconsumption or some sort of accretive production.
+
+I think the solution-- pragmatic in this case-- is to assume autoconsumption except when it fails, namely when a process takes in exactly as much or more than it puts out.
+
+

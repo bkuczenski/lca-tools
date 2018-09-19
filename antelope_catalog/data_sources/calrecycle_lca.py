@@ -174,7 +174,7 @@ class CalRecycleImporter(object):
         return self._fnf
 
     def fragment_by_index(self, index):
-        return self._frags[int(index) - 1]
+        return self._fragments[str(int(index))]
 
     def fragment_flow_by_index(self, index):
         return self.ff[int(index) - 1]
@@ -219,51 +219,63 @@ class CalRecycleImporter(object):
 
     def terminate_fragments(self, qi, frags=None):
         for ff in self.ff:
-            frag = self._frags[ff['FragmentFlowID']]
+            debug = False
             if frags is not None:
                 if ff['FragmentFlowID'] not in frags:
                     continue
                 print('FragmentFlowID: %s' % ff['FragmentFlowID'])
-                frag.set_debug_threshold(999)
+                debug = True
 
-            flow = frag.flow
-            # terminate the fragment
-            if ff['NodeTypeID'] == '1':
-                term_node = qi.get(ff['Process']['ProcessUUID'])
-                term_flow = qi.get(ff['Process']['FlowUUID'])
-                frag.clear_termination()
-                frag.terminate(term_node, term_flow=term_flow)
-                if term_node.origin in private_roots:
-                    frag.set_background()
+            try:
+                self._terminate_fragment(qi, ff, debug=debug)
+            except ZeroDivisionError:
+                print('!! Skipping Frag: %s' % ff['FragmentFlowID'])
+
+    def _terminate_fragment(self, qi, ff, debug=False):
+        frag = self._frags[ff['FragmentFlowID']]
+        if debug:
+            frag.set_debug_threshold(999)
+
+        flow = frag.flow
+        # terminate the fragment
+        if ff['NodeTypeID'] == '1':
+            term_node = qi.get(ff['Process']['ProcessUUID'])
+            term_flow = qi.get(ff['Process']['FlowUUID'])
+            frag.clear_termination()
+            frag.terminate(term_node, term_flow=term_flow)
+            if term_node.origin in private_roots:
+                frag.set_background()
+            else:
+                frag.set_child_exchanges()
+        elif ff['NodeTypeID'] == '2':
+            term_frag = self._fragments[ff['SubFragment']['SubFragmentID']]
+            term_flow = qi.get(ff['SubFragment']['FlowUUID'])
+            if term_flow is term_frag.flow:
+                term_node = term_frag
+            else:
+                term_node = None
+                for c in term_frag.top().traverse(None):
+                    if c.term.is_null and c.fragment.flow is term_flow:
+                        term_node = c.fragment
+                if term_node is None:
+                    raise ValueError('Could not find flow from inverse traversal')
+            descend = {'1': True, '0': False}[ff['SubFragment']['Descend']]
+            frag.clear_termination()
+            frag.terminate(term_node, term_flow=term_flow, descend=descend)
+
+        elif ff['NodeTypeID'] == '4':
+            bg = next(row for row in self._bg
+                      if row['FlowUUID'] == flow.uuid and row['DirectionID'] == ff['DirectionID'])
+            if bg['TargetUUID'] != '':
+                if bg['NodeTypeID'] == '1':
+                    term_node = qi.get(bg['TargetUUID'])
+                    if term_node.origin in private_roots:
+                        frag.set_background()
                 else:
-                    frag.set_child_exchanges()
-            elif ff['NodeTypeID'] == '2':
-                term_frag = self._fragments[ff['SubFragment']['SubFragmentID']]
-                term_flow = qi.get(ff['SubFragment']['FlowUUID'])
-                if term_flow is term_frag.flow:
-                    term_node = term_frag
-                else:
-                    term_node = None
-                    for c in term_frag.io_flows(None):
-                        if c.fragment.flow is term_flow:
-                            term_node = c.fragment
-                    if term_node is None:
-                        raise ValueError('Could not find flow from inverse traversal')
-                descend = {'1': True, '0': False}[ff['SubFragment']['Descend']]
+                    term_node = next(_f for _f in self._fragments.values() if _f.uuid == bg['TargetUUID'])
                 frag.clear_termination()
-                frag.terminate(term_node, term_flow=term_flow, descend=descend)
-            elif ff['NodeTypeID'] == '4':
-                bg = next(row for row in self._bg
-                          if row['FlowUUID'] == flow.uuid and row['DirectionID'] == ff['DirectionID'])
-                if bg['TargetUUID'] != '':
-                    if bg['NodeTypeID'] == '1':
-                        term_node = qi.get(bg['TargetUUID'])
-                        if term_node.origin in private_roots:
-                            frag.set_background()
-                    else:
-                        term_node = next(_f for _f in self._fragments.values() if _f.uuid == bg['TargetUUID'])
-                    frag.clear_termination()
-                    frag.terminate(term_node, term_flow=flow, descend=False)
+                frag.terminate(term_node, term_flow=flow, descend=False)
+        return frag
 
     def set_balances(self):
         for f in self.ff:

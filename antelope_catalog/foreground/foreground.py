@@ -154,11 +154,11 @@ class LcForeground(BasicArchive):
             '''
         try:
             self._add(entity, entity.link)
-            self._uuid_map[entity.uuid].add(entity.link)
         except KeyError:
             # merge incoming entity's properties with existing entity
             current = self[entity.uuid]
             current.merge(entity)
+        self._uuid_map[entity.uuid].add(entity.link)
 
     def _add_children(self, entity):
         if entity.entity_type == 'fragment':
@@ -167,11 +167,6 @@ class LcForeground(BasicArchive):
                 self.add_entity_and_children(c)
         else:
             super(LcForeground, self)._add_children(entity)
-
-    def check_counter(self, entity_type=None):
-        super(LcForeground, self).check_counter(entity_type=entity_type)
-        if entity_type is None:
-            super(LcForeground, self).check_counter(entity_type='fragment')
 
     def name_fragment(self, frag, name):
         """

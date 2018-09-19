@@ -870,7 +870,7 @@ class LcFragment(LcEntity):
         if len(children) == 0:
             return
 
-        for x in term.term_node.inventory(ref_flow=term.term_flow):
+        for x in term.term_node.inventory(ref_flow=term.term_flow, direction=term.direction):
             if x.value is None:
                 self.dbg_print('skipping None-valued exchange: %s' % x)
                 continue
@@ -997,7 +997,6 @@ class LcFragment(LcEntity):
 
         ffs = top.traverse(scenario, observed=observed)
 
-        ffs.append(FragmentFlow.ref_flow(top, scenario=scenario, observed=observed))
         ios, internal = group_ios(self, ffs)
 
         return ios, internal
@@ -1029,7 +1028,7 @@ class LcFragment(LcEntity):
                                 for i in ref.intermediate(ref.lci(ref_flow=ff.term.term_flow.external_ref))])
 
         if aggregate:
-            cos, _ = group_ios(self, cos)
+            cos, _ = group_ios(self, cos, include_ref_flow=False)
 
         return sorted([ExchangeValue(f.fragment, f.fragment.flow, f.fragment.direction, value=f.magnitude)
                        for f in cos], key=lambda x: (x.direction == 'Input', x.flow['Compartment'],
@@ -1181,6 +1180,10 @@ class LcFragment(LcEntity):
         unit_inv.remove(match)
 
         in_ex = match.magnitude  # this is the inbound exchange value for the driven fragment
+        if in_ex == 0:
+            # this indicates a non-consumptive pass-thru fragment.
+            print('Frag %.5s: Zero inbound exchange' % self.uuid)
+            raise ZeroDivisionError
         if match.fragment.direction == self.direction:
             # self is driving subfragment in reverse
             in_ex *= -1

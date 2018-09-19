@@ -1,4 +1,26 @@
 ==========
+Fri Sep 14 13:48:35 -0700 2018
+
+I am losing and re-learning all this flask stuff.
+
+Here's the deal.  The flask server does not *appear* to *normally* be runtime-configurable.  Meaning, it does not appear to be straightforward to e.g. first startup a flask server and then add foregrounds to it.
+
+anyway, even if it's not supported to do that in real time, I can still write the AV1 routes as a blueprint.  that's what I should do.
+
+The workflow would be:
+
+ 0- have an LcCatalog that contains the fragment you want to publish
+ 1- create the study object
+ 2- from the fragment, add to the study object by (a) crawls the fragment and (b) accumulates lists of processes, flows, flowproperties
+ 3- add lciamethods at any time
+ 4- supply the study object to a blueprint factory that produces the blueprint
+  4a- add the blueprint to the flask app
+
+
+    
+
+
+==========
 Mon Mar 19 22:15:39 -0700 2018
 
 Flask app should be route-based and not subclassed
@@ -56,7 +78,7 @@ resourceService.ROUTES = {
     "fragment" : API_ROOT + "fragments/:fragmentID",
     "impactCategory" : API_ROOT + "impactcategories",
     "lciaMethod" : API_ROOT + "lciamethods",
-    "process" : API_ROOT + "processes",
+    "process" : API_ROOT + "processes",  /** WANT TO DEPRECATE THIS-- for now just return list of process ID and name **/
 
     /** entity-specific properties **/
     "fragmentStage" : API_ROOT + "fragments/:fragmentID/fragmentstages",
@@ -88,4 +110,3 @@ resourceService.ROUTES = {
 Dissipation endpoints are ignored for now-- those are very low priority.
 
 Also let's neglect scenarios for the moment-- though that is a large question mark and the API is going to need to handle POST and PUT data for scenarios-- perhaps a sql-like backend is appropriate for that-- in which case perhaps a sql-like backend is appropriate for at least mapping the entities from index to semantic link.  but for now the db is going to be just a defaultdict(list) (ZOMG!)
-

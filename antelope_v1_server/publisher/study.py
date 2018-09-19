@@ -1,4 +1,6 @@
-
+"""
+This appears to be a serialization of a study, which is not what I wnt to work on right this second.
+"""
 
 
 class StudyPublication(object):

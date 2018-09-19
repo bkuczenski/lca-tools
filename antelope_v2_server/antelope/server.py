@@ -49,6 +49,11 @@ def index():
                    origin=query.origin)
 
 
+@app.route('/hello')  # testing only-----
+def hello_world():
+    return 'Hello world!'
+
+
 flow_schema = FlowSchema()
 process_schema = ProcessSchema()
 quantity_schema = QuantitySchema()

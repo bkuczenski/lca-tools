@@ -30,37 +30,76 @@ import os
 import csv
 from collections import namedtuple
 
-from ..lc_resource import LcResource
-from .. import LcCatalog
 from ..foreground.fragment_editor import FragmentEditor
 from lcatools.interfaces import comp_dir
+
+from .data_source import DataSource, DataCollection
+from ..foreground.fragments import BalanceAlreadySet
 
 
 SemanticRoot = namedtuple('SemanticRoot', ('path', 'root', 'privacy', 'priority'))
 
 
-DATA_ROOT = '/data/GitHub/CalRecycle/LCA_Data/'
+# DATA_ROOT = '/data/GitHub/CalRecycle/LCA_Data/'
 
-data_main = SemanticRoot(os.path.join(DATA_ROOT, 'Full UO LCA Flat Export BK'), 'calrecycle.uolca.core', 0, 10)
-data_improper = SemanticRoot(os.path.join(DATA_ROOT, 'Full UO LCA Flat Export Improper'), 'calrecycle.uolca.improper',
-                             0, 20)
-data_ecoinvent = SemanticRoot(os.path.join(DATA_ROOT, 'Full UO LCA Flat Export Ecoinvent'),
-                              'calrecycle.uolca.ecoinvent.2.2', 1, 30)
-data_pe24 = SemanticRoot(os.path.join(DATA_ROOT, 'Full UO LCA Flat Export PE-SP24'), 'calrecycle.uolca.pe.sp24', 1, 40)
-data_pe22 = SemanticRoot(os.path.join(DATA_ROOT, 'Full UO LCA Flat Export PE-SP22'), 'calrecycle.uolca.pe.sp22', 1, 50)
+data_main = SemanticRoot('Full UO LCA Flat Export BK', 'calrecycle.uolca.core', 0, 10)
+data_improper = SemanticRoot('Full UO LCA Flat Export Improper', 'calrecycle.uolca.improper', 0, 20)
+data_ecoinvent = SemanticRoot('Full UO LCA Flat Export Ecoinvent', 'calrecycle.uolca.ecoinvent.2.2', 1, 30)
+data_pe24 = SemanticRoot('Full UO LCA Flat Export PE-SP24', 'calrecycle.uolca.pe.sp24', 1, 40)
+data_pe22 = SemanticRoot('Full UO LCA Flat Export PE-SP22', 'calrecycle.uolca.pe.sp22', 1, 50)
 
-lcia_elcd = SemanticRoot(os.path.join(DATA_ROOT, 'ELCD-LCIA'), 'calrecycle.lcia.elcd', 0, 70)
-lcia_traci = SemanticRoot(os.path.join(DATA_ROOT, 'TRACI Core-4 Export'), 'calrecycle.lcia.traci.2.0', 0, 70)
+lcia_elcd = SemanticRoot('ELCD-LCIA', 'calrecycle.lcia.elcd', 0, 70)
+lcia_traci = SemanticRoot('TRACI Core-4 Export', 'calrecycle.lcia.traci.2.0', 0, 70)
 
 sources = (data_main, data_improper, data_ecoinvent, data_pe22, data_pe24)
+lcia_sources = (lcia_elcd, lcia_traci)
 
 private_roots = [k.root for k in sources if k.privacy > 0]
 
 
-def create_catalog(path):
-    return LcCatalog(path)
+class CalRecycleArchive(DataSource):
+    _ds_type = 'IlcdArchive'
+
+    def __init__(self, data_root, semantic_root):
+        archive_path = os.path.join(data_root, semantic_root.path)
+        super(CalRecycleArchive, self).__init__(archive_path)
+        self._info = semantic_root
+
+    @property
+    def references(self):
+        for k in (self._info.root,):
+            yield k
+
+    def interfaces(self, ref):
+        yield 'inventory'
+        if self._info.privacy > 0:
+            yield 'background'
+
+    def make_resources(self, ref):
+        if ref == self._info.root:
+            yield self._make_resource(ref, self.root, privacy=self._info.privacy, priority=self._info.priority,
+                                      interfaces=[k for k in self.interfaces(ref)])
 
 
+class CalRecycleLcia(CalRecycleArchive):
+    _ds_type = 'IlcdLcia'
+
+    def interfaces(self, ref):
+        yield 'quantity'
+
+
+class CalRecycleConfig(DataCollection):
+    def factory(self, data_root):
+        for source in sources:
+            yield CalRecycleArchive(data_root, source)
+        for source in lcia_sources:
+            yield CalRecycleLcia(data_root, source)
+
+    def foreground(self, cat, **kwargs):
+        return CalRecycleImporter.run_import(self.root, cat, **kwargs)
+
+
+'''
 def install_resources(cat):
     for a in sources:
         if a.privacy > 0:
@@ -73,6 +112,7 @@ def install_resources(cat):
     for q in (lcia_elcd, lcia_traci):
         res = LcResource(q.root, q.path, 'IlcdLcia', interfaces='quantity', priority=q.priority, static=False)
         cat.add_resource(res)
+'''
 
 
 def direction_map(did):
@@ -116,13 +156,55 @@ def dict_from_csv(file):
 
 class CalRecycleImporter(object):
     """
-    Maybe we want a superclass; for now let's just put in what we need
+    runs to create
     """
+    @classmethod
+    def run_import(cls, data_root, cat, origin='calrecycle.uolca', fg_path='fg', **kwargs):
+        """
+
+        :param data_root:
+        :param cat:
+        :param origin: ['calrecycle.uolca']
+        :param fg_path: ['fg'] either a directory name in the catalog root, or an absolute path
+        :return: a foreground archive containing the model
+        """
+        imp = cls(data_root, **kwargs)
+
+        qi = cat.query(origin)
+        try:
+            fg = cat.get_archive(origin, 'foreground')
+        except KeyError:
+            cat.create_foreground(fg_path, ref=origin)  # currently this returns an interface- but op requires archive
+            fg = cat.get_archive(origin, 'foreground')
+
+        if fg.count_by_type('fragment') < len(imp.ff):
+            for f in imp.ff:
+                imp.fragment_from_fragment_flow(qi, f)
+
+            imp.terminate_fragments(qi)
+
+            imp.set_balances()
+
+            for f in imp.fragments:
+                fg.add_entity_and_children(f)
+                if f.reference_entity is None:
+                    f_id = imp.fragment_flow_by_index(f['FragmentFlowID'])['FragmentID']
+                    fg.name_fragment(f, 'fragments/%s' % f_id)
+
+            fg.save()
+
+        return fg
+
     @property
     def fragment_dir(self):
         return os.path.join(self._root, 'fragments')
 
-    def __init__(self, data_root):
+    def _print(self, *args):
+        if not self._quiet:
+            print(*args)
+
+    def __init__(self, data_root, quiet=True):
+        self._quiet = quiet
         self._root = data_root
         self._stages = dict_from_csv(os.path.join(self.fragment_dir, 'FragmentStage.csv'))
         self._f = read_csv(os.path.join(self.fragment_dir, 'Fragment.csv'))
@@ -173,6 +255,11 @@ class CalRecycleImporter(object):
     def fnf(self):
         return self._fnf
 
+    @property
+    def fragments(self):
+        for f in self._frags.values():
+            yield f
+
     def fragment_by_index(self, index):
         return self._fragments[str(int(index))]
 
@@ -186,7 +273,7 @@ class CalRecycleImporter(object):
         :return:
         """
         if ff['FragmentFlowID'] in self._frags:
-            print('Already loaded: %s' % ff['FragmentFlowID'])
+            self._print('Already loaded: %s' % ff['FragmentFlowID'])
             return
         flow = qi.get(ff['FlowUUID'])
         direction = direction_map(ff['DirectionID'])
@@ -204,7 +291,7 @@ class CalRecycleImporter(object):
             try:
                 parent = self._frags[ff['ParentFragmentFlowID']]
             except KeyError:
-                print('Recursing to %s' % ff['ParentFragmentFlowID'])
+                self._print('Recursing to %s' % ff['ParentFragmentFlowID'])
                 self.fragment_from_fragment_flow(qi, self.fragment_flow_by_index(ff['ParentFragmentFlowID']))
                 parent = self._frags[ff['ParentFragmentFlowID']]
 
@@ -223,7 +310,7 @@ class CalRecycleImporter(object):
             if frags is not None:
                 if ff['FragmentFlowID'] not in frags:
                     continue
-                print('FragmentFlowID: %s' % ff['FragmentFlowID'])
+                self._print('FragmentFlowID: %s' % ff['FragmentFlowID'])
                 debug = True
 
             try:
@@ -281,7 +368,10 @@ class CalRecycleImporter(object):
         for f in self.ff:
             if f['NodeTypeID'] == '1':
                 if f['Process']['ConservationFFID'] != '':
-                    self._frags[f['Process']['ConservationFFID']].set_balance_flow()
+                    try:
+                        self._frags[f['Process']['ConservationFFID']].set_balance_flow()
+                    except BalanceAlreadySet:
+                        pass
 
 
 if __name__ == '__main__':

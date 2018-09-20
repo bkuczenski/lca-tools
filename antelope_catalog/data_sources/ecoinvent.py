@@ -57,12 +57,12 @@ class Ecoinvent3Base(DataSource):
                     pname = '%s%s_%s_ecoSpold02' % (pf, self._version, mod)
                 else:
                     pname = '%s%s_%s_%s_ecoSpold02' % (pf, self._version, mod, ftype)
-                dsource = os.path.join(self._root, self._version, pname)
+                dsource = os.path.join(self.root, self._version, pname)
                 if os.path.isdir(dsource):
                     return dsource
                 for ext in FILE_EXT:
                     fname = '%s.%s' % (pname, ext)
-                    source = os.path.join(self._root, self._version, fname)
+                    source = os.path.join(self.root, self._version, fname)
                     if os.path.exists(source):
                         return source
 

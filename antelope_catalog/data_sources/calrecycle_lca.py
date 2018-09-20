@@ -37,37 +37,37 @@ from .data_source import DataSource, DataCollection
 from ..foreground.fragments import BalanceAlreadySet
 
 
-SemanticRoot = namedtuple('SemanticRoot', ('path', 'root', 'privacy', 'priority'))
+SemanticResource = namedtuple('SemanticResource', ('path', 'ref', 'privacy', 'priority'))
 
 
 # DATA_ROOT = '/data/GitHub/CalRecycle/LCA_Data/'
 
-data_main = SemanticRoot('Full UO LCA Flat Export BK', 'calrecycle.uolca.core', 0, 10)
-data_improper = SemanticRoot('Full UO LCA Flat Export Improper', 'calrecycle.uolca.improper', 0, 20)
-data_ecoinvent = SemanticRoot('Full UO LCA Flat Export Ecoinvent', 'calrecycle.uolca.ecoinvent.2.2', 1, 30)
-data_pe24 = SemanticRoot('Full UO LCA Flat Export PE-SP24', 'calrecycle.uolca.pe.sp24', 1, 40)
-data_pe22 = SemanticRoot('Full UO LCA Flat Export PE-SP22', 'calrecycle.uolca.pe.sp22', 1, 50)
+data_main = SemanticResource('Full UO LCA Flat Export BK', 'calrecycle.uolca.core', 0, 10)
+data_improper = SemanticResource('Full UO LCA Flat Export Improper', 'calrecycle.uolca.improper', 0, 20)
+data_ecoinvent = SemanticResource('Full UO LCA Flat Export Ecoinvent', 'calrecycle.uolca.ecoinvent.2.2', 1, 30)
+data_pe24 = SemanticResource('Full UO LCA Flat Export PE-SP24', 'calrecycle.uolca.pe.sp24', 1, 40)
+data_pe22 = SemanticResource('Full UO LCA Flat Export PE-SP22', 'calrecycle.uolca.pe.sp22', 1, 50)
 
-lcia_elcd = SemanticRoot('ELCD-LCIA', 'calrecycle.lcia.elcd', 0, 70)
-lcia_traci = SemanticRoot('TRACI Core-4 Export', 'calrecycle.lcia.traci.2.0', 0, 70)
+lcia_elcd = SemanticResource('ELCD-LCIA', 'calrecycle.lcia.elcd', 0, 70)
+lcia_traci = SemanticResource('TRACI Core-4 Export', 'calrecycle.lcia.traci.2.0', 0, 70)
 
 sources = (data_main, data_improper, data_ecoinvent, data_pe22, data_pe24)
 lcia_sources = (lcia_elcd, lcia_traci)
 
-private_roots = [k.root for k in sources if k.privacy > 0]
+private_roots = [k.ref for k in sources if k.privacy > 0]
 
 
 class CalRecycleArchive(DataSource):
     _ds_type = 'IlcdArchive'
 
-    def __init__(self, data_root, semantic_root):
-        archive_path = os.path.join(data_root, semantic_root.path)
+    def __init__(self, data_root, semantic_resource):
+        archive_path = os.path.join(data_root, semantic_resource.path)
         super(CalRecycleArchive, self).__init__(archive_path)
-        self._info = semantic_root
+        self._info = semantic_resource
 
     @property
     def references(self):
-        for k in (self._info.root,):
+        for k in (self._info.ref,):
             yield k
 
     def interfaces(self, ref):
@@ -76,7 +76,7 @@ class CalRecycleArchive(DataSource):
             yield 'background'
 
     def make_resources(self, ref):
-        if ref == self._info.root:
+        if ref == self._info.ref:
             yield self._make_resource(ref, self.root, privacy=self._info.privacy, priority=self._info.priority,
                                       interfaces=[k for k in self.interfaces(ref)])
 
@@ -115,11 +115,11 @@ def install_resources(cat):
 '''
 
 
-def direction_map(did):
+def direction_map(dir_id):
     return {'1': 'Input',
             1: 'Input',
             '2': 'Output',
-            2: 'Output'}[did]
+            2: 'Output'}[dir_id]
 
 
 def read_csv(file):

@@ -296,10 +296,10 @@ class LcFragment(LcEntity):
         return terms
 
     def serialize(self, save_unit_scores=False):
-        j = super(LcFragment, self).serialize()
+        j = super(LcFragment, self).serialize(domesticate=True)  # once you save a fragment, it's yours
 
         j.update({
-            'flow': self.flow.uuid,
+            'flow': self.flow.uuid,  # TODO: should be external ref-- phaseout uuids generally
             'direction': self.direction,
             'isPrivate': self._private,
             'isBackground': self._background,

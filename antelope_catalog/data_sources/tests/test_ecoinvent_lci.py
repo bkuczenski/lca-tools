@@ -19,13 +19,13 @@ from ... import LcCatalog
 from lcatools.entities import LcProcess
 from ...providers import archive_from_json
 
-from interfaces import EntityNotFound
+from lcatools.interfaces import EntityNotFound
 
 from ..local import CATALOG_ROOT, check_enabled
 from lcatools.archives import LcArchive
 
 EcoinventNode = namedtuple('EcoinventNode', ['version', 'model', 'node'])
-_debug = True
+_debug = False
 
 
 if __name__ == '__main__':
@@ -162,6 +162,7 @@ class EcoinventLciTest(unittest.TestCase):
             self.skipTest('Ecoinvent not setup')
 
     def test_lci(self):
+        print('Run Test? %s' % _run_ecoinvent)
         for node in self.nodes():
             lci_result = cat.query(test_ref(node.version, node.model)).get(node.node)
             rx = lci_result.reference()

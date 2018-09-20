@@ -45,6 +45,7 @@ TO ADD A NEW DATA SOURCE:
 
 from .ecoinvent import EcoinventConfig
 from .traci import TraciConfig
+from .calrecycle_lca import CalRecycleConfig
 
 
 '''CATALOG_ROOT specifies the local folder that stores the reference catalog
@@ -66,11 +67,16 @@ RESOURCES_CONFIG = {
     'ecoinvent': {
         'source': EcoinventConfig,
         'data_root': '/data/LCI/Ecoinvent/',
-        'enable_test': True
+        'enable_test': False
     },
     'traci': {
         'source': TraciConfig,
         'data_root': '/data/LCI/TRACI/',
+        'enable_test': True
+    },
+    'calrecycle': {
+        'source': CalRecycleConfig,
+        'data_root': '/data/GitHub/CalRecycle/LCA_Data/',
         'enable_test': True
     }
 }

@@ -114,6 +114,7 @@ class LcForeground(BasicArchive):
         if not os.path.isdir(self.source):
             os.makedirs(self.source)
         self.load_all()
+        self.check_counter('fragment')
 
     def _fetch(self, entity, **kwargs):
         return self.__getitem__(entity)
@@ -134,6 +135,27 @@ class LcForeground(BasicArchive):
         if ref is None:
             ref = CatalogRef(origin, external_ref, entity_type=entity_type)
         return ref
+
+    def _flow_ref_from_json(self, e, uid):
+        origin = e.pop('origin')
+        external_ref = e.pop('externalId')
+        c = e.pop('characterizations')
+        ref_qty_uu = next(cf['quantity'] for cf in c if 'isReference' in cf and cf['isReference'] is True)
+        return CatalogRef.from_query(external_ref, self._catalog.query(origin), 'flow', self[ref_qty_uu], uuid=uid, **e)
+
+    def _qty_ref_from_json(self, e, uid):
+        origin = e.pop('origin')
+        external_ref = e.pop('externalId')
+        unitstring = e.pop('referenceUnit')
+        return CatalogRef.from_query(external_ref, self._catalog.query(origin), 'quantity', unitstring, uuid=uid, **e)
+
+    def _make_entity(self, e, etype, uid):
+        if e['origin'] != self.ref:
+            if etype == 'flow':
+                return self._flow_ref_from_json(e, uid)
+            elif etype == 'quantity':
+                return self._qty_ref_from_json(e, uid)
+        return super(LcForeground, self)._make_entity(e, etype, uid)
 
     def add(self, entity):
         """

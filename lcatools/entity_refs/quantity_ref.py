@@ -8,6 +8,8 @@ class QuantityRef(EntityRef):
     _etype = 'quantity'
 
     def unit(self):
+        if isinstance(self.reference_entity, str):
+            return self.reference_entity
         return self.reference_entity.unitstring
 
     @property

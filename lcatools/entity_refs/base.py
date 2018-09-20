@@ -196,6 +196,12 @@ class EntityRef(BaseRef):
     def make_ref(self, *args):
         return self
 
+    def set_external_ref(self, ref):
+        # stopgap because of entity_from_json confusion regarding external refs and foregrounds
+        # TODO: rework external ref handling after context refactor
+        if ref != self.external_ref:
+            raise ValueError('Ref collision! [%s] != [%s]' % (ref, self.external_ref))
+
     def __init__(self, external_ref, query, reference_entity, **kwargs):
         """
 

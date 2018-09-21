@@ -357,7 +357,7 @@ class FlowTermination(object):
             if self.is_bg:
                 iterable = self.term_node.lci(ref_flow=self.term_flow)
             else:
-                iterable = self.term_node.inventory(ref_flow=self.term_flow)
+                iterable = self.term_node.inventory(ref_flow=self.term_flow, direction=self.direction)
             for x in iterable:
                 if (x.flow, x.direction) not in children:
                     yield x

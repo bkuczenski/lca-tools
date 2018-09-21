@@ -176,8 +176,8 @@ class CompartmentManager(object):
                             raise MissingCompartment('Merge failed: %s (%s)' % (cs, c))
                     except ProtectedReferenceFile:
                         pass
-                return None
-                # raise MissingCompartment('%s' % compartment_name)
+                # return None
+                raise MissingCompartment('%s' % compartment_name)
             else:
                 return None
         self._c_dict[cs] = match  # cache for later discovery

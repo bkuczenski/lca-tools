@@ -50,7 +50,7 @@ class LcForeground(BasicArchive):
     _entity_types = set(FOREGROUND_ENTITY_TYPES)
     _ns_uuid_required = None
 
-    def _load_json_file(self, filename):
+    def _load_entities_json(self, filename):
         with open(filename, 'r') as fp:
             self.load_json(json.load(fp), jsonfile=filename)
 
@@ -121,7 +121,7 @@ class LcForeground(BasicArchive):
 
     def _load_all(self):
         if os.path.exists(self._archive_file):
-            self._load_json_file(self._archive_file)
+            self._load_entities_json(self._archive_file)
             self._load_fragments()
 
     def make_interface(self, iface):
@@ -131,6 +131,16 @@ class LcForeground(BasicArchive):
             return super(LcForeground, self).make_interface(iface)
 
     def catalog_ref(self, origin, external_ref, entity_type=None):
+        """
+        TODO: make foreground-generated CatalogRefs lazy-loading. This mainly requires removing the expectation of a
+        locally-defined reference entity, and properly implementing and using a reference-retrieval process in the
+        basic interface.
+        :param origin:
+        :param external_ref:
+        :param entity_type:
+        :return:
+        """
+        # TODO: catalog.fetch is costly because it loads the entire target object
         ref = self._catalog.fetch(origin, external_ref)
         if ref is None:
             ref = CatalogRef(origin, external_ref, entity_type=entity_type)

@@ -74,6 +74,8 @@ class CalRecycleArchive(DataSource):
         yield 'inventory'
         if self._info.privacy > 0:
             yield 'background'
+        else:
+            yield 'quantity'
 
     def make_resources(self, ref):
         if ref == self._info.ref:
@@ -89,7 +91,7 @@ class CalRecycleLcia(CalRecycleArchive):
 
 
 class CalRecycleConfig(DataCollection):
-    def factory(self, data_root):
+    def factory(self, data_root, **kwargs):
         for source in sources:
             yield CalRecycleArchive(data_root, source)
         for source in lcia_sources:

@@ -87,8 +87,8 @@ Code below this line is used by the local init machinery to setup catalogs / tes
 '''
 
 
-def make_config(data_source):
-    d = RESOURCES_CONFIG[data_source]
+def make_config(resource):
+    d = RESOURCES_CONFIG[resource]
     return d['source'](**{k: v for k, v in d.items() if k != 'source'})
 
 

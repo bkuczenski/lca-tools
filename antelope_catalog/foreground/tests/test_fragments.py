@@ -8,18 +8,17 @@ from math import floor
 from ... import LcCatalog
 from ...data_sources.local import make_config, check_enabled, CATALOG_ROOT
 
+if check_enabled('calrecycle'):
+    cat = LcCatalog(CATALOG_ROOT)
+    crc = make_config('calrecycle')
+    fg = crc.foreground(cat)
+
 
 @unittest.skipUnless(check_enabled('calrecycle'), 'CalRecycle not enabled')
 class FragmentTests(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if check_enabled('calrecycle'):
-            cat = LcCatalog(CATALOG_ROOT)
-            crc = make_config('calrecycle')
-            cls.fg = crc.foreground(cat)
 
     def test_passthrough(self):
-        lm = self.fg['fragments/3']
+        lm = fg['fragments/3']
         inv, _ = lm.unit_inventory(None, observed=True)
         self.assertEqual(len(inv), 3)  # 3 inventory flows
         self.assertEqual(len(set(x.fragment.flow for x in inv)), 2)  # 2 distinct flows
@@ -31,7 +30,7 @@ class FragmentTests(unittest.TestCase):
         pass  # no autoconsumption fragments in CalRecycle :(
 
     def test_traversal(self):
-        uom = self.fg['fragments/55']
+        uom = fg['fragments/55']
         ffs = uom.traverse(None, observed=True)
         self.assertEqual(len(ffs), 332)
         inv = uom.inventory(None, observed=True)

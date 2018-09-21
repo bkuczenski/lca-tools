@@ -254,7 +254,7 @@ class LcProcess(LcEntity):
         """
         if flow is None:
             if reference is True:
-                _x_gen = (x for x in self.reference_entity)
+                _x_gen = (self._exchanges[x.key] for x in self.reference_entity)
             elif reference is False:
                 _x_gen = (x for x in self._exchanges.values() if not x.is_reference)
             else:

@@ -82,7 +82,7 @@ class LcCatalogResolver(object):
         ref = resource.reference
         res = self._resources[ref]
         if resource not in res:
-            raise KeyError('Resource not found by resolver')
+            raise KeyError('Resource not found by resolver (ref: %s)' % ref)
         res.remove(resource)
         self._write_or_delete_resource_file(ref, res)
         if len(res) == 0:
@@ -152,7 +152,7 @@ class LcCatalogResolver(object):
                         print('%s:%s [priority %d]' % (k.source, i, k.priority))
                 raise ValueError('Ambiguous matches for supplied parameters')
         elif len(matches) == 0:
-            raise KeyError('no resource found')
+            raise KeyError('no resource found; ref:%s iface:%s source=%s' % (ref, iface, source))
         return matches[0]
 
     def _write_or_delete_resource_file(self, ref, resources):

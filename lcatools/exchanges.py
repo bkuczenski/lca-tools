@@ -21,10 +21,6 @@ class AmbiguousReferenceError(Exception):
     pass
 
 
-class NoReferenceFound(Exception):
-    pass
-
-
 class Exchange(object):
     """
     An exchange is an affiliation of a process, a flow, and a direction. An exchange does

@@ -105,7 +105,7 @@ class FlowRef(EntityRef):
         try:
             val = self._query.cf(self.external_ref, query_quantity, locale=locale, **kwargs)
         except QuantityRequired:
-            print('!Unable to lookup flow CF\nflow: %s\nquantity: %s' %(self.link, query_quantity.link))
+            print('!Unable to lookup flow CF\nflow: %s\nquantity: %s' % (self.link, query_quantity.link))
             val = 0.0
         self.add_characterization(query_quantity, value=val, location=locale)
         return val

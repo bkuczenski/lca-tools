@@ -51,8 +51,18 @@ class InventoryInterface(AbstractQuery):
     def inventory(self, process, ref_flow=None, **kwargs):
         """
         Return a list of exchanges with values. If no reference is supplied, return all unallocated exchanges, including
-        reference exchanges. If a reference is supplied, return allocated (but not normalized) exchanges, excluding
         reference exchanges.
+
+        If a reference flow is supplied, expected behavior depends on a number of factors.
+         - If the supplied reference flow is part of the process's reference entity, the inventory should return all
+         non-reference exchanges, appropriately allocated to the specified flow, and normalized to a unit of the
+         specified flow.
+         - If the supplied reference flow is not part of the reference entity, NO allocation should be performed.
+         Instead, the inventory should return ALL exchanges except for the specified flow, un-allocated, normalized to
+         a unit of the specified flow.  This query is only valid if the specified flow is a cut-off (i.e. un-terminated)
+         exchange.
+         - If the supplied reference flow is a non-reference, non-cutoff flow (i.e. it is a terminated exchange), then
+         the appropriate behavior is undefined. The default implementation raises an ExchangeError.
 
         Note: if this is called on a fragment, the signature is the same but the 'ref_flow' argument is interpreted
         as a 'scenario' specification instead, inclusive of the fragment's reference exchange

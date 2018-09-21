@@ -30,11 +30,11 @@ class ProcessesTest(BasicEntityTest):
         for x in self.grid.inventory(ex):
             self.assertEqual(x.value, inv_dict[x.flow] / ex.value)
 
-    def test_inv_no_reference(self):
+    def test_inv_not_reference(self):
         """
-        If a reference flow is given but it is not part of the reference entity, the query should fail
-        if the process has no reference entity, then it should succeed but the supplied flow should be omitted from
-        the [normalized] inventory
+        test implementation of the interface specification for inventory
+
+        exchange-finding tools have been fixed but the test has yet to be written
         :return:
         """
         pass

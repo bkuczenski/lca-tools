@@ -231,7 +231,7 @@ class EcoinventSpreadsheet(LcArchive):
         else:
             p = self.lcia_validation_proxy(process_id)
             if ref_flow is None:
-                ref_flow = p.find_reference(reference).flow
+                ref_flow = p.find_exchange(reference, reference=True).flow
             rf = self._find_rf(p, ref_flow=ref_flow)
             return self.lcia.retrieve_lcia_scores(process_id, rf.uuid, quantities=quantities)
 

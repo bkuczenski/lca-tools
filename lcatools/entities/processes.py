@@ -3,17 +3,21 @@ from numbers import Number
 
 import uuid
 
-# from collections import namedtuple
+from collections import defaultdict
 
 from ..interfaces import InventoryRequired
 
 from lcatools.entities.entities import LcEntity
-from lcatools.exchanges import (Exchange, ExchangeValue, DuplicateExchangeError, AmbiguousReferenceError,
-                                NoReferenceFound)
+from lcatools.exchanges import Exchange, ExchangeValue, DuplicateExchangeError, AmbiguousReferenceError
+
 from lcatools.lcia_results import LciaResult, LciaResults
 
 
 class MissingAllocation(Exception):
+    pass
+
+
+class NoExchangeFound(Exception):
     pass
 
 
@@ -160,6 +164,8 @@ class LcProcess(LcEntity):
         :param kwargs:
         """
         self._exchanges = dict()  # maps exchange key to exchange
+        self._exch_map = defaultdict(set)  # maps flow external_ref to exchanges having that flow
+
         super(LcProcess, self).__init__('process', entity_uuid, **kwargs)
         if self.reference_entity is not None:
             raise AttributeError('How could the reference entity not be None?')
@@ -215,33 +221,6 @@ class LcProcess(LcEntity):
     def alloc_total(self):
         return self._alloc_sum
 
-    def _find_reference_by_string(self, term, strict=False):
-        """
-        Select a reference based on a search term--- check against flow.  test get_uuid().startswith, or ['Name'].find()
-        If multiple results found- if strict, return None; if strict=False, return first
-
-        This method returns an item from the reference_entity, not an item from _exchanges - the extraction is done by
-        find_reference()
-        :param term:
-        :param strict: [False] raise error if ambiguous search term; otherwise return first
-        :return: the exchange entity
-        """
-        hits = [None] * len(self.reference_entity)
-        for i, e in enumerate(self.reference_entity):
-            if e.flow.external_ref == term:
-                hits[i] = e
-            elif e.flow.get_uuid().startswith(term):
-                hits[i] = e
-            elif e.flow['Name'].lower().find(term.lower()) >= 0:
-                hits[i] = e
-        hits = list(filter(None, hits))
-        if strict:
-            if len(hits) > 1:
-                raise MultipleReferencesFound('process:%s key: %s' % (self, term))
-        if len(hits) == 0:
-            raise NoReferenceFound('process:%s key: %s' % (self, term))
-        return hits[0]
-
     def show_inventory(self, reference=None):
         """
         Convenience wrapper around self.inventory() which:
@@ -263,19 +242,35 @@ class LcProcess(LcEntity):
             num += 1
         return it
 
-    def _gen_exchanges(self, flow=None, direction=None):
+    def _gen_exchanges(self, flow=None, direction=None, reference=None):
         """
         Generate a list of exchanges matching the supplied flow and direction.
 
         If this is too slow, we could hash the process's exchanges by flow
-        :param flow:
-        :param direction:
+        :param flow: either a flow entity, flow ref, or external_ref
+        :param direction: [None] or filter by direction
+        :param reference: [None] find any exchange; True: only reference exchanges; False: only non-reference exchanges
         :return:
         """
-        for x in self._exchanges.values():
-            if flow is not None:
-                if x.flow != flow:
-                    continue
+        if flow is None:
+            if reference is True:
+                _x_gen = (x for x in self.reference_entity)
+            elif reference is False:
+                _x_gen = (x for x in self._exchanges.values() if not x.is_reference)
+            else:
+                _x_gen = (x for x in self._exchanges.values())
+        else:
+            if hasattr(flow, 'entity_type'):
+                if flow.entity_type != 'flow':
+                    raise TypeError('Flow argument must be a flow')
+                flow = flow.external_ref
+            if reference is True:
+                _x_gen = (x for x in self._exch_map[flow] if x.is_reference)
+            elif reference is False:
+                _x_gen = (x for x in self._exch_map[flow] if not x.is_reference)
+            else:
+                _x_gen = (x for x in self._exch_map[flow])
+        for x in _x_gen:
             if direction is not None:
                 if x.direction != direction:
                     continue
@@ -306,7 +301,7 @@ class LcProcess(LcEntity):
             return False
         return True
 
-    def inventory(self, ref_flow=None, strict=False, direction=None):
+    def inventory(self, ref_flow=None, direction=None):
         """
         generate a process's exchanges.  If no reference is supplied, generate unallocated exchanges, including all
         reference exchanges.  If a reference is supplied AND the process is allocated with respect to that reference,
@@ -315,82 +310,72 @@ class LcProcess(LcEntity):
         the reference itself).  Reference must be a flow or exchange found in the process's reference entity.
 
         :param ref_flow:
-        :param strict: [False] whether to use strict flow name matching [default- first regex match]
         :param direction: could help with finding reference
         :return:
         """
-        if ref_flow is not None:
+        if ref_flow is None:
+            ref_exch = None
+        else:
             try:
-                ref_flow = self.find_reference(ref_flow, strict=strict, direction=direction)
-            except (NoReferenceFound, MultipleReferencesFound):  # unresolvable exceptions
-                ref_flow = None
-            except NotAReference:  # pedantic exception
-                pass  # just use ref_flow as spec
+                ref_exch = self.find_exchange(ref_flow, direction=direction)
+            except MultipleReferencesFound:
+                ref_exch = self.find_exchange(ref_flow, direction=direction, reference=True)
         for i in self._exchanges.values():
-            if ref_flow is None:
+            if ref_exch is None:
+                # generate unallocated exchanges
                 yield i
-            else:
+            elif ref_exch.is_reference:
+                # generate allocated, normalized, non-reference exchanges
                 if i in self.reference_entity:
                     continue
                 else:
-                    # this pushes the problem up to ExchangeValue
-                    yield ExchangeValue.from_allocated(i, ref_flow)
+                    yield ExchangeValue.from_allocated(i, ref_exch)
+            else:
+                # generate un-allocated, normalized, non-query exchanges
+                if i is ref_exch:
+                    continue
+                else:
+                    yield ExchangeValue.from_allocated(i, ref_exch)
 
-    def find_reference(self, spec=None, strict=False, direction=None):
+    def find_exchange(self, spec=None, reference=None, direction=None):
         """
         returns an exchange matching the specification.
-        If reference is None: returns a reference exchange ONLY IF the process has a single reference exchange;
-         else AmbiguousReferenceError
 
-        If reference is a flow,
-         if the flow matches a reference exchange, returns the reference exchange
-         elif the flow matches a non-reference exchange, return the non-reference exchange (possibly: gate this option
-         to only occur if the process has an empty reference entity)
-         else NoReferenceFound
+        If multiple results are found, filters out terminated exchanges
 
-        If the reference is an exchange,
-         if the reference is not a reference exchange, what are you doing?? raises NotAReference
-
-        If the reference is a string, it will check against the existing references' external_refs before falling back
-         on a costly _find_reference_by_string() call
-
-        :param spec: could be None, string (name or uuid), flow, or exchange
-        :param strict:
+        :param spec: could be None, external_ref, flow, flow ref, or exchange
+        :param reference: [None] find any exchange; True: only find references; False: only non-references
         :param direction: could be helpful if the object is a non-reference exchange
         :return:
         """
-        if spec is None:
-            if len(self.reference_entity) > 1:
-                raise AmbiguousReferenceError('Must specify reference!')
-            try:
-                ref = next(x for x in self.reference_entity)
-            except StopIteration:
-                raise NoReferenceFound('Process does not have a reference!')
-        elif hasattr(spec, 'entity_type'):
-            if spec.entity_type == 'flow':
-                try:
-                    ref = next(rf for rf in self.reference_entity if rf.flow == spec)
-                except StopIteration:
-                    candidates = [x for x in self.exchanges(spec, direction=direction) if x.termination is None]
-                    if len(candidates) == 0:
-                        raise NoReferenceFound('Flow %s not encountered' % spec)
-                    elif len(candidates) > 1:
-                        raise AmbiguousReferenceError(
-                            '%d un-terminated exchanges found; try specifying direction' % len(candidates))
-                    ref = candidates[0]
-            elif spec.entity_type == 'exchange':
-                if spec in self.reference_entity:
-                    ref = spec
-                else:
-                    raise NotAReference('Exchange is not a reference exchange %s' % spec)
+        if hasattr(spec, 'entity_type'):
+            if spec.entity_type == 'exchange':
+                if direction is None:
+                    direction = spec.direction
+                _x_gen = self._gen_exchanges(flow=spec.flow.external_ref, direction=direction, reference=reference)
+            elif spec.entity_type == 'flow':
+                _x_gen = self._gen_exchanges(flow=spec.external_ref, direction=direction, reference=reference)
             else:
-                ref = None
+                raise TypeError('Cannot interpret specification %s (%s)' % (spec, type(spec)))
+        else:  # works for spec=external_ref or spec is None
+            _x_gen = self._gen_exchanges(spec, direction=direction, reference=reference)
+
+        candidates = [x for x in _x_gen]
+
+        if len(candidates) == 0:
+            raise NoExchangeFound
+        elif len(candidates) > 1:
+            nonterms = [x for x in candidates if x.termination is None]
+            if len(nonterms) > 1:
+                raise MultipleReferencesFound(
+                    '%d un-terminated exchanges found; try specifying direction' % len(nonterms))
+            elif len(nonterms) == 0:
+                raise AmbiguousReferenceError(
+                    '%d exchanges found, all terminated. Not supported brah.' % len(candidates))
+            else:
+                return nonterms[0]
         else:
-            try:
-                ref = next(rf for rf in self.reference_entity if rf.flow.external_ref == spec)
-            except StopIteration:
-                ref = self._find_reference_by_string(spec, strict=strict)
-        return self._exchanges[ref.key]
+            return candidates[0]
 
     def add_reference(self, flow, dirn):
         rx = Exchange(self, flow, dirn)
@@ -415,7 +400,7 @@ class LcProcess(LcEntity):
                     yield self._exchanges[rf.key]
 
     def reference(self, flow=None):
-        return self.find_reference(flow)
+        return self.find_exchange(flow, reference=True)
 
     ''' # don't think I want this
     def reference_value(self, flow=None):
@@ -424,9 +409,9 @@ class LcProcess(LcEntity):
 
     def has_reference(self, flow=None):
         try:
-            self.find_reference(flow)
+            self.find_exchange(flow, reference=True)
             return True
-        except NoReferenceFound:
+        except NoExchangeFound:
             return False
 
     def allocate_by_quantity(self, quantity):
@@ -472,8 +457,8 @@ class LcProcess(LcEntity):
         :return: True - allocations exist; False - no allocations exist; raise MissingFactor - some allocations exist
         """
         try:
-            reference = self.find_reference(reference)
-        except NoReferenceFound:
+            reference = self.find_exchange(reference, reference=True)
+        except NoExchangeFound:
             print('Not a reference exchange.')
             return False
         if self.alloc_qty is not None:
@@ -575,8 +560,10 @@ class LcProcess(LcEntity):
                 e = ExchangeValue(self, flow, dirn, value_dict=value, termination=termination)
             else:
                 raise TypeError('Unhandled value type %s' % type(value))
-            # self._exchanges.add(e)
+
+            # This is the only point an exchange is added to the process
             self._exchanges[e.key] = e
+            self._exch_map[e.flow.external_ref].add(e)
             return e
 
     def lcias(self, quantities, **kwargs):

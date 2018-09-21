@@ -8,7 +8,7 @@ either one from the other.
 
 from .interfaces import PrivateArchive, comp_dir
 
-from lcatools.exchanges import ExchangeValue, NoReferenceFound
+from lcatools.exchanges import ExchangeValue
 from lcatools.lcia_results import LciaResult, LciaResults
 
 

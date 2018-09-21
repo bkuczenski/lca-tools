@@ -190,6 +190,13 @@ class SummaryLciaResult(object):
     def cumulative_result(self):
         return self.node_weight * self.unit_score
 
+    def components(self):
+        if self.static:
+            yield self
+        else:
+            for x in self._internal_result.components():
+                yield x
+
     def __hash__(self):
         try:
             h = self.entity.uuid
@@ -241,35 +248,58 @@ class SummaryLciaResult(object):
          * Two static-valued summaries are added together.  In this case, either the scores must be equal (in which case
            the node weights are summed) or the node weights must be equal, and the unit scores are summed.
 
+        This is the sort of garbage that should be unittested.
+
         :param other:
         :return:
         """
         if not isinstance(other, SummaryLciaResult):
             raise TypeError('Can only add SummaryLciaResults together')
+        if self._lc is not other._lc:
+            raise InconsistentSummaries('These summaries do not belong to the same LciaResult')
         if self.static:
             if other.static:
                 # either the node weights or the unit scores must be equal
-                if self._node_weight == other._node_weight:
+                if self.node_weight == other.node_weight:
                     _node_weight = self._node_weight
                     unit_score = self._static_value + other.unit_score
+                elif self.unit_score == other.unit_score:
+                    unit_score = self.unit_score
+                    _node_weight = self._node_weight + (other.node_weight / self._lc.scale)
                 else:
                     raise InconsistentScores('These summaries do not add together:\n%s\n%s' % (self, other))
             else:
                 if self.unit_score == other.unit_score:
-                    _node_weight = self._node_weight + other.node_weight
-                    unit_score = self.unit_score
+                    unit_score = other._internal_result
+                    _node_weight = self._node_weight + (other.node_weight / self._lc.scale)
                 else:
-                    raise InconsistentScores('This corner case not yet handled')
-        elif self._internal_result is other._internal_result:  # this only works because terminations cache unit scores
+                    raise InconsistentScores('These summaries have different unit scores')
+        elif self.unit_score == other.unit_score:
             unit_score = self._internal_result
-            # just sum the node weights, ignoring our local scaling factor (DWR!)
-            if self.entity == other.entity:
-                # WARNING: FragmentFlow equality does not include magnitude or node weight
-                _node_weight = self._node_weight + other.node_weight
+            if other.static:
+                _node_weight = self._node_weight + (other.node_weight / self._lc.scale)
+            elif self._internal_result is other._internal_result:
+                # this only works because terminations cache unit scores
+                # just sum the node weights, ignoring our local scaling factor (DWR!)
+                if self.entity == other.entity:
+                    # WARNING: FragmentFlow equality does not include magnitude or node weight
+                    _node_weight = self._node_weight + (other.node_weight / self._lc.scale)
+                else:
+                    print("entities do not match\n self: %s\nother: %s" % (self.entity, other.entity))
+                    raise InconsistentSummaries
             else:
-                print("entities do not match\n self: %s\nother: %s" % (self.entity, other.entity))
-                raise InconsistentSummaries
+                """
+                This situation is cropping up in the CalRecycle model but it appears to be kosher. I propose the 
+                following test: if the two summaries are both nonstatic and (a) have the same set of components and (b) 
+                have the same unit scores, then treat them as the same.
+                """
+                if set(k.entity for k in self.components()) == set(k.entity for k in other.components()):
+                    _node_weight = self._node_weight + (other.node_weight / self._lc.scale)
+                else:
+                    raise InconsistentSummaries('Components differ between non-static summaries')
         else:
+            print('\n%s' % self)
+            print(other)
             raise InconsistentSummaries('At least one not static, and unit scores do not match')
         return SummaryLciaResult(self._lc, self.entity, _node_weight, unit_score)
 
@@ -402,6 +432,7 @@ class LciaResult(object):
         self._LciaScores = dict()
         self._private = private
         self._autorange = None
+        self._failed = []
 
     @property
     def is_null(self):
@@ -565,6 +596,10 @@ class LciaResult(object):
         return flat
 
     @property
+    def failed(self):
+        return self._failed
+
+    @property
     def is_private(self):
         return self._private
 
@@ -604,7 +639,10 @@ class LciaResult(object):
                                                                                  entity,
                                                                                  node_weight, uss))
             '''
-            self._LciaScores[key] += SummaryLciaResult(self, entity, node_weight, unit_score)
+            try:
+                self._LciaScores[key] += SummaryLciaResult(self, entity, node_weight, unit_score)
+            except InconsistentSummaries:
+                self._failed.append(SummaryLciaResult(self, entity, node_weight, unit_score))
         else:
             self._LciaScores[key] = SummaryLciaResult(self, entity, node_weight, unit_score)
 

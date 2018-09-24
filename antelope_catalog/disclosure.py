@@ -158,6 +158,11 @@ class ObservedCutoff(object):
     def from_off(cls, off, negate=False):
         return cls(off.parent, off.fragment.flow, off.fragment.direction, off.ff.magnitude, negate=negate)
 
+    @classmethod
+    def from_exchange(cls, parent, exch):
+        mag = parent.magnitude * exch.value
+        return cls(parent, exch.flow, exch.direction, mag)
+
     def __init__(self, parent, flow, direction, magnitude, negate=False):
         """
 
@@ -314,19 +319,20 @@ class TraversalDisclosure(object):
             except IndexError:
                 print('Ran out of parents to pop!')
                 raise
-            parent = self._parents[-1]  # last-registered parent is ours!
+            parent = self._parents[-1]  # last-seen fragment matching parent is ours!
 
             if parent.term.is_subfrag and not parent.term.descend:
                 if ff.term.is_null:
                     # drop cutoffs from nondescend subfrags because they get traversed later
                     return
                 # otherwise we need to "borrow" from their cutoffs to continue our current op
-                off = self._new_fg_node(ffid, parent)
+
+                off = self._handle_term(ffid)
 
                 self._add_cutoff(off, negate=True)
-                # fall through to handle term normally
+                return off
 
-        self._handle_term(ffid)
+        return self._handle_term(ffid)
 
     def _handle_term(self, ffid):
         """
@@ -334,11 +340,14 @@ class TraversalDisclosure(object):
 
         the term can be any of the following:
          * null -> cutoff (parent stays same)
-         * fg -> create a new off
-         * fg process -> add unobserved exchanges as emissions (parent stays the same)
          * bg -> add ad (parent stays same)
+
+         * fg process -> add unobserved exchanges as emissions (parent stays the same)
+
+         * fg -> create a new off
+         * nondescending subfrag -> add to deferred list, create a new off
          * descending subfrag -> add to _descents, create a new off
-         * nondescending subfrag -> add to deferred list (parent stays the same)
+
         :param key: 1:1 to columns, lookup into _fg, gives us OFF for off.ff.term and off.value
         :return:
         """

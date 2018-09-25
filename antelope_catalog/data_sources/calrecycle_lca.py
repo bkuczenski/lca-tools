@@ -46,7 +46,7 @@ data_main = SemanticResource('Full UO LCA Flat Export BK', 'calrecycle.uolca.cor
 data_improper = SemanticResource('Full UO LCA Flat Export Improper', 'calrecycle.uolca.improper', 0, 20)
 data_ecoinvent = SemanticResource('Full UO LCA Flat Export Ecoinvent', 'calrecycle.uolca.ecoinvent.2.2', 1, 30)
 data_pe24 = SemanticResource('Full UO LCA Flat Export PE-SP24', 'calrecycle.uolca.pe.sp24', 1, 40)
-data_pe22 = SemanticResource('Full UO LCA Flat Export PE-SP22', 'calrecycle.uolca.pe.sp22', 1, 50)
+data_pe22 = SemanticResource('Full UO LCA Flat Export PE-SP22', 'calrecycle.uolca.pe.sp22', 1, 30)  # default
 
 lcia_elcd = SemanticResource('ELCD-LCIA', 'calrecycle.lcia.elcd', 0, 70)
 lcia_traci = SemanticResource('TRACI Core-4 Export', 'calrecycle.lcia.traci.2.0', 0, 70)
@@ -72,7 +72,7 @@ class CalRecycleArchive(DataSource):
 
     def interfaces(self, ref):
         yield 'inventory'
-        if self._info.privacy > 0:
+        if self._info.privacy > 0 or ref == 'calrecycle.uolca.core':
             yield 'background'
         else:
             yield 'quantity'
@@ -98,6 +98,7 @@ class CalRecycleConfig(DataCollection):
             yield CalRecycleLcia(data_root, source)
 
     def foreground(self, cat, **kwargs):
+        self.register_all_resources(cat)
         return CalRecycleImporter.run_import(self.root, cat, **kwargs)
 
 
@@ -184,6 +185,10 @@ class CalRecycleImporter(object):
                 imp.fragment_from_fragment_flow(qi, f)
 
             imp.terminate_fragments(qi)
+
+            imp.pe_sp24_correction(cat)
+
+            imp.uslci_bg_elec_correction()
 
             imp.set_balances()
 
@@ -374,6 +379,35 @@ class CalRecycleImporter(object):
                         self._frags[f['Process']['ConservationFFID']].set_balance_flow()
                     except BalanceAlreadySet:
                         pass
+
+    '''
+    Data Corrections
+    '''
+    def pe_sp24_correction(self, cat):
+        """
+        Add an 'sp24' scenario that sets all PE processes to their SP-24 versions
+        :param cat:
+        :return:
+        """
+        sp24 = cat.query('calrecycle.uolca.pe.sp24')
+        for f in self._frags.values():
+            if f.term.is_process:
+                if f.term.term_node.origin == 'calrecycle.uolca.pe.sp22':
+                    f.terminate(sp24.get(f.term.term_node.external_ref), scenario='sp24',
+                                term_flow=f.term.term_flow,
+                                direction=f.term.direction,
+                                descend=f.term.descend)
+
+    def uslci_bg_elec_correction(self):
+        """
+        Set the rolled-up USLCI processes to be computed via the background interface, to keep their
+        flows out of foreground disclosures
+        :return:
+        """
+        uslci_bg_ffids = ('14', '26', '38', '50', '62', '74', '92')
+        for i in uslci_bg_ffids:
+            frag = self._frags[i]
+            frag.set_background()
 
 
 if __name__ == '__main__':

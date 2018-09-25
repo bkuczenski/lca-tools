@@ -20,6 +20,11 @@ class DataSource(object):
             ds_type = self._ds_type
         return LcResource(ref, source, ds_type, **kwargs)
 
+    def register_all_resources(self, cat):
+        for ref in self.references:
+            for res in self.make_resources(ref):
+                cat.add_resource(res)
+
     @property
     def references(self):
         """

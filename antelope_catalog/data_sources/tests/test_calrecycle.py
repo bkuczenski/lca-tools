@@ -22,7 +22,7 @@ else:
 if _run_calrecycle:
     cat = LcCatalog(CATALOG_ROOT)
     crc = CalRecycleConfig(RESOURCES_CONFIG['calrecycle']['data_root'])
-    fg = crc.foreground(cat)
+    fg = crc.foreground(cat, fg_path='uolca')
 
 else:
     fg = None
@@ -54,7 +54,7 @@ class CalRecycleTest(unittest.TestCase):
     def test_traversal(self):
         uom = fg['fragments/55']
         ffs = uom.traverse(None, observed=True)
-        self.assertEqual(len(ffs), 332)
+        self.assertEqual(len(ffs), 306)  # presumably some ffs went away with uslci bg change 43d35c7
         inv = uom.inventory(None, observed=True)
         light_fuel = next(x for x in inv if x.flow['Name'].startswith('Light Fuel'))
         self.assertEqual(floor(light_fuel.value), 116915718)

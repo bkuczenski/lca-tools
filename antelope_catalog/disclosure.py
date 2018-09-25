@@ -159,7 +159,7 @@ class ObservedFragmentFlow(object):
     def value(self):
         if self.parent is RX:
             return self.ff.magnitude
-        return self.ff.node_weight / self.parent.value
+        return self.ff.node_weight / self.parent.magnitude
 
     @property
     def magnitude(self):
@@ -232,7 +232,7 @@ class ObservedCutoff(object):
 
     @property
     def value(self):
-        val = self.magnitude / self.parent.value
+        val = self.magnitude / self.parent.magnitude
         if self.negate:
             val *= -1
         return val

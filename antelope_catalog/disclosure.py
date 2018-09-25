@@ -90,7 +90,7 @@ more to this than meets the eye.. FUCK
 
 from collections import deque
 
-# from lcatools.interfaces import comp_dir
+from lcatools.interfaces import comp_dir
 
 '''
 from lca_disclosures import BaseExporter
@@ -262,11 +262,17 @@ class SeqList(object):
 
         return self._d[key]
 
+    def __len__(self):
+        return len(self._l)
+
     def __getitem__(self, key):
         try:
             return self._l[key]
         except TypeError:
             return self._d[key]
+
+    def to_list(self):
+        return self._l
 
 
 class SeqDict(object):
@@ -284,6 +290,9 @@ class SeqDict(object):
         self._ix[value] = ix
         self._ix[key] = ix
 
+    def __len__(self):
+        return len(self._l)
+
     def __getitem__(self, key):
         try:
             return self._d[key]
@@ -292,6 +301,9 @@ class SeqDict(object):
 
     def index(self, item):
         return self._ix[item]
+
+    def to_list(self):
+        return [self._d[x] for x in self._l]
 
 
 class TraversalDisclosure(object):
@@ -412,7 +424,9 @@ class TraversalDisclosure(object):
             if deferred.term.term_node in self._frags_seen:
                 self._add_deferred_dependency(deferred, self._frags_seen[deferred.term.term_node])
             else:
-                self._ffqueue.extend(deferred.ff.subfragments)
+                # re-traversal is necessary to properly locate cutoffs
+                ffs = deferred.term.term_node.traverse(**deferred.ff.subfragment_params)
+                self._ffqueue.extend(ffs)
                 return deferred
 
     def _get_next_fragment_flow(self):
@@ -460,13 +474,13 @@ class TraversalDisclosure(object):
         self._key_lookup[off.key] = (self._bg, ix)
         self._Ad.append(obg)
 
-    def _add_cutoff(self, oco):
+    def _add_cutoff(self, oco, extra=''):
         """
 
         :param oco: the Observed Cutoff
         :return:
         """
-        print('Adding Cutoff')
+        print('Adding Cutoff %s' % extra)
         ix = self._co.index(oco.key)
         self._key_lookup[oco.key] = (self._co, ix)
         self._Ac.append(oco)
@@ -529,7 +543,7 @@ class TraversalDisclosure(object):
                 self._handle_term(off)  # off gets observed here
 
                 oco = ObservedCutoff.from_off(off, negate=True)
-                self._add_cutoff(oco)
+                self._add_cutoff(oco, ' * negated')
                 return off
 
         return self._handle_term(off)
@@ -576,3 +590,34 @@ class TraversalDisclosure(object):
     @property
     def functional_unit(self):
         return self._fg[0]
+
+    def generate_disclosure(self):
+        _ = [x for x in self]  # ensure fully iterated
+        p = len(self._fg)
+
+        d_i = [(off.fragment.flow, comp_dir(off.fragment.direction)) if off.parent is RX
+               else (off.fragment.flow, off.fragment.direction) for off in self._fg.to_list()]
+        d_i += self._co.to_list()
+
+        d_ii = self._bg.to_list()
+
+        d_iii = self._em.to_list()
+
+        d_iv = []
+        d_v = []
+        d_vi = []
+
+        for off in self._Af:
+            if off.parent is RX:
+                continue
+            d_iv.append([self._fg.index(off.key), self._fg.index(off.parent.key), off.value])
+        for oco in self._Ac:
+            d_iv.append([p + self._co.index(oco.key), self._fg.index(oco.parent.key), oco.value])
+
+        for obg in self._Ad:
+            d_v.append([self._bg.index(obg.bg_key), self._fg.index(obg.parent.key), obg.value])
+
+        for oem in self._Bf:
+            d_vi.append([self._em.index(oem.key), self._fg.index(oem.parent.key), oem.value])
+
+        return d_i, d_ii, d_iii, d_iv, d_v, d_vi

@@ -1201,7 +1201,7 @@ class LcFragment(LcEntity):
         else:
             # if aggregating, we are only setting unit scores- so don't scale
             self.dbg_print('aggregating', level=0)
-            ffs[0].aggregate_subfragments(subfrags)
+            ffs[0].aggregate_subfragments(subfrags, scenario=scenario, observed=observed)  # include params to reproduce
             ffs[0].node_weight = downstream_nw
 
         # next we traverse our own child flows, determining the exchange values from the subfrag traversal

@@ -119,16 +119,21 @@ class FragmentFlow(object):
         self.node_weight = node_weight
         self.term = term
         self.is_conserved = is_conserved
-        self._subfragments = []
+        self._subfrags_params = None
 
     @property
     def subfragments(self):
         if self.term.is_subfrag and (self.term.descend is False):
-            return self._subfragments
+            return self._subfrags_params[0]
         return []
 
-    def aggregate_subfragments(self, subfrags):
-        self._subfragments = subfrags
+    @property
+    def subfragment_params(self):
+        return {'scenario': self._subfrags_params[1],
+                'observed': self._subfrags_params[2]}
+
+    def aggregate_subfragments(self, subfrags, scenario=None, observed=False):
+        self._subfrags_params = (subfrags, scenario, observed)
 
     def scale(self, x):
         self.node_weight *= x

@@ -200,6 +200,14 @@ class FlowTermination(object):
         return (not self.is_null) and (self.term_node.entity_type == 'process')
 
     @property
+    def is_emission(self):
+        """
+        Pending context refactor
+        :return:
+        """
+        return (not self.is_null) and (self.term_node.entity_type == 'context')
+
+    @property
     def is_fg(self):
         """
         Termination is parent
@@ -351,15 +359,15 @@ class FlowTermination(object):
         #         yield x
         else:
             children = set()
-            children.add((self.term_flow, self.direction))
+            children.add((self.term_flow.external_ref, self.direction))
             for c in self._parent.child_flows:
-                children.add((c.flow, c.direction))
+                children.add((c.flow.external_ref, c.direction))
             if self.is_bg:
                 iterable = self.term_node.lci(ref_flow=self.term_flow)
             else:
                 iterable = self.term_node.inventory(ref_flow=self.term_flow, direction=self.direction)
             for x in iterable:
-                if (x.flow, x.direction) not in children:
+                if (x.flow.external_ref, x.direction) not in children:
                     yield x
 
     def compute_unit_score(self, quantity_ref, **kwargs):

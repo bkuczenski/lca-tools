@@ -103,8 +103,12 @@ class BaseRef(object):
     @property
     def _name(self):
         if self.has_property('Name'):
-            return ' ' + self['Name']
-        return ''
+            addl = self._addl
+            name = self['Name']
+            if len(addl) > 0:
+                name += ' [%s]' % addl
+            return name
+        return self.external_ref
 
     @property
     def _addl(self):
@@ -120,7 +124,7 @@ class BaseRef(object):
             return False
 
     def __str__(self):
-        return '%s/%s%s [%s]' % (self.origin, self.external_ref, self._name, self._addl)
+        return '[%s] %s' % (self.origin, self._name)
 
     def __hash__(self):
         return hash(self.link)

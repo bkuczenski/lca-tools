@@ -88,9 +88,9 @@ more to this than meets the eye.. FUCK
 
 """
 
-from collections import namedtuple, defaultdict, deque
+from collections import deque
 
-from lcatools.interfaces import comp_dir
+# from lcatools.interfaces import comp_dir
 
 '''
 from lca_disclosures import BaseExporter
@@ -117,40 +117,92 @@ class LcaDisclosure(BaseExporter):
 # ObservedFragmentFlow = namedtuple('ObservedFragmentFlow', ('ff', 'key', 'ffid', 'pnw'))
 
 
-DeferredSubFragment = namedtuple('DeferredSubFragment', ('parent_key', 'cached_subfrags', 'value'))
+class UnobservedFragmentFlow(Exception):
+    pass
+
+
+class EmptyFragQueue(Exception):
+    pass
+
+
+class ProxyParent(object):
+    def __init__(self, off):
+        self.fragment = off.term.term_node
+        self.term = off.term
 
 
 class ObservedFragmentFlow(object):
-    def __init__(self, ff, ffid, parent):
+    def __init__(self, ff, key):
         """
 
         :param ff: the fragmentflow from the traversal
-        :param ffid: the position of the fragment flow in the traversal sequence
-        :param parent: an OFF, or None for ref exch
+        :param key: the fg key for the fragment
         """
         self.ff = ff
-        self.ffid = ffid
-        self.parent = parent
+        self.key = key
+        self._parent = None
+
+    def observe(self, parent):
+        self._parent = parent
+
+    @property
+    def parent(self):
+        if self._parent is None:
+            raise UnobservedFragmentFlow
+        return self._parent
+
+    @property
+    def ffid(self):
+        return self.key[-1]
 
     @property
     def value(self):
-        if self.parent is None:
+        if self.parent is RX:
             return self.ff.magnitude
         return self.ff.node_weight / self.parent.value
+
+    @property
+    def magnitude(self):
+        if self.parent is RX:
+            return self.ff.magnitude
+        return self.ff.node_weight
 
     @property
     def fragment(self):
         return self.ff.fragment
 
     @property
+    def term(self):
+        return self.ff.term
+
+    @property
     def flow_key(self):
         return self.ff.fragment.flow, self.ff.fragment.direction
+
+    def observe_bg_flow(self):
+        bg = ObservedBgFlow(self.ff, self.ffid)
+        bg.observe(self.parent)
+        return bg
+
+    def __repr__(self):
+        return str(self)
+
+    def __str__(self):
+        return 'ObservedFragmentFlow(Parent: %s, Term: %s, Magnitude: %g)' % (self.parent.key,
+                                                                              self.key,
+                                                                              self.magnitude)
+
+
+RX = ObservedFragmentFlow(None, None)
 
 
 class ObservedBgFlow(ObservedFragmentFlow):
     @property
     def bg_key(self):
         return self.ff.term.term_node, self.ff.term.term_flow
+
+    def __str__(self):
+        return 'ObservedBg(Parent: %s, Term: %s, Magnitude: %g)' % (self.parent.key, self.bg_key, self.magnitude)
 
 
 class ObservedCutoff(object):
@@ -186,8 +238,15 @@ class ObservedCutoff(object):
         return val
 
     @property
-    def flow_key(self):
+    def key(self):
         return self.flow, self.direction
+
+    def __repr__(self):
+        return str(self)
+
+    def __str__(self):
+        return 'ObservedCutoff(Parent: %s, %s: %s, Magnitude: %g)' % (self.parent.key, self.direction,
+                                                                      self.flow, self.magnitude)
 
 
 class SeqList(object):
@@ -202,6 +261,12 @@ class SeqList(object):
             self._d[key] = ix
 
         return self._d[key]
+
+    def __getitem__(self, key):
+        try:
+            return self._l[key]
+        except TypeError:
+            return self._d[key]
 
 
 class SeqDict(object):
@@ -220,11 +285,13 @@ class SeqDict(object):
         self._ix[key] = ix
 
     def __getitem__(self, key):
-        return self._d[key]
+        try:
+            return self._d[key]
+        except KeyError:
+            return self._d[self._l[key]]
 
     def index(self, item):
-        ix = self._ix[item]
-        return self._l[ix]  # give back the key (???)
+        return self._ix[item]
 
 
 class TraversalDisclosure(object):
@@ -245,11 +312,13 @@ class TraversalDisclosure(object):
 
         self._ffqueue = deque(fragment_flows)  # once thru
 
-        self._frag_queue = []  # for non-descend subfragments, for later
+        self._frags_seen = dict()  # maps to key of ffid
+
+        self._deferred_frag_queue = deque()  # for non-descend subfragments, for later
 
         self._ffs = []
 
-        self._descents = []
+        self._descents = []  # add ffids
         self._parents = []  # keep a stack of OFFs
 
         """
@@ -266,75 +335,206 @@ class TraversalDisclosure(object):
         self._Ad = []  # list of OBGs
         self._Bf = []  # list of emissions
 
+        self._key_lookup = dict()  # map ff key to type-specific (map, key)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return self.next_ff()
+
     def _make_key(self, ffid):
         return tuple(self._descents + [ffid])
 
-    def _new_fg_node(self, ffid, parent):
+    def __getitem__(self, key):
+        _map, _key = self._key_lookup[key]
+        return _map[_key]
+
+    def _show_mtx(self, mtx):
+        tag = {'Af': 'Foreground',
+               'Ac': 'Cutoffs',
+               'Ad': 'Background',
+               'Bf': 'Emissions'}[mtx]  # KeyError saves
+        if mtx != 'Af':
+            print('\n')
+        print('%s - %s' % (mtx, tag))
+        for k in getattr(self, '_' + mtx):
+            print(k)
+
+    def show(self):
+        self._show_mtx('Af')
+        self._show_mtx('Ac')
+        self._show_mtx('Ad')
+        self._show_mtx('Bf')
+
+    def _add_parent(self, parent):
+        print('Adding parent %s' % parent)
+        self._parents.append(parent)
+
+    def _pop_parent(self):
+        pop = self._parents.pop()
+        print('Popped parent %s' % pop)
+        return pop
+
+    @property
+    def _current_parent(self):
+        try:
+            return self._parents[-1]
+        except IndexError:
+            return RX
+
+    def _add_deferred_dependency(self, off, tgt):
         """
-        Creates a new node from the most recent FFID
-        :param ffid: the index into the ffs array
-        :param parent: the OFF of the parent node
+        The off is the parent, the off.term.term_node is the term
+        :param off:
         :return:
         """
-        off = ObservedFragmentFlow(self._ffs[ffid], ffid, parent)
-        self._fg[self._make_key(ffid)] = off
-        self._Af.append(off)
-        self._parents.append(off)
-        return off
+        dep = ObservedFragmentFlow(off.ff, tgt)
+        dep.observe(off)
+        self._Af.append(dep)
 
-    def _add_background(self, ffid, parent):
+    def _feed_deferred_frag(self):
+        """
+        Processes the deferred fragment queue-
+         - if the queue is empty, returns False
+         - if the queue is nonempty:
+            = if the target frag has already been seen, add the deferred dependency and then go back to the queue
+            = otherwise, send the cached subfragments into the ff queue and return the deferred off
+              (deferred dependency must be added after next ffid has been created)
+\        """
+        while 1:
+            try:
+                # deferred is an off whose term is a non-descend subfrag
+                deferred = self._deferred_frag_queue.popleft()
+            except IndexError:
+                return False
+
+            if deferred.term.term_node in self._frags_seen:
+                self._add_deferred_dependency(deferred, self._frags_seen[deferred.term.term_node])
+            else:
+                self._ffqueue.extend(deferred.ff.subfragments)
+                return deferred
+
+    def _get_next_fragment_flow(self):
+        deferred = None
+        try:
+            ff = self._ffqueue.popleft()
+        except IndexError:
+            deferred = self._feed_deferred_frag()
+            if deferred:
+                ff = self._ffqueue.popleft()
+            else:
+                raise EmptyFragQueue
+
+        ffid = len(self._ffs)
+        self._ffs.append(ff)
+
+        new_off = ObservedFragmentFlow(self._ffs[ffid], self._make_key(ffid))
+
+        if deferred:
+            self._add_deferred_dependency(deferred, new_off.key)
+
+        return new_off
+
+    def _traverse_node(self, off):
+        """
+        Creates a new node from the most recent OFF
+        :param off: the observed fragment flow
+        :return:
+        """
+        print('Handling as FG')
+        self._fg[off.key] = off
+        self._key_lookup[off.key] = (self._fg, off.key)
+        self._Af.append(off)
+        self._add_parent(off)
+
+    def _add_background(self, off):
         """
 
         :param off: an OFF
         :return:
         """
-        obg = ObservedBgFlow(self._ffs[ffid], ffid, parent)
-        self._bg.index(obg.bg_key)
+        print('Handling as BG')
+        obg = off.observe_bg_flow()
+        ix = self._bg.index(obg.bg_key)
+        self._key_lookup[off.key] = (self._bg, ix)
         self._Ad.append(obg)
 
-    def _add_cutoff(self, off, negate=False):
+    def _add_cutoff(self, oco):
         """
 
-        :param off: the Observed Fragment Flow
+        :param oco: the Observed Cutoff
         :return:
         """
-        oco = ObservedCutoff.from_off(off, negate=negate)
-        self._co.index(oco.flow_key)
+        print('Adding Cutoff')
+        ix = self._co.index(oco.key)
+        self._key_lookup[oco.key] = (self._co, ix)
         self._Ac.append(oco)
 
-    def next_ff(self):
-        ff = self._ffqueue.popleft()
+    def _add_emission(self, oco):
+        """
 
-        ffid = len(self._ffs)
-        self._ffs.append(ff)
+        :param oco: the Observed Fragment Flow
+        :return:
+        """
+        print('Adding Emission')
+        ix = self._em.index(oco.key)
+        self._key_lookup[oco.key] = (self._em, ix)
+        self._Bf.append(oco)
+
+    def next_ff(self):
+        try:
+            off = self._get_next_fragment_flow()
+        except EmptyFragQueue:
+            raise StopIteration
+        print(off.ff)
+
+        if off.ff.magnitude == 0:
+            print('Dropping zero-weighted node')
+            return
 
         # new fragment--
-        if ff.fragment.reference_entity is None:
-            self._new_fg_node(ffid, None)
+        if off.ff.fragment.reference_entity is None:
+            assert off.ff.fragment not in self._frags_seen
+            off.observe(RX)
+            self._frags_seen[off.ff.fragment] = off.key
+            # self._traverse_node(off)
 
         else:
-            try:
-                while ff.fragment.reference_entity is not self._parents[-1].fragment:
-                    self._parents.pop()
-            except IndexError:
-                print('Ran out of parents to pop!')
-                raise
-            parent = self._parents[-1]  # last-seen fragment matching parent is ours!
+            # upon descent, we load up the descender and then the subfrag on the stack
+            while off.ff.fragment.reference_entity is not self._current_parent.fragment:
+                try:
+                    oldparent = self._pop_parent()
+                except IndexError:
+                    print('Ran out of parents to pop!')
+                    print(off)
+                    print(off.ff)
+                    raise
+
+                if len(self._descents) > 0:
+                    if self._ffs[self._descents[-1]].fragment is oldparent:
+                        self._descents.pop()
+
+            parent = self._current_parent  # last-seen fragment matching parent is ours!
+
+            off.observe(parent)
 
             if parent.term.is_subfrag and not parent.term.descend:
-                if ff.term.is_null:
+                if off.ff.term.is_null:
                     # drop cutoffs from nondescend subfrags because they get traversed later
+                    print('Dropping enclosed cutoff')
                     return
                 # otherwise we need to "borrow" from their cutoffs to continue our current op
 
-                off = self._handle_term(ffid)
+                self._handle_term(off)  # off gets observed here
 
-                self._add_cutoff(off, negate=True)
+                oco = ObservedCutoff.from_off(off, negate=True)
+                self._add_cutoff(oco)
                 return off
 
-        return self._handle_term(ffid)
+        return self._handle_term(off)
 
-    def _handle_term(self, ffid):
+    def _handle_term(self, off):
         """
         Upon arrival here, the last entry in self._parents should be our column; our ff determines the rest
 
@@ -342,26 +542,37 @@ class TraversalDisclosure(object):
          * null -> cutoff (parent stays same)
          * bg -> add ad (parent stays same)
 
-         * fg process -> add unobserved exchanges as emissions (parent stays the same)
+         * fg process -> traverse, add unobserved exchanges as emissions
 
-         * fg -> create a new off
-         * nondescending subfrag -> add to deferred list, create a new off
-         * descending subfrag -> add to _descents, create a new off
+         * fg -> traverse
+         * nondescending subfrag -> traverse, add to deferred list
+         * descending subfrag -> traverse, add to _descents, add term to _parents
 
-        :param key: 1:1 to columns, lookup into _fg, gives us OFF for off.ff.term and off.value
+        :param off: the observed fragment flow
         :return:
         """
+        if off.ff.term.is_null:
+            self._add_cutoff(ObservedCutoff.from_off(off))
+        elif off.ff.term.term_is_bg or off.fragment.is_background:
+            self._add_background(off)
+        elif off.ff.term.is_emission:
+            self._add_emission(ObservedCutoff.from_off(off))
+        else:
+            self._traverse_node(off)  # make it the parent
+            if off.ff.term.is_subfrag:
+                self._add_parent(ProxyParent(off))
+                if off.ff.term.descend:
+                    self._descents.append(off.ffid)
+                else:
+                    self._deferred_frag_queue.append(off)
+            else:
+                # add unobserved exchanges--
+                for x in off.ff.term._unobserved_exchanges():
+                    emf = ObservedCutoff.from_exchange(off, x)
+                    self._add_emission(emf)
 
-
-
-
-
-
-
+        return off
 
     @property
     def functional_unit(self):
         return self._fg[0]
-
-
-

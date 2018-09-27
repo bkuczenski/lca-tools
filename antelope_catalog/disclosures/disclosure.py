@@ -66,6 +66,10 @@ class ObservedFlow(object):
         raise NotImplemented
 
     @property
+    def locale(self):
+        raise NotImplemented
+
+    @property
     def value(self):
         raise NotImplemented
 
@@ -240,7 +244,7 @@ class Disclosure(object):
         _ = [x for x in self]  # ensure fully iterated
         p = len(self._fg)
 
-        d_i = [(off.flow, off.direction) for off in self._fg.to_list()]
+        d_i = [(off.flow, off.direction, off.locale) for off in self._fg.to_list()]
         d_i += self._co.to_list()
 
         d_ii = self._bg.to_list()

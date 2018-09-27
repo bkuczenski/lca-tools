@@ -2,9 +2,10 @@ from .disclosure import ObservedFlow, RX, Disclosure
 
 
 class ObservedForegroundFlow(ObservedFlow):
-    def __init__(self, exch, key):
+    def __init__(self, exch, key, locale):
         self._exch = exch
         self._key = key
+        self._locale = locale
 
     @property
     def key(self):
@@ -22,6 +23,10 @@ class ObservedForegroundFlow(ObservedFlow):
     def direction(self):
         return self._exch.direction
 
+    @property
+    def locale(self):
+        return self._locale
+
     def __repr__(self):
         return 'ObservedForegroundFlow(Parent: %s, Term: %s: Value: %g)' % (self.parent.key,
                                                                             self.key,
@@ -33,8 +38,8 @@ class ObservedForegroundFlow(ObservedFlow):
 
 class ObservedBackgroundFlow(ObservedForegroundFlow):
     def __init__(self, exch, query):
-        super(ObservedBackgroundFlow, self).__init__(exch, exch.key)
         self._term = query.get(exch.termination)
+        super(ObservedBackgroundFlow, self).__init__(exch, exch.key, self._term['SpatialScope'])
 
     @property
     def bg_key(self):
@@ -43,7 +48,7 @@ class ObservedBackgroundFlow(ObservedForegroundFlow):
 
 class ObservedEmissionFlow(ObservedForegroundFlow):
     def __init__(self, exch):
-        super(ObservedEmissionFlow, self).__init__(exch, exch.key)
+        super(ObservedEmissionFlow, self).__init__(exch, exch.key, exch.process['SpatialScope'])
 
     @property
     def key(self):
@@ -81,7 +86,8 @@ class ForegroundDisclosure(Disclosure):
         self._exchs.append(x)
 
         if x.process.external_ref in self._parent_map:
-            off = ObservedForegroundFlow(x, x.termination)
+            ss = self._query.get_item(x.termination, 'SpatialScope')
+            off = ObservedForegroundFlow(x, x.termination, ss)
             parent = self._parent_map[x.process.external_ref]
             off.observe(parent)
 
@@ -92,7 +98,7 @@ class ForegroundDisclosure(Disclosure):
                 self._add_foreground_deps_ems(off, x.termination)
 
         else:
-            off = ObservedForegroundFlow(x, x.process.external_ref)
+            off = ObservedForegroundFlow(x, x.process.external_ref, x.process['SpatialScope'])
             print('Adding rx')
             off.observe(RX)
             self._add_foreground(off)

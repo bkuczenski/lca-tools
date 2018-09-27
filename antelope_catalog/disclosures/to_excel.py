@@ -27,6 +27,10 @@ def _x_tilde(fg_list, Af):
     return x_tilde.todense()
 
 
+def fg_name(k):
+    return '%s [%s] [%s]' % (k[0]._name, k[2], k[1])
+
+
 def flow_key_name(k):
     return '%s [%s]' % (k[0]._name, k[1])
 
@@ -39,7 +43,7 @@ def to_excel(disclosure, xlsfile):
     xlsw = ExcelWriter(xlsfile)
     i, ii, iii, iv, v, vi = disclosure.generate_disclosure()
 
-    fg = [flow_key_name(t) for t in i]
+    fg = ['%d. %s' % (x, fg_name(t)) for x, t in enumerate(i)]
     bg = [bg_key_name(t) for t in ii]
     em = [flow_key_name(t) for t in iii]
 

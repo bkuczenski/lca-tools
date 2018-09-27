@@ -32,12 +32,18 @@ class ObservedForegroundFlow(ObservedFlow):
 
 
 class ObservedBackgroundFlow(ObservedForegroundFlow):
-    def __init__(self, exch):
+    def __init__(self, exch, query):
         super(ObservedBackgroundFlow, self).__init__(exch, exch.key)
+        self._term = query.get(exch.termination)
 
     @property
     def bg_key(self):
-        return self._exch.termination, self._exch.flow
+        return self._term, self._exch.flow
+
+
+class ObservedEmissionFlow(ObservedForegroundFlow):
+    def __init__(self, exch):
+        super(ObservedEmissionFlow, self).__init__(exch, exch.key)
 
     @property
     def key(self):
@@ -61,12 +67,12 @@ class ForegroundDisclosure(Disclosure):
     def _add_foreground_deps_ems(self, parent, term):
         self._parent_map[term] = parent
         for x in self._query.dependencies(term):
-            bg = ObservedBackgroundFlow(x)
+            bg = ObservedBackgroundFlow(x, self._query)
             bg.observe(parent)
             self._add_background(bg)
 
         for x in self._query.emissions(term):
-            em = ObservedBackgroundFlow(x)
+            em = ObservedEmissionFlow(x)
             em.observe(parent)
             self._add_emission(em)
 

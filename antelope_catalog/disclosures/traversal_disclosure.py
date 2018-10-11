@@ -91,7 +91,6 @@ more to this than meets the eye.. FUCK
 
 from collections import deque
 from .disclosure import Disclosure, ObservedFlow, RX
-from lcatools.interfaces import comp_dir
 
 
 class EmptyFragQueue(Exception):
@@ -145,9 +144,14 @@ class ObservedFragmentFlow(ObservedFlow):
 
     @property
     def direction(self):
-        if self.parent is RX:
-            return comp_dir(self.ff.fragment.direction)
         return self.ff.fragment.direction
+
+    @property
+    def locale(self):
+        try:
+            return self.ff.term.term_node['SpatialScope']
+        except KeyError:
+            return ''
 
     @property
     def term(self):
@@ -165,9 +169,6 @@ class ObservedFragmentFlow(ObservedFlow):
         return 'ObservedFragmentFlow(Parent: %s, Term: %s, Magnitude: %g)' % (self.parent.key,
                                                                               self.key,
                                                                               self.magnitude)
-
-
-# RX = ObservedFragmentFlow(None, None)
 
 
 class ObservedBgFlow(ObservedFragmentFlow):
@@ -213,7 +214,7 @@ class ObservedCutoff(object):
 
     @property
     def key(self):
-        return self.flow, self.direction
+        return self.flow, self.direction, self.parent.locale
 
     def __repr__(self):
         return str(self)
@@ -316,7 +317,7 @@ class TraversalDisclosure(Disclosure):
         try:
             ff = self._ffqueue.popleft()
         except IndexError:
-            deferred = self._feed_deferred_frag()
+            deferred = self._feed_deferred_frag()  # deferred is either False or a FragmentFlow popped from the queue
             if deferred:
                 ff = self._ffqueue.popleft()
             else:

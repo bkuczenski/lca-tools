@@ -17,18 +17,24 @@ def _df_to_excel(writer, sheetname, mtx, index):
 
 
 def _x_tilde(fg_list, Af):
-    e = eye(len(fg_list)).tocsr()
+    p = len(fg_list)
+    p_ = Af.shape[1]
+    e = eye(p_).tocsr()
     bs = [i for i, x in enumerate(fg_list) if x.parent.key is None]
-    x_tilde = lil_matrix((len(fg_list), len(bs)))
+    x_tilde = lil_matrix((p_, len(bs)))
     A = e - Af
     for i, x in enumerate(bs):
         b = e[:, x]
         x_tilde[:, i] = lil_matrix(spsolve(A, b)).transpose()
-    return x_tilde.todense()
+    return x_tilde[:p, :].todense()
 
 
 def fg_name(k):
-    return '%s [%s] [%s]' % (k[0]._name, k[2], k[1])
+    if len(k[2]) > 0:
+        locale = '[%s] ' % k[2]
+    else:
+        locale = ''
+    return '%s %s[%s]' % (k[0]._name, locale, k[1])
 
 
 def flow_key_name(k):

@@ -285,7 +285,7 @@ class LcEntity(object):
             self._d[key] = value
 
     def merge(self, other):
-        if not isinstance(other, LcEntity):
+        if False:  # not isinstance(other, LcEntity):  ## This is not a requirement! cf. EntityRefs, Disclosure objs
             raise EntityMergeError('Incoming is not an LcEntity: %s' % other)
         elif self.entity_type != other.entity_type:
             raise EntityMergeError('Incoming entity type %s mismatch with %s' % (other.entity_type, self.entity_type))
@@ -321,6 +321,10 @@ class LcEntity(object):
 
     def __str__(self):
         return 'LC %s: %s' % (self.entity_type, self._d['Name'])
+
+    @property
+    def _name(self):
+        return str(self)
 
     def __hash__(self):
         return hash(self._uuid)

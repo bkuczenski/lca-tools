@@ -1,4 +1,4 @@
-from .disclosure import ObservedFlow, RX, Disclosure
+from .observer import ObservedFlow, RX, Observer
 
 
 class ObservedForegroundFlow(ObservedFlow):
@@ -43,7 +43,7 @@ class ObservedBackgroundFlow(ObservedForegroundFlow):
 
     @property
     def bg_key(self):
-        return self._term, self._exch.flow
+        return self._term, self._exch.flow, self._exch.direction
 
 
 class ObservedEmissionFlow(ObservedForegroundFlow):
@@ -52,12 +52,12 @@ class ObservedEmissionFlow(ObservedForegroundFlow):
 
     @property
     def key(self):
-        return self.flow, self.direction
+        return self.flow, self.direction, self.locale
 
 
-class ForegroundDisclosure(Disclosure):
+class ForegroundObserver(Observer):
     def __init__(self, query, *refs):
-        super(ForegroundDisclosure, self).__init__()
+        super(ForegroundObserver, self).__init__()
 
         self._query = query
 

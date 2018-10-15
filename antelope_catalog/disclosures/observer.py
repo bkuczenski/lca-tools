@@ -1,35 +1,4 @@
-"""
-Used to generate disclosures of the sort required by lca_disclosures -
-"""
-
-
-'''
-from lca_disclosures import BaseExporter
-
-
-class LcaDisclosure(BaseExporter):
-
-    def _prepare_efn(self):
-        return self.filename or self.[0].fragment.external_ref
-
-    def __init__(self, foreground, background, emissions, Af, Ad, Bf, filename=None):
-        self._ffs = fragment_flows
-        self.filename = filename
-
-    def _prepare_disclosure(self):
-        pass
-'''
-
-# ff is the actual FragmentFlow; ffid is its position in the sequence;
-# parent is the key to the parent off
-# pnw is the node weight of the parent node
-# off.ff.node_weight / off.pnw = the exchange value to put in the matrix
-#
-# ObservedFragmentFlow = namedtuple('ObservedFragmentFlow', ('ff', 'key', 'ffid', 'pnw'))
-
-"""
-Observed Foreground Flows, Observed Background Flows, Observed Cutoff Flows
-"""
+from lca_disclosures import ForegroundFlow, BackgroundFlow, EmissionFlow
 
 
 class UnobservedFragmentFlow(Exception):
@@ -147,7 +116,7 @@ class SeqDict(object):
         return [self._d[x] for x in self._l]
 
 
-class Disclosure(object):
+class Observer(object):
     def __init__(self):
         """
         These are really 'list-dicts' where they have a sequence but also a reverse-lookup capability.
@@ -244,12 +213,22 @@ class Disclosure(object):
         _ = [x for x in self]  # ensure fully iterated
         p = len(self._fg)
 
-        d_i = [(off.flow, off.direction, off.locale) for off in self._fg.to_list()]
-        d_i += self._co.to_list()
+        d_i = [ForegroundFlow(off.flow['Name'], off.direction, off.unit(), location=off.locale)
+               for off in self._fg.to_list()]  # this returns an ObservedForegroundFlow
+        d_i += [ForegroundFlow(flow['Name'], dirn, flow.unit(), location=locale)
+                for flow, dirn, locale in self._co.to_list()]
 
-        d_ii = self._bg.to_list()
+        d_ii = [BackgroundFlow(node.origin, flow['Name'], dirn, flow.unit(),
+                               activity=node.external_ref,
+                               location=node['SpatialScope'],
+                               external_ref=flow.external_ref)
+                for node, flow, dirn in self._bg.to_list()]
 
-        d_iii = self._em.to_list()
+        d_iii = [EmissionFlow(flow.origin, flow['Name'], dirn, flow.unit(),
+                              context=flow.context,
+                              location=locale,
+                              external_ref=flow.external_ref)
+                 for flow, dirn, locale in self._em.to_list()]
 
         d_iv = []
         d_v = []

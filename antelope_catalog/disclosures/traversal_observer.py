@@ -31,66 +31,11 @@ gives us the key to the most recent parent, which gives us the context we need t
 
 Then the only reverse mapping we need is from ff to key, so that given a fragmentflow from the sequence we can retrieve
 its OFF without knowing its FFID.
-
-
-here we go:
-
-To start off, add ffs[0].fragment to running tops key, add None to running parents key
-
-OFF has ff, ffid, parent, observed node_weight
-
-input: FragmentFlow object
-known: key for current parent
-
-while ff.fragment.top() is not tops[-1]:
-    try:
-        tops.pop()
-        parents.pop()
-    except IndexError:
-        if ff.fragment.reference_entity is not None:
-            raise SomeKindaError
-        print('starting new traversal\n%s' % ff
-        tops = [ff.fragment]
-        parents = None
-        break
-
-
-
-send it to list, get back its FFID.  {FF -> FFID}
-create OFF
-
-exchange value is off.value / parent_off.value
-
-if null: it's a cutoff->
-  if parent OFF.term.is_subfrag and OFF.term.descend is False, continue
-  else, add it to cutoffs, column = parent
-elif fg emission (detectable??)->
-  add it to emissions, column = parent
-elif process ref->
-  if fg:
-    for term's unobserved exchanges, add to emissions, column = parent
-  elif bg:
-    add to background, column = parent
-elif frag:
-  if descending subfrag->
-    add self to parents
-    add term to tops
-    add OFF to foreground
-    add Af entry, column = parent, row = self
-  elif non-descending subfrag->
-    enqueue term's cached subfragments in deque
-    add term's term_node-- somehow--
-
-more to this than meets the eye.. FUCK
-
-
-
-
 """
 
 
 from collections import deque
-from .disclosure import Disclosure, ObservedFlow, RX
+from .observer import Observer, ObservedFlow, RX
 
 
 class EmptyFragQueue(Exception):
@@ -174,7 +119,7 @@ class ObservedFragmentFlow(ObservedFlow):
 class ObservedBgFlow(ObservedFragmentFlow):
     @property
     def bg_key(self):
-        return self.ff.term.term_node, self.ff.term.term_flow
+        return self.ff.term.term_node, self.ff.term.term_flow, self.ff.direction
 
     def __str__(self):
         return 'ObservedBg(Parent: %s, Term: %s, Magnitude: %g)' % (self.parent.key, self.bg_key, self.magnitude)
@@ -224,7 +169,7 @@ class ObservedCutoff(object):
                                                                       self.flow, self.magnitude)
 
 
-class TraversalDisclosure(Disclosure):
+class TraversalDisclosure(Observer):
     """
     Take a sequence of fragmentflows and processes them into an Af, Ad, and Bf
     """

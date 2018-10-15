@@ -50,6 +50,14 @@ class LcFlow(LcEntity):
         if local_unit is not None:
             self.set_local_unit(local_unit)
 
+    @property
+    def context(self):
+        """
+        Stopgap until Context Refactor is completed.  return '; '.join(self['Compartment'])
+        :return:
+        """
+        return '; '.join(self['Compartment'])
+
     def _set_reference(self, ref_entity):
         if self.reference_entity is not None:
             if self.reference_entity.get_uuid() == ref_entity.get_uuid():

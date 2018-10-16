@@ -1,0 +1,23 @@
+==========
+Tue Jul 24 13:23:20 -0700 2018
+
+Re-structuring the repo into several repos.  Objectives:
+
+ * 'core' repository should include interfaces and everything that would be required to use them
+   - should have close to zero dependencies ('six' is the only one presently- should move to eight?)
+   - a brightway2 instance should only require this import, to make an archive
+
+ * antelope-catalog: mutual requirement for catalog + foregrounds + fragments
+   - also includes (? or should it?) providers- ilcd, ecospold2, olca, traci, etc
+   - av1 and av2 clients
+   = introduce dependencies: lxml, marshmallow-- not much else tho
+
+ * antelope-background: partial ordering (requires scipy)
+
+ * antelope-v2-server: for deploying either node (ext ref) or catalog (link) servers
+
+ * antelope-v1-server: compat, anyway- required to show off the current app
+
+OR- I could learn javascript and write a new app using the av1/2 api
+
+how does lcopt do it again?

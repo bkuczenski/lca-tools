@@ -1,10 +1,10 @@
 import os
+import re
 
 from .data_source import DataSource, DataCollection
 
 FILE_PREFIX = ('current_Version_', 'ecoinvent ')
 FILE_EXT = ('7z', 'zip')
-ECOINVENT_VERSIONS = ('3.2', '3.4')
 ECOINVENT_SYS_MODELS = ('apos', 'conseq', 'cutoff')
 MODELMAP = {
     'apos': ('apos',),
@@ -18,7 +18,6 @@ class Ecoinvent3Base(DataSource):
     _ds_type = 'EcospoldV2Archive'
 
     def __init__(self, data_root, version, model, **kwargs):
-        assert version in ECOINVENT_VERSIONS
         assert model in ECOINVENT_SYS_MODELS
         super(Ecoinvent3Base, self).__init__(data_root=data_root, **kwargs)
         self._version = version
@@ -51,6 +50,11 @@ class Ecoinvent3Base(DataSource):
             yield self._make_resource(ref, self.inv_source, interfaces=('index', 'inventory'), prefix='datasets')
 
     def _fname(self, ftype=None):
+        precheck = os.path.join(self.root, self._model)
+        if ftype is not None:
+            precheck += '_%s' % ftype
+        if os.path.isdir(precheck):
+            return precheck
         for pf in FILE_PREFIX:
             for mod in MODELMAP[self._model]:
                 if ftype is None:
@@ -76,7 +80,33 @@ class Ecoinvent3Base(DataSource):
 
 
 class EcoinventConfig(DataCollection):
+    """
+    Ecoinvent Configurator
+    This DataCollection generates LcResource objects for ecoinvent archives.  The only required input is the root
+    folder containing the ecoinvent data.  Within this folder should be subfolders named after the major and minor
+    version of the database (e.g. "3.3"). Within the subfolders should be the archives.
+
+    Archives must be named according to ecoinvent's various conventions:
+     #1#2_#3_ecoSpold02#4
+    where
+     #1 is one of ('current_Version_' or 'ecoinvent ')
+     #2 is the major and minor version ('2.2', '3.01', '3.1', '3.2', etc)
+     #3 is the system model ('apos', 'cutoff', 'consequential', or 'consequential_longterm')
+     #4 is either omitted (in the case of an expanded directory) or an archive extension ('.zip' or '.7z')
+
+    Within the archives, either compressed or expanded, the datasets are assumed to be in a subfolder called 'datasets'
+
+    The class does not currently support loading undefined data collections, but this could be added in the future.
+
+    """
+    @property
+    def ecoinvent_versions(self):
+        for d in os.listdir(self._root):
+            if os.path.isdir(os.path.join(self._root, d)):
+                if re.match('[23]\.[0-9]+', d):
+                    yield d
+
     def factory(self, data_root, **kwargs):
-        for v in ECOINVENT_VERSIONS:
+        for v in self.ecoinvent_versions:
             for m in ECOINVENT_SYS_MODELS:
                 yield Ecoinvent3Base(data_root, v, m, **kwargs)

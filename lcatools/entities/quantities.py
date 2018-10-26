@@ -131,6 +131,8 @@ class LcUnit(object):
             self._uuid = uuid.UUID(unit_uuid)
         else:
             self._uuid = None
+        if isinstance(unitstring, LcUnit):
+            unitstring = unitstring.unitstring
         self._unitstring = unitstring
         self._external_ref = None
 

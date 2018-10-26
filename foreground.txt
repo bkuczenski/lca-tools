@@ -1,0 +1,66 @@
+==========
+Mon Sep 17 16:01:38 -0700 2018
+
+OK, after spending 3 hours with the Salmon Feed database [LAST FRIDAY] it is becoming clear that the current design of the so-called Foreground Interface does NOT WORK.  Certainly it does not deal with gaBi-style models where all the flow terminations are determined by hand.
+
+Another thing that has become clear from the Salmon Feed database is that fragment scenario traversal is not well designed.
+
+In fact, the LcFragment design is rotting on the vine.  At least the traversal machinery has been reimplemented and worked throguh but the scenario-based exchange values and terminations are not well handled; the tree drawing should use fragment flows and not introspection; nothing is tested; and now this: flow terminations in subfragments need tobe able to carry an 'apply_scenario' setting in order to allow fragments to be customized per-traversal.  For instance, I could make one powergrid fragment and terminate it with DE processes, BR processes, EU proceses, US processes, and then terminate the top fragment with DE / BR / US / EU mixes; then wen I installed the fragment I could simply specify which param set to use.
+
+That currently doesn't work.  The current approach would require me to duplicate the fragments and terminate them separately, at least if I wanted to mix and match power grid fragments in the same model (e.g. have som eprocesses occur in DE and others in US, which is certainly reasonable)
+
+MAYBE if I had started doing this right after lunch instead of after 90 minutes of stupid web shit, maybe I could have made some progress. But here I am, with essentially HALF my unallocated time GONE for this week.  because I am a stupid fuckup.
+
+OK, on to the actual work.  I need a test fragment to develop the new foreground system. Here are my options:
+
+ 1* use something from the CalRecycle model
+ 2* use something from the AUOMA model
+ 3* create something from the Salmon model
+ 4* create something from the WAS model.
+
+Advantage of 1: it is already done
+Disadvantage of 1: not the wisest model design; kind of tired at this point (project from '11-13??)
+
+Advantage of 2: it is already done
+	     	it is more recent than CalRecycle
+Disadvantage of 2: it may be obsolete
+	     	   not an interesting system; not nec. free to share
+
+Advantage of 3: It has a really useful known flaw
+Disadvantage of 3: no permission; not done; hard to build
+
+Advantage of 4: It could be valuable to show to client
+Disadvantage of 4: not nec. free to use
+	     	   not the greatest model
+
+For the purposes of developing the av1 server, I should use a model that already exists.  fullstop.  I choose: CalRecycle.
+
+For the slideshow I can use salmon feed, and redesign the fg interface if need be.
+
+Mon 2018-09-17 16:36:44 -0700
+
+So the recurring theme here is that ILCD processes exported from GaBi have no marked reference flows. This is problematic because I have changed the flow termination machinery to require flows to be reference flows.  Maybe I need to undo this.
+
+That means changing how the inventory() interface method works.
+
+Here's the proposal- love how this iis so super ad-hoc and totally untested and unauditable.
+IF the process has a nonempty reference, it works as currently coded
+IF, however, the process has no marked reference flows, then whichever flow is named is treated as the reference
+
+Tue 2018-09-18 16:33:30 -0700
+
+Nice that I consistently start working around 4:30 PM. BRILLIANT.
+
+The reason all this is so shitty is because I don't have ANY test cases. I don't have ANY models that work. So- I think I should feel free to discard ANY code and reimplement it.
+
+Starting with termination inbound exchange values.  They were created because e.g. thinkstep processes that produce electricity list it as an output with an amount of 3.6 MJ, or more generically because processes are not guaranteed to have unit reference flows and because the ORIGINAL conceptualization of a fragment was that it had a termination in an ordinary unit process which would behave in an unmodified way.
+
+THIS IS NO LONGER HOW IT WORKS.
+
+NOW the way it works is as follows:
+
+ inventory() returns a process's complete exchange list with values
+ inventory(flow) returns a process' exchange list, excluding the named flow, normalized by the amount of the named flow, as long as the named flow belongs to an exchange with no termination (i.e. a reference OR a cutoff)
+
+Because the inventory method now returns normalized exchanges (because ExchangeValue.__getitem__ now normalizes), there is no need for an inbound exchange value on terminations.  The only case where it is non-unity is when it's a fragment, and there it's stored in the top-level fragment's exchange array and NOT in the termination.  SO HACK IT OUT. This is actually great beacuse we can now clean up some of the crufiest parts of terminations.py.
+

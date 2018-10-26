@@ -171,6 +171,8 @@ class LcCatalog(LciaEngine):
         """
         self._nicknames = dict()  # keep a collection of shorthands for sources
 
+        self._queries = dict()  # keep a collection of CatalogQuery instances for each origin
+
         self.add_existing_archive(self._qdb, interfaces=('index', 'quantity'), store=False)
 
     @property
@@ -337,7 +339,8 @@ class LcCatalog(LciaEngine):
         if os.path.exists(inx_file):
             if not force:
                 print('Not overwriting existing index. force=True to override.')
-                return
+                ex_res = next(r for r in self._resolver.resources_with_source(inx_file))
+                return ex_res.reference
             print('Re-indexing %s' % source)
         new_ref = res.make_index(inx_file)
         self._resolver.new_resource(new_ref, inx_file, 'json', priority=priority, store=stored, interfaces='index',
@@ -483,16 +486,23 @@ class LcCatalog(LciaEngine):
     """
     public functions -- should these operate directly on a catalog ref instead? I think so but let's see about usage
     """
-    def query(self, origin, strict=False, **kwargs):
+    def query(self, origin, strict=False, refresh=False, **kwargs):
         """
         Returns a query using the first interface to match the origin.
         :param origin:
-        :param strict:
+        :param strict: [False] whether the resolver should match the origin exactly, as opposed to returning more highly
+         specified matches.  e.g. with strict=False, a request for 'local.traci' could be satisfied by 'local.traci.2.1'
+         whereas if strict=True, only a resource matching 'local.traci' exactly will be returned
+        :param refresh: [False] by default, the catalog stores a CatalogQuery instance for every requested origin.  With
+         refresh=True, any prior instance will be replaced with a fresh one.
         :param kwargs:
         :return:
         """
+
         next(self._resolver.resolve(origin, strict=strict))  # raises UnknownOrigin
-        return CatalogQuery(origin, catalog=self, **kwargs)
+        if refresh or (origin not in self._queries):
+            self._queries[origin] = CatalogQuery(origin, catalog=self, **kwargs)
+        return self._queries[origin]
 
     def lookup(self, origin, external_ref):
         """

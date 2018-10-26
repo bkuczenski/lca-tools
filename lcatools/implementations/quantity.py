@@ -85,7 +85,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         :param ref_quantity:
         :param flowable:
         :param compartment:
-        :param cf:
+        :param res: a QRResult
         :param locale:
         :return:
         """
@@ -184,7 +184,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         :return:
         """
         qr_results, qr_mismatch, _ = self._quantity_results(ref_quantity, flowable, compartment,
-                                                  query_quantity, locale=locale, **kwargs)
+                                                            query_quantity, locale=locale, **kwargs)
 
         if len(qr_results) > 1:
             # this is obviously punting

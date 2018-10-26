@@ -30,6 +30,15 @@ class ProcessesTest(BasicEntityTest):
         for x in self.grid.inventory(ex):
             self.assertEqual(x.value, inv_dict[x.flow] / ex.value)
 
+    def test_inv_not_reference(self):
+        """
+        test implementation of the interface specification for inventory
+
+        exchange-finding tools have been fixed but the test has yet to be written
+        :return:
+        """
+        pass
+
 
 if __name__ == '__main__':
     unittest.main()

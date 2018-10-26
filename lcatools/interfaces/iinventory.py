@@ -11,6 +11,18 @@ _interface = 'inventory'
 class InventoryInterface(AbstractQuery):
     """
     InventoryInterface core methods: individual processes, quantitative data.
+
+    Need to do some thinking here-- the list of methods is very short. In particular there is no way to do any of
+    the following:
+     * retrieve reference exchanges
+     * retrieve cutoff exchanges or only terminated exchanges
+     * retrieve only intermediate or only elementary exchanges [[ pending context refactor :(:( ]]
+       = this is frankly not possible to do, even after the context refactor, because there is no bulletproof way to
+         determine whether a termination is a context or a process or some non-elementary compartment, until you
+         introduce the Lcia Engine with its reference set of contexts, UNLESS you include the reference elementary set
+         in ALL context managers.  Which is feasible- since it's a short list- but still, not done as yet.
+    There's also no access to information from the original source that is not part of the data model, e.g. uncertainty
+    information, arbitrary XML queries, etc.
     """
     def exchanges(self, process, **kwargs):
         """
@@ -18,29 +30,39 @@ class InventoryInterface(AbstractQuery):
         :param process:
         :return:
         """
-        for x in self._perform_query(_interface, 'exchanges',
-                                     InventoryRequired('No access to exchange data'), process, **kwargs):
-            yield self.make_ref(x)
+        return self._perform_query(_interface, 'exchanges',
+                                   InventoryRequired('No access to exchange data'), process, **kwargs)
 
-    def exchange_values(self, process, flow, direction=None, termination=None, **kwargs):
+    def exchange_values(self, process, flow, direction=None, termination=None, reference=None, **kwargs):
         """
         Return a list of exchanges with values matching the specification
         :param process:
         :param flow:
-        :param direction:
+        :param direction: [None] if none,
         :param termination: [None] if none, return all terminations
+        :param reference: [None] if True, only find reference exchanges. If false- maybe omit reference exchanges?
         :return:
         """
-        for x in self._perform_query(_interface, 'exchange_values',
-                                     InventoryRequired('No access to exchange data'),
-                                     process, flow, direction=direction, termination=termination, **kwargs):
-            yield self.make_ref(x)
+        return self._perform_query(_interface, 'exchange_values',
+                                   InventoryRequired('No access to exchange data'),
+                                   process, flow, direction=direction, termination=termination, reference=reference,
+                                   **kwargs)
 
     def inventory(self, process, ref_flow=None, **kwargs):
         """
         Return a list of exchanges with values. If no reference is supplied, return all unallocated exchanges, including
-        reference exchanges. If a reference is supplied, return allocated (but not normalized) exchanges, excluding
         reference exchanges.
+
+        If a reference flow is supplied, expected behavior depends on a number of factors.
+         - If the supplied reference flow is part of the process's reference entity, the inventory should return all
+         non-reference exchanges, appropriately allocated to the specified flow, and normalized to a unit of the
+         specified flow.
+         - If the supplied reference flow is not part of the reference entity, NO allocation should be performed.
+         Instead, the inventory should return ALL exchanges except for the specified flow, un-allocated, normalized to
+         a unit of the specified flow.  This query is only valid if the specified flow is a cut-off (i.e. un-terminated)
+         exchange.
+         - If the supplied reference flow is a non-reference, non-cutoff flow (i.e. it is a terminated exchange), then
+         the appropriate behavior is undefined. The default implementation raises an ExchangeError.
 
         Note: if this is called on a fragment, the signature is the same but the 'ref_flow' argument is interpreted
         as a 'scenario' specification instead, inclusive of the fragment's reference exchange
@@ -48,9 +70,8 @@ class InventoryInterface(AbstractQuery):
         :param ref_flow:
         :return:
         """
-        for x in self._perform_query(_interface, 'inventory', InventoryRequired('No access to exchange data'),
-                                     process, ref_flow=ref_flow, **kwargs):
-            yield self.make_ref(x)
+        return self._perform_query(_interface, 'inventory', InventoryRequired('No access to exchange data'),
+                                   process, ref_flow=ref_flow, **kwargs)
 
     def exchange_relation(self, process, ref_flow, exch_flow, direction, termination=None, **kwargs):
         """

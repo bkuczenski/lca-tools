@@ -29,7 +29,7 @@ from .quantity import QdbQuantityImplementation
 from lcatools.from_json import from_json
 from lcatools.lcia_results import LciaResult
 from lcatools.archives import BasicArchive
-from lcatools.flowdb.compartments import Compartment, CompartmentManager
+from lcatools.flowdb.compartments import Compartment, CompartmentManager, MissingCompartment
 from lcatools.characterizations import Characterization
 # from lcatools.dynamic_grid import dynamic_grid
 # from lcatools.interact import pick_one
@@ -148,7 +148,7 @@ class CLookup(object):
 
 class Qdb(BasicArchive):
     def __init__(self, source=REF_QTYS, quantities=Q_SYNS, flowables=F_SYNS, compartments=None,
-                 quell_biogenic_CO2=False,
+                 quell_biogenic_CO2=False, quell_biogenic_co2=False,
                  ref=None, **kwargs):
         """
 
@@ -196,7 +196,7 @@ class Qdb(BasicArchive):
         self._f_dict = defaultdict(set)  # dict of flowable index to set of characterized quantities (by index)
 
         # following are to implement special treatment for biogenic CO2
-        self._quell_biogenic_co2 = quell_biogenic_CO2
+        self._quell_biogenic_co2 = quell_biogenic_CO2 or quell_biogenic_co2
         self._co2_index = self._f.index('124-38-9')
         self._comp_from_air = self.c_mgr.find_matching('Resources from air')
 
@@ -521,7 +521,7 @@ class Qdb(BasicArchive):
         for i in q.uuid, q.link, q.q_name:
             yield i
 
-    def add_cf(self, factor, flow=None):
+    def add_cf(self, factor, flow=None, interact=False):
         """
         factor should be a Characterization, with the behavior:
           * flow[x] for x in {'Name', 'CasNumber', 'Compartment'} operable
@@ -530,6 +530,7 @@ class Qdb(BasicArchive):
           * __getitem__ operable
         :param factor:
         :param flow: [None] source for flowables
+        :param interact: [False] raise MissingCompartment; True: interactively add/merge compartment
         :return:
         """
         q_ind = self._get_q_ind(factor.quantity)
@@ -541,7 +542,7 @@ class Qdb(BasicArchive):
 
         self._get_q_ind(factor.flow.reference_entity)
 
-        comp = self.c_mgr.find_matching(factor.flow['Compartment'])
+        comp = self.c_mgr.find_matching(factor.flow['Compartment'], interact=interact)
 
         for f_ind in f_inds:
             self._q_dict[q_ind].add(f_ind)
@@ -596,7 +597,7 @@ class Qdb(BasicArchive):
         conv = self._conversion_from_flow(flow, from_q_ind)
         if conv is None:
             f_inds = [fb for fb in self._find_flowables(*self._flow_terms(flow))]
-            compartment = self.c_mgr.find_matching(flow['Compartment'])
+            compartment = self.c_mgr.find_matching(flow['Compartment'], interact=False)
             conv, origin = self._lookfor_conversion(f_inds, compartment, from_q_ind, ref_q_ind)
             if conv is not None:
                 flow.add_characterization(self._q.entity(from_q), location=locale, value=conv, origin=origin)
@@ -738,7 +739,8 @@ class Qdb(BasicArchive):
             self._print('  ** convert - ref and query are the same')
             return 1.0
 
-        comp = self.c_mgr.find_matching(compartment)
+        comp = self.c_mgr.find_matching(compartment, interact=False)
+
         if len(f_inds) == 0:
             self._print(' !! No matching flowables !!')
 
@@ -791,9 +793,13 @@ class Qdb(BasicArchive):
             if refresh or not x.flow.has_characterization(q):
                 try:
                     factor = self.convert(flow=x.flow, query_q_ind=q_ind, locale=locale, **kwargs)
+                except MissingCompartment:
+                    print('Missing compartment %s; abandoning this exchange' % x.flow['Compartment'])
+                    continue
                 except ConversionReferenceMismatch:
                     print('Mismatch %s' % x)
                     factor = None
+
                 if factor is not None:
                     self._print('factor %g %s' % (factor, x))
                     x.flow.add_characterization(q, value=factor, overwrite=refresh)

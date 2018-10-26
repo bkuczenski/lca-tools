@@ -8,20 +8,27 @@ class IndexRequired(Exception):
 directions = ('Input', 'Output')
 
 
+def check_direction(dirn):
+    if isinstance(dirn, str):
+        dirn = dirn[0].lower()
+    return {0: 'Input',
+            1: 'Output',
+            'i': 'Input',
+            'o': 'Output'}[dirn]
+
+
 class InvalidDirection(Exception):
     pass
 
 
 def comp_dir(direction):
+    if direction is None:
+        return None
     try:
-        cd = {'input': 'Output',
-              'output': 'Input',
-              'source': 'Input',
-              'sink': 'Output',
-              None: None}[direction.lower()]
+        _dirn = check_direction(direction)
     except KeyError:
         raise InvalidDirection('%s' % direction)
-    return cd
+    return next(k for k in directions if k != _dirn)
 
 
 _interface = 'index'
@@ -58,7 +65,6 @@ class IndexInterface(AbstractQuery):
         """
         for i in self._perform_query(_interface, 'flows', IndexRequired('Index access required'), **kwargs):
             yield self.make_ref(i)
-
 
     def synonyms(self, item, **kwargs):
         """

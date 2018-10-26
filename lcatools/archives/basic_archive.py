@@ -171,6 +171,7 @@ class BasicArchive(EntityStore):
         return LcUnit(unitstring), None
 
     def _quantity_from_json(self, entity_j, uid):
+        entity_j.pop('externalId')  # TODO
         # can't move this to entity because we need _create_unit- so we wouldn't gain anything
         unit, _ = self._create_unit(entity_j.pop('referenceUnit'))
         entity_j['referenceUnit'] = unit
@@ -178,13 +179,14 @@ class BasicArchive(EntityStore):
         return quantity
 
     def _flow_from_json(self, entity_j, uid):
+        entity_j.pop('externalId')  # TODO
         if 'referenceQuantity' in entity_j:
             entity_j.pop('referenceQuantity')
         chars = entity_j.pop('characterizations', [])
         flow = LcFlow(uid, **entity_j)
         for c in chars:
             v = None
-            q = self._get_entity(c['quantity'])
+            q = self[c['quantity']]  # this is required because of foreground; _process_from_json unaffected
             if q is None:
                 continue
                 # import json
@@ -222,7 +224,7 @@ class BasicArchive(EntityStore):
         if 'tags' in e:
             raise OldJson('This file type is no longer supported.')
         uid = e.pop('entityId', None)
-        ext_ref = e.pop('externalId')
+        ext_ref = e['externalId']  # TODO: need this still present
         if uid is None:
             uid = to_uuid(ext_ref)
             if uid is None:

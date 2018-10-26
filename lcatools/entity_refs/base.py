@@ -101,15 +101,20 @@ class BaseRef(object):
         return self._localitem(item) is not None
 
     def __setitem__(self, key, value):
-        if not key.startswith('Local'):
-            key = 'Local%s' % key
+        key = key.lower()
+        if not key.startswith('local_'):
+            key = 'local_%s' % key
         self._d[key] = value
 
     @property
     def _name(self):
         if self.has_property('Name'):
-            return ' ' + self['Name']
-        return ''
+            addl = self._addl
+            name = self['Name']
+            if len(addl) > 0:
+                name += ' [%s]' % addl
+            return name
+        return self.external_ref
 
     @property
     def _addl(self):
@@ -125,7 +130,7 @@ class BaseRef(object):
             return False
 
     def __str__(self):
-        return '%s/%s%s [%s]' % (self.origin, self.external_ref, self._name, self._addl)
+        return '[%s] %s' % (self.origin, self._name)
 
     def __hash__(self):
         return hash(self.link)
@@ -146,8 +151,11 @@ class BaseRef(object):
             raise EntityRefMergeError('Type mismatch %s vs %s' % (self.entity_type, other.entity_type))
         if self.link != other.link:
             if self.external_ref == other.external_ref:
+                pass  # we're going to consider origin mismatches allowable for entity refs
+                '''
                 if not (self.origin.startswith(other.origin) or other.origin.startswith(self.origin)):
                     raise EntityRefMergeError('Origin mismatch %s vs %s' % (self.origin, other.origin))
+                '''
             else:
                 raise EntityRefMergeError('external_ref mismatch: %s vs %s' % (self.external_ref, other.external_ref))
         # otherwise fine-- left argument is dominant
@@ -162,12 +170,24 @@ class BaseRef(object):
         print('origin: %s' % self.origin)
         self._show_hook()
         if len(self._d) > 0:
-            print('==Local Fields==')
+            _notprint = True  # only print '==Local Fields==' if there are any
             ml = len(max(self._d.keys(), key=len))
+            named = {'comment', 'name'}
             for k, v in self._d.items():
+                if k.lower() in named or 'local' + k.lower() in named:
+                    continue
+                named.add(k.lower())
+                if _notprint:
+                    print('==Local Fields==')
+                    _notprint = False
                 print('%*s: %s' % (ml, k, v))
 
-    def serialize(self):
+    def serialize(self, **kwargs):
+        """
+
+        :param kwargs: 'domesticate' has no effect- refs can't be domesticated
+        :return:
+        """
         j = {
             'origin': self.origin,
             'externalId': self.external_ref
@@ -188,6 +208,12 @@ class EntityRef(BaseRef):
     """
     def make_ref(self, *args):
         return self
+
+    def set_external_ref(self, ref):
+        # stopgap because of entity_from_json confusion regarding external refs and foregrounds
+        # TODO: rework external ref handling after context refactor
+        if ref != self.external_ref:
+            raise ValueError('Ref collision! [%s] != [%s]' % (ref, self.external_ref))
 
     def __init__(self, external_ref, query, reference_entity, **kwargs):
         """
@@ -282,7 +308,7 @@ class EntityRef(BaseRef):
     def __getitem__(self, item):
         return self.get_item(item)
 
-    def serialize(self):
-        j = super(EntityRef, self).serialize()
+    def serialize(self, **kwargs):
+        j = super(EntityRef, self).serialize(**kwargs)
         j['entityId'] = self.uuid
         return j

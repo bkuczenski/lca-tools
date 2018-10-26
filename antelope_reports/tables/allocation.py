@@ -106,19 +106,22 @@ class AllocationGrid(BaseTableOutput):
     def add_column(self, arg):
         col_idx = len(self._columns)
         # add process's native values
-        if self._add_alloc_column(col_idx, arg, None):
-            self._add_alloc_refs(arg)
+        if self._report_unallocated:
+            if self._add_alloc_column(col_idx, arg, None):
+                self._add_alloc_refs(arg)
 
         for ref in arg.references():
             col_idx = len(self._columns)
             if self._add_alloc_column(col_idx, arg, ref.flow):
                 self._add_alloc_refs(arg, flow=ref.flow)
 
-    def __init__(self, archive, *prefs):
+    def __init__(self, archive, *prefs, report_unallocated=True):
         """
 
         :param archive:
         :param prefs: one or more process refs
+        :param report_unallocated: [True] by default, report process's unallocated values alongside the allocated ones
         """
         self._ar = archive
+        self._report_unallocated = bool(report_unallocated)
         super(AllocationGrid, self).__init__(*prefs)

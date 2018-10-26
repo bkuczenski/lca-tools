@@ -5,6 +5,8 @@ from itertools import chain
 from numbers import Number
 from lcatools.entity_refs import CatalogRef
 
+from .lower_dict import LowerDict
+
 
 entity_types = ('process', 'flow', 'quantity', 'fragment')
 entity_refs = {
@@ -50,7 +52,7 @@ class LcEntity(object):
         if entity_uuid is not None:
             self.uuid = entity_uuid
 
-        self._d = dict()
+        self._d = LowerDict()
 
         self._entity_type = entity_type
         self.reference_entity = None
@@ -306,7 +308,7 @@ class LcEntity(object):
             self._d[key] = value
 
     def merge(self, other):
-        if not isinstance(other, LcEntity):
+        if False:  # not isinstance(other, LcEntity):  ## This is not a requirement! cf. EntityRefs, Disclosure objs
             raise EntityMergeError('Incoming is not an LcEntity: %s' % other)
         elif self.entity_type != other.entity_type:
             raise EntityMergeError('Incoming entity type %s mismatch with %s' % (other.entity_type, self.entity_type))
@@ -333,7 +335,7 @@ class LcEntity(object):
         else:
             print('reference: %s' % self.reference_entity)
         fix = ['Name', 'Comment']
-        postfix = set(self._d.keys()).difference(fix)
+        postfix = set(str(k) for k in self._d.keys()).difference(fix)
         ml = len(max(self._d.keys(), key=len))
         for k in fix:
             print('%*s: %s' % (ml, k, self._d[k]))
@@ -343,8 +345,12 @@ class LcEntity(object):
     def __str__(self):
         return 'LC %s: %s' % (self.entity_type, self._d['Name'])
 
+    @property
+    def _name(self):
+        return str(self)
+
     def __hash__(self):
-        return hash(self._uuid)
+        return hash(self.link)
 
     def __eq__(self, other):
         """

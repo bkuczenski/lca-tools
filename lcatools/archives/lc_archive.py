@@ -63,6 +63,7 @@ class LcArchive(BasicArchive):
 
     def _process_from_json(self, entity_j, uid):
         # note-- we are officially abandoning referenceExchange notation
+        entity_j.pop('externalId')  # TODO - see basic archive
         if 'referenceExchange' in entity_j:
             entity_j.pop('referenceExchange')
         a_b_q = entity_j.pop('AllocatedByQuantity', None)

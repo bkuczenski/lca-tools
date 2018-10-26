@@ -270,7 +270,7 @@ class CompartmentManagerTestCase(unittest.TestCase):
 
     def test_read_reference(self):
         kn = self.cm.known_names
-        self.assertEqual(len(kn), 121, "Length does not match")
+        self.assertEqual(len(kn), 125, "Length does not match")
         self.assertEqual(kn[47], 'Heavy metals to industrial soil')
         self.assertEqual(kn[-1], 'intermediate flows')
 

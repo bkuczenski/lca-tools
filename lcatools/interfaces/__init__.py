@@ -9,7 +9,7 @@ from .abstract_query import UnknownOrigin, PrivateArchive, EntityNotFound
 
 from .iconfigure import ConfigureInterface
 from .iinventory import InventoryInterface, InventoryRequired
-from .iindex import IndexInterface, IndexRequired, comp_dir, directions
+from .iindex import IndexInterface, IndexRequired, directions, comp_dir, check_direction
 from .ibackground import BackgroundInterface, BackgroundRequired
 from .iquantity import QuantityInterface, QuantityRequired, NoFactorsFound, ConversionReferenceMismatch
 
@@ -22,7 +22,8 @@ from os.path import splitext
 from collections import namedtuple
 
 
-uuid_regex = re.compile('([0-9a-f]{8}.?([0-9a-f]{4}.?){3}[0-9a-f]{12})', flags=re.IGNORECASE)
+uuid_regex = re.compile('([0-9a-f]{8}-?([0-9a-f]{4}-?){3}[0-9a-f]{12})', flags=re.IGNORECASE)
+
 
 
 def to_uuid(_in):
@@ -89,5 +90,6 @@ model (exchange terminations are contexts)
 CONTEXT_STATUS_ = 'compat'  # 'compat': context = flow['Compartment']; 'new': context = exch.termination
 
 
+# Containers of information about linked exchanges.  Direction is given with respect to the termination.
 ExteriorFlow = namedtuple('ExteriorFlow', ('origin', 'flow', 'direction', 'termination'))
 ProductFlow = namedtuple('ProductFlow', ('origin', 'flow', 'direction', 'termination', 'component_id'))

@@ -21,10 +21,6 @@ class AmbiguousReferenceError(Exception):
     pass
 
 
-class NoReferenceFound(Exception):
-    pass
-
-
 class Exchange(object):
     """
     An exchange is an affiliation of a process, a flow, and a direction. An exchange does
@@ -343,7 +339,7 @@ class ExchangeValue(Exchange):
         :param item:
         :return:
         """
-        if item in ('process', 'flow', 'termination', 'value'):
+        if isinstance(item, str) and item in ('process', 'flow', 'termination', 'value'):
             return getattr(self, item)  # %*(#%)(* Marshmallow!
         '''
         if len(self._value_dict) == 0:
@@ -374,6 +370,8 @@ class ExchangeValue(Exchange):
                     # no need to raise on zero allocation
                     # raise NoAllocation('No allocation found for key %s in process %s' % (item, self.process))
                 # else fall through
+        elif item.termination is not None:
+            raise ExchangeError('Cannot compute exchange values with respect to a terminated exchange')
         return self._value / item.value
 
     def __setitem__(self, key, value):

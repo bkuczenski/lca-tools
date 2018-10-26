@@ -12,8 +12,11 @@ import os
 from collections import namedtuple
 
 from ..engine import BackgroundEngine
-from lcatools.interfaces import CONTEXT_STATUS_
+from lcatools.interfaces import CONTEXT_STATUS_, ProductFlow
 from lcatools import from_json, to_json, comp_dir
+
+
+_FLATTEN_AF = False
 
 
 class NoLciDatabase(Exception):
@@ -175,7 +178,9 @@ class FlatBackground(object):
     @classmethod
     def from_background_engine(cls, be, **kwargs):
         af, ad, bf = be.make_foreground()
-        af, ad, bf = flatten(af, ad, bf, be.tstack)
+
+        if _FLATTEN_AF:
+            af, ad, bf = flatten(af, ad, bf, be.tstack)
 
         _map_nontrivial_sccs = {k: be.product_flow(k).process.external_ref for k in be.tstack.nontrivial_sccs()}
 
@@ -336,6 +341,9 @@ class FlatBackground(object):
         are traversed multiple times.
         :return:
         """
+        if _FLATTEN_AF is False and traverse is True:
+            print('Warning: traversal of foreground SCC will never terminate')
+
         index = self._fg_index[process, ref_flow]
         yield ExchDef(process, ref_flow, self._fg[index].direction, None, 1.0)
 
@@ -350,7 +358,8 @@ class FlatBackground(object):
             rows, cols = fg_deps.nonzero()
             for i in range(len(rows)):
                 assert cols[i] == 0  # 1-column slice
-                assert rows[i] > current  # well-ordered and flattened
+                if _FLATTEN_AF:
+                    assert rows[i] > current  # well-ordered and flattened
                 if rows[i] in cols_seen:
                     if traverse:
                         q.append(rows[i])  # allow fragment to be traversed multiple times
@@ -398,6 +407,17 @@ class FlatBackground(object):
             else:
                 _term = term.term_ref
             yield ExchDef(node_ref, term.flow_ref, dirn, _term, dat)
+
+    def consumers(self, process, ref_flow):
+        idx = self.index_of(process, ref_flow)
+        if self.is_in_background(process, ref_flow):
+            for i in self._ad[idx, :].nonzero()[1]:
+                yield self.fg[i]
+            for i in self._A[idx, :].nonzero()[1]:
+                yield self.bg[i]
+        else:
+            for i in self._af[idx, :].nonzero()[1]:
+                yield self.fg[i]
 
     def dependencies(self, process, ref_flow):
         if self.is_in_background(process, ref_flow):

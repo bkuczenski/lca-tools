@@ -366,7 +366,10 @@ class IlcdArchive(LcArchive):
             cat = find_tags(o, 'class', ns='common')
         cat = [str(i) for i in cat]
 
-        f = LcFlow(u, Name=n, CasNumber=cas, Comment=c, Compartment=cat)
+        if str(find_tag(o, 'typeOfDataSet', ns=ns)) == 'Elementary flow':
+            f = LcFlow(u, Name=n, CasNumber=cas, Comment=c, Compartment=cat)
+        else:
+            f = LcFlow(u, Name=n, CasNumber=cas, Comment=c, Compartment=['Intermediate flows'], Class=cat)
 
         f.set_external_ref('%s/%s' % (typeDirs['Flow'], u))
 

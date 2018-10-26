@@ -1,7 +1,7 @@
 from collections import defaultdict
 
 from .basic import BasicImplementation
-from ..interfaces import IndexInterface, comp_dir
+from ..interfaces import IndexInterface, comp_dir, CONTEXT_STATUS_
 
 
 class NotForeground(Exception):
@@ -20,28 +20,36 @@ class IndexImplementation(BasicImplementation, IndexInterface):
      - count_by_type()
      - search(), including implicitly _narrow_search()
     """
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, cutoffs=False, **kwargs):
         super(IndexImplementation, self).__init__(*args, **kwargs)
         if not hasattr(self._archive, 'ti'):
-            self.re_index()
+            self.re_index(cutoffs=cutoffs)
 
     @property
     def _terminations(self):
         return self._archive.ti
 
-    def re_index(self):
+    def re_index(self, cutoffs=False):
         self._archive.ti = defaultdict(set)
-        self._index_terminations()
+        self._index_terminations(cutoffs=cutoffs)
 
-    def _index_terminations(self):
+    def _index_terminations(self, cutoffs=False):
         """
         This can't be done on add because new processes may get stored before their references are setup.
         This should only be run if the archive is local
+        :param cutoffs: [False] if true, terminations include all cutoff [null-termination] exchanges, not just
+          references
+         :NOTE: until context refactor there is no consistent usage of terminations, so we will skip this
         :return:
         """
         for p in self._archive.entities_by_type('process'):
-            for rx in p.reference_entity:
-                self._terminations[rx.flow.external_ref].add((rx.direction, p))
+            if cutoffs and CONTEXT_STATUS_ == 'new':
+                for x in p.exchanges():
+                    if x.termination is None:
+                        self._terminations[x.flow.external_ref].add((x.direction, p))
+            else:
+                for rx in p.reference_entity:
+                    self._terminations[rx.flow.external_ref].add((rx.direction, p))
     """
     CatalogInterface core methods
     These are the main tools for describing information about the contents of the archive

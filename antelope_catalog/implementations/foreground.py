@@ -1,6 +1,7 @@
 from lcatools.implementations import BasicImplementation
-from lcatools.interfaces import ForegroundInterface, comp_dir, BackgroundRequired
+from lcatools.interfaces import ForegroundInterface, comp_dir, BackgroundRequired, CONTEXT_STATUS_
 
+from lcatools.entities.editor import FlowEditor
 from ..foreground.fragment_editor import FragmentEditor
 
 
@@ -65,6 +66,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         :param qdb: quantity database, used for compartments and id'ing flow properties--
         """
         super(ForegroundImplementation, self).__init__(*args, **kwargs)
+        self._flow_ed = FlowEditor(self._archive.qdb)
 
         self._recursion_check = None  # prevent recursive loops on frag-from-node
 
@@ -83,11 +85,27 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
     '''
     Create and modify fragments
     '''
+    def new_flow(self, name, ref_quantity, context=None, **kwargs):
+        """
+
+        :param name:
+        :param ref_quantity:
+        :param context: [None] pending context refactor
+        :param kwargs:
+        :return:
+        """
+        if CONTEXT_STATUS_ == 'compat':
+            if context is not None and 'compartment' not in kwargs:
+                kwargs['compartment'] = str(context)
+        ref_q = self._archive.qdb.get_canonical(ref_quantity)
+        f = self._flow_ed.new_flow(name=name, quantity=ref_q, **kwargs)
+        self._archive.add_entity_and_children(f)
+        return f
 
     def new_fragment(self, *args, **kwargs):
         """
 
-        :param args: flow, direction
+        :param args: flow, direction (w.r.t. parent)
         :param kwargs: uuid=None, parent=None, comment=None, value=None, balance=False; **kwargs passed to LcFragment
         :return:
         """

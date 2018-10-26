@@ -77,7 +77,7 @@ class IlcdLcia(IlcdArchive):
 
     def _fetch(self, term, dtype=None, version=None, **kwargs):
         o = super(IlcdLcia, self)._fetch(term, dtype=dtype, version=version, **kwargs)
-        if isinstance(o, LcEntity):
+        if isinstance(o, LcEntity) or o is None:
             return o
         if dtype is None:
             dtype = dtype_from_nsmap(o.nsmap)

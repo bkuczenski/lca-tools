@@ -8,6 +8,8 @@ class QuantityRef(EntityRef):
     _etype = 'quantity'
 
     def unit(self):
+        if isinstance(self.reference_entity, str):
+            return self.reference_entity
         return self.reference_entity.unitstring
 
     @property
@@ -18,8 +20,8 @@ class QuantityRef(EntityRef):
     def _addl(self):
         return self.unit()
 
-    def serialize(self):
-        j = super(QuantityRef, self).serialize()
+    def serialize(self, **kwargs):
+        j = super(QuantityRef, self).serialize(**kwargs)
         j['referenceUnit'] = self.unit()
         return j
 

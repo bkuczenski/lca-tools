@@ -26,6 +26,18 @@ _interface = 'foreground'
 
 
 class ForegroundInterface(AbstractQuery):
+    def new_flow(self, name, ref_quantity, context=None, **kwargs):
+        """
+        Creates a new flow entity and adds it to the foreground
+        :param name: required flow name
+        :param ref_quantity:
+        :param context: [None] Required for elementary flows. Should be a string
+        :param kwargs:
+        :return:
+        """
+        return self._perform_query(_interface, 'new_flow', ForegroundRequired, name, ref_quantity, context=context,
+                                   **kwargs)
+
     def new_fragment(self, *args, **kwargs):
         """
 

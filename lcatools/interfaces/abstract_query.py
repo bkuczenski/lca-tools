@@ -32,6 +32,10 @@ class AbstractQuery(object):
     def off_debug(self):
         self._debug = False
 
+    @property
+    def origin(self):
+        return None
+
     def _iface(self, itype, strict=False):
         """
         Pseudo-abstract method to generate interfaces of the specified type upon demand.  Must be reimplemented
@@ -67,6 +71,7 @@ class AbstractQuery(object):
         """
         return self
 
+    '''
     def is_elementary(self, f):
         """
         Stopgap used to expose access to a catalog's Qdb; in the future, flows will no longer exist and is_elementary
@@ -75,6 +80,7 @@ class AbstractQuery(object):
         :return:
         """
         return None
+    '''
 
     def make_ref(self, entity):
         if entity is None:
@@ -96,6 +102,20 @@ class AbstractQuery(object):
                 self._validated = False
         return self._validated
 
+    def get(self, eid, **kwargs):
+        """
+        Basic entity retrieval-- must be overridden by basic implementation
+        :param eid:
+        :param kwargs:
+        :return:
+        """
+        return self._perform_query(None, 'get', EntityNotFound('%s/%s' % (self.origin, eid)), eid,
+                                   **kwargs)
+
+
+'''# maybe we don't need these?!
+<<<<<<< HEAD
+
     def get_item(self, external_ref, item):
         """
         access an entity's dictionary items
@@ -106,6 +126,8 @@ class AbstractQuery(object):
         return self._perform_query(None, 'get_item', EntityNotFound('%s/%s' % (self.origin, external_ref)),
                                    external_ref, item)
 
+=======
+>>>>>>> master
     def get_reference(self, external_ref):
         return self._perform_query(None, 'get_reference', EntityNotFound('%s/%s' % (self.origin, external_ref)),
                                    external_ref)
@@ -113,4 +135,4 @@ class AbstractQuery(object):
     def get_uuid(self, external_ref):
         return self._perform_query(None, 'get_uuid', EntityNotFound('%s/%s' % (self.origin, external_ref)),
                                    external_ref)
-
+'''

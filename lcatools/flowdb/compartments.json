@@ -241,8 +241,11 @@
             "Material resources",
             "Natural gas (resource)",
             "Non renewable energy resources",
+            "Non renewable resources",
+            "Renewable energy resources",
             "Renewable resources",
             "Resources",
+            "Uranium (resource)",
             "natural resource",
             "renewable",
             "resource"
@@ -258,7 +261,8 @@
                 {
                   "elementary": true,
                   "name": [
-                    "Hemeroby"
+                    "Hemeroby",
+                    "Hemerobie ecoinvent"
                   ],
                   "subcompartments": []
                 },

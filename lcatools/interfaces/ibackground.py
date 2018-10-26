@@ -85,6 +85,17 @@ class BackgroundInterface(AbstractQuery):
             if i.termination is None:
                 yield i
 
+    def consumers(self, process, ref_flow=None, **kwargs):
+        """
+        Generate ProductFlows that include the identified process/ref_flow as a dependency
+        :param process:
+        :param ref_flow:
+        :param kwargs:
+        :return:
+        """
+        return self._perform_query(_interface, 'consumers', BackgroundRequired('Background matrix required'),
+                                   process, ref_flow=ref_flow, **kwargs)
+
     def dependencies(self, process, ref_flow=None, **kwargs):
         """
         Interior background exchanges for a given node

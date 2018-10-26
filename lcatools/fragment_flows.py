@@ -95,17 +95,13 @@ class FragmentFlow(object):
         return cls(frag, magnitude, nw, term, conserved)
 
     @classmethod
-    def ref_flow(cls, parent, scenario=None, observed=False, use_ev=None):
+    def ref_flow(cls, parent, use_ev):
         """
 
         :param parent:
-        :param scenario:
-        :param observed:
         :param use_ev: required to create reference flows from fragment refs
         :return:
         """
-        if use_ev is None:
-            use_ev = parent.exchange_value(scenario=scenario, observed=observed)
         fragment = GhostFragment(parent, parent.flow, comp_dir(parent.direction))
         term = FlowTermination.null(fragment)
         return cls(fragment, use_ev, 1.0, term,
@@ -123,16 +119,21 @@ class FragmentFlow(object):
         self.node_weight = node_weight
         self.term = term
         self.is_conserved = is_conserved
-        self._subfragments = []
+        self._subfrags_params = None
 
     @property
     def subfragments(self):
         if self.term.is_subfrag and (self.term.descend is False):
-            return self._subfragments
+            return self._subfrags_params[0]
         return []
 
-    def aggregate_subfragments(self, subfrags):
-        self._subfragments = subfrags
+    @property
+    def subfragment_params(self):
+        return {'scenario': self._subfrags_params[1],
+                'observed': self._subfrags_params[2]}
+
+    def aggregate_subfragments(self, subfrags, scenario=None, observed=False):
+        self._subfrags_params = (subfrags, scenario, observed)
 
     def scale(self, x):
         self.node_weight *= x
@@ -198,18 +199,19 @@ class FragmentFlow(object):
         pass
 
 
-def group_ios(parent, ios):
+def group_ios(parent, ios, include_ref_flow=True):
     """
     Utility function for dealing with a traversal result (list of FragmentFlows)
     Creates a list of cutoff flows from the inputs and outputs from a fragment traversal.
     ios is a list of FragmentFlows
     :param parent: the node generating the cutoffs
-    :param ios: a list of fragment flows whose termination is Null (non-nulls ignored)
-    :return: {set of grouped IO flows}, [list of internal non-null flows]
+    :param ios: a list of fragment flows resulting from a traversal of the parent
+    :param include_ref_flow: [True] whether to include the reference fragment and adjust for autoconsumption
+    :return: [list of grouped IO flows], [list of internal non-null flows]
     """
     out = defaultdict(float)
     internal = []
-    external = set()
+    external = []
     for ff in ios:
         if ff.term.is_null:
             if ff.fragment.direction == 'Input':
@@ -219,12 +221,43 @@ def group_ios(parent, ios):
             out[ff.fragment.flow] += magnitude
         else:
             internal.append(ff)
+
+    # now deal with reference flow
+    if include_ref_flow:
+        ref_frag = parent.top()
+        ref_mag = ios[0].magnitude
+        if ref_frag.flow in out:  # either pass through or autoconsumption
+            val = out[ref_frag.flow]
+            if val < 0:
+                auto_dirn = 'Output'
+            else:
+                auto_dirn = 'Input'
+            """
+            Default is autoconsumption, which is fine as long as 
+             (a) directions are complementary [meaning equal since ref flow dirn is w.r.t. parent] and 
+             (b) magnitude of autoconsumption is smaller
+            """
+            if abs(val) < ref_mag and auto_dirn == ref_frag.direction:
+                # in either case, the direction sense of the autoconsumed flow should switch
+                if auto_dirn == 'Output':
+                    out[ref_frag.flow] += ref_mag
+                else:
+                    out[ref_frag.flow] -= ref_mag
+
+            else:
+                # pass-thru: pre-initialize external with the reference flow
+                external.append(FragmentFlow.cutoff(parent, ref_frag.flow, comp_dir(ref_frag.direction), ref_mag))
+        else:
+            # no autoconsumption or pass-through, but we still want the ref flow to show up in the inventory
+            external.append(FragmentFlow.cutoff(parent, ref_frag.flow, comp_dir(ref_frag.direction), ref_mag))
+
     for flow, value in out.items():
         if value < 0:
             direction = 'Output'
         else:
             direction = 'Input'
-        external.add(FragmentFlow.cutoff(parent, flow, direction, abs(value)))
+        external.append(FragmentFlow.cutoff(parent, flow, direction, abs(value)))
+
     return external, internal
 
 
@@ -302,3 +335,6 @@ class GhostFragment(object):
         re = self.reference_entity.uuid[:7]
         return '(%s) %s %.5s %s --:   [%s] %s' % (re, self.dirn, self.uuid, self.dirn,
                                                   self.flow.unit(), self.flow['Name'])
+
+    def __getitem__(self, item):
+        return self.flow[item]

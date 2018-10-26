@@ -11,10 +11,19 @@ class DataSource(object):
         self._root = data_root
         self._kwargs = kwargs
 
+    @property
+    def root(self):
+        return self._root
+
     def _make_resource(self, ref, source, ds_type=None, **kwargs):
         if ds_type is None:
             ds_type = self._ds_type
         return LcResource(ref, source, ds_type, **kwargs)
+
+    def register_all_resources(self, cat):
+        for ref in self.references:
+            for res in self.make_resources(ref):
+                cat.add_resource(res)
 
     @property
     def references(self):
@@ -81,9 +90,10 @@ class DataCollection(DataSource):
     def factory(self, *args, **kwargs):
         raise NotImplementedError
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, data_root, **kwargs):
+        super(DataCollection, self).__init__(data_root, **kwargs)
         self._sources = dict()
-        for b in self.factory(*args, **kwargs):
+        for b in self.factory(data_root, **kwargs):
             for r in b.references:
                 if r in self._sources:
                     raise KeyError('Duplicate reference %s' % r)

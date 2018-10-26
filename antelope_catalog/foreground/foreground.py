@@ -50,7 +50,7 @@ class LcForeground(BasicArchive):
     _entity_types = set(FOREGROUND_ENTITY_TYPES)
     _ns_uuid_required = None
 
-    def _load_json_file(self, filename):
+    def _load_entities_json(self, filename):
         with open(filename, 'r') as fp:
             self.load_json(json.load(fp), jsonfile=filename)
 
@@ -98,6 +98,10 @@ class LcForeground(BasicArchive):
     def _fragment_dir(self):
         return os.path.join(self.source, 'fragments')
 
+    @property
+    def qdb(self):
+        return self._catalog.qdb
+
     def __init__(self, fg_path, catalog=None, **kwargs):
         """
 
@@ -114,13 +118,14 @@ class LcForeground(BasicArchive):
         if not os.path.isdir(self.source):
             os.makedirs(self.source)
         self.load_all()
+        self.check_counter('fragment')
 
     def _fetch(self, entity, **kwargs):
         return self.__getitem__(entity)
 
     def _load_all(self):
         if os.path.exists(self._archive_file):
-            self._load_json_file(self._archive_file)
+            self._load_entities_json(self._archive_file)
             self._load_fragments()
 
     def make_interface(self, iface):
@@ -130,10 +135,41 @@ class LcForeground(BasicArchive):
             return super(LcForeground, self).make_interface(iface)
 
     def catalog_ref(self, origin, external_ref, entity_type=None):
+        """
+        TODO: make foreground-generated CatalogRefs lazy-loading. This mainly requires removing the expectation of a
+        locally-defined reference entity, and properly implementing and using a reference-retrieval process in the
+        basic interface.
+        :param origin:
+        :param external_ref:
+        :param entity_type:
+        :return:
+        """
+        # TODO: catalog.fetch is costly because it loads the entire target object
         ref = self._catalog.fetch(origin, external_ref)
         if ref is None:
             ref = CatalogRef(origin, external_ref, entity_type=entity_type)
         return ref
+
+    def _flow_ref_from_json(self, e, uid):
+        origin = e.pop('origin')
+        external_ref = e.pop('externalId')
+        c = e.pop('characterizations')
+        ref_qty_uu = next(cf['quantity'] for cf in c if 'isReference' in cf and cf['isReference'] is True)
+        return CatalogRef.from_query(external_ref, self._catalog.query(origin), 'flow', self[ref_qty_uu], uuid=uid, **e)
+
+    def _qty_ref_from_json(self, e, uid):
+        origin = e.pop('origin')
+        external_ref = e.pop('externalId')
+        unitstring = e.pop('referenceUnit')
+        return CatalogRef.from_query(external_ref, self._catalog.query(origin), 'quantity', unitstring, uuid=uid, **e)
+
+    def _make_entity(self, e, etype, uid):
+        if e['origin'] != self.ref:
+            if etype == 'flow':
+                return self._flow_ref_from_json(e, uid)
+            elif etype == 'quantity':
+                return self._qty_ref_from_json(e, uid)
+        return super(LcForeground, self)._make_entity(e, etype, uid)
 
     def add(self, entity):
         """
@@ -154,11 +190,11 @@ class LcForeground(BasicArchive):
             '''
         try:
             self._add(entity, entity.link)
-            self._uuid_map[entity.uuid].add(entity.link)
         except KeyError:
             # merge incoming entity's properties with existing entity
             current = self[entity.uuid]
             current.merge(entity)
+        self._uuid_map[entity.uuid].add(entity.link)
 
     def _add_children(self, entity):
         if entity.entity_type == 'fragment':
@@ -167,11 +203,6 @@ class LcForeground(BasicArchive):
                 self.add_entity_and_children(c)
         else:
             super(LcForeground, self)._add_children(entity)
-
-    def check_counter(self, entity_type=None):
-        super(LcForeground, self).check_counter(entity_type=entity_type)
-        if entity_type is None:
-            super(LcForeground, self).check_counter(entity_type='fragment')
 
     def name_fragment(self, frag, name):
         """

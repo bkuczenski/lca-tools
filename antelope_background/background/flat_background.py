@@ -18,6 +18,7 @@ from lcatools import from_json, to_json, comp_dir
 
 _FLATTEN_AF = False
 
+
 class NoLciDatabase(Exception):
     pass
 

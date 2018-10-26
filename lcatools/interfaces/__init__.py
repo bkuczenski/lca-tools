@@ -9,7 +9,7 @@ from .abstract_query import UnknownOrigin, PrivateArchive, EntityNotFound
 
 from .iconfigure import ConfigureInterface
 from .iinventory import InventoryInterface, InventoryRequired
-from .iindex import IndexInterface, IndexRequired, comp_dir, directions
+from .iindex import IndexInterface, IndexRequired, directions, comp_dir, check_direction
 from .ibackground import BackgroundInterface, BackgroundRequired
 from .iquantity import QuantityInterface, QuantityRequired
 from .iforeground import ForegroundInterface, ForegroundRequired
@@ -21,7 +21,8 @@ from os.path import splitext
 from collections import namedtuple
 
 
-uuid_regex = re.compile('([0-9a-f]{8}.?([0-9a-f]{4}.?){3}[0-9a-f]{12})', flags=re.IGNORECASE)
+uuid_regex = re.compile('([0-9a-f]{8}-?([0-9a-f]{4}-?){3}[0-9a-f]{12})', flags=re.IGNORECASE)
+
 
 def to_uuid(_in):
     if _in is None:

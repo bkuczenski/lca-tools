@@ -164,13 +164,16 @@ class BaseRef(object):
         print('origin: %s' % self.origin)
         self._show_hook()
         if len(self._d) > 0:
-            print('==Local Fields==')
+            _notprint = True  # only print '==Local Fields==' if there are any
             ml = len(max(self._d.keys(), key=len))
-            named = set()
+            named = {'comment', 'name'}
             for k, v in self._d.items():
                 if k.lower() in named or 'local' + k.lower() in named:
                     continue
                 named.add(k.lower())
+                if _notprint:
+                    print('==Local Fields==')
+                    _notprint = False
                 print('%*s: %s' % (ml, k, v))
 
     def serialize(self, **kwargs):

@@ -312,7 +312,7 @@ class LcEntity(object):
         else:
             print('reference: %s' % self.reference_entity)
         fix = ['Name', 'Comment']
-        postfix = set(self._d.keys()).difference(fix)
+        postfix = set(str(k) for k in self._d.keys()).difference(fix)
         ml = len(max(self._d.keys(), key=len))
         for k in fix:
             print('%*s: %s' % (ml, k, self._d[k]))
@@ -327,7 +327,7 @@ class LcEntity(object):
         return str(self)
 
     def __hash__(self):
-        return hash(self._uuid)
+        return hash(self.link)
 
     def __eq__(self, other):
         """

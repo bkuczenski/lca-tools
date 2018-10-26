@@ -1,6 +1,5 @@
 from .foreground_observer import ForegroundObserver
 from .traversal_observer import TraversalDisclosure
-from .to_excel import to_excel
 
 from lca_disclosures import BaseDisclosure
 

@@ -19,9 +19,8 @@ class TermManagerTest(unittest.TestCase):
         self.assertIs(cx, self.tm[cx])
 
     def test_none_item(self):
-        for k in (None, 'None', 'none'):
-            self.assertIs(self.tm[k], None)
+        self.assertIs(self.tm[None], None)
 
     def test_undefined_item(self):
-        for k in ('unspecified', 'UNKNOWN', 'Undefined'):
+        for k in ('unspecified', 'UNKNOWN', 'Undefined', 'none'):
             self.assertIs(self.tm[k], self.tm._cm._null_context)

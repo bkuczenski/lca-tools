@@ -79,10 +79,10 @@ class LcFragment(LcEntity):
 
     @classmethod
     def from_json(cls, fg, j):
-        if j['parent'] is not None:
-            parent = fg[j['parent']]
-        else:
+        if j['parent'] is None or j['parent'].lower() == 'none':
             parent = None
+        else:
+            parent = fg[j['parent']]
         flow = fg[j['flow']]
         if flow is None:
             flow = LcFlow(j['flow'], Name=j['tags']['Name'], Compartment=['Intermediate Flows', 'Fragments'])

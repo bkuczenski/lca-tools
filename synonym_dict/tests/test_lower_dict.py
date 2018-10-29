@@ -22,8 +22,8 @@ class LcEntityTest(unittest.TestCase):
     def test_contains(self):
         e = LowerDict(Annotation='a subtle yet profound statement', domain='society')
         self.assertTrue('annotation' in e.keys())
-        self.assertTrue('Annotation' in e.keys())
-        self.assertTrue('dOmAiN' in e.keys())
+        self.assertTrue('Annotation ' in e.keys())
+        self.assertTrue(' dOmAiN' in e.keys())
         self.assertFalse('SoCiEtY' in e.keys())
         self.assertFalse('annotat' in e.keys())
 
@@ -33,6 +33,18 @@ class LcEntityTest(unittest.TestCase):
         self.assertIsNone(e.get('Quorum'))
         self.assertEqual(e.pop('COMMENT'), 'no comment.')
         self.assertIsNone(e.get('comment'))
+
+    def test_update(self):
+        e = LowerDict(comment='argh')
+        self.assertEqual(e['Comment '], 'argh')
+        d = {'Comment': 'no comment', 'Name': 'no name'}
+        e.update(d)
+        self.assertTrue('comment' in e)
+        self.assertTrue('Comment ' in e)
+        self.assertEqual(e['comment'], 'no comment')
+        self.assertTrue('name' in e)
+        self.assertTrue('Name' in e.keys())
+        self.assertFalse('namee' in e.keys())
 
 
 if __name__ == '__main__':

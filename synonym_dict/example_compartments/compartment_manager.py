@@ -13,7 +13,7 @@ import json
 
 
 # these are not-really-subcompartments whose names should be modified if they have parents
-NONSPECIFIC_LOWER = {'unspecified', 'non-specific', 'nonspecific', 'none'}
+NONSPECIFIC_LOWER = {'unspecified', 'non-specific', 'nonspecific', 'unknown', 'undefined'}
 
 
 class NonSpecificContext(Exception):

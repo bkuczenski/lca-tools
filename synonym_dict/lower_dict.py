@@ -10,7 +10,7 @@ class LowerDictKeys(object):
         self._dk = [k.lower() for k in dict_keys]
 
     def __contains__(self, item):
-        return item.lower() in self._dk
+        return item.strip().lower() in self._dk
 
     def __iter__(self):
         for k in self._orig:
@@ -62,3 +62,9 @@ class LowerDict(dict):
     def pop(self, key, default=None):
         key = self.Key(key)
         return super(LowerDict, self).pop(key, default)
+
+    def update(self, m, **kwargs):
+        for k, v in m.items():
+            self.__setitem__(k, v)
+        for k, v in kwargs.items():
+            self.__setitem__(k, v)

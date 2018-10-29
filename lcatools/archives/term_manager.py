@@ -31,7 +31,10 @@ import re
 
 
 def _flowable_terms(flow):
-    yield flow['Name']
+    try:
+        yield flow['Name']
+    except KeyError:
+        pass
     yield str(flow)
     yield flow.uuid
     if flow.origin is not None:

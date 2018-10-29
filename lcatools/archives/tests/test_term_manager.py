@@ -17,3 +17,11 @@ class TermManagerTest(unittest.TestCase):
         cx = self.tm['emissions to air']
         self.assertIsInstance(cx, Context)
         self.assertIs(cx, self.tm[cx])
+
+    def test_none_item(self):
+        for k in (None, 'None', 'none'):
+            self.assertIs(self.tm[k], None)
+
+    def test_undefined_item(self):
+        for k in ('unspecified', 'UNKNOWN', 'Undefined'):
+            self.assertIs(self.tm[k], self.tm._cm._null_context)

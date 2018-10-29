@@ -5,7 +5,7 @@ from itertools import chain
 from numbers import Number
 from lcatools.entity_refs import CatalogRef
 
-from .lower_dict import LowerDict
+from synonym_dict import LowerDict
 
 
 entity_types = ('process', 'flow', 'quantity', 'fragment')
@@ -194,7 +194,8 @@ class LcEntity(object):
             # raise ValueError('Null reference')
             return False  # allow none references
         if ref_entity.entity_type != entity_refs[self.entity_type]:
-            raise TypeError("Type Mismatch on reference entity")
+            raise TypeError("Type Mismatch on reference entity: expected %s, found %s" % (entity_refs[self.entity_type],
+                                                                                          ref_entity.entity_type))
         return True
 
     def _set_reference(self, ref_entity):

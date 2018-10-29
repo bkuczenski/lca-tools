@@ -17,6 +17,7 @@ as gatekeepers to decide what information can be disclosed)
 The classes in this file get imported elsewhere; the CatalogRef class imports all the others because it
 *instantiates* all the others.
 """
+from synonym_dict import LowerDict
 
 
 class NoCatalog(Exception):
@@ -48,7 +49,8 @@ class BaseRef(object):
         self._ref = external_ref
         self._uuid = uuid
 
-        self._d = kwargs
+        self._d = LowerDict()
+        self._d.update(kwargs)
 
     @property
     def origin(self):
@@ -79,8 +81,8 @@ class BaseRef(object):
     def _localitem(self, item):
         if item in self._d:
             return self._d[item]
-        if 'Local%s' % item in self._d:
-            return self._d['Local%s' % item]
+        if 'local_%s' % item in self._d:
+            return self._d['local_%s' % item]
         raise KeyError(item)
 
     def __getitem__(self, item):

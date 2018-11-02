@@ -13,6 +13,10 @@ class ConversionReferenceMismatch(Exception):
     pass
 
 
+class FlowableMismatch(Exception):
+    pass
+
+
 _interface = 'quantity'
 
 
@@ -20,6 +24,37 @@ class QuantityInterface(AbstractQuery):
     """
     QuantityInterface
     """
+    def synonyms(self, item, **kwargs):
+        """
+        Return a list of synonyms for the object -- quantity, flowable, or compartment
+        :param item:
+        :return: list of strings
+        """
+        return self._perform_query(_interface, 'synonyms', QuantityRequired('Quantity interface required'), item,
+                                   ** kwargs)
+
+    def flowables(self, quantity=None, compartment=None, **kwargs):
+        """
+        Return a list of flowable strings. Use quantity and compartment parameters to narrow the result
+        set to those characterized by a specific quantity, those exchanged with a specific compartment, or both
+        :param quantity:
+        :param compartment:
+        :return: list of pairs: CAS number, name
+        """
+        return self._perform_query(_interface, 'flowables', QuantityRequired('Quantity interface required'),
+                                   quantity=quantity, compartment=compartment, **kwargs)
+
+    def compartments(self, quantity=None, flowable=None, **kwargs):
+        """
+        Return a list of compartment strings. Use quantity and flowable parameters to narrow the result
+        set to those characterized for a specific quantity, those with a specific flowable, or both
+        :param quantity:
+        :param flowable:
+        :return: list of strings
+        """
+        return self._perform_query(_interface, 'compartments', QuantityRequired('Quantity interface required'),
+                                   quantity=quantity, flowable=flowable, **kwargs)
+
     def profile(self, flow, **kwargs):
         """
         Generate characterizations for the named flow, with the reference quantity noted
@@ -39,6 +74,22 @@ class QuantityInterface(AbstractQuery):
         return self.make_ref(self._perform_query(_interface, 'get_canonical',
                                                  QuantityRequired('Quantity interface required'),
                                                  quantity, **kwargs))
+
+    def add_c14n(self, flowable, ref_quantity, query_quantity, value, context=None, location='GLO', **kwargs):
+        """
+        Add Characterization for a flowable, reporting the amount of a query quantity that is equal to a unit amount
+        of the reference quantity, for a given context and location
+        :param flowable: string or flow external ref
+        :param ref_quantity: string or external ref
+        :param query_quantity: string or external ref
+        :param context: string
+        :param location: string
+        :param kwargs: overwrite=False, origin=query_quantity.origin, others?
+        :return:
+        """
+        return self._perform_query(_interface, 'add_c14n', QuantityRequired,
+                                   flowable, ref_quantity, query_quantity, value,
+                                   context=context, location=location, **kwargs)
 
     def factors(self, quantity, flowable=None, compartment=None, **kwargs):
         """

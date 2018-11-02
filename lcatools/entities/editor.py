@@ -106,21 +106,6 @@ class FlowEditor(EntityEditor):
 
             flow = LcFlow.new(name, quantity, CasNumber=cas, Compartment=compartment, Comment=comment,
                               local_unit=local_unit)
-        else:
-            quantity = flow.reference_entity
-
-        if self._interactive:
-            flow.profile()
-            while ifinput('Add characterizations for this flow? y/n', 'n') != 'n':
-                ch = cyoa('[n]ew or [e]xisting quantity? ', 'en', 'e')
-                if ch == 'n':
-                    cq = self.new_quantity()
-                else:
-                    cq = pick_one(self._qdb.quantities())
-                    if cq is None:
-                        cq = self.new_quantity()
-                val = parse_math(input('Value (1 %s = x %s): ' % (quantity.unit(), cq.unit())))
-                flow.add_characterization(cq, value=val)
 
         return flow
 

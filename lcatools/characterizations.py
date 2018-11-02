@@ -1,13 +1,36 @@
+"""
+Characterizations are one of the two forms of quantitative information in LCA. A characterization relates two different
+quantities of measurement (known as a reference quantity and a query quantity) for one particular flowable substance, in
+a specific environmental context and geographic locale.
+
+A QRResult is a namedtuple that documents the result of a "quantity relation" calculation- it reports:
+ - the flowable
+ - the reference quantity
+ - the query quantity
+ - the context / compartment
+ - the locale
+ - the origin of the characterization data
+ - the value of the characterization
+
+"""
+
 from collections import namedtuple
 
 
 # namedtuple to store the parameters and result of a quantity-relation lookup
 # the first 4 are input params, 'locale' is as-found if found, as-specified if not; origin and value are results
 
-QRResult = namedtuple('QRResult', ('ref', 'flowable', 'context', 'query', 'locale', 'origin', 'value'))
+QRResult = namedtuple('QRResult', ('flowable', 'ref', 'query', 'context', 'locale', 'origin', 'value'))
 
 
 class DuplicateCharacterizationError(Exception):
+    pass
+
+
+class MissingReference(Exception):
+    """
+    A flow must have a reference quantity to be characterized
+    """
     pass
 
 
@@ -19,7 +42,19 @@ class Characterization(object):
 
     entity_type = 'characterization'
 
-    def __init__(self, flow, quantity, context=None, **kwargs):
+    @classmethod
+    def from_qrresult(cls, qrr):
+        return cls(qrr.flowable, qrr.ref, qrr.quantity, qrr.context, qrr.origin, location=qrr.locale, value=qrr.value)
+
+    @classmethod
+    def from_flow(cls, flow, quantity, context=None, origin=None, **kwargs):
+        if context is None:
+            context = flow.context
+        if origin is None:
+            origin = flow.origin
+        return cls(flow['Name'], flow.reference_entity, quantity, context, origin=origin, **kwargs)
+
+    def __init__(self, flowable, ref_quantity, query_quantity, context, origin=None, **kwargs):
         """
 
         :param flow:
@@ -29,39 +64,31 @@ class Characterization(object):
         :param origin: of data, if applicable
         :return:
         """
-        assert flow.entity_type == 'flow', "'flow' must be an LcFlow"
-        assert quantity.entity_type == 'quantity', "'quantity' must be an LcQuantity"
+        assert ref_quantity.entity_type == 'quantity', "'ref_quantity' must be an LcQuantity"
+        assert query_quantity.entity_type == 'quantity', "'query_quantity' must be an LcQuantity"
 
-        self.flow = flow
-        self.quantity = quantity
+        self.flowable = flowable
+        self.quantity = query_quantity
+        self._ref_q = ref_quantity
         self._context = context
         self._locations = dict()
-        self._origins = dict()
+        self._origin = origin or query_quantity.origin
 
         if kwargs:
             self.add_value(**kwargs)
         # self._natural_dirn = None
 
-    def cf_origin(self, location='GLO'):
-        """
-        Giving this function a different name because origin is generally implemented as a @property
-        :param location:
-        :return:
-        """
-        org = None
-        if location in self._origins:
-            org = self._origins[location]
-        elif 'GLO' in self._origins:
-            org = self._origins['GLO']
-        if org is None:
-            return self.flow.origin
-        return org
+    @property
+    def origin(self):
+        return self._origin
 
     @property
     def context(self):
-        if self._context is None:
-            self._context = self.flow.context
         return self._context
+
+    @property
+    def ref_quantity(self):
+        return self._ref_q
 
     '''
     @property
@@ -112,16 +139,16 @@ class Characterization(object):
     def query(self, locale):
         found = self._lookup(locale)
         if found is None:
-            return QRResult(self.flow.reference_entity, self.flow.flowable, self.flow.context, self.quantity, locale,
+            return QRResult(self.flowable, self.ref_quantity, self.quantity, self.context, locale,
                             None, None)
-        return QRResult(self.flow.reference_entity, self.flow.flowable, self.flow.context, self.quantity, found,
-                        self.cf_origin(found), self._locations[found])
+        return QRResult(self.flowable, self.ref_quantity, self.quantity, self.context, found,
+                        self.origin, self._locations[found])
 
     def __getitem__(self, item):
         if item == 'quantity':  # f%&(@*$ marshmallow hack
             return self.quantity
         if item == 'flow':  # ibid.
-            return self.flow
+            return self.flowable
         found = self._lookup(item)
         if found is None:
             return 0.0
@@ -136,14 +163,13 @@ class Characterization(object):
     def update_values(self, **kwargs):
         self._locations.update(kwargs)
 
-    def add_value(self, value=None, location=None, origin=None, overwrite=False):
+    def add_value(self, value=None, location=None, overwrite=False):
         if location is None:
             location = 'GLO'
         if overwrite:
             if location in self._locations:
                 self._locations.pop(location)
         self[location] = value
-        self._origins[location] = origin
 
     '''
     def scale(self, factor):
@@ -158,7 +184,7 @@ class Characterization(object):
         return '; '.join([k for k in self.locations()])
 
     def __hash__(self):
-        return hash((self.flow.uuid, self.quantity.uuid, self.context))
+        return hash((self.flowable, self.ref_quantity.uuid, self.quantity.uuid, self.context))
 
     def __eq__(self, other):
         """
@@ -168,7 +194,7 @@ class Characterization(object):
         """
         if other is None:
             return False
-        if ((self.flow.uuid == other.flow.uuid) &
+        if ((self.flowable == other.flowable) &
                 (self.quantity.uuid == other.quantity.uuid)):
             if all(self[l] == other[l] for l in other.locations()):
                 return True
@@ -176,23 +202,23 @@ class Characterization(object):
 
     def __str__(self):
         if self.is_null:
-            return '%s has %s %s' % (self.flow, self.quantity, self.quantity.reference_entity)
+            return '%s has %s %s' % (self.flowable, self.quantity, self.quantity.reference_entity)
         return '%s [%s / %s] %s (%s)' % ('\n'.join(['%6.3g [%s]' % (v, k) for k, v in self._locations.items()]),
-                                         self.quantity.unit(), self.flow.unit(), self.flow['Name'],
+                                         self.quantity.unit(), self.ref_quantity.unit(), self.flowable,
                                          self.quantity['Name'])
 
     def q_view(self):
-        if self.quantity is self.flow.reference_entity:
+        if self.quantity is self.ref_quantity:
             ref = '(*)'
         else:
             ref = ' | '
         if self.value is not None:
             return '%6.3g %16.16s == %s%s%s' % (self.value, self.quantity.unit(),
-                                                self.flow.unit(), ref,
+                                                self.ref_quantity.unit(), ref,
                                                 self.quantity)
         else:
             return '%6s %16.16s == %s%s%s' % (' ', self.quantity.unit(),
-                                              self.flow.unit(), ref,
+                                              self.ref_quantity.unit(), ref,
                                               self.quantity)
 
     '''
@@ -200,19 +226,18 @@ class Characterization(object):
         return self.flow.get_uuid(), self.quantity.get_uuid()
     '''
 
-    def serialize(self, values=False):
+    def serialize(self, values=False, concise=False):
         j = {
             'entityType': self.entity_type,
-            'quantity': self.quantity.uuid
+            'ref_quantity': self.ref_quantity.uuid,
         }
-        if self.quantity == self.flow.reference_entity:
+        if self.ref_quantity is self.quantity:
             j['isReference'] = True
-        else:  # no need to report the characterization value for the reference quantity
+        else:
+            if not concise:
+                j['query_quantity'] = self.quantity.uuid,
+                j['context'] = str(self.context)
             if values:
                 if self.value is not None:
-                    j['value'] = self.value
+                    j['value'] = self._locations
         return j
-
-    @classmethod
-    def signature_fields(cls):
-        return ['flow', 'quantity']

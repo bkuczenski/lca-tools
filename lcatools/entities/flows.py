@@ -45,10 +45,6 @@ class LcFlow(LcEntity):
         if self['CasNumber'] is None:
             self['CasNumber'] = ''
 
-        if self.reference_entity is not None:
-            if self.reference_entity.uuid not in self._characterizations.keys():
-                self.add_characterization(self.reference_entity, reference=True)
-
         if local_unit is not None:
             self.set_local_unit(local_unit)
 
@@ -77,6 +73,8 @@ class LcFlow(LcEntity):
 
         Not sure whether to (a) remove FlowWithoutContext exception and test for None, or (b) allow set_context to
         abort silently if context is already set. Currently chose (b) because I think I still want the exception.
+
+
         :param context_manager:
         :return:
         """
@@ -87,11 +85,10 @@ class LcFlow(LcEntity):
         elif self.has_property('Category'):
             _c = context_manager.add_compartments(self['Category'])
         else:
-            _c = context_manager.get(None)
+            _c = context_manager.get('none')
             # raise AttributeError('Flow has no contextual attribute! %s' % self)
         if not context_manager.is_context(_c):
             raise TypeError('Context manager did not return a context! %s (%s)' % (_c, type(_c)))
-        self._context = _c
         self._flowable = context_manager.add_flow(self)
         for cf in self.characterizations():
             context_manager.add_cf(cf.quantity, cf)
@@ -316,22 +313,3 @@ class LcFlow(LcEntity):
         out = self.cf(to or self.reference_entity, locale=locale)
         inn = self.cf(fr or self.reference_entity, locale=locale)
         return val * out / inn
-
-    def merge(self, other):
-        super(LcFlow, self).merge(other)
-        for k in other._characterizations.keys():
-            if k not in self._characterizations:
-                print('Merge: Adding characterization %s' % k)
-                self.add_characterization(other._characterizations[k])
-
-    def serialize(self, characterizations=False, domesticate=False, **kwargs):
-        j = super(LcFlow, self).serialize(domesticate=domesticate)
-        j.pop(self._ref_field)  # reference reported in characterizations
-        if characterizations:
-            j['characterizations'] = sorted([x.serialize(**kwargs) for x in self._characterizations.values()],
-                                            key=lambda x: x['quantity'])
-        else:
-            j['characterizations'] = [x.serialize(**kwargs) for x in self._characterizations.values()
-                                      if x.quantity is self.reference_entity]
-
-        return j

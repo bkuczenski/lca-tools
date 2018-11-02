@@ -25,34 +25,10 @@ class LcQuantity(LcEntity):
 
     def __init__(self, entity_uuid, **kwargs):
         super(LcQuantity, self).__init__('quantity', entity_uuid, **kwargs)
-        self._cm = None
+        self._qi = None
 
-    def set_context(self, cm):
-        self._cm = cm
-
-    def register_cf(self, cf):
-        """
-        Allows the quantity to keep a list of local characterizations that use it
-        :param cf: a Characterization
-        :return:
-        """
-        if cf.quantity is self:
-            if cf.cf_origin() is None or cf.cf_origin() == self.origin:
-                if cf.flow.reference_entity is self:
-                    return
-                cf.flow.set_context(self._cm)
-                self._cm.add_cf(self, cf)
-            else:
-                if not self._cm.quiet:
-                    print('%% origin mismatch %s != %s' % (cf.cf_origin(), self.origin))
-        else:
-            if not self._cm.quiet:
-                print('%% not self')
-
-    def deregister_cf(self, cf):
-        if cf.quantity is self:
-            if cf.cf_origin() == self.origin:
-                self._qlookup[cf.flow['Name']].remove(cf)
+    def set_qi(self, qi):
+        self._qi = qi
 
     def unit(self):
         return self.reference_entity.unitstring
@@ -63,6 +39,24 @@ class LcQuantity(LcEntity):
     def is_lcia_method(self):
         return 'Indicator' in self.keys()
 
+    """
+    Quantity Interface Methods
+    Quantity entities use the quantity interface provided by the parent archive; this emulates the operation of 
+    quantity refs, which have access to the catalog.
+    """
+    def add_ch13n(self, flow, value, context=None, overwrite=False, origin=None, location='GLO'):
+        self._qi.add_c14n(flow, self, value, context=context, overwrite=overwrite, origin=origin, location=location)
+
+    def cf(self, flow, locale='GLO', **kwargs):
+        return self._qi.cf(flow, self, locale=locale, **kwargs)
+
+    def factors(self, flowable=None, compartment=None, **kwargs):
+        return self._qi.factors(self, flowable=flowable, compartment=compartment, **kwargs)
+
+    """
+    Interior utility functions
+    These are not exactly exposed by the quantity interface and maybe should be retired
+    """
     def convert(self, from_unit=None, to=None):
         """
         Perform unit conversion within a quantity, using a 'UnitConversion' table stored in the object properties.

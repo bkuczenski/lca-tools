@@ -38,6 +38,12 @@ class ForegroundInterface(AbstractQuery):
         return self._perform_query(_interface, 'new_flow', ForegroundRequired, name, ref_quantity, context=context,
                                    **kwargs)
 
+    def fragments(self, show_all=False, **kwargs):
+        if show_all:
+            raise ValueError('Cannot retrieve non-parent fragments via interface')
+        for i in self._perform_query(_interface, 'fragments', ForegroundRequired, **kwargs):
+            yield self.make_ref(i)
+
     def new_fragment(self, *args, **kwargs):
         """
 

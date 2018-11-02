@@ -156,4 +156,4 @@ class SynonymSet(object):
             otherterms = set(other.terms)
         else:
             otherterms = {other}
-        return self._terms == otherterms
+        return set(self.terms) >= otherterms  # yes, I know, that's not equal per se

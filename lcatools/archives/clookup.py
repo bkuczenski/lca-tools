@@ -1,9 +1,38 @@
+"""
+The CLookup is a classic example of trying to solve a very complex data problem with a very complex data structure.
+It does not entirely succeed, but it works well enough as a stopgap until I have a chance to give an honest crack at
+a graph database.
+
+Flow characterization is the very complex data problem: the "quantity relation" maps a large, diverse set of inputs:
+ - flowable (substance)
+ - reference quantity (in our data system, tied to flowable)
+ - query quantity
+ - context / compartment
+ - location / locale
+to a numeric output, namely the amount of the query quantity that corresponds to a unit of the reference quantity.
+
+The idea behind a CLookup is that it contains all known characterizations for a given flowable [substance] with respect
+to a given quantity.  The CLookup is selected by specifying the flowable and the quantity, and then the CLookup is used
+to retrieve a set of Characterization objects for a given context (hence the 'C' in 'CLookup'). The characterization
+already stores a mapping of locale to factor, and also stores the flowable (with its native reference quantity used
+to interpret the factor).
+
+So it solves a very narrow portion of the problem and leaves a lot to outside code.
+
+The dream would be to design a graph database that held all of these parameters and magically obtained all the factors
+that applied to a given query-- that graph database would replace the current Term Manager and everything else under
+its hood. But first we will learn to walk...
+"""
 from synonym_dict.example_compartments import Context
 from lcatools.characterizations import Characterization
 from collections import defaultdict
 
 
 class QuantityMismatch(Exception):
+    pass
+
+
+class DuplicateOrigin(Exception):
     pass
 
 
@@ -30,12 +59,12 @@ class CLookup(object):
             return self._dict[item]
         return set()
 
-    def _check_qty(self, value):
+    def _check_qty(self, cf):
         if self._qid is None:
-            self._qid = value.quantity.uuid
+            self._qid = cf.quantity.uuid
         else:
-            if value.quantity.uuid != self._qid:
-                raise QuantityMismatch('Inbound: %s\nCurrent: %s' % (value.quantity, self._qid))
+            if cf.quantity.uuid != self._qid:
+                raise QuantityMismatch('Inbound: %s\nCurrent: %s' % (cf.quantity, self._qid))
 
     def add(self, value):
         if not isinstance(value, Characterization):
@@ -43,6 +72,8 @@ class CLookup(object):
         key = value.context
         if isinstance(key, Context):
             self._check_qty(value)
+            if any(k.origin == value.origin for k in self._dict[key]):
+                raise DuplicateOrigin(value.origin)
             self._dict[key].add(value)
         else:
             raise ValueError('Context is not valid: %s (%s)' % (key, type(key)))
@@ -59,7 +90,13 @@ class CLookup(object):
             for cf in cfs:
                 yield cf
 
-    def find(self, item, dist=1, return_first=True):
+    def _filter_results(self, item, origin):
+        if origin is None:
+            return self.__getitem__(item)
+        else:
+            return set(k for k in self.__getitem__(item) if k.origin == origin)
+
+    def find(self, item, dist=1, return_first=True, origin=None):
         """
         Hunt for a matching compartment. 'dist' param controls the depth of search:
           dist = 0: equivalent to __getitem__
@@ -71,6 +108,7 @@ class CLookup(object):
         :param item: a Compartment
         :param dist: how far to search (with limits) (default: 1= compartment + children)
         :param return_first: stop hunting as soon as a cf is found
+        :param origin: [None] if present, only return cfs whose origins match the specification
         :return: a set of characterization factors that meet the query criteria.
         """
         if not isinstance(item, Context):
@@ -78,7 +116,7 @@ class CLookup(object):
 
         def found(res):
             return len(res) > 0 and return_first
-        results = self.__getitem__(item)
+        results = self._filter_results(item, origin)
         if found(results):
             return results
 
@@ -86,24 +124,20 @@ class CLookup(object):
             for s in item.self_and_subcompartments:  # note: this is depth first
                 if s is item:
                     continue  # skip self, just recurse subcompartments
-                if s in self._dict.keys():
-                    results = results.union(self._dict[s])
-                    if found(results):
-                        return results
+                results = results.union(self._filter_results(s, origin))
+                if found(results):
+                    return results
 
         if dist > 1:
             item = item.parent
-            if item in self._dict.keys():
-                results = results.union(self._dict[item])
-
-        if found(results):
-            return results
+            results = results.union(self._filter_results(item, origin))
+            if found(results):
+                return results
 
         if dist > 2 and item is not None:
             while item.parent is not None:
                 item = item.parent
-                if item in self._dict.keys():
-                    results = results.union(self._dict[item])
+                results = results.union(self._filter_results(item, origin))
                 if found(results):
                     return results
 
@@ -112,6 +146,13 @@ class CLookup(object):
     def find_first(self, item, dist=3):
         cfs = self.find(item, dist=dist, return_first=True)
         return list(cfs)[0]
+
+    @staticmethod
+    def _ser_set(cf_set, values=False):
+        return {cf.origin: cf.serialize(values=values, concise=True) for cf in cf_set}
+
+    def serialize(self, values=False):
+        return {str(c): self._ser_set(cfs, values=values) for c, cfs in self._dict.items()}
 
 
 class FactorCollision(Exception):

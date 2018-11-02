@@ -96,15 +96,24 @@ class EntityStore(object):
     def __init__(self, source, ref=None, quiet=True, upstream=None, static=False, dataReference=None, ns_uuid=None,
                  **kwargs):
         """
-        An EntityStore is a provenance structure for a collection of entities.  Ostensibly, an archive has a single
+        An EntityStore is a provenance structure for a collection of entities.  Ostensibly, an EntityStore has a single
         source from which entities are collected.  The source is a resolvable URI that indicates a data resource from
         which data describing the entities can be extracted.  The exact manner of extracting data from resources is
         subclass-dependent.
 
         Internally, all entities are stored with UUID keys.  If the external references do not contain UUIDs, it is
-        recommended to derive a UUID3 using an archive-specific, stable namespace ID.  The NsUuidArchive subclass
-        does this semi-automatically (semi- because the uuid is an input argument to the entity constructor and
-        so it has to be known. but maybe we should do away with that.  entities without uuids! amazing!).
+        recommended to derive a UUID3 using an archive-specific, stable namespace ID.  The class-level
+        _ns_uuid_required attribute governs this option:
+         - if True, an ns_uuid argument must be provided when the class is instantiated.  This is consistent with a
+           use case in which it is desirable to have predictable, fixed UUIDs (i.e. to interface with a data system
+           that requires stable UUIDs)
+
+         - if False, a random ns_uuid is generated, and used to create a UUID anytime an entity is given a non-UUID
+           external_ref
+
+         - if None, UUID3 are not used and any supplied ns_uuid argument is ignored. external_refs must always be UUIDs.
+
+        There is still some refactoring to be done, to try to eliminate the need for externally visible UUIDs anywhere.
 
         An archive has a single semantic reference that describes the data context from which its native entities
         were gathered.  The reference is given using dot-separated hierarchical terms in order of decreasing
@@ -126,7 +135,7 @@ class EntityStore(object):
         elcd.3.2/processes/00043bd2-4563-4d73-8df8-b84b5d8902fc
         uslci.ecospold/Acetic acid, at plant
 
-        Note that the inclusion of embedded whitespace, commas, and other delimiters indicate that these semantic
+        Note that the inclusion of embedded whitespace, commas, and other characters indicate that these semantic
         references are not proper URIs.
 
         It is hoped that the user community will help develop and maintain a consistent and easily interpreted

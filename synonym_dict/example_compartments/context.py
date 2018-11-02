@@ -1,5 +1,7 @@
 from ..synonym_dict import SynonymSet
 
+ELEMENTARY = {'resources', 'emissions'}
+
 
 class InvalidSense(Exception):
     pass
@@ -40,6 +42,9 @@ class Context(SynonymSet):
 
     If a context has a parent, it inherits the sense of the parent- specifying the opposite sense will raise
     an error.
+
+    If 'resources' or 'emissions' match any terms in a context, it is considered 'elementary', along with all its
+    subcompartments.
     """
     @classmethod
     def null(cls):
@@ -90,6 +95,16 @@ class Context(SynonymSet):
             self._sense = valid_sense(value)
         else:
             self.parent.sense = value
+
+    @property
+    def elementary(self):
+        if self.parent is None:
+            for t in self.terms:
+                if t.lower() in ELEMENTARY:
+                    return True
+            return False
+        else:
+            return self.parent.elementary
 
     @property
     def parent(self):

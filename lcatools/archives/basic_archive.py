@@ -33,6 +33,15 @@ class BasicArchive(EntityStore):
     """
     Adds on basic functionality to the archive interface: add new entities; deserialize entities.
 
+    The Basic Archive also introduces the Term Manager, which is used to handle flow characterization information.
+
+    Each archive must have a term manager; however, the same term manager can be shared among several archives.  If
+    no TermManager is provided at instantiation as an input argument, then the archive will create a captive term
+    manager that only includes entities from that archive.
+
+    ALternatively, a term manager can be created first and supplied as an argument to each created archive, which would
+    then allow them to share their terms in common with one another.
+
     The BasicArchive should be used for all archives that only contain flows and quantities (and contexts in the future)
 
     """
@@ -112,12 +121,17 @@ class BasicArchive(EntityStore):
     def add(self, entity):
         if entity.entity_type not in self._entity_types:
             raise ValueError('%s is not a valid entity type' % entity.entity_type)
-        if entity.entity_type in BASIC_ENTITY_TYPES:
+
+        # characterization infrastructure
+        if entity.entity_type == 'flow':
             entity.set_context(self._tm)
+        elif entity.entity_type == 'quantity':
+            entity.set_qi(self.make_interface('quantity'))
+
         if entity.uuid is None:  # TODO: eliminate visible UUIDs in favor of NS UUIDs. this will get fleshed out later
             entity.uuid = self._key_to_id(entity.external_ref)
         if self._tm[entity.external_ref] is not None:
-            raise ContextCollision('Entity external_ref %s is already known as a context or flowable' %
+            raise ContextCollision('Entity external_ref %s is already known as a context identifier' %
                                    entity.external_ref)
         self._add(entity, entity.uuid)
 
@@ -180,11 +194,17 @@ class BasicArchive(EntityStore):
 
     def _flow_from_json(self, entity_j, uid):
         entity_j.pop('externalId')  # TODO
-        if 'referenceQuantity' in entity_j:
-            entity_j.pop('referenceQuantity')
         chars = entity_j.pop('characterizations', [])
-        flow = LcFlow(uid, **entity_j)
+        if 'referenceQuantity' in entity_j:
+            rq = entity_j.pop('referenceQuantity')
+        else:
+            rq = next(c['quantity'] for c in chars if 'isReference' in c and c['isReference'] is True)
+        q = self[rq]
+        flow = LcFlow(uid, referenceQuantity=q, **entity_j)
         for c in chars:
+            if 'isReference' in c:
+                if c['isReference'] is True:
+                    continue
             v = None
             q = self[c['quantity']]  # this is required because of foreground; _process_from_json unaffected
             if q is None:
@@ -196,11 +216,7 @@ class BasicArchive(EntityStore):
                 # raise KeyError
             if 'value' in c:
                 v = c['value']
-            if 'isReference' in c:
-                is_ref = c['isReference']
-            else:
-                is_ref = False
-            flow.add_characterization(q, reference=is_ref, value=v)
+            self.tm.add_c14n(flow, q, v, context=flow.context)
 
         return flow
 
@@ -336,9 +352,11 @@ class BasicArchive(EntityStore):
         :return:
         """
         j = super(BasicArchive, self).serialize()
-        j['flows'] = sorted([f.serialize(characterizations=characterizations, values=values, domesticate=domesticate)
+        j['flows'] = sorted([f.serialize(domesticate=domesticate)
                              for f in self.entities_by_type('flow')],
                             key=lambda x: x['entityId'])
+        if characterizations:
+            j['characterizations'] = self.tm.serialize_factors(values=values)
         j['quantities'] = sorted([q.serialize(domesticate=domesticate)
                                   for q in self.entities_by_type('quantity')],
                                  key=lambda x: x['entityId'])

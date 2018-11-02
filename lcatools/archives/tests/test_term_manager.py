@@ -24,3 +24,10 @@ class TermManagerTest(unittest.TestCase):
     def test_undefined_item(self):
         for k in ('unspecified', 'UNKNOWN', 'Undefined', 'none'):
             self.assertIs(self.tm[k], self.tm._cm._null_context)
+
+    def test_add_flow(self):
+        """
+        We want to test several things:
+         * extrac
+        :return:
+        """

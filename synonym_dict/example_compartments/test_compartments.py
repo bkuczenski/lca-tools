@@ -13,6 +13,13 @@ class CompartmentTest(unittest.TestCase):
         with self.assertRaises(InconsistentSense):
             Context('resources from urban air', parent=c, sense='source')
 
+    def test_elementary(self):
+        c = Context('eMissions', sense='sink')
+        c1 = Context('emissions to boot', parent=c)
+        d = Context('emulsions', sense='sink')
+        self.assertTrue(c1.elementary)
+        self.assertFalse(d.elementary)
+
     def test_parent(self):
         c = Context('emissions', sense='sink')
         d = Context('emissions to air', parent=c)

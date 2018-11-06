@@ -12,7 +12,7 @@ from lxml import objectify
 from lxml.etree import XMLSyntaxError
 
 from lcatools.interfaces import uuid_regex
-from lcatools.characterizations import Characterization
+from lcatools.characterizations import QRResult
 from lcatools.entities import LcQuantity, LcFlow, LcProcess
 from lcatools.exchanges import ExchangeValue, DirectionlessExchangeError
 from lcatools.lcia_results import LciaResult, LciaResults
@@ -223,8 +223,8 @@ class EcospoldV2Archive(LcArchive):
         n = exchange.name.text
         c = 'EcoSpold02 Flow'
 
-        f = LcFlow(uid, Name=n, CasNumber=cas, Comment=c, Compartment=cat)
-        f.add_characterization(quantity=q, reference=True)
+        f = LcFlow(uid, Name=n, CasNumber=cas, Comment=c, Compartment=cat, ReferenceQuantity=q)
+        # TODO: implement ecospold flow properties, only for reference products
 
         self.add(f)
 
@@ -533,8 +533,8 @@ class EcospoldV2Archive(LcArchive):
                 if my_tag in tags:
                     q = tags[my_tag]
                     result = LciaResult(q)
-                    cf = Characterization(rf, q, value=v, location=p['SpatialScope'])
-                    result.add_score(p.get_uuid(), exch, cf, p['SpatialScope'])
+                    cf = QRResult(rf['Name'], rf.reference_entity, q, rf.context, p['SpatialScope'], self.ref, v)
+                    result.add_score(p.get_uuid(), exch, cf)
                     results[q.get_uuid()] = result
 
         self._print('%30.30s -- %5f' % ('Impact scores collected', time.time() - start_time))

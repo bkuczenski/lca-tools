@@ -2,6 +2,7 @@
 This object replaces the LciaResult types spelled out in Antelope-- instead, it serializes to an LCIA result directly.
 
 """
+from lcatools import comp_dir
 from lcatools.exchanges import ExchangeValue, DissipationExchange
 from lcatools.characterizations import Characterization
 from lcatools.autorange import AutoRange
@@ -54,75 +55,74 @@ class DetailedLciaResult(object):
     """
     Contains exchange, factor, result
     """
-    def __init__(self, lc_result, exchange, factor, location):
-        self.exchange = exchange
-        self.factor = factor
-        self._dirn_mod = None
-        if location in factor.locations():
-            self.location = location
-        else:
-            self.location = 'GLO'
+    def __init__(self, lc_result, exchange, qrresult):
+        assert exchange.flow.reference_entity == qrresult.ref
+        self._exchange = exchange
+        self._qr = qrresult
         self._lc = lc_result
+
+    @property
+    def exchange(self):
+        return self._exchange
+
+    @property
+    def factor(self):
+        return self._qr
+
+    @property
+    def _dirn_adjust(self):
+        if comp_dir(self._qr.context.sense) == self._exchange.direction:
+            return 1.0
+        return -1.0
 
     @property
     def is_null(self):
         return self.result == 0
 
     @property
-    def _dirn_adjust(self):
-        """
-        Memoized direction correction for "Outputs" "from ground" and "Inputs" "to environment".
-        'fac' temporary variable created to silence an IDE warning
-        :return:
-        """
-        if self._dirn_mod is None:
-            natural_direction = self.factor.natural_direction
-            if natural_direction is None or natural_direction is False:
-                fac = 1.0
-            elif self.exchange.direction == natural_direction:
-                fac = 1.0
-            else:
-                fac = -1.0
-            self._dirn_mod = fac
-        else:
-            fac = self._dirn_mod
-        return fac
-
-    @property
     def flow(self):
-        return self.exchange.flow
+        return self._exchange.flow
 
     @property
     def direction(self):
-        return self.exchange.direction
+        return self._exchange.direction
+
+    @property
+    def flowable(self):
+        return str(self._qr.flowable)
+
+    @property
+    def context(self):
+        return str(self._qr.context)
 
     @property
     def content(self):
-        if isinstance(self.exchange, DissipationExchange):
-            return self.exchange.content()
+        if isinstance(self._exchange, DissipationExchange):
+            return self._exchange.content()
         return None
 
     @property
     def value(self):
-        if self.exchange.value is None:
+        if self._exchange.value is None:
             return 0.0
-        return self.exchange.value * self._lc.scale
+        return self._exchange.value * self._lc.scale
 
     @property
     def result(self):
-        if self.factor.is_null:
+        if self._qr.value is None:
             return 0.0
-        return self.value * self._dirn_adjust * (self.factor[self.location] or 0.0)
+        return self.value * self._dirn_adjust * self._qr.value
 
     def __hash__(self):
-        return hash((self.exchange.process.uuid, self.exchange.direction, self.factor.flow.uuid))
+        return hash((self._exchange.process.uuid, self._exchange.direction, self._qr.flowable, self._qr.context))
 
     def __eq__(self, other):
         if not isinstance(other, DetailedLciaResult):
             return False
         return (self.exchange.process.uuid == other.exchange.process.uuid and
-                self.factor.flow.uuid == other.factor.flow.uuid and
-                self.direction[0] == other.direction[0])
+                self.flowable == other.flowable and
+                self.direction[0] == other.direction[0] and
+                self.context == other.context)
 
     def __str__(self):
         if self._dirn_adjust == -1:
@@ -131,10 +131,10 @@ class DetailedLciaResult(object):
             dirn_mod = ' '
         return '%s%s x %-s  = %-s [%s] %s' % (dirn_mod,
                                               number(self.value),
-                                              number(self.factor[self.location] * self._lc.autorange),
+                                              number(self._qr.value * self._lc.autorange),
                                               number(self.result * self._lc.autorange),
-                                              self.location,
-                                              self.factor.flow)
+                                              self._qr.location,
+                                              self.flowable)
 
 
 class SummaryLciaResult(object):
@@ -338,8 +338,8 @@ class AggregateLciaScore(object):
         """
         self.entity = self.entity + other
 
-    def add_detailed_result(self, exchange, factor, location):
-        d = DetailedLciaResult(self._lc, exchange, factor, location)
+    def add_detailed_result(self, exchange, qrresult):
+        d = DetailedLciaResult(self._lc, exchange, qrresult)
         '''
         if d in self.LciaDetails:  # process.uuid, direction, flow.uuid are the same
             if factor[location] != 0:
@@ -415,7 +415,7 @@ class LciaResult(object):
             results[qu] = cls(q, scenario=scenario)
             if isinstance(cf, Characterization):
                 results[qu].add_component(fragment.get_uuid(), entity=fragment)
-                results[qu].add_score(fragment.get_uuid(), exch, cf, location)
+                results[qu].add_score(fragment.get_uuid(), exch, cf)
 
         return results
 
@@ -565,7 +565,7 @@ class LciaResult(object):
                     flat.add_component(d.flow.uuid, d.flow)
                     # create a new exchange that has already had scaling applied
                     exch = ExchangeValue(d.exchange.process, d.flow, d.exchange.direction, value=d.value * _apply_scale)
-                    flat.add_score(d.flow.uuid, exch, d.factor, d.location)
+                    flat.add_score(d.flow.uuid, exch, d.factor)
 
         for r in recurse:
             for k in r.keys():
@@ -584,7 +584,7 @@ class LciaResult(object):
                         flat.add_component(d.flow.uuid, d.flow)
                         exch = ExchangeValue(d.exchange.process, d.flow, d.exchange.direction,
                                              value=d.value * _apply_scale)
-                        flat.add_score(k, exch, d.factor, d.location)
+                        flat.add_score(k, exch, d.factor)
 
         scaled_total = self.total() * _apply_scale
         if not isclose(scaled_total, flat.total(), rel_tol=1e-10):
@@ -615,14 +615,14 @@ class LciaResult(object):
         if key not in self._LciaScores.keys():
             self._LciaScores[key] = AggregateLciaScore(self, entity)
 
-    def add_score(self, key, exchange, factor, location):
-        if factor.quantity.uuid != self.quantity.uuid:
-            raise InconsistentQuantity('%s\nfactor.quantity: %s\nself.quantity: %s' % (factor,
-                                                                                       factor.quantity.uuid,
-                                                                                       self.quantity.uuid))
+    def add_score(self, key, exchange, qrresult):
+        if qrresult.query.uuid != self.quantity.uuid:
+            raise InconsistentQuantity('%s\nqrresult.quantity: %s\nself.quantity: %s' % (qrresult,
+                                                                                         qrresult.query.uuid,
+                                                                                         self.quantity.uuid))
         if key not in self._LciaScores.keys():
             self.add_component(key)
-        self._LciaScores[key].add_detailed_result(exchange, factor, location)
+        self._LciaScores[key].add_detailed_result(exchange, qrresult)
 
     def add_summary(self, key, entity, node_weight, unit_score):
         if key in self._LciaScores.keys():

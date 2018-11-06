@@ -293,7 +293,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
             ref_q = self.get_canonical(x.flow.reference_entity)
             cf = self.cf(ref_q, x.flow['Name'], x.termination, locale=locale,
                                         **kwargs)
-            res.add_score(x.process, x, cf, locale)
+            res.add_score(x.process, x, cf)
             # TODO: lcia_result remodel
             # should we characterize the flows? to save on lookups? no, leave that to the client
         return res

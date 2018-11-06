@@ -94,7 +94,7 @@ class CLookup(object):
         if origin is None:
             return self.__getitem__(item)
         else:
-            return set(k for k in self.__getitem__(item) if k.origin == origin)
+            return [k for k in self.__getitem__(item) if k.origin == origin]
 
     def find(self, item, dist=1, return_first=True, origin=None):
         """
@@ -109,10 +109,10 @@ class CLookup(object):
         :param dist: how far to search (with limits) (default: 1= compartment + children)
         :param return_first: stop hunting as soon as a cf is found
         :param origin: [None] if present, only return cfs whose origins match the specification
-        :return: a set of characterization factors that meet the query criteria.
+        :return: a list of characterization factors that meet the query criteria, ordered by increasing dist
         """
         if not isinstance(item, Context):
-            return set()
+            return []
 
         def found(res):
             return len(res) > 0 and return_first
@@ -124,20 +124,20 @@ class CLookup(object):
             for s in item.self_and_subcompartments:  # note: this is depth first
                 if s is item:
                     continue  # skip self, just recurse subcompartments
-                results = results.union(self._filter_results(s, origin))
+                results += self._filter_results(s, origin)
                 if found(results):
                     return results
 
         if dist > 1:
             item = item.parent
-            results = results.union(self._filter_results(item, origin))
+            results += self._filter_results(item, origin)
             if found(results):
                 return results
 
         if dist > 2 and item is not None:
             while item.parent is not None:
                 item = item.parent
-                results = results.union(self._filter_results(item, origin))
+                results += self._filter_results(item, origin)
                 if found(results):
                     return results
 

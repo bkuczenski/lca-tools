@@ -269,6 +269,12 @@ class TermManager(object):
     '''
     Info Retrieval
     '''
+    def get_canonical(self, quantity):
+        try:
+            return self._canonical_q(quantity)
+        except UnknownQuantityRef:
+            return None
+
     @staticmethod
     def _q_ref(quantity):
         return quantity.external_ref
@@ -287,11 +293,12 @@ class TermManager(object):
     def qlookup(self, quantity):
         return self._q_dict[self._canonical_q(quantity)]
 
-    def factors_for_flowable(self, flowable, quantity=None, compartment=None, dist=0):
+    def factors_for_flowable(self, flowable, quantity=None, context=None, dist=0):
         """
+        This is the method that actually performs the lookup.  Other methods are wrappers for this
         :param flowable:
         :param quantity:
-        :param compartment:
+        :param context:
         :param dist: [0] only used if compartment is specified. by default report only exact matches.
         :return:
         """
@@ -301,32 +308,32 @@ class TermManager(object):
             return
         if quantity is None:
             for q_ref in self._fq_map[fb]:
-                for cf in self.factors_for_flowable(fb, quantity=q_ref, compartment=compartment, dist=dist):
+                for cf in self.factors_for_flowable(fb, quantity=q_ref, context=context, dist=dist):
                     yield cf
         else:
-            if compartment is None:
+            if context is None:
                 for cf in self.qlookup(quantity)[fb].cfs():
                     yield cf
             else:
-                comp = self[compartment]
+                comp = self[context]
                 for cf in self.qlookup(quantity)[fb].find(comp, dist=dist):
                     yield cf
 
-    def factors_for_quantity(self, quantity, flowable=None, compartment=None, dist=0):
+    def factors_for_quantity(self, quantity, flowable=None, context=None, dist=0):
         """
 
         :param quantity:
         :param flowable:
-        :param compartment:
+        :param context:
         :param dist: [0] only used if compartment is specified. by default report only exact matches.
         :return:
         """
         if flowable is not None:
-            for k in self.factors_for_flowable(flowable, quantity=quantity, compartment=compartment, dist=dist):
+            for k in self.factors_for_flowable(flowable, quantity=quantity, context=context, dist=dist):
                 yield k
         else:
             for f in self.qlookup(quantity).keys():
-                for k in self.factors_for_flowable(f, quantity=quantity, compartment=compartment, dist=dist):
+                for k in self.factors_for_flowable(f, quantity=quantity, context=context, dist=dist):
                     yield k
 
     def get_flowable(self, term):

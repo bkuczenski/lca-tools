@@ -56,37 +56,37 @@ class QdbQuantityImplementation(QuantityImplementation):
         """
         pass
 
-    def factors(self, quantity, flowable=None, compartment=None, **kwargs):
+    def factors(self, quantity, flowable=None, context=None, **kwargs):
         """
         Return characterization factors for the given quantity, subject to optional flowable and compartment
         filter constraints. This is ill-defined because the reference unit is not explicitly reported in current
         serialization for characterizations (it is implicit in the flow)-- but it can be added to a web service layer.
         :param quantity:
         :param flowable:
-        :param compartment:
+        :param context:
         :return:
         """
         if flowable is not None:
             flowable = self._archive.f_index(flowable)
-        if compartment is not None:
-            compartment = self._archive.c_mgr.find_matching(compartment)
-        for cf in self._archive.cfs_for_quantity(quantity, compartment=compartment):
+        if context is not None:
+            context = self._archive.c_mgr.find_matching(context)
+        for cf in self._archive.cfs_for_quantity(quantity, compartment=context):
             if flowable is not None:
                 if self._archive.f_index(cf.flow['Name']) != flowable:
                     continue
             yield cf
 
-    def quantity_relation(self, ref_quantity, flowable, compartment, query_quantity, locale='GLO', **kwargs):
+    def quantity_relation(self, flowable, ref_quantity, query_quantity, context, locale='GLO', **kwargs):
         """
         Return a single number that converts the a unit of the reference quantity into the query quantity for the
         given flowable, compartment, and locale (default 'GLO').  If no locale is found, this would be a great place
         to run a spatial best-match algorithm.
-        :param ref_quantity:
         :param flowable:
-        :param compartment:
+        :param ref_quantity:
         :param query_quantity:
+        :param context:
         :param locale:
         :return:
         """
-        return self._archive.convert(flowable=flowable, compartment=compartment, reference=ref_quantity,
+        return self._archive.convert(flowable=flowable, compartment=context, reference=ref_quantity,
                                      query=query_quantity, locale=locale, **kwargs)

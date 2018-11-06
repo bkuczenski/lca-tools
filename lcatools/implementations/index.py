@@ -4,10 +4,6 @@ from .basic import BasicImplementation
 from ..interfaces import IndexInterface, comp_dir, CONTEXT_STATUS_
 
 
-class NotForeground(Exception):
-    pass
-
-
 class IndexImplementation(BasicImplementation, IndexInterface):
     """
     A CatalogInterface provides basic-level semantic data about entities
@@ -73,14 +69,6 @@ class IndexImplementation(BasicImplementation, IndexInterface):
         for q in self._archive.search('quantity', **kwargs):
             if q.is_lcia_method():
                 yield q
-
-    def fragments(self, **kwargs):
-        if hasattr(self._archive, 'fragments'):
-            # we only want reference fragments
-            for f in self._archive.fragments(show_all=False, **kwargs):
-                yield f
-        else:
-            raise NotForeground('The resource does not contain fragments: %s' % self._archive.ref)
 
     def terminate(self, flow_ref, direction=None, **kwargs):
         """

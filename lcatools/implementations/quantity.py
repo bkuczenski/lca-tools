@@ -1,10 +1,24 @@
+"""
+Each archive now has a TermManager which interprets query arguments as synonyms for canonical flows and contexts.  This
+can also be upgraded to an LciaEngine, which extends the synonymization strategy to quantities as well
+"""
 from .basic import BasicImplementation
 from ..characterizations import QRResult
-from ..interfaces import QuantityInterface, EntityNotFound, NoFactorsFound, ConversionReferenceMismatch
+from ..interfaces import QuantityInterface, NoFactorsFound, ConversionReferenceMismatch, FlowableMismatch
 from ..lcia_results import LciaResult
 
 
 class QuantityConversion(object):
+    """
+    A stack of Quantity Relation results that are composed sequentially in order to render a flow-quantity conversion.
+    The first QRR added should report the query quantity (numerator) in terms of some reference quantity (denominator);
+    then each subsequent QRR should include the prior ref quantity as the query quantity.
+
+    For instance, a Quantity conversion from moles of CH4 to GWP 100 might include first the GWP conversion and then
+    the mol conversion:
+    QuantityConversion(QRResult('methane', 'kg', 'kg CO2eq', 'emissions to air', 'GLO', 'ipcc.2007', 25.0),
+                       QRResult('methane', 'mol', 'kg', None, 'GLO', 'local.qdb', 0.016))
+    """
     def __init__(self, *args):
         self._results = []
         for arg in args:
@@ -13,6 +27,8 @@ class QuantityConversion(object):
     def add_result(self, qrr):
         if isinstance(qrr, QRResult):
             if len(self._results) > 0:
+                if self.flowable != qrr.flowable:
+                    raise FlowableMismatch('%s != %s' % (self.flowable, qrr.flowable))
                 if self.ref != qrr.query:
                     raise ConversionReferenceMismatch('%s != %s' % (self._results[-1].ref, qrr.query))
             self._results.append(qrr)
@@ -27,9 +43,17 @@ class QuantityConversion(object):
     def ref(self):
         return self._results[-1].ref
 
+    @property
+    def flowable(self):
+        return self._results[0].flowable
+
+    @property
+    def context(self):
+        return self._results[-1].context
+
     @staticmethod
     def _invert_qrr(qrr):
-        return QRResult(qrr.query, qrr.flowable, qrr.context, qrr.ref, qrr.locale, qrr.origin, 1.0 / qrr.value)
+        return QRResult(qrr.flowable, qrr.ref, qrr.query, qrr.context, qrr.locale, qrr.origin, 1.0 / qrr.value)
 
     def add_inverted_result(self, qrri):
         self.add_result(self._invert_qrr(qrri))
@@ -61,22 +85,14 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         :param quantity: external_id of quantity
         :return: quantity entity
         """
-        return self.get(quantity)
+        return self._archive.tm.get_canonical(quantity)
 
-    def profile(self, flow, **kwargs):
-        """
-        Generate characterizations for the named flow, with the reference quantity noted
-        :param flow:
-        :param kwargs:
-        :return:
-        """
-        f = self.get(flow)
-        for cf in f.characterizations():
-            yield cf
+    def factor(self, *args, **kwargs):
+        pass
 
-    def factors(self, quantity, flowable=None, compartment=None, dist=0):
+    def factors(self, quantity, flowable=None, context=None, dist=0):
         q = self.get_canonical(quantity)
-        for cf in self._archive.tm.factors_for_quantity(q, flowable=flowable, compartment=compartment, dist=dist):
+        for cf in self._archive.tm.factors_for_quantity(q, flowable=flowable, context=context, dist=dist):
             yield cf
 
     def _ref_qty_conversion(self, ref_quantity, flowable, compartment, res, locale):
@@ -89,6 +105,8 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         :param locale:
         :return:
         """
+        if ref_quantity is None:
+            raise ConversionReferenceMismatch('Cannot convert to None')
         if res[0].ref != ref_quantity:
             try:
                 res.add_result(self.quantity_relation(ref_quantity, flowable, compartment, res[0].ref, locale=locale,
@@ -103,38 +121,37 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
                                                                                    ref_quantity))
         return res
 
-    def _quantity_results(self, ref_quantity, flowable, compartment, query_quantity, locale='GLO', strategy='highest',
-                          **kwargs):
+    def _quantity_conversions(self, flowable, rq, qq, context, locale='GLO',
+                             **kwargs):
         """
-        self is the query quantity.
-        :param ref_quantity:
+        This is the main "comprehensive" engine for performing characterizations
+
         :param flowable: a string that is synonymous with a known flowable.
-        :param compartment: a string that is synonymous with a known context
-        :param query_quantity:
+        :param rq: a canonical ref_quantity or None
+        :param qq: a canonical query_quantity or None
+        :param context: a string that is synonymous with a known context
         :param locale: ['GLO']
-        :param strategy: approach for resolving multiple-CF in dist>0.  ('highest' | 'lowest' | 'average' | ...? )
         :param kwargs:
          dist: CLookup distance (0=exact 1=subcompartments 2=parent 3=all parents)
-        :return: 3-tuple: qr_results, qr_mismatch, qr_geog
+        :return: 3-tuple of lists of QRResults objects: qr_results, qr_mismatch, qr_geog
          qr_results: valid conversions from query quantity to ref quantity
-         qr_mismatch: conversions from query quantity to a different quantity that could not be further converted
          qr_geog: valid conversions which had a broader spatial scope than specified, if at least one narrow result
+         qr_mismatch: conversions from query quantity to a different quantity that could not be further converted
 
         """
         # TODO: port qdb functionality: detect unity conversions; quell biogenic co2; integrate convert()
         # first- check to see if the query quantity can be converted to the ref quantity directly:
-        qq = self.get_canonical(query_quantity)
-        rq = self.get_canonical(ref_quantity)
-        if qq.has_property('UnitConversion'):
-            try:
-                fac = qq.convert(to=rq.unit())
-                return fac
-            except KeyError:
-                pass
+        if qq is not None and rq is not None:
+            if qq.has_property('UnitConversion'):
+                try:
+                    fac = qq.convert(to=rq.unit())
+                    return fac
+                except KeyError:
+                    pass
 
-        cfs = [cf for cf in self.factors(qq, flowable, compartment, **kwargs)]
+        cfs = [cf for cf in self._archive.tm.factors_for_flowable(flowable, quantity=qq, context=context, **kwargs)]
         if len(cfs) == 0:
-            raise NoFactorsFound('%s [%s] %s', (flowable, compartment, self))
+            raise NoFactorsFound('%s [%s] %s', (flowable, context, self))
 
         qr_results = []
         qr_mismatch = []
@@ -142,7 +159,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         for cf in cfs:
             res = QuantityConversion(cf.query(locale))
             try:
-                qr_results.append(self._ref_qty_conversion(rq, flowable, compartment, res, locale))
+                qr_results.append(self._ref_qty_conversion(rq, flowable, context, res, locale))
             except ConversionReferenceMismatch:
                 qr_mismatch.append(res)
 
@@ -150,41 +167,60 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
             qr_geog = [k for k in filter(lambda x: x[0].locale != locale, qr_results)]
             qr_results = [k for k in filter(lambda x: x[0].locale == locale, qr_results)]
 
-        return qr_results, qr_mismatch, qr_geog
+        return qr_results, qr_geog, qr_mismatch
 
-    def cf(self, flow, quantity, locale='GLO', **kwargs):
-        """
-
-        :param flow:
-        :param quantity:
-        :param locale:
-        :param kwargs:
-        :return:
-        """
+    def _get_flowable_info(self, flow, ref_quantity, context):
         f = self.get(flow)
         if f is None:
-            raise EntityNotFound(f)
-        return self.quantity_relation(f.reference_entity, f.flowable, f.context, quantity, locale=locale,
-                                      **kwargs)
+            flowable = flow
+        else:
+            flowable = f['Name']
+            if ref_quantity is None:
+                ref_quantity = f.reference_entity
+            if context is None:
+                context = f.context
+        rq = self.get_canonical(ref_quantity)
+        cx = self._archive.tm[context]
+        return flowable, rq, cx
 
-    def quantity_relation(self, ref_quantity, flowable, compartment, query_quantity, locale='GLO', strategy='highest',
-                          **kwargs):
+    def quantity_conversions(self, flow, query_quantity, ref_quantity=None, context=None, locale='GLO', **kwargs):
         """
         Return a single number that converts the a unit of the reference quantity into the query quantity for the
         given flowable, compartment, and locale (default 'GLO').  If the locale is not found, this would be a great
         place to run a spatial best-match algorithm.
-        :param ref_quantity: convert for 1 unit of this quantity
-        :param flowable: a string that is synonymous with a flowable characterized by the query quantity
-        :param compartment: a string synonym for a context / "archetype"? (<== locale-specific?)
+        :param flow: a string that is synonymous with a flowable characterized by the query quantity
         :param query_quantity: convert to this quantty
+        :param ref_quantity: [None] convert for 1 unit of this quantity
+        :param context: [None] a string synonym for a context / "archetype"? (<== locale-specific?)
         :param locale: handled by CF; default 'GLO'
-        :param strategy: approach for resolving multiple-CF in dist>0.  ('highest' | 'lowest' | 'average' | ...? )
         :param kwargs:
          dist: CLookup distance (0=exact 1=subcompartments 2=parent compartment 3=all parents)
+        :return: a 3-tuple of lists of QuantityConversion objects:
+         [valid conversions],
+         [geographic proxy conversions],
+         [mismatched ref unit conversions]
+        """
+        flowable, rq, cx = self._get_flowable_info(flow, ref_quantity, context)
+        qq = self.get_canonical(query_quantity)
+
+        return self._quantity_conversions(flowable, rq, qq, context, locale=locale, **kwargs)
+
+    def cf(self, flow, quantity, ref_quantity=None, context=None, locale='GLO', strategy=None, **kwargs):
+        """
+        Reports the first / best result of a quantity conversion
+
+        :param flow:
+        :param quantity:
+        :param ref_quantity:
+        :param context:
+        :param locale:
+        :param strategy: approach for resolving multiple-CF in dist>0.  ('highest' | 'lowest' | 'average' | ...? )
+        :param kwargs:
         :return:
         """
-        qr_results, qr_mismatch, _ = self._quantity_results(ref_quantity, flowable, compartment,
-                                                            query_quantity, locale=locale, **kwargs)
+        qr_results, qr_geog, qr_mismatch = self.quantity_conversions(flow, quantity,
+                                                                     ref_quantity=ref_quantity, context=context,
+                                                                     locale=locale, **kwargs)
 
         if len(qr_results) > 1:
             # this is obviously punting
@@ -197,14 +233,44 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
             else:
                 raise ValueError('Unknown strategy %s' % strategy)
         elif len(qr_results) == 1:
-            return qr_results[0].value
+            return qr_results[0]
         else:
-            if len(qr_mismatch) > 0:
+            if len(qr_geog) > 0:
+                return qr_geog[0]
+            elif len(qr_mismatch) > 0:
                 for k in qr_mismatch:
                     print('Flowable: %s\nfrom: %s\nto: %s' % (k[0].flowable, k.ref, ref_quantity))
                 raise ConversionReferenceMismatch
             else:
                 raise NoFactorsFound
+
+    def quantity_relation(self, flowable, ref_quantity, query_quantity, context, locale='GLO', **kwargs):
+        cf = self.cf(flowable, query_quantity, ref_quantity=ref_quantity, context=context, locale=locale, **kwargs)
+        return cf.value
+
+    def flat_cf(self, flow, quantity, ref_quantity=None, context=None, locale='GLO', **kwargs):
+        flowable, rq, cx = self._get_flowable_info(flow, ref_quantity, context)
+        val = self.quantity_relation(flowable, rq, quantity, cx, locale=locale, **kwargs)
+        return QRResult(flowable, rq, quantity, cx, locale, self.origin, val)
+
+    def profile(self, flow, ref_quantity=None, context=None, **kwargs):
+        """
+        Generate characterizations for the named flow or flowable.  The positional argument is first used to retrieve
+        a flow, and if successful, the reference quantity and context are taken for that flow.  Otherwise, the
+        positional argument is interpreted as a flowable synonym and used to generate CFs, optionally filtered by
+        context.  In that case, if no ref quantity is given then the CFs are returned as-reported; if a ref quantity is
+        given then a ref quantity conversion is attempted and the resulting QRResult objects are returned.
+
+        :param flow:
+        :param ref_quantity: [None]
+        :param context: [None]
+        :param kwargs:
+        :return:
+        """
+        flowable, rq, cx = self._get_flowable_info(flow, ref_quantity, context)
+        qrr, qrm, qrg = self._quantity_conversions(flowable, None, ref_quantity=rq, context=cx, **kwargs)
+        for r in qrr + qrm + qrg:
+            yield r
 
     def do_lcia(self, quantity, inventory, locale='GLO', **kwargs):
         """
@@ -225,7 +291,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
                 res.add_cutoff(x)
                 continue
             ref_q = self.get_canonical(x.flow.reference_entity)
-            cf = self.quantity_relation(ref_q, x.flow['Name'], x.termination, locale=locale,
+            cf = self.cf(ref_q, x.flow['Name'], x.termination, locale=locale,
                                         **kwargs)
             res.add_score(x.process, x, cf, locale)
             # TODO: lcia_result remodel

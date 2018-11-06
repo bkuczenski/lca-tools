@@ -89,6 +89,8 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
         A ConfigFlowCharacterization provides a procedural mechanism for specifying flow quantity characterizations
         after loading an archive.  The 'flow_ref' and 'quantity_ref' have to lookup successfully in the archive.
 
+        Not clear how to deal with contexts
+
         :param flow_ref:
         :param quantity_ref:
         :param value:
@@ -99,13 +101,12 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
         """
         flow = self._archive.retrieve_or_fetch_entity(flow_ref)
         qty = self._archive.retrieve_or_fetch_entity(quantity_ref)
-        if flow.has_characterization(qty):
-            if overwrite:
-                flow.del_characterization(qty)
-            else:
-                print('Flow %s already characterized for %s. Skipping.' % (flow, qty))
-                pass
-        flow.add_characterization(qty, value=value, location=location)
+        if flow.context.elementary:
+            context = flow.context
+        else:
+            context = None
+        self._archive.tm.add_c14n(flow['Name'], flow.reference_entity, qty, value, context=context,  location=location,
+                                  origin=self.origin, overwrite=overwrite)
 
     def allocate_by_quantity(self, process_ref, quantity_ref, overwrite=False, **kwargs):
         """

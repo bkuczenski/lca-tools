@@ -261,12 +261,11 @@ class EcoinventSpreadsheet(LcArchive):
         if u in self._entities:
             f = self[u]
         else:
-            f = LcFlow(u, Name=Name, Compartment=Compartment, **kwargs)
-            f.set_external_ref(ext_ref)
             q = self._create_quantity(unit)
             if q is None:
                 raise ValueError
-            f.add_characterization(quantity=q, reference=True)
+            f = LcFlow(u, Name=Name, Compartment=Compartment, ReferenceQuantity=q, **kwargs)
+            f.set_external_ref(ext_ref)
             self.add(f)
         f.update(kwargs)
 

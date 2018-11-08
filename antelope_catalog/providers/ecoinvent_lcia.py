@@ -118,9 +118,9 @@ class EcoinventLcia(BasicArchive):
         if u in self._entities:
             return self[u]
         f = LcFlow(u, Name=row['name'], CasNumber='', Compartment=[row['compartment'], row['subcompartment']],
+                   ReferenceQuantity=self._mass,
                    Comment=row['note'])
         self._print('Created new flow with %s ' % key)
-        f.add_characterization(self._mass, reference=True)
         f.set_external_ref(key)
         self.add(f)
         return f
@@ -139,5 +139,5 @@ class EcoinventLcia(BasicArchive):
             f = self._create_flow(row)
             q = self._create_quantity(row)
             v = LiterateFloat(self._get_value(row), **row)
-            f.add_characterization(q, value=v)
+            self.tm.add_characterization(f['Name'], f.reference_entity, q, v, context=f.context, origin=self.ref)
         self.check_counter()

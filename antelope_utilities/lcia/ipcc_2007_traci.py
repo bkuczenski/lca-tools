@@ -8,7 +8,6 @@ This project inspired the "domesticate" kwarg in write_to_file.
 # TODO: figure out how to authorize refs
 
 
-from lcatools.archives import BasicArchive
 from antelope_catalog.providers import Traci21Factors
 
 from argparse import ArgumentParser
@@ -44,24 +43,7 @@ def generate_ipcc_2007_traci21(source, target):
 
     print(str(q))
 
-    ar = BasicArchive(None, ref=AUTHORIZED_REF, ns_uuid=T.init_args['nsUuid'])
-    Ti = T.make_interface('index')
-
-    for f in Ti.flows():
-        dels = []
-        if not f.has_characterization(q):
-            continue
-        for c in f.characterizations():
-            if c.quantity is f.reference_entity:
-                continue
-            if c.quantity is q:
-                continue
-            dels.append(c.quantity)
-        for qq in dels:  # dictionary changed size during iteration
-            f.del_characterization(qq)
-        ar.add_entity_and_children(f)
-
-    ar.write_to_file(target, complete=True, domesticate=True)
+    T.export_quantity(target, q, domesticate=True)
 
 
 if __name__ == '__main__':

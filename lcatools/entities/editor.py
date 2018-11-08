@@ -110,14 +110,4 @@ class FlowEditor(EntityEditor):
         return flow
 
     def edit_flow(self, flow):
-        ch = cyoa('Edit (P)roperties or (C)haracterizations? ', 'pc').lower()
-        if ch == 'p':
-            self._edit_entity(flow)
-        elif ch == 'c':
-            self.edit_characterizations(flow)
-
-    @staticmethod
-    def edit_characterizations(flow):
-        char = pick_one(cf for cf in flow.characterizations())
-        val = float(ifinput('enter new characterization value: ', char.value))
-        char.value = val
+        self._edit_entity(flow)

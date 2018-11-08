@@ -6,8 +6,6 @@ from __future__ import print_function, unicode_literals
 
 import uuid
 import re
-import json
-import gzip as gz
 import os
 import six
 from datetime import datetime
@@ -15,6 +13,7 @@ from datetime import datetime
 from collections import defaultdict
 
 from ..interfaces import to_uuid, local_ref
+from ..from_json import to_json
 
 LD_CONTEXT = 'https://bkuczenski.github.io/lca-tools-datafiles/context.jsonld'
 
@@ -602,15 +601,4 @@ class EntityStore(object):
             s = self._serialize_all(**kwargs)
         else:
             s = self.serialize(**kwargs)
-        if gzip is True:
-            if not bool(re.search('\.gz$', filename)):
-                filename += '.gz'
-            if six.PY3:  # python3
-                with gz.open(filename, 'wt') as fp:
-                    json.dump(s, fp, indent=2, sort_keys=True)
-            else:  # python2
-                with gz.open(filename, 'w') as fp:
-                    json.dump(s, fp, indent=2, sort_keys=True)
-        else:
-            with open(filename, 'w') as fp:
-                json.dump(s, fp, indent=2, sort_keys=True)
+        to_json(s, filename, gzip=gzip)

@@ -144,20 +144,20 @@ class EcospoldV1Archive(LcArchive):
             cas = not_none(exch.get("CASNumber"))
             cat = [k for k in filter(None, (exch.get('category'), exch.get('subCategory')))]
 
-            f = LcFlow(uid, Name=n, CasNumber=cas, Comment=c, Compartment=cat)
-            f.add_characterization(q, reference=True)
+            f = LcFlow(uid, Name=n, CasNumber=cas, Comment=c, Compartment=cat, ReferenceQuantity=q)
             f.set_external_ref(number)
             self.add(f)
 
         if exch.get("unit") != f.unit():
             local_q = self._create_quantity(exch.get("unit"))
-            if not f.has_characterization(local_q):
+            if len([z for z in self.tm.factors_for_flowable(f, quantity=local_q)]) == 0:
                 if (f.unit(), local_q.unit()) not in conversion_dict:
                     print('Flow %s needs characterization for unit %s' % (f, local_q))
                     val = parse_math(input('Enter conversion factor 1 %s = x %s' % (f.unit(), local_q)))
                 else:
                     val = conversion_dict[(f.unit(), local_q.unit())]
-                f.add_characterization(local_q, value=val)
+
+                self.tm.add_characterization(f['Name'], f.reference_entity, local_q, val, context=f.context)
         return f
 
     def _create_process(self, filename):
@@ -192,7 +192,7 @@ class EcospoldV1Archive(LcArchive):
             local_q = self._create_quantity(exch.get("unit"))
             v = float(exch.get('meanValue'))  # returns none if missing
             if local_q is not f.reference_entity:
-                v = v / f.cf(local_q)
+                v = v / local_q.cf(f).value
             flowlist.append((f, d, v))
 
         p_meta = o.dataset.metaInformation.processInformation

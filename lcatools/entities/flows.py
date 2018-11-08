@@ -32,8 +32,6 @@ class LcFlow(LcEntity):
     def __init__(self, entity_uuid=None, local_unit=None, **kwargs):
         super(LcFlow, self).__init__('flow', entity_uuid, **kwargs)
 
-        self._characterizations = dict()
-
         self._local_unit = None
         self._context = None
         self._flowable = None
@@ -79,6 +77,7 @@ class LcFlow(LcEntity):
         :return:
         """
         if context_manager.is_context(self._context):
+            # cannot change context once it's set
             return
         if self.has_property('Compartment'):
             _c = context_manager.add_compartments(self['Compartment'])
@@ -89,30 +88,8 @@ class LcFlow(LcEntity):
             # raise AttributeError('Flow has no contextual attribute! %s' % self)
         if not context_manager.is_context(_c):
             raise TypeError('Context manager did not return a context! %s (%s)' % (_c, type(_c)))
+        self._context = _c
         self._flowable = context_manager.add_flow(self)
-        for cf in self.characterizations():
-            context_manager.add_cf(cf.quantity, cf)
-
-    def _set_reference(self, ref_entity):
-        if self.reference_entity is not None:
-            if self.reference_entity.uuid == ref_entity.uuid:
-                return
-            '''
-            ## THIS IS NOT ALLOWED! There is no way to adjust exchange values that use this flow, so it would not
-            ## be permissible to change the flow's reference quantity
-            # need to do a conversion
-            print('Changing reference quantity for flow %s' % self)
-            print('reference >>%s<<' % self.reference_entity)
-            print('refer.new >>%s<<' % ref_entity)
-            inc = self.cf(ref_entity)  # divide by 0 if not known
-            if inc is None or inc == 0:
-                raise MissingFactor('Flow %s missing factor for reference quantity %s' % (self, ref_entity))
-            adj = 1.0 / inc
-            for v in self._characterizations.values():
-                v.scale(adj)
-            '''
-            raise RefQuantityError('Cannot change reference quantities for a flow!')
-        super(LcFlow, self)._set_reference(ref_entity)
 
     def unit(self):
         if self._local_unit is not None:
@@ -173,6 +150,7 @@ class LcFlow(LcEntity):
         self._local_unit = None
 
     def match(self, other):
+        print('Warning: LcFlow.match() method is slapdash')
         if isinstance(other, str):
             '''
             return (self.uuid == other or
@@ -198,6 +176,7 @@ class LcFlow(LcEntity):
             context = '(cutoff)'
         return '%s%s %s' % (self.get('Name'), cas, context)
 
+    '''
     def profile(self):
         print('%s' % self)
         out = []
@@ -217,7 +196,7 @@ class LcFlow(LcEntity):
         :param overwrite: [False] if True, allow values to replace existing characterizations
         :return:
         """
-        ''' # we no longer want to be able to add literal characterizations. Just do it explicitly.
+        'x'x'x # we no longer want to be able to add literal characterizations. Just do it explicitly.
         if isinstance(quantity, Characterization):
             if quantity.flow.reference_entity != self.reference_entity:
                 adj = self.cf(quantity.flow.reference_entity)
@@ -230,7 +209,7 @@ class LcFlow(LcEntity):
                 self.add_characterization(quantity.quantity, reference=reference,
                                           value=quantity[l] / adj, location=l, origin=quantity.origin[l])
             return
-        '''
+        'x'x'x
         if reference:
             if value is not None and value != 1.0:
                 raise ValueError('Reference quantity always has unit value')
@@ -313,3 +292,4 @@ class LcFlow(LcEntity):
         out = self.cf(to or self.reference_entity, locale=locale)
         inn = self.cf(fr or self.reference_entity, locale=locale)
         return val * out / inn
+    '''

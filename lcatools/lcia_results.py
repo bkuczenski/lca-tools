@@ -430,6 +430,7 @@ class LciaResult(object):
         self.scenario = scenario
         self._scale = scale
         self._LciaScores = dict()
+        self._cutoffs = []
         self._private = private
         self._autorange = None
         self._failed = []
@@ -645,6 +646,13 @@ class LciaResult(object):
                 self._failed.append(SummaryLciaResult(self, entity, node_weight, unit_score))
         else:
             self._LciaScores[key] = SummaryLciaResult(self, entity, node_weight, unit_score)
+
+    def add_cutoff(self, exchange):
+        self._cutoffs.append(exchange)
+
+    def cutoffs(self):
+        for x in self._cutoffs:
+            yield x
 
     def keys(self):
         if self._private:

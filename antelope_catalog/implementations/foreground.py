@@ -19,6 +19,10 @@ class OutOfOrderException(Exception):
     pass
 
 
+class NotForeground(Exception):
+    pass
+
+
 ed = FragmentEditor(interactive=False)
 
 
@@ -70,14 +74,13 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
 
         self._recursion_check = None  # prevent recursive loops on frag-from-node
 
-    def fragments(self, *args, **kwargs):
-        """
-
-        :param args: optional regex filter(s)
-        :param kwargs: background [None], show_all [False]
-        :return:
-        """
-        return self._archive.fragments(*args, **kwargs)
+    def fragments(self, **kwargs):
+        if hasattr(self._archive, 'fragments'):
+            # we only want reference fragments
+            for f in self._archive.fragments(show_all=False, **kwargs):
+                yield f
+        else:
+            raise NotForeground('The resource does not contain fragments: %s' % self._archive.ref)
 
     def frag(self, string, strict=True):
         return self._archive.frag(string, strict=strict)

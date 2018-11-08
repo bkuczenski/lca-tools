@@ -60,15 +60,15 @@ class LciaEngine(object):
                 locale = 'GLO'
             if value is None:
                 value = self._qdb.convert(flow, query=quantity, locale=locale)
-            flow.add_characterization(quantity, value=value, origin=self._qdb.ref, location=locale)
+            flow.OLD_add_characterization(quantity, value=value, origin=self._qdb.ref, location=locale)
         else:
             ref_conversion = self._qdb.convert_reference(flow, factor.flow.reference_entity, locale=locale)
             if locale is None:
                 for l in factor.locations():
-                    flow.add_characterization(factor.quantity, location=l, value=factor[l] * ref_conversion,
+                    flow.OLD_add_characterization(factor.quantity, location=l, value=factor[l] * ref_conversion,
                                               origin=factor.origin(l))
             else:
-                flow.add_characterization(factor.quantity, location=locale, value=factor[locale] * ref_conversion,
+                flow.OLD_add_characterization(factor.quantity, location=locale, value=factor[locale] * ref_conversion,
                                           origin=factor.origin(locale))
 
         self._qdb.add_entity_and_children(flow)

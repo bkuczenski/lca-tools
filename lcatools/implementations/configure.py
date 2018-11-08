@@ -105,8 +105,9 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
             context = flow.context
         else:
             context = None
-        self._archive.tm.add_c14n(flow['Name'], flow.reference_entity, qty, value, context=context,  location=location,
-                                  origin=self.origin, overwrite=overwrite)
+        self._archive.tm.add_characterization(flow['Name'], flow.reference_entity, qty, value, context=context,
+                                              location=location,
+                                              origin=self.origin, overwrite=overwrite)
 
     def allocate_by_quantity(self, process_ref, quantity_ref, overwrite=False, **kwargs):
         """

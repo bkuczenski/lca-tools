@@ -60,7 +60,7 @@ class FragmentFlow(object):
         flow = make_ref('flows/%s' % j['flowID'], 'flow', ref_qty)
         for fpm in fpms[1:]:
             mag_qty = make_ref('flowproperties/%s' % fpm['flowPropertyID'], 'quantity', fpm['unit'])
-            flow.add_characterization(mag_qty, value=fpm['magnitude'] / magnitude)
+            flow.characterize(mag_qty, value=fpm['magnitude'] / magnitude, compartment=None)
         dirn = j['direction']
 
         if 'parentFragmentFlowID' in j:

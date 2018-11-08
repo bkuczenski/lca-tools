@@ -44,14 +44,22 @@ class LcQuantity(LcEntity):
     Quantity entities use the quantity interface provided by the parent archive; this emulates the operation of 
     quantity refs, which have access to the catalog.
     """
-    def add_ch13n(self, flow, value, context=None, overwrite=False, origin=None, location='GLO'):
-        self._qi.add_c14n(flow, self, value, context=context, overwrite=overwrite, origin=origin, location=location)
-
     def cf(self, flow, locale='GLO', **kwargs):
         return self._qi.cf(flow, self, locale=locale, **kwargs)
 
-    def factors(self, flowable=None, compartment=None, **kwargs):
-        return self._qi.factors(self, flowable=flowable, compartment=compartment, **kwargs)
+    def factors(self, flowable=None, context=None, **kwargs):
+        return self._qi.factors(self, flowable=flowable, context=context, **kwargs)
+
+    def profile(self, flow, **kwargs):
+        """
+        This is a ridiculous hack because the profile doesn't depend on self at all.  So let's make it non-ridiculous
+        by defaulting to self as ref_quantity, so it's not TOTALLY ridiculous
+        :param flow:
+        :param kwargs:
+        :return:
+        """
+        ref_quantity = kwargs.pop('ref_quantity', self)
+        return self._qi.profile(flow, ref_quantity=ref_quantity, **kwargs)
 
     """
     Interior utility functions

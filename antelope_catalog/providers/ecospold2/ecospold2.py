@@ -7,7 +7,6 @@ from __future__ import print_function, unicode_literals
 from collections import namedtuple
 from time import time
 
-import six
 from lxml import objectify
 from lxml.etree import XMLSyntaxError
 
@@ -22,10 +21,6 @@ from lcatools.archives import LcArchive
 from ..xml_widgets import *
 
 from .ecospold2_index import EcoSpold2IndexImplementation
-
-if six.PY2:
-    bytes = str
-    str = unicode
 
 
 EcospoldExchange = namedtuple('EcospoldExchange', ('flow', 'direction', 'value', 'termination', 'is_ref'))

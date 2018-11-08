@@ -128,7 +128,7 @@ class OpenLcaJsonLdArchive(LcArchive):
         f = LcFlow(f_id, Name=name, Compartment=comp, CasNumber=cas, ReferenceQuantity=ref_q, **f_j)
 
         for i, q in enumerate(qs):
-            f.add_characterization(q, value=facs[i], location=loc)
+            self.tm.add_characterization(name, ref_q, q, facs[i], context=f.context, location=loc)
 
         self.add(f)
         return f
@@ -156,7 +156,7 @@ class OpenLcaJsonLdArchive(LcArchive):
                   flow.reference_entity.uuid,
                   fp.uuid)
             print('From %g %s' % (value, fp.unit()))
-            value *= flow.cf(flow.reference_entity)
+            value /= fp.cf(flow).value  # TODO: account for locale?  ## is this even right?
             print('To %g %s' % (value, flow.unit()))
 
         return p.add_exchange(flow, dirn, value=value, add_dups=True)

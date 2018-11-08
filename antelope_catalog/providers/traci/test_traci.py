@@ -28,7 +28,7 @@ class TraciTest(unittest.TestCase):
         # note: UUID equality depends on the proper NS UUID being set in the invocation
         tox = self._qi.get('Ecotoxicity, freshwater')
         self.assertEqual(tox.uuid, 'f2bd6435-f825-3e7e-ab40-45ea5d1dc1d5')
-        fac = next(self._qi.factors(tox.external_ref, flowable='ethyl carbamate', compartment='agricultural'))
+        fac = next(self._qi.factors(tox.external_ref, flowable='ethyl carbamate', context='agricultural'))
         self.assertTrue(isclose(fac.value, 1.783221, rel_tol=1e-6))
 
     def test_compartments(self):

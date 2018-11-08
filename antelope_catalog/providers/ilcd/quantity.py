@@ -54,14 +54,14 @@ class IlcdQuantityImplementation(QuantityImplementation):
         """
         pass
 
-    def factors(self, quantity, flowable=None, compartment=None, **kwargs):
+    def factors(self, quantity, flowable=None, context=None, **kwargs):
         """
         Return characterization factors for the given quantity, subject to optional flowable and compartment
         filter constraints. This is ill-defined because the reference unit is not explicitly reported in current
         serialization for characterizations (it is implicit in the flow)-- but it can be added to a web service layer.
         :param quantity:
         :param flowable:
-        :param compartment: not implemented
+        :param context: not implemented
         :return:
         """
         for factor in self._archive.generate_factors(quantity):
@@ -70,15 +70,15 @@ class IlcdQuantityImplementation(QuantityImplementation):
                     continue
             yield factor
 
-    def quantity_relation(self, ref_quantity, flowable, compartment, query_quantity, locale='GLO', **kwargs):
+    def quantity_relation(self, flowable, ref_quantity, query_quantity, context, locale='GLO', **kwargs):
         """
         Return a single number that converts the a unit of the reference quantity into the query quantity for the
         given flowable, compartment, and locale (default 'GLO').  If no locale is found, this would be a great place
         to run a spatial best-match algorithm.
-        :param ref_quantity:
         :param flowable:
-        :param compartment:
+        :param ref_quantity:
         :param query_quantity:
+        :param context:
         :param locale:
         :return:
         """

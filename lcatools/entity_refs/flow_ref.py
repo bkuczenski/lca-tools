@@ -26,13 +26,9 @@ class FlowRef(EntityRef):
 
     def __init__(self, *args, **kwargs):
         super(FlowRef, self).__init__(*args, **kwargs)
-        self._characterizations = dict()
-        self._cfs_fetched = False
 
         self._context = None
         self._flowable = None
-
-        self.add_characterization(self.reference_entity, value=1.0)
 
     def unit(self):
         return self.reference_entity.reference_entity
@@ -93,6 +89,7 @@ class FlowRef(EntityRef):
             raise FlowRefWithoutContext('Context was not set for flow ref %s!' % self.link)
         return self._context
 
+    '''
     def has_characterization(self, quantity, location='GLO'):
         """
         A flow ref keeps track of characterizations by link
@@ -127,15 +124,11 @@ class FlowRef(EntityRef):
     def characterizations(self):
         for i in self._characterizations.values():
             yield i
+    '''
 
     def serialize(self, characterizations=False, domesticate=False, **kwargs):
         j = super(FlowRef, self).serialize(domesticate=domesticate)
-        if characterizations:
-            j['characterizations'] = sorted([x.serialize(**kwargs) for x in self._characterizations.values()],
-                                            key=lambda x: x['quantity'])
-        else:
-            j['characterizations'] = [x.serialize(**kwargs) for x in self._characterizations.values()
-                                      if x.quantity is self.reference_entity]
+        j['referenceQuantity'] = self.reference_entity.external_ref
 
         return j
 
@@ -149,6 +142,16 @@ class FlowRef(EntityRef):
     def originate(self, direction=None, **kwargs):
         return self._query.originate(self.external_ref, direction, **kwargs)
 
+    def characterize(self, quantity, value, context=None, **kwargs):
+        if context is None:
+            context = self.context
+        try:
+            flowable = self['Name']
+        except KeyError:
+            flowable = self.link
+        return self._query.characterize(flowable, self.reference_entity, quantity, value, context=context, **kwargs)
+
+    '''
     def cf(self, query_quantity, locale='GLO', **kwargs):
         if isinstance(query_quantity, str):
             query_quantity = self._query.get(query_quantity)
@@ -156,17 +159,13 @@ class FlowRef(EntityRef):
         if u in self._characterizations:
             return self._characterizations[u][locale]
         try:
-            val = self._query.cf(self.external_ref, query_quantity, locale=locale, **kwargs)
+            val = self._query.cf(self.link, query_quantity, locale=locale, **kwargs)
+            self._query.add_c14n(self.link, self.reference_entity.external_ref,
+                                 query_quantity.external_ref, val, context=self.context, location=locale)
         except QuantityRequired:
             print('!Unable to lookup flow CF\nflow: %s\nquantity: %s' % (self.link, query_quantity.link))
             val = 0.0
-        self.add_characterization(query_quantity, value=val, location=locale)
         return val
-
-    def factor(self, quantity):
-        if quantity.uuid in self._characterizations:
-            return self._characterizations[quantity.uuid]
-        return Characterization(self, quantity)
 
     def profile(self, show=False, **kwargs):
         """
@@ -175,15 +174,11 @@ class FlowRef(EntityRef):
         :param kwargs:
         :return:
         """
+        return self._query.profile()
         if show:
             print('%s' % self)
         out = []
         seen = set()
-        for cf in self._characterizations.values():
-            if show:
-                print('%2d %s' % (len(out), cf.q_view()))
-            out.append(cf)
-            seen.add(cf.quantity.uuid)
         if not self._cfs_fetched:
             try:
                 for cf in self._query.profile(self.external_ref, **kwargs):
@@ -193,13 +188,14 @@ class FlowRef(EntityRef):
                         print('%2d %s' % (len(out), cf.q_view()))
                     out.append(cf)
                     seen.add(cf.quantity.uuid)
-                    self.add_characterization(cf.quantity, value={l: cf[l] for l in cf.locations()})
+                    self._query.add_c14n(self['Name'], self.reference_entity.link,
+                                         cf.quantity.link, value={l: cf[l] for l in cf.locations()},
+                                         context=self.context)
                 self._cfs_fetched = True
             except QuantityRequired:
                 pass  # return empty; keep checking on subsequent queries
         return out
 
-    '''
     def mix(self, direction, **kwargs):
         return self._query.mix(self.external_ref, direction, **kwargs)
     '''

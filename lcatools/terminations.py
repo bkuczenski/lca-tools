@@ -6,7 +6,7 @@ as a ProductFlow in lca-matrix, although the FlowTermination is more powerful.  
 either one from the other.
 """
 
-from .interfaces import PrivateArchive, comp_dir
+from .interfaces import PrivateArchive, comp_dir, NoFactorsFound
 
 from lcatools.exchanges import ExchangeValue
 from lcatools.lcia_results import LciaResult, LciaResults
@@ -289,6 +289,7 @@ class FlowTermination(object):
         problem is, the term doesn't know its own scenario
         :return:
         """
+        '''
         if self._parent.flow == self.term_flow:
             return 1.0
         parent_qty = self._parent.flow.reference_entity
@@ -297,11 +298,11 @@ class FlowTermination(object):
             return 1.0
         if self._parent.flow.cf(tgt_qty) == 0:
             if self.term_flow.cf(parent_qty) == 0:
-                '''
+                'x'x'x
                 print('term flow')
                 self.term_flow.show()
                 self.term_flow.profile()
-                '''
+                'x'x'x
                 print('\nfragment flow %s' % self._parent)
                 self._parent.flow.show()
                 self._parent.flow.profile()
@@ -310,6 +311,11 @@ class FlowTermination(object):
             else:
                 return 1.0 / self.term_flow.cf(parent_qty)
         return self._parent.flow.cf(tgt_qty)
+        '''
+        try:
+            return self.term_flow.reference_entity.cf(self._parent.flow).value
+        except NoFactorsFound:
+            return 1.0 / self._parent.flow.reference_entity.cf(self.term_flow).value
 
     def validate_flow_conversion(self):
         return self.flow_conversion  # deal with it when an error comes up

@@ -20,6 +20,7 @@ The proposed model for the quantity interface is as follows:
 
  quantity_relation (flowable, ref quantity, query quantity, context, locale='GLO', strategy='first')
      => number.  quantity_relation(*) = cf(*).value
+        amount of the query quantity that corresponds to a unit of the ref quantity
  cf (flow[able], query quantity, ref quantity=None, context=None, locale='GLO', strategy='first')
      =>  single result, chosen by named strategy.  cf(*) = quantity_conversions(*)[0][0]
  quantity_conversions (flow[able], query quantity, ref quantity=None, context=None, locale='GLO') "comprehensive"
@@ -36,7 +37,7 @@ and cf() will fail.  For the Quantity Relation, all 4 core arguments are explici
 Additional methods:
 
  profile (flow[able], ref_quantity=None, context=None)
-     => sequence of all valid results from quantity conversions for all characterized quantities for the flow[able]
+     => sequence of cfs from quantity conversions for all characterized quantities for the flow[able]
  factors (quantity, flowable=None, ref_quantity=None, context=None)
      => sequence of characterizations for the named quantity, optionally filtered by flowable and/or compartment,
         optionally converted to the named reference
@@ -119,19 +120,20 @@ class QuantityInterface(AbstractQuery):
                                                  QuantityRequired('Quantity interface required'),
                                                  quantity, **kwargs))
 
-    def add_c14n(self, flowable, ref_quantity, query_quantity, value, context=None, location='GLO', **kwargs):
+    def characterize(self, flowable, ref_quantity, query_quantity, value, context=None, location='GLO', **kwargs):
         """
-        Add Characterization for a flowable, reporting the amount of a query quantity that is equal to a unit amount
-        of the reference quantity, for a given context and location
+        Add Characterization data for a flowable, reporting the amount of a query quantity that is equal to a unit
+        amount of a reference quantity, for a given context and location
         :param flowable: string or flow external ref
         :param ref_quantity: string or external ref
         :param query_quantity: string or external ref
+        :param value: float or dict of locations to floats
         :param context: string
-        :param location: string
+        :param location: string, ignored if value is dict
         :param kwargs: overwrite=False, origin=query_quantity.origin, others?
         :return:
         """
-        return self._perform_query(_interface, 'add_c14n', QuantityRequired,
+        return self._perform_query(_interface, 'characterize', QuantityRequired,
                                    flowable, ref_quantity, query_quantity, value,
                                    context=context, location=location, **kwargs)
 

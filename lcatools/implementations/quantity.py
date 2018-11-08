@@ -87,13 +87,26 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         """
         return self._archive.tm.get_canonical(quantity)
 
-    def factor(self, *args, **kwargs):
-        pass
-
     def factors(self, quantity, flowable=None, context=None, dist=0):
         q = self.get_canonical(quantity)
         for cf in self._archive.tm.factors_for_quantity(q, flowable=flowable, context=context, dist=dist):
             yield cf
+
+    def characterize(self, flowable, ref_quantity, query_quantity, value, context=None, location='GLO', **kwargs):
+        """
+        We gotta be able to do this
+        :param flowable: string
+        :param ref_quantity: string
+        :param query_quantity: string
+        :param value: float
+        :param context: string
+        :param location: string
+        :param kwargs: overwrite=False, origin=self.origin
+        :return:
+        """
+        rq = self.get_canonical(ref_quantity)
+        qq = self.get_canonical(query_quantity)
+        return self._archive.tm.add_characterization(flowable, rq, qq, value, context=context, location=location, **kwargs)
 
     def _ref_qty_conversion(self, ref_quantity, flowable, compartment, res, locale):
         """
@@ -170,15 +183,23 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         return qr_results, qr_geog, qr_mismatch
 
     def _get_flowable_info(self, flow, ref_quantity, context):
-        f = self.get(flow)
-        if f is None:
-            flowable = flow
+        # skip the lookup if all terms are given
+        if ref_quantity is None or context is None:
+            if hasattr(flow, 'entity_type') and flow.entity_type == 'flow':
+                f = flow
+            else:
+                f = self.get(flow)
+
+            if f is None:
+                flowable = flow
+            else:
+                flowable = f['Name']
+                if ref_quantity is None:
+                    ref_quantity = f.reference_entity
+                if context is None:
+                    context = f.context
         else:
-            flowable = f['Name']
-            if ref_quantity is None:
-                ref_quantity = f.reference_entity
-            if context is None:
-                context = f.context
+            flowable = flow
         rq = self.get_canonical(ref_quantity)
         cx = self._archive.tm[context]
         return flowable, rq, cx
@@ -205,7 +226,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
 
         return self._quantity_conversions(flowable, rq, qq, context, locale=locale, **kwargs)
 
-    def cf(self, flow, quantity, ref_quantity=None, context=None, locale='GLO', strategy=None, **kwargs):
+    def cf(self, flow, quantity, ref_quantity=None, context=None, locale='GLO', strategy=None, allow_proxy=True, **kwargs):
         """
         Reports the first / best result of a quantity conversion
 
@@ -215,6 +236,9 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         :param context:
         :param locale:
         :param strategy: approach for resolving multiple-CF in dist>0.  ('highest' | 'lowest' | 'average' | ...? )
+          None = return first result
+        :param allow_proxy: [True] in the event of 0 exact results but >0 geographic proxies, return a geographic
+          proxy without error.
         :param kwargs:
         :return:
         """
@@ -222,9 +246,14 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
                                                                      ref_quantity=ref_quantity, context=context,
                                                                      locale=locale, **kwargs)
 
+        if len(qr_results) == 0 and len(qr_geog) > 0 and allow_proxy:
+            qr_results += qr_geog
+
         if len(qr_results) > 1:
             # this is obviously punting
-            if strategy == 'highest':
+            if strategy is None:
+                return qr_results[0].value
+            elif strategy == 'highest':
                 return max(v.value for v in qr_results)
             elif strategy == 'lowest':
                 return min(v.value for v in qr_results)
@@ -253,7 +282,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         val = self.quantity_relation(flowable, rq, quantity, cx, locale=locale, **kwargs)
         return QRResult(flowable, rq, quantity, cx, locale, self.origin, val)
 
-    def profile(self, flow, ref_quantity=None, context=None, **kwargs):
+    def profile(self, flow, ref_quantity=None, context=None, complete=False, **kwargs):
         """
         Generate characterizations for the named flow or flowable.  The positional argument is first used to retrieve
         a flow, and if successful, the reference quantity and context are taken for that flow.  Otherwise, the
@@ -261,16 +290,24 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         context.  In that case, if no ref quantity is given then the CFs are returned as-reported; if a ref quantity is
         given then a ref quantity conversion is attempted and the resulting QRResult objects are returned.
 
+        This desperately needs tested.
+
         :param flow:
         :param ref_quantity: [None]
         :param context: [None]
+        :param complete: [False] if True, report all results including errors and geographic proxies
         :param kwargs:
         :return:
         """
         flowable, rq, cx = self._get_flowable_info(flow, ref_quantity, context)
-        qrr, qrm, qrg = self._quantity_conversions(flowable, None, ref_quantity=rq, context=cx, **kwargs)
-        for r in qrr + qrm + qrg:
+        qrr, qrg, qrm = self._quantity_conversions(flowable, None, ref_quantity=rq, context=cx, **kwargs)
+
+        for r in qrr:
             yield r
+
+        if complete:
+            for r in qrg + qrm:
+                yield r
 
     def do_lcia(self, quantity, inventory, locale='GLO', **kwargs):
         """

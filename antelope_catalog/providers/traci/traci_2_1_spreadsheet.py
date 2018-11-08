@@ -99,7 +99,7 @@ class Traci21Factors(BasicArchive):
                 continue
             f = self._create_flow(row, i.Compartment)
             try:
-                f.add_characterization(q, value=cf)
+                self.tm.add_characterization(f['Name'], f.reference_entity, q, cf, context=f.context)
             except DuplicateCharacterizationError:
                 continue
 

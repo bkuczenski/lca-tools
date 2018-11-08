@@ -684,7 +684,8 @@ class LcFragment(LcEntity):
 
     def balance(self, scenario=None, observed=False):
         """
-        display a balance the inputs and outputs from a fragment termination.
+        display a balance the inputs and outputs from a fragment termination.  This probably needs to be reimagined and
+        rewritten
         :param scenario:
         :param observed:
         :return: a dict of quantities to balance magnitudes (positive = input to term node)
@@ -694,14 +695,14 @@ class LcFragment(LcEntity):
             in_ex = self.exchange_value(scenario, observed=observed)
         else:
             in_ex = 1.0
-        for cf in self.flow.characterizations():
+        for cf in self.flow.reference_entity.profile(self.flow):
             if cf.value is not None:
                 if self.direction == 'Input':  # output from term
                     qs[cf.quantity] -= cf.value * in_ex
                 else:
                     qs[cf.quantity] += cf.value * in_ex
         for c in self.child_flows:
-            for cf in c.flow.characterizations():
+            for cf in c.flow.reference_entity.profile(c.flow):
                 mag = c.exchange_value(scenario, observed=observed) * (cf.value or 0.0)
                 if mag != 0:
                     if c.direction == 'Output':
@@ -725,7 +726,7 @@ class LcFragment(LcEntity):
             quantity = self.flow.reference_entity
 
         print('%s' % quantity)
-        mag = self.flow.cf(quantity)
+        mag = quantity.cf(self.flow).value
         if self.reference_entity is None:
             mag *= self.exchange_value(scenario, observed=observed)
         if self.direction == 'Input':
@@ -736,7 +737,7 @@ class LcFragment(LcEntity):
         _p_line(self, mag, comp_dir(self.direction))
 
         for c in sorted(self.child_flows, key=lambda x: x.direction):
-            mag = c.exchange_value(scenario, observed=observed) * c.flow.cf(quantity)
+            mag = c.exchange_value(scenario, observed=observed) * quantity.cf(c.flow).value
             if c.direction == 'Output':
                 mag *= -1
             if mag is None or mag != 0:
@@ -1093,7 +1094,7 @@ class LcFragment(LcEntity):
             stock = term.inbound_exchange_value  # balance measurement w.r.t. term node's unit magnitude
         bal_f = None
         if self._conserved_quantity is not None:
-            stock *= self.flow.cf(self._conserved_quantity)
+            stock *= self._conserved_quantity.cf(self.flow).value
             if self.direction == 'Input':  # convention: inputs to self are positive
                 stock *= -1
             self.dbg_print('%.3s %g inbound-balance' % (self.uuid, stock), level=2)
@@ -1278,7 +1279,7 @@ class LcFragment(LcEntity):
         if conserved_qty is not None:
             if self.balance_flow:
                 raise BalanceFlowError  # to be caught
-            conserved_val = ev * self.flow.cf(conserved_qty)
+            conserved_val = ev * conserved_qty.cf(self.flow).value
             if conserved_val != 0:
                 conserved = True
             if self.direction == 'Output':  # convention: inputs to parent are positive

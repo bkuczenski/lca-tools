@@ -219,8 +219,8 @@ class TermManager(object):
             return list(cfs)[0]
         return None
 
-    def add_c14n(self, flowable, ref_quantity, query_quantity, value, context=None, origin=None, location='GLO',
-                 overwrite=False):
+    def add_characterization(self, flowable, ref_quantity, query_quantity, value, context=None, origin=None,
+                             location='GLO', overwrite=False):
         """
         Replacement for flow-based add_characterization.  THE ONLY place to create Characterization objects.
         Add them to all flowables that match the supplied flow.
@@ -357,18 +357,35 @@ class TermManager(object):
     '''
     def _serialize_qdict(self, quantity, values=False):
         _ql = self.qlookup(quantity)
-        return {fb: cl.serialize(values=values) for fb, cl in _ql.items()}
+        return {str(fb): cl.serialize(values=values) for fb, cl in _ql.items()}
 
     def serialize_factors(self, *quantities, values=False):
         if len(quantities) == 0:
             quantities = self._q_dict.keys()
         j = dict()
         for q in quantities:
-            j[self._canonical_q_ref(q)] = self._serialize_qdict(q, values=values)
+            _sq = self._serialize_qdict(q, values=values)
+            if len(_sq) > 0:
+                j[self._canonical_q_ref(q)] = _sq
+        return j
 
     def _add_from_json(self, j):
         """
-        Argument: the contents of archive['characterizations']
+        Argument: the contents of archive['characterizations'], which looks like this:
+        'characterizations': {
+          query_quantity.external_ref: {
+            flowable: {
+              context: {
+                origin: {
+                  ref_quantity: xxx,
+                  value: {
+                    locale: val
+                  }
+                }
+              }
+            }
+          }
+        }
         :param j:
         :return:
         """
@@ -376,5 +393,9 @@ class TermManager(object):
             query_q = self._canonical_q(query_ext_ref)
             for fb, cxs in fbs.items():
                 flowable = self._fm[fb]
-
-
+                for cx, cfs in cxs.items():
+                    context = self._cm[cx]
+                    for org, spec in cfs.items():
+                        origin = org
+                        ref_q = self._canonical_q(spec['ref_quantity'])
+                        self.add_characterization(flowable, ref_q, query_q, spec['value'], context=context, origin=origin)

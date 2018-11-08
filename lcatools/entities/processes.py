@@ -439,7 +439,7 @@ class LcProcess(LcEntity):
             if rfx.value is None:
                 continue
             exchs[rf.flow] = rfx.value
-            mags[rf.flow] = exchs[rf.flow] * rf.flow.cf(quantity)
+            mags[rf.flow] = exchs[rf.flow] * quantity.cf(rf.flow).value
 
         total = sum([v for v in mags.values()])
         if total == 0:
@@ -462,7 +462,7 @@ class LcProcess(LcEntity):
             print('Not a reference exchange.')
             return False
         if self.alloc_qty is not None:
-            if reference.flow.cf(self.alloc_qty) == 0:
+            if self.alloc_qty.cf(reference.flow).value == 0:
                 return False
             return True
         missing_allocations = []

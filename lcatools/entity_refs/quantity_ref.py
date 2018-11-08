@@ -36,11 +36,20 @@ class QuantityRef(EntityRef):
             return False
         return True
 
+    """
+    Interface methods
+    """
     def flowables(self, **kwargs):
         return self._query.flowables(quantity=self.external_ref, **kwargs)
 
     def factors(self, **kwargs):
         return self._query.factors(self.external_ref, **kwargs)
+
+    def cf(self, flow, **kwargs):
+        return self._query.cf(flow, self.external_ref, **kwargs)
+
+    def characterize(self, flowable, ref_quantity, value, **kwargs):
+        return self._query.characterize(flowable, ref_quantity, self, value, **kwargs)
 
     def ensure_lcia(self):
         self._query.ensure_lcia_factors(self)

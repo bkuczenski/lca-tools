@@ -366,20 +366,11 @@ class IlcdArchive(LcArchive):
             cat = find_tags(o, 'class', ns='common')
         cat = [str(i) for i in cat]
 
-        if str(find_tag(o, 'typeOfDataSet', ns=ns)) == 'Elementary flow':
-            f = LcFlow(u, Name=n, CasNumber=cas, Comment=c, Compartment=cat)
-        else:
-            f = LcFlow(u, Name=n, CasNumber=cas, Comment=c, Compartment=['Intermediate flows'], Class=cat)
-
-        f.set_external_ref('%s/%s' % (typeDirs['Flow'], u))
-
         ref_to_ref = get_reference_flow_property_id(o, ns=ns)
+        chars = []
+        ref_qty = None
+
         for fp in o['flowProperties'].getchildren():
-            if int(fp.attrib['dataSetInternalID']) == ref_to_ref:
-                is_ref = True
-            else:
-                is_ref = False
-            val = float(find_tag(fp, 'meanValue', ns=ns))
 
             ref = find_tag(fp, 'referenceToFlowPropertyDataSet', ns=ns)
             rfp_uuid = ref.attrib['refObjectId']
@@ -390,13 +381,28 @@ class IlcdArchive(LcArchive):
             except (HTTPError, XMLSyntaxError, KeyError):
                 continue
 
-            try:
-                f.add_characterization(q, reference=is_ref, value=val)
-            except DuplicateCharacterizationError:
-                print('Duplicate Characterization in entity %s\n %s = %g' % (u, q, val))
-                # let it go
+            if int(fp.attrib['dataSetInternalID']) == ref_to_ref:
+                ref_qty = q
+            else:
+                val = float(find_tag(fp, 'meanValue', ns=ns))
+                chars.append((q, val))
+
+        if str(find_tag(o, 'typeOfDataSet', ns=ns)) == 'Elementary flow':
+            f = LcFlow(u, Name=n, CasNumber=cas, Comment=c, ReferenceQuantity=ref_qty, Compartment=cat)
+        else:
+            f = LcFlow(u, Name=n, CasNumber=cas, Comment=c, ReferenceQuantity=ref_qty, Class=cat)
+
+        f.set_external_ref('%s/%s' % (typeDirs['Flow'], u))
 
         self.add(f)
+
+        for qty, val in chars:
+            try:
+                self.tm.add_characterization(f['Name'], f.reference_entity, qty, val, context=f.context)
+            except DuplicateCharacterizationError:
+                print('Duplicate Characterization in entity %s\n %s = %g' % (u, qty, val))
+                # let it go
+
         return f
 
     def _create_process_entity(self, o, ns):

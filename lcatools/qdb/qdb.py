@@ -600,7 +600,7 @@ class Qdb(BasicArchive):
             compartment = self.c_mgr.find_matching(flow['Compartment'], interact=False)
             conv, origin = self._lookfor_conversion(f_inds, compartment, from_q_ind, ref_q_ind)
             if conv is not None:
-                flow.add_characterization(self._q.entity(from_q), location=locale, value=conv, origin=origin)
+                flow.OLD_add_characterization(self._q.entity(from_q), location=locale, value=conv, origin=origin)
         if conv is None:
             return 0.0
         return conv
@@ -689,7 +689,7 @@ class Qdb(BasicArchive):
                     factor *= ref_conversion
                     if flow is not None:
                         # if we have the flow, we should document the characterization used
-                        flow.add_characterization(cf.flow.reference_entity, value=ref_conversion, location=locale,
+                        flow.OLD_add_characterization(cf.flow.reference_entity, value=ref_conversion, location=locale,
                                                   origin=origin)
 
             self._print('  ** found value %g\n%s' % (factor, cf))
@@ -802,10 +802,10 @@ class Qdb(BasicArchive):
 
                 if factor is not None:
                     self._print('factor %g %s' % (factor, x))
-                    x.flow.add_characterization(q, value=factor, overwrite=refresh)
+                    x.flow.OLD_add_characterization(q, value=factor, overwrite=refresh)
                 else:
                     self._print('factor NONE %s' % x)
-                    x.flow.add_characterization(q)
+                    x.flow.OLD_add_characterization(q)
             if x.flow.cf(q) is not None:
                 r.add_component(x.flow.external_ref, entity=x.flow)
                 fac = x.flow.factor(q)

@@ -4,6 +4,7 @@ from .term_manager import TermManager
 from ..interfaces import to_uuid
 from ..implementations import BasicImplementation, IndexImplementation, QuantityImplementation
 from lcatools.entities import LcQuantity, LcUnit, LcFlow
+from ..from_json import to_json
 
 
 class OldJson(Exception):
@@ -146,8 +147,8 @@ class BasicArchive(EntityStore):
         """
         cx = self._tm.__getitem__(item)
         if cx is None:
-            if hasattr(item, 'uuid'):  # TODO: should this be external_ref?
-                item = item.uuid
+            if hasattr(item, 'external_ref'):  # TODO: should this be uuid?
+                item = item.external_ref
             return super(BasicArchive, self).__getitem__(item)
         return cx
 
@@ -156,9 +157,7 @@ class BasicArchive(EntityStore):
             # reset unit strings- units are such a hack
             entity.reference_entity._external_ref = entity.reference_entity.unitstring
         elif entity.entity_type == 'flow':
-            # need to import all the flow's quantities
-            for cf in entity.characterizations():
-                self.add_entity_and_children(cf.quantity)
+            self.add_entity_and_children(entity.reference_entity)
 
     def add_entity_and_children(self, entity):
         try:
@@ -199,8 +198,8 @@ class BasicArchive(EntityStore):
             rq = entity_j.pop('referenceQuantity')
         else:
             rq = next(c['quantity'] for c in chars if 'isReference' in c and c['isReference'] is True)
-        q = self[rq]
-        flow = LcFlow(uid, referenceQuantity=q, **entity_j)
+        ref_q = self[rq]
+        flow = LcFlow(uid, referenceQuantity=ref_q, **entity_j)
         for c in chars:
             if 'isReference' in c:
                 if c['isReference'] is True:
@@ -216,7 +215,7 @@ class BasicArchive(EntityStore):
                 # raise KeyError
             if 'value' in c:
                 v = c['value']
-            self.tm.add_c14n(flow, q, v, context=flow.context)
+            self.tm.add_characterization(flow['Name'], ref_q, q, v, context=flow.context)
 
         return flow
 
@@ -361,6 +360,29 @@ class BasicArchive(EntityStore):
                                   for q in self.entities_by_type('quantity')],
                                  key=lambda x: x['entityId'])
         return j
+
+    def export_quantity(self, filename, quantity, domesticate=False, values=True, gzip=False):
+        j = super(BasicArchive, self).serialize()
+        j['characterizations'] = dict()
+        _q_seen = set()
+        _queue = [self.tm.get_canonical(quantity)]
+        while len(_queue) > 0:
+            _q = _queue.pop(0)
+            print('Exporting %s' % _q)
+            _q_seen.add(_q)
+            cs = self.tm.serialize_factors(_q, values=values)
+            for qq in cs.values():
+                for cx in qq.values():
+                    for spec in cx.values():
+                        rq = self.tm.get_canonical(spec['ref_quantity'])
+                        if rq not in _q_seen and rq not in _queue:
+                            _queue.append(rq)
+            j['characterizations'].update(cs)
+
+        j['quantities'] = sorted([q.serialize(domesticate=domesticate)
+                                  for q in _q_seen],
+                                 key=lambda x: x['entityId'])
+        to_json(j, filename, gzip=gzip)
 
     def _serialize_all(self, **kwargs):
         return self.serialize(characterizations=True, values=True, **kwargs)

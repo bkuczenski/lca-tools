@@ -3,7 +3,7 @@ import os
 from shutil import rmtree
 from uuid import uuid4
 
-from ..fragment_editor import FragmentEditor
+from ..fragment_editor import create_fragment
 from .. import LcForeground
 from lcatools.entity_refs import CatalogRef  # , EntityRefMergeError  ## merge error no longer!
 
@@ -73,13 +73,12 @@ class LcForegroundTestCase(unittest.TestCase):
     """
     @classmethod
     def setUpClass(cls):
-        cls.ed = FragmentEditor()
         cls.fg = LcForeground(WORKING_DIR, ref=test_ref)
         cls.fg.entity_from_json(flow_json)
 
     def test_1_make_fragment(self):
         myflow = self.fg[flow_uuid]
-        frag = self.ed.create_fragment(myflow, 'Output', uuid=frag_uuid, comment='Test Fragment')
+        frag = create_fragment(myflow, 'Output', uuid=frag_uuid, comment='Test Fragment')
         self.fg.add(frag)
 
     def test_2_retrieve_fragment(self):

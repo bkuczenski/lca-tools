@@ -30,7 +30,7 @@ import os
 import csv
 from collections import namedtuple
 
-from ..foreground.fragment_editor import FragmentEditor
+from ..foreground.fragment_editor import create_fragment
 from lcatools.interfaces import comp_dir
 
 from .data_source import DataSource, DataCollection
@@ -236,7 +236,6 @@ class CalRecycleImporter(object):
                 raise ValueError('Fragment %d is multiply referenced' % frag['ReferenceFragmentFlowID'])
             self.ff[ffid]['Fragment'] = frag
 
-        self._ed = FragmentEditor(interactive=False)
         self._frags = dict()  # indexed with FragmentFlowID.str
         self._fragments = dict()  # indexed with FragmentID.str
 
@@ -291,8 +290,8 @@ class CalRecycleImporter(object):
         if ff['ParentFragmentFlowID'] == '':
             # must be a reference flow
             frag_uuid = ff['Fragment']['FragmentUUID']
-            frag = self._ed.create_fragment(flow, comp_dir(direction), uuid=frag_uuid, StageName=stage, Name=name,
-                                            FragmentFlowID=ff['FragmentFlowID'])
+            frag = create_fragment(flow, comp_dir(direction), uuid=frag_uuid, StageName=stage, Name=name,
+                                   FragmentFlowID=ff['FragmentFlowID'])
             self._fragments[ff['Fragment']['FragmentID']] = frag
         else:
             try:
@@ -303,8 +302,8 @@ class CalRecycleImporter(object):
                 parent = self._frags[ff['ParentFragmentFlowID']]
 
             frag_uuid = ff['FragmentUUID']
-            frag = self._ed.create_fragment(flow, direction, uuid=frag_uuid, Name=name, StageName=stage, parent=parent,
-                                            FragmentFlowID=ff['FragmentFlowID'])
+            frag = create_fragment(flow, direction, uuid=frag_uuid, Name=name, StageName=stage, parent=parent,
+                                   FragmentFlowID=ff['FragmentFlowID'])
 
         # save the fragment
         if frag is None:

@@ -87,7 +87,7 @@ changed. So we introduce this flag CONTEXT_STATUS_ to express to client code whi
 either of the two values: 'compat' means "old style" (flows have Compartments) and 'new' means use the new data
 model (exchange terminations are contexts) 
 """
-CONTEXT_STATUS_ = 'compat'  # 'compat': context = flow['Compartment']; 'new': context = exch.termination
+CONTEXT_STATUS_ = 'new'  # 'compat': context = flow['Compartment']; 'new': context = exch.termination
 
 
 # Containers of information about linked exchanges.  Direction is given with respect to the termination.

@@ -1,10 +1,151 @@
 from .fragments import LcFragment
 
-from lcatools.interfaces import directions, comp_dir
-from lcatools.interact import parse_math, cyoa, ifinput
-from lcatools.entities.editor import EntityEditor
+from lcatools.interfaces import check_direction, comp_dir
 
 
+def create_fragment(flow, direction, uuid=None, parent=None, name=None, comment=None, value=None, balance=False,
+                    **kwargs):
+    direction = check_direction(direction)
+    if name is None:
+        name = flow['Name']
+    name = kwargs.pop('Name', name)
+    if comment is None:
+        comment = ''
+    comment = kwargs.pop('Comment', comment)
+    if parent is None:
+        # direction reversed for UX! user inputs direction w.r.t. fragment, not w.r.t. parent
+        if value is None:
+            value = 1.0
+        if uuid is None:
+            frag = LcFragment.new(name, flow, comp_dir(direction), Comment=comment, exchange_value=value,
+                                  **kwargs)
+        else:
+            frag = LcFragment(uuid, flow, comp_dir(direction), Comment=comment, exchange_value=value, Name=name,
+                              **kwargs)
+    else:
+        if parent.term.is_null:
+            parent.to_foreground()
+        if balance or parent.term.is_subfrag:
+            # exchange value set during traversal
+            value = None
+
+        if uuid is None:
+            frag = LcFragment.new(name, flow, direction, parent=parent, Comment=comment,
+                                  exchange_value=value, balance_flow=balance, **kwargs)
+        else:
+            frag = LcFragment(uuid, flow, direction, parent=parent, Comment=comment, exchange_value=value,
+                              balance_flow=balance, Name=name, **kwargs)
+
+        # traverse -- may not need to do this anymore if we switch to live traversals for everything
+        parent.traverse(None)  # in fact, let's skip it
+
+    if flow.context.elementary:
+        frag.terminate(flow.context)
+
+    return frag
+
+
+def _transfer_evs(frag, new):
+    if frag.observed_ev != 0 and new.observable():
+        new.observed_ev = frag.observed_ev
+    for scen in frag.exchange_values():
+        if scen != 0 and scen != 1 and new.observable(scen):
+            new.set_exchange_value(scen, frag.exchange_value(scen))
+
+
+def clone_fragment(frag, suffix=' (copy)', comment=None, _parent=None):
+    """
+    Creates duplicates of the fragment and its children. returns the new reference fragment.
+    :param frag:
+    :param _parent: used internally
+    :param suffix: attached to top level fragment
+    :param comment: can be used in place of source fragment's comment
+    :return:
+    """
+    if _parent is None:
+        direction = comp_dir(frag.direction)  # this gets re-reversed in create_fragment
+    else:
+        direction = frag.direction
+    if suffix is None:
+        suffix = ''
+    the_comment = comment or frag['Comment']
+    new = create_fragment(parent=_parent,
+                          Name=frag['Name'] + suffix, StageName=frag['StageName'],
+                          flow=frag.flow, direction=direction, comment=the_comment,
+                          value=frag.cached_ev, balance=frag.balance_flow,
+                          background=frag.is_background)
+
+    _transfer_evs(frag, new)
+
+    for t_scen, term in frag.terminations():
+        if term.term_node is frag:
+            new.to_foreground(scenario=t_scen)
+        else:
+            new.terminate(term.term_node, term_flow=term.term_flow, direction=term.direction,
+                          descend=term.descend, inbound_ev=term.inbound_exchange_value,
+                          scenario=t_scen)
+
+    for c in frag.child_flows:
+        clone_fragment(c, _parent=new, suffix='')
+    return new
+
+
+def _fork_fragment(fragment, comment=None):
+    """
+    create a new fragment between the given fragment and its parent. if flow is None, uses the same flow.
+    direction is the same as the given fragment. exchange value is shifted to new frag; given frag's ev is
+    set to 1.
+
+    The newly created fragment is not terminated and the original fragment's parent is not corrected.  Both of
+    these must be done by the calling function before the fragment will have a sensible topology.
+
+    :param fragment:
+    :param comment:
+    :return: the new fragment
+    """
+    old_parent = fragment.reference_entity
+    subfrag = create_fragment(parent=old_parent, flow=fragment.flow, direction=fragment.direction,
+                              comment=comment, value=fragment.cached_ev,
+                              balance=fragment.balance_flow)
+    _transfer_evs(fragment, subfrag)
+    fragment.clear_evs()
+    return subfrag
+
+
+def interpose(fragment):
+    """
+    Insert a new foreground node in-line between the fragment and its parent, terminating it to the foreground and
+    making the specified fragment a child flow.
+    given fragment sets the new frag as its parent.
+    """
+    interp = _fork_fragment(fragment, comment='Interposed node')
+
+    interp.term.self_terminate()
+    fragment.set_parent(interp)
+
+    return interp
+
+
+def split_subfragment(fragment):
+    """
+    This method is like interpose except a new reference fragment is created.  The new node becomes a
+    cutoff w/r/t its parent, and then gets terminated to the new reference fragment as a subfragment.
+
+    Exchange value and balancing status stays with parent.
+
+    :param fragment:
+    :return:
+    """
+    surrogate = _fork_fragment(fragment, comment='New subfragment')
+
+    fragment.unset_parent()
+    surrogate.terminate(fragment)
+
+    return fragment
+
+
+
+'''
 class FragmentEditor(EntityEditor):
     def create_fragment(self, flow, direction, uuid=None, parent=None, comment=None, value=None, balance=False,
                         **kwargs):
@@ -205,3 +346,4 @@ class FragmentEditor(EntityEditor):
         surrogate.terminate(fragment)
 
         return fragment
+'''

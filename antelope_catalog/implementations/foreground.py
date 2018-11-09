@@ -1,8 +1,8 @@
 from lcatools.implementations import BasicImplementation
 from lcatools.interfaces import ForegroundInterface, comp_dir, BackgroundRequired, CONTEXT_STATUS_
 
-from lcatools.entities.editor import FlowEditor
-from ..foreground.fragment_editor import FragmentEditor
+from lcatools.entities.flows import new_flow
+from ..foreground.fragment_editor import create_fragment, clone_fragment, split_subfragment
 
 
 class FragRecursionError(Exception):
@@ -21,9 +21,6 @@ class OutOfOrderException(Exception):
 
 class NotForeground(Exception):
     pass
-
-
-ed = FragmentEditor(interactive=False)
 
 
 class ForegroundImplementation(BasicImplementation, ForegroundInterface):
@@ -70,7 +67,6 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         :param qdb: quantity database, used for compartments and id'ing flow properties--
         """
         super(ForegroundImplementation, self).__init__(*args, **kwargs)
-        self._flow_ed = FlowEditor(self._archive.qdb)
 
         self._recursion_check = None  # prevent recursive loops on frag-from-node
 
@@ -101,7 +97,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
             if context is not None and 'compartment' not in kwargs:
                 kwargs['compartment'] = str(context)
         ref_q = self._archive.qdb.get_canonical(ref_quantity)
-        f = self._flow_ed.new_flow(name=name, quantity=ref_q, **kwargs)
+        f = new_flow(name, ref_q, **kwargs)
         self._archive.add_entity_and_children(f)
         return f
 
@@ -112,7 +108,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         :param kwargs: uuid=None, parent=None, comment=None, value=None, balance=False; **kwargs passed to LcFragment
         :return:
         """
-        frag = ed.create_fragment(*args, **kwargs)
+        frag = create_fragment(*args, **kwargs)
         self._archive.add_entity_and_children(frag)
         return frag
 
@@ -133,7 +129,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
             if background is None:
                 background = False
             print('@@ Creating new termination bg=%s for %s' % (background, exchange.termination))
-            bg = ed.create_fragment(exchange.flow, comp_dir(exchange.direction), background=background)
+            bg = create_fragment(exchange.flow, comp_dir(exchange.direction), background=background)
             bg.terminate(self._archive.catalog_ref(exchange.process.origin, exchange.termination,
                                                    entity_type='process'), term_flow=exchange.flow)
             self._archive.add_entity_and_children(bg)
@@ -155,8 +151,8 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         :return:
         """
         rx = process_ref.reference(ref_flow)
-        top_frag = ed.create_fragment(rx.flow, rx.direction,
-                                      comment='Reference fragment; %s ' % process_ref.link)
+        top_frag = create_fragment(rx.flow, rx.direction,
+                                   comment='Reference fragment; %s ' % process_ref.link)
         term = top_frag.terminate(process_ref)
         self._child_fragments(top_frag, term, **kwargs)
         self._archive.add_entity_and_children(top_frag)
@@ -189,13 +185,13 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
 
         if include_elementary:
             for x in process.elementary(child_exchs):
-                elem = ed.create_fragment(x.flow, x.direction, parent=parent, value=x.value,
-                                          comment='FG Emission; %s' % comment,
-                                          StageName='Foreground Emissions')
+                elem = create_fragment(x.flow, x.direction, parent=parent, value=x.value,
+                                       comment='FG Emission; %s' % comment,
+                                       StageName='Foreground Emissions')
                 elem.to_foreground()  # this needs renamed
 
         for x in process.intermediate(child_exchs):
-            child_frag = ed.create_fragment(x.flow, x.direction, parent=parent, value=x.value, comment=comment)
+            child_frag = create_fragment(x.flow, x.direction, parent=parent, value=x.value, comment=comment)
 
             if x.termination is not None:
                 try:
@@ -218,6 +214,8 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
 
     def create_forest(self, process_ref, ref_flow=None, observe=True):
         """
+        This function needs serious attention-- use NETL project to repair this
+
         create a collection of maximal fragments that span the foreground for a given node.  Any node that is
         multiply invoked will be a subfragment; any node that has a unique parent will be a child fragment.
 
@@ -275,17 +273,17 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
             if _exch.termination in term_map:
                 _n = term_map[_exch.termination]
                 if _n.reference_entity is None:
-                    _c = ed.create_fragment(_exch.flow, _exch.direction, parent=_par, termination=_n,
-                                            value=_exch.value,
-                                            comment='Subfragment; %s' % _exch.termination)
+                    _c = create_fragment(_exch.flow, _exch.direction, parent=_par, termination=_n,
+                                         value=_exch.value,
+                                         comment='Subfragment; %s' % _exch.termination)
                 else:
                     # upgrade to a subfragment
                     print('### Splitting subfragment %s' % _n.term.term_node)
-                    _s = ed.split_subfragment(_n)
+                    _s = split_subfragment(_n)
                     term_map[_exch.termination] = _s
-                    _c = ed.create_fragment(_exch.flow, _exch.direction, parent=_par, termination=_s,
-                                            value=_exch.value,
-                                            comment='Subfragment; %s' % _exch.termination)
+                    _c = create_fragment(_exch.flow, _exch.direction, parent=_par, termination=_s,
+                                         value=_exch.value,
+                                         comment='Subfragment; %s' % _exch.termination)
             else:
                 _c = self._new_node(_exch, parent=_par)
                 term_map[_exch.termination] = _c
@@ -308,7 +306,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
             if top_frag.reference_entity is None:
                 return top_frag
             else:
-                return ed.split_subfragment(top_frag)
+                return split_subfragment(top_frag)
 
         top_frag = self._new_node(fx[0])
         term_map[fx[0].process.external_ref] = top_frag
@@ -362,12 +360,12 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
 
         print('# Creating node (%2d) with term %s' % (self._count, term.external_ref))
         self._count += 1
-        frag = ed.create_fragment(exch.flow, exch.direction, value=exch.value, parent=parent)  # will flip direction
+        frag = create_fragment(exch.flow, exch.direction, value=exch.value, parent=parent)  # will flip direction
         frag.terminate(term, term_flow=exch.flow)
 
         for dep in term.dependencies(ref_flow=exch.flow):
-            child = ed.create_fragment(dep.flow, dep.direction, parent=frag, value=dep.value,
-                                       comment='Dependency; %s' % term.link)
+            child = create_fragment(dep.flow, dep.direction, parent=frag, value=dep.value,
+                                    comment='Dependency; %s' % term.link)
             child.terminate(self.find_or_create_term(dep, background=True))
         return frag
 
@@ -410,25 +408,25 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         fg_exchs = [x for x in process.inventory(ref_flow=ref_flow)]
         rx = process.reference(ref_flow)
         comment = 'Created from inventory query to %s' % process.origin
-        top_frag = ed.create_fragment(rx.flow, rx.direction,
-                                      comment='Reference fragment; %s ' % comment)
+        top_frag = create_fragment(rx.flow, rx.direction,
+                                   comment='Reference fragment; %s ' % comment)
         top_frag.terminate(process)
 
         if include_elementary:
             for x in process.elementary(fg_exchs):
-                elem = ed.create_fragment(x.flow, x.direction, parent=top_frag, value=x.value,
-                                          comment='FG Emission; %s' % comment,
-                                          StageName='Foreground Emissions')
+                elem = create_fragment(x.flow, x.direction, parent=top_frag, value=x.value,
+                                       comment='FG Emission; %s' % comment,
+                                       StageName='Foreground Emissions')
                 elem.to_foreground()
 
         for x in process.intermediate(fg_exchs):
             if x.termination is None:
-                ed.create_fragment(x.flow, x.direction, parent=top_frag, value=x.value,
-                                   comment='Cut-off; %s' % comment)
+                create_fragment(x.flow, x.direction, parent=top_frag, value=x.value,
+                                comment='Cut-off; %s' % comment)
 
             else:
-                child_frag = ed.create_fragment(x.flow, x.direction, parent=top_frag, value=x.value,
-                                                comment='Subfragment; %s' % comment)
+                child_frag = create_fragment(x.flow, x.direction, parent=top_frag, value=x.value,
+                                             comment='Subfragment; %s' % comment)
                 if process.is_in_background(termination=x.termination, ref_flow=x.flow):
                     bg = self.find_or_create_term(x, background=True)
                     child_frag.terminate(bg)
@@ -462,6 +460,6 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
                        comment (override existing Comment if present; applied to all)
         :return:
         """
-        clone = ed.clone_fragment(frag, **kwargs)
+        clone = clone_fragment(frag, **kwargs)
         self._archive.add_entity_and_children(clone)
         return clone

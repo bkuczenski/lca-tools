@@ -8,17 +8,21 @@ class IndexRequired(Exception):
 directions = ('Input', 'Output')
 
 
-def check_direction(dirn):
-    if isinstance(dirn, str):
-        dirn = dirn[0].lower()
-    return {0: 'Input',
-            1: 'Output',
-            'i': 'Input',
-            'o': 'Output'}[dirn]
-
-
 class InvalidDirection(Exception):
     pass
+
+
+def check_direction(dirn):
+    _dir = dirn  # needed only in case of exception
+    if isinstance(dirn, str):
+        dirn = dirn[0].lower()
+    try:
+        return {0: 'Input',
+                1: 'Output',
+                'i': 'Input',
+                'o': 'Output'}[dirn]
+    except KeyError:
+        raise InvalidDirection(_dir)
 
 
 def comp_dir(direction):

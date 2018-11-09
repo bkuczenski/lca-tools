@@ -80,6 +80,12 @@ class Context(SynonymSet):
     def object(self):
         return self
 
+    def as_list(self):
+        if self.parent is None:
+            return [str(self)]
+        else:
+            return self.parent.as_list() + [str(self)]
+
     @property
     def sense(self):
         if self.parent is None:

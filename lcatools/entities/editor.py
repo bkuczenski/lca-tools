@@ -1,4 +1,4 @@
-from lcatools.interact import ifinput, pick_one, pick_compartment, cyoa, parse_math, menu_list
+from lcatools.interact import ifinput, pick_one, pick_compartment, menu_list
 from . import LcQuantity, LcFlow
 # from antelope_interface import directions, comp_dir
 

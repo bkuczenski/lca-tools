@@ -262,7 +262,7 @@ class LcCatalog(LciaEngine):
         :return:
         """
         self._resolver.delete_resource(resource)
-        if delete_source is False or not os.path.isfile(resource.source):
+        if delete_source is False or resource.source is None or not os.path.isfile(resource.source):
             return
         if len([t for t in self._resolver.resources_with_source(resource.source)]) > 0:
             return

@@ -1,4 +1,7 @@
 from ..lc_resource import LcResource
+from collections import namedtuple
+
+ResourceInfo = namedtuple('ResourceInfo', ('source', 'ds_type', 'download_url', 'download_md5sum', 'config'))
 
 
 class DataSource(object):
@@ -15,7 +18,14 @@ class DataSource(object):
     def root(self):
         return self._root
 
-    def _make_resource(self, ref, source, ds_type=None, **kwargs):
+    def _make_resource(self, ref, source=None, ds_type=None, info=None, **kwargs):
+        if isinstance(info, ResourceInfo):
+            source = info.source
+            ds_type = info.ds_type
+            if info.download_url is not None:
+                kwargs['download'] = {'url': info.download_url, 'md5sum': info.download_md5sum}
+            if info.config is not None:
+                kwargs['config'] = info.config
         if ds_type is None:
             ds_type = self._ds_type
         return LcResource(ref, source, ds_type, **kwargs)

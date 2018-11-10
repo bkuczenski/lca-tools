@@ -15,7 +15,7 @@ class AllocationGrid(BaseTableOutput):
         """
         columns should be seeded with allocated exchanges
 
-        :param flow_collection:
+        :param alloc_inv: the inventory iterable
         :return: allocated exchanges
         """
         for x in alloc_inv:
@@ -35,7 +35,7 @@ class AllocationGrid(BaseTableOutput):
         :param item:
         :return:
         """
-        _p = self._ar.retrieve_or_fetch_entity(item.termination)
+        _p = self._ar.get(item.termination)
         if _p is None:
             print('%s => None' % item.termination)
             return item.termination

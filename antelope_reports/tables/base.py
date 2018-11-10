@@ -254,6 +254,11 @@ class BaseTableOutput(object):
             fmt += '%%-%d.%ds ' % (width, width)
             rem_width -= 1
 
+        if rem_width < 0:
+            # uh oh negative rem width: widen freely; set remainder to 10 chars
+            max_width -= (rem_width - 10)
+            rem_width = 10
+
         fmt += '%%-%d.%ds' % (rem_width, rem_width)
 
         print(fmt % header)

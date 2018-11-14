@@ -198,8 +198,11 @@ class LcResource(object):
     def exists(self, path):
         filename = os.path.join(path, self.reference)
         if os.path.exists(filename):
-            with open(filename, 'r') as fp:
-                j = json.load(fp)
+            try:
+                with open(filename, 'r') as fp:
+                    j = json.load(fp)
+            except json.JSONDecodeError:
+                return False
 
             if any([self.matches(k) for k in j[self.reference]]):
                 return True
@@ -280,7 +283,8 @@ class LcResource(object):
             return None
 
         if cf.check_config(config, args):
-            self._add_config(config, *args)
+            if not self.internal:  # don't want to store config on internal (derived) archives
+                self._add_config(config, *args)
             cf.apply_config({config: {args}})
             return True
         return False
@@ -334,8 +338,11 @@ class LcResource(object):
 
         filename = os.path.join(path, self.reference)
         if os.path.exists(filename):
-            with open(filename, 'r') as fp:
-                j = json.load(fp)
+            try:
+                with open(filename, 'r') as fp:
+                    j = json.load(fp)
+            except json.JSONDecodeError:
+                j = {self.reference: []}
 
             resources = [k for k in j[self.reference] if not self.matches(k)]
             resources.append(self.serialize())

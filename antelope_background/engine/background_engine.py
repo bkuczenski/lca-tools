@@ -287,8 +287,8 @@ class BackgroundEngine(object):
                 term = terms[0]
             else:
                 if strategy == 'abort':
-                    print('process: %s\nAmbiguous termination found for %s: %s' % (exch.process.external_ref,
-                                                                                   exch.direction, exch.flow))
+                    print('flow: %s\nAmbiguous termination found for %s: %s' % (exch.flow.external_ref,
+                                                                                exch.direction, exch.flow))
                     raise TerminationError
                 elif strategy == 'first':
                     term = terms[0]
@@ -584,7 +584,7 @@ class BackgroundEngine(object):
             self._traverse_term_exchanges(j, multi_term, default_allocation, net_coproducts)
         except TerminationError:
             self._rm_product_flow_children(j)
-            print('Termination Error')
+            print('Termination Error: process %s: ref_flow %s, ' % (j.process.external_ref, j.flow.external_ref))
 
             raise
 

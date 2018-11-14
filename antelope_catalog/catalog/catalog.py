@@ -38,6 +38,8 @@ from ..lc_resource import LcResource
 from lcatools.flowdb.compartments import REFERENCE_INT  # reference intermediate flows
 from ..data_sources.local import TEST_ROOT
 
+from lcatools.archives import archive_from_json
+
 
 class DuplicateEntries(Exception):
     pass
@@ -339,8 +341,16 @@ class LcCatalog(LciaEngine):
         if os.path.exists(inx_file):
             if not force:
                 print('Not overwriting existing index. force=True to override.')
-                ex_res = next(r for r in self._resolver.resources_with_source(inx_file))
-                return ex_res.reference
+                try:
+                    ex_res = next(r for r in self._resolver.resources_with_source(inx_file))
+                    return ex_res.reference
+                except StopIteration:
+                    # index file exists, but no matching resource
+                    inx = archive_from_json(inx_file)
+                    self._resolver.new_resource(inx.ref, inx_file, 'json', priority=priority, store=stored,
+                                                interfaces='index', _internal=True, static=True, preload_archive=inx)
+                    return inx.ref
+
             print('Re-indexing %s' % source)
         new_ref = res.make_index(inx_file)
         self._resolver.new_resource(new_ref, inx_file, 'json', priority=priority, store=stored, interfaces='index',
@@ -560,12 +570,15 @@ class LcCatalog(LciaEngine):
         # TODO: testing??
         for res in self._resolver.resolve(reference, strict=False):
             if res.add_config(config, *args):
-                print('Saving resource configuration for %s' % res.reference)
-                res.save(self)
-                if os.path.dirname(res.source) == self._index_dir:
-                    print('Saving updated index %s' % res.source)
-                    res.archive.write_to_file(res.source, gzip=True,
-                                              exchanges=False, characterizations=False, values=False)
+                if res.internal:
+                    if os.path.dirname(res.source) == self._index_dir:
+                        print('Saving updated index %s' % res.source)
+                        res.archive.write_to_file(res.source, gzip=True,
+                                                  exchanges=False, characterizations=False, values=False)
+                else:
+                    print('Saving resource configuration for %s' % res.reference)
+                    res.save(self)
+
             else:
                 if res.internal:
                     print('Deleting unconfigurable internal resource %s' % res.reference)

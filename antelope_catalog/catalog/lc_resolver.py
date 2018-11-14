@@ -48,7 +48,13 @@ class LcCatalogResolver(object):
                     yield res.source
 
     def _update_semantic_ref(self, ref):
-        resources = LcResource.from_json(os.path.join(self._resource_dir, ref))
+        path = os.path.join(self._resource_dir, ref)
+        try:
+            resources = LcResource.from_json(path)
+        except json.JSONDecodeError:
+            print('Skipping Invalid resource file %s' % path)
+            # os.remove(path)
+            return
         self._resources[ref] = resources
 
     def index_resources(self):
@@ -165,7 +171,7 @@ class LcCatalogResolver(object):
             os.remove(os.path.join(self._resource_dir, ref))
             return
         with open(os.path.join(self._resource_dir, ref), 'w') as fp:
-            json.dump(fp, {ref: j})
+            json.dump({ref: j}, fp)
 
     def write_resource_files(self):
         for ref, resources in self._resources.items():

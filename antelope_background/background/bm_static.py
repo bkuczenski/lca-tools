@@ -4,7 +4,7 @@ LcArchive subclass that supports rich background computations by providing a Fla
 
 import os
 
-from lcatools.archives import LcArchive
+from lcatools.archives import LcArchive, InterfaceError
 from .flat_background import FlatBackground
 from .implementation import TarjanBackgroundImplementation
 
@@ -29,7 +29,7 @@ class TarjanBackground(LcArchive):
         if iface == 'background':
             return TarjanBackgroundImplementation(self)
         else:
-            raise AttributeError('%s: This class can only implement the background interface' % iface)
+            raise InterfaceError('%s: This class can only implement the background interface' % iface)
 
     def create_flat_background(self, index):
         """

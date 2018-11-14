@@ -1,5 +1,5 @@
 from .entity_store import EntityStore, SourceAlreadyKnown
-from .basic_archive import BasicArchive, BASIC_ENTITY_TYPES
+from .basic_archive import BasicArchive, BASIC_ENTITY_TYPES, InterfaceError
 from .lc_archive import LcArchive
 from ..from_json import from_json
 

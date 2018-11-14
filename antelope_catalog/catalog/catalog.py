@@ -192,7 +192,7 @@ class LcCatalog(LciaEngine):
                 yield ':'.join([ref, i])
 
     def show_interfaces(self):
-        for ref, ints in self._resolver.references:
+        for ref, ints in sorted(self._resolver.references):
             print('%s [%s]' % (ref, ', '.join(ints)))
 
     '''
@@ -287,7 +287,7 @@ class LcCatalog(LciaEngine):
     Retrieve resources
     '''
     def _find_single_source(self, origin, interface, source=None):
-        r = self._resolver.get_resource(ref=origin, iface=interface, source=source)
+        r = self._resolver.get_resource(ref=origin, iface=interface, source=source, include_internal=False)
         r.check(self)
         return r.source
 
@@ -388,7 +388,7 @@ class LcCatalog(LciaEngine):
         bk_file = os.path.join(self.archive_dir, '%s_background' % inx_ref)
         bk = LcResource(inx_ref, bk_file, 'Background', interfaces='background', priority=99,
                         save_after=True, filetype='.mat', _internal=True)
-        bk.check(self)  # ImportError if resource not found
+        bk.check(self)  # ImportError if antelope_background pkg not found
         self.add_resource(bk)
         return bk.make_interface('background')  # when the interface is returned, it will trigger setup_bm
 
@@ -548,3 +548,27 @@ class LcCatalog(LciaEngine):
 
         res.check(self)
         return res.make_interface('foreground')
+
+    def configure_resource(self, reference, config, *args):
+        """
+        We must propagate configurations to internal, derived resources. This also begs for testing.
+        :param reference:
+        :param config:
+        :param args:
+        :return:
+        """
+        # TODO: testing??
+        for res in self._resolver.resolve(reference, strict=False):
+            if res.add_config(config, *args):
+                print('Saving resource configuration for %s' % res.reference)
+                res.save(self)
+                if os.path.dirname(res.source) == self._index_dir:
+                    print('Saving updated index %s' % res.source)
+                    res.archive.write_to_file(res.source, gzip=True,
+                                              exchanges=False, characterizations=False, values=False)
+            else:
+                if res.internal:
+                    print('Deleting unconfigurable internal resource %s' % res.reference)
+                    self.delete_resource(res, delete_source=True)
+                else:
+                    print('Unable to apply configuration to reference %s' % res.reference)

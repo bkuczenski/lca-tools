@@ -3,6 +3,8 @@ import os
 from collections import defaultdict
 from datetime import datetime
 
+from lcatools.archives import InterfaceError
+
 from .foreground import LcForeground
 from .catalog_query import INTERFACE_TYPES
 
@@ -95,6 +97,9 @@ class LcResource(object):
             self._instantiate(catalog)
         return True
 
+    def save(self, catalog):
+        self.write_to_file(catalog.resource_dir)
+
     def make_index(self, index_file):
         self._archive.load_all()
         suffix = 'index__%s' % new_date
@@ -186,7 +191,7 @@ class LcResource(object):
         if config:
             for k, v in config.items():
                 for q in v:
-                    self.add_config(k, *q)
+                    self._add_config(k, *q)
 
         self._args = kwargs
 
@@ -253,14 +258,32 @@ class LcResource(object):
                 return True
         return False
 
-    def add_config(self, config, *args):
+    def _add_config(self, config, *args):
         """
-        Add a configuration option
+        does no validation
         :param config:
-        :param args: the arguments, in the proper sequence
+        :param args:
         :return:
         """
         self._config[config].add(args)
+
+    def add_config(self, config, *args):
+        """
+        Add a configuration setting to the resource, and apply it to the archive.
+        :param config:
+        :param args: the arguments, in the proper sequence
+        :return: None if archive doesn't support configuration; False if unsuccessful, True if successful
+        """
+        try:
+            cf = self._archive.make_interface('configure')
+        except InterfaceError:
+            return None
+
+        if cf.check_config(config, args):
+            self._add_config(config, *args)
+            cf.apply_config({config: {args}})
+            return True
+        return False
 
     def _serialize_config(self):
         j = dict()
@@ -284,14 +307,16 @@ class LcResource(object):
 
     def matches(self, k):
         """
-        Pretty cheesy.  When we serialize a set of resources, we need to make sure not to include self twice.
+        Pretty cheesy.  When we serialize a set of resources, we need to make sure not to include self twice.  To
+        make the comparison concrete, use a serialized resource as input.
+
         We were using dataSource as a unique identifier for resource entries; but the introduction of download links
          breaks that because a downloadable resource has no source until it's been downloaded.
          The solution is to fallback to download.url ONLY IF the resource has no source specified.
-        :param k:
+        :param k: a serialized LcResource
         :return:
         """
-        if 'dataSource' in k and 'dataSource' is not None:
+        if k['dataSource'] is not None and self.source is not None:
             return k['dataSource'] == self.source
         return k['download']['url'] == self._args['download']['url']
 

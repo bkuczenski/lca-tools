@@ -13,6 +13,10 @@ class EntityExists(Exception):
     pass
 
 
+class InterfaceError(Exception):
+    pass
+
+
 BASIC_ENTITY_TYPES = ('quantity', 'flow')
 
 
@@ -95,6 +99,8 @@ class BasicArchive(EntityStore):
             return QuantityImplementation(self)
         elif iface == 'index':
             return IndexImplementation(self)
+        else:
+            raise InterfaceError('Unable to create interface %s' % iface)
 
     def add(self, entity):
         if entity.entity_type not in self._entity_types:

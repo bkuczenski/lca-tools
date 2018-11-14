@@ -12,6 +12,17 @@ class ConfigureInterface(AbstractQuery):
     """
     A class for tuning and tweaking the reference flow configuration of processes in an archive.
     """
+    def check_config(self, config, c_args, **kwargs):
+        """
+        Check that a given configuration tuple is valid
+        :param config: a config option
+        :param c_args: a tuple of args passed to the config optioin
+        :param kwargs:
+        :return:
+        """
+        return self._perform_query(_interface, 'check_config', ConfigRequired('Configuration Interface required'),
+                                   config, c_args, **kwargs)
+
     def set_reference(self, process_ref, flow_ref, direction=None, **kwargs):
         """
         Set a particular exchange as a reference flow for a given process.  The exchange must already exist.  No error

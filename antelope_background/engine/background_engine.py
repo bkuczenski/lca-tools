@@ -190,6 +190,11 @@ class BackgroundEngine(object):
         self.tstack.add_to_stack(pf)
 
     def _rm_product_flow_children(self, bad_pf):
+        """
+        This needs desperately to be tested
+        :param bad_pf:
+        :return:
+        """
         while 1:
             pf = self.tstack.pop_from_stack()
             self._print('!!!removing %s' % pf)
@@ -200,6 +205,10 @@ class BackgroundEngine(object):
                 if z is pf:
                     break
                 self._print('--!removing %s' % z)
+            while self._interior_incoming[-1].parent is pf:
+                self._interior_incoming.pop()
+            while self._cutoff_incoming[-1].parent is pf:
+                self._cutoff_incoming.pop()
             if pf is bad_pf:
                 break
 
@@ -278,7 +287,8 @@ class BackgroundEngine(object):
                 term = terms[0]
             else:
                 if strategy == 'abort':
-                    print('Ambiguous termination found for %s: %s' % (exch.direction, exch.flow))
+                    print('process: %s\nAmbiguous termination found for %s: %s' % (exch.process.external_ref,
+                                                                                   exch.direction, exch.flow))
                     raise TerminationError
                 elif strategy == 'first':
                     term = terms[0]
@@ -576,11 +586,7 @@ class BackgroundEngine(object):
             self._rm_product_flow_children(j)
             print('Termination Error')
 
-            # reset incoming
-            self._interior_incoming = []  # terminated entries -> added to the component graph
-            self._cutoff_incoming = []  # entries with no termination -> emissions
-
-            j = None
+            raise
 
         sys.setrecursionlimit(old_recursion_limit)
         return j

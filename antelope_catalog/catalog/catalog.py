@@ -581,7 +581,7 @@ class LcCatalog(LciaEngine):
 
             else:
                 if res.internal:
-                    print('Deleting unconfigurable internal resource %s' % res.reference)
+                    print('Deleting unconfigurable internal resource for %s\nsource: %s' % (res.reference, res.source))
                     self.delete_resource(res, delete_source=True)
                 else:
-                    print('Unable to apply configuration to reference %s' % res.reference)
+                    print('Unable to apply configuration to resource for %s\nsource: %s' % (res.reference, res.source))

@@ -106,7 +106,8 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         """
 
         :param args: flow, direction (w.r.t. parent)
-        :param kwargs: uuid=None, parent=None, comment=None, value=None, balance=False; **kwargs passed to LcFragment
+        :param kwargs: uuid=None, parent=None, comment=None, value=None, units=None, balance=False; 
+          **kwargs passed to LcFragment
         :return:
         """
         frag = ed.create_fragment(*args, **kwargs)

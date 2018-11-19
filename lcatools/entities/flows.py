@@ -60,7 +60,7 @@ class LcFlow(LcEntity):
 
     def _set_reference(self, ref_entity):
         if self.reference_entity is not None:
-            if self.reference_entity.get_uuid() == ref_entity.get_uuid():
+            if self.reference_entity.uuid == ref_entity.uuid:
                 return
             # need to do a conversion
             print('Changing reference quantity for flow %s' % self)

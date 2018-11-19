@@ -29,6 +29,7 @@ from .quantity import QdbQuantityImplementation
 from lcatools.from_json import from_json
 from lcatools.lcia_results import LciaResult
 from lcatools.archives import BasicArchive
+from lcatools.basic_query import BasicQuery
 from lcatools.flowdb.compartments import Compartment, CompartmentManager, MissingCompartment
 from lcatools.characterizations import Characterization
 # from lcatools.dynamic_grid import dynamic_grid
@@ -223,7 +224,7 @@ class Qdb(BasicArchive):
         if q.is_lcia_method():
             ind = self._q.add_set(self._q_terms(q), merge=False)  # allow different versions of the same LCIA method
             if ind is None:  # major design flaw in SynList- add_set should not return None
-                ind = self._q.index(next(_i for _i in self._q_terms(q)))
+                ind = self._q.index(next(self._q_terms(q)))
         else:
             ind = self._q.add_set(self._q_terms(q), merge=True)  # squash together different versions of a ref quantity
         if self._q.entity(ind) is None:
@@ -257,9 +258,7 @@ class Qdb(BasicArchive):
 
     def __getitem__(self, item):
         try:
-            i = self._get_q_ind(item)
-            if i is not None:
-                return self._q.entity(i)
+            return self.get_canonical(item)
         except IndexError:
             pass
         except QuantityNotKnown:
@@ -267,6 +266,14 @@ class Qdb(BasicArchive):
         except NotAQuantity:
             pass
         return super(Qdb, self).__getitem__(item)
+
+    def get_canonical(self, item):
+        i = self._get_q_ind(item)
+        if i is not None:
+            q = self._q.entity(i)
+            if q is not None:
+                return q.make_ref(BasicQuery(self))
+        raise QuantityNotKnown(item)
 
     def save(self):
         self.write_to_file(self.source, characterizations=True, values=True)  # leave out exchanges

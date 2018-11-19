@@ -7,7 +7,7 @@ from lcatools.entities.editor import EntityEditor
 
 class FragmentEditor(EntityEditor):
     def create_fragment(self, flow, direction, uuid=None, parent=None, comment=None, value=None, balance=False,
-                        **kwargs):
+                        units=None, **kwargs):
         """
 
         :param parent:
@@ -18,6 +18,7 @@ class FragmentEditor(EntityEditor):
         :param comment:
         :param value:
         :param balance:
+        :param units: [None] if both value and unit are non-None, interpret value as given in units and convert
         :param kwargs:
         :return:
         """
@@ -32,6 +33,11 @@ class FragmentEditor(EntityEditor):
             name = kwargs.pop('Name')
         else:
             name = flow['Name']
+
+        # TODO: add me to ContextRefactor
+        if value is not None and units is not None:
+            value *= flow.reference_entity.convert(units)
+
         comment = comment or self.ifinput('Enter FragmentFlow comment: ', '')
         if parent is None:
             # direction reversed for UX! user inputs direction w.r.t. fragment, not w.r.t. parent

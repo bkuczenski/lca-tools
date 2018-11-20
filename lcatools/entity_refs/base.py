@@ -92,7 +92,11 @@ class BaseRef(object):
         return self._localitem(item)
 
     def has_property(self, item):
-        return self._localitem(item) is not None
+        try:
+            self.__getitem__(item)
+            return self._localitem(item) is not None
+        except KeyError:
+            return False
 
     def __setitem__(self, key, value):
         key = key.lower()

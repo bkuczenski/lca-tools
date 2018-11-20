@@ -527,6 +527,36 @@ class Qdb(BasicArchive):
         """
         for i in q.uuid, q.link, q.q_name:
             yield i
+        if q.has_property('Synonyms'):
+            syns = q['Synonyms']
+            if isinstance(syns, str):
+                yield syns
+            else:
+                for syn in syns:
+                    yield syn
+
+    def add_synonyms(self, main_term, *terms):
+        if self._q[main_term] is None:
+            if self._f[main_term] is None:
+                raise KeyError(main_term)
+            else:
+                # no way to save new flowable synonyms-- do this after ContextRefactor
+                return NotImplemented
+        else:
+            # we can, however, save quantity synonyms in the local archive
+            self._q.add_synonyms(main_term, *terms)
+            ent = self._q.entity(main_term)
+            if ent.has_property('Synonyms'):
+                syns = ent['Synonyms']
+                if isinstance(syns, str):
+                    syns = [syns]
+            else:
+                syns = []
+            syns.extend(terms)
+            ent['Synonyms'] = syns
+            self.save()
+            # also update the entity ref
+            ent.make_ref(BasicQuery(self))['Synonyms'] = syns
 
     def add_cf(self, factor, flow=None, interact=False):
         """

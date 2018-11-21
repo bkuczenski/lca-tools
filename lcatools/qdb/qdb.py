@@ -258,7 +258,7 @@ class Qdb(BasicArchive):
 
     def __getitem__(self, item):
         try:
-            return self.get_canonical(item)
+            return self._get_canonical(item)
         except IndexError:
             pass
         except QuantityNotKnown:
@@ -267,13 +267,18 @@ class Qdb(BasicArchive):
             pass
         return super(Qdb, self).__getitem__(item)
 
-    def get_canonical(self, item):
+    def _get_canonical(self, item):
         i = self._get_q_ind(item)
         if i is not None:
             q = self._q.entity(i)
             if q is not None:
-                return q.make_ref(BasicQuery(self))
+                return q
         raise QuantityNotKnown(item)
+
+    def get_canonical(self, item):
+        q = self._get_canonical(item)
+        return q.make_ref(BasicQuery(self))
+
 
     def save(self):
         self.write_to_file(self.source, characterizations=True, values=True)  # leave out exchanges

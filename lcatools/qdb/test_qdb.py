@@ -15,10 +15,19 @@ class QdbTestCase(unittest.TestCase):
         cls._qdb = Qdb()
 
     def setUp(self):
-        self._qi = self._qdb.make_interface('quantity')
+        self.qi = self._qdb.make_interface('quantity')
 
     def test_mass(self):
-        self.assertEqual(self._qi.get_canonical('mass').uuid, mass_uuid)
+        self.assertEqual(self.qi.get_canonical('mass').uuid, mass_uuid)
+
+    def test_canonical(self):
+        m = self.qi.get_canonical('mass')
+        self.assertEqual(m['Name'], 'Mass')
+
+    def test_kwh_mj_conversion(self):
+        elec = next(self._qdb.search('flow', Name='electricity'))
+        ncv = self.qi.get_canonical('net calorific value')
+        self.assertEqual(elec.cf(ncv), 3.6)
 
 
 if __name__ == '__main__':

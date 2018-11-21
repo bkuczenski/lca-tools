@@ -12,7 +12,7 @@
       "CasNumber": "",
       "Comment": "EcoSpold02 Flow",
       "Compartment": [
-        "By-product classification: allocatable product"
+        "Intermediate Flows"
       ],
       "Name": "electricity, high voltage",
       "characterizations": [
@@ -242,7 +242,7 @@
         "Mg": 0.001,
         "g": 1000.0,
         "kg": 1.0,
-        "kt": 5000.0,
+        "kt": 0.000001,
         "lb av": 2.2046226218487757,
         "long tn": 0.0009842065276110606,
         "mg": 1000000.0,
@@ -267,7 +267,7 @@
         "Mg": 0.001,
         "g": 1000.0,
         "kg": 1.0,
-        "kt": 5000.0,
+        "kt": 0.000001,
         "lb av": 2.2046226218487757,
         "long tn": 0.0009842065276110606,
         "mg": 1000000.0,
@@ -292,7 +292,7 @@
         "Mg": 0.001,
         "g": 1000.0,
         "kg": 1.0,
-        "kt": 5000.0,
+        "kt": 0.000001,
         "lb av": 2.2046226218487757,
         "long tn": 0.0009842065276110606,
         "mg": 1000000.0,
@@ -311,12 +311,17 @@
       "referenceUnit": "kg"
     },
     {
-      "Comment": "EcoSpold02",
-      "Name": "EcoSpold Quantity kWh",
+      "Comment": "EcoSpold02. This is not an ILCD reference quantity.",
+      "Name": "Electric energy",
+      "UnitConversion": {
+        "GWh": 0.000001,
+        "MWh": 0.001,
+        "MJ": 3.6
+      },
       "Synonyms": [
         "kWh",
         "EcoSpold Quantity kWh",
-        "Electric energy"
+        "Electricity"
       ],
       "entityId": "77ae64fa-7e74-4252-9c3b-889c1cd20bfc",
       "entityType": "quantity",
@@ -361,7 +366,7 @@
         "Mg": 0.001,
         "g": 1000.0,
         "kg": 1.0,
-        "kt": 5000.0,
+        "kt": 0.000001,
         "lb av": 2.2046226218487757,
         "long tn": 0.0009842065276110606,
         "mg": 1000000.0,
@@ -460,7 +465,7 @@
         "Mg": 0.001,
         "g": 1000.0,
         "kg": 1.0,
-        "kt": 5000.0,
+        "kt": 0.000001,
         "lb av": 2.2046226218487757,
         "long tn": 0.0009842065276110606,
         "mg": 1000000.0,
@@ -680,7 +685,7 @@
         "Mg": 0.001,
         "g": 1000.0,
         "kg": 1.0,
-        "kt": 5000.0,
+        "kt": 0.000001,
         "lb av": 2.2046226218487757,
         "long tn": 0.0009842065276110606,
         "mg": 1000000.0,

@@ -186,6 +186,9 @@ class LcProcess(LcEntity):
     def __str__(self):
         return '%s [%s]' % (self._d['Name'], self._d['SpatialScope'])
 
+    def __len__(self):
+        return len(self._exchanges)
+
     def _validate_reference(self, ref_set):
         for x in ref_set:
             if not super(LcProcess, self)._validate_reference(x):

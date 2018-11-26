@@ -32,13 +32,14 @@ class Exchange(object):
 
     entity_type = 'exchange'
 
-    def __init__(self, process, flow, direction, termination=None):
+    def __init__(self, process, flow, direction, termination=None, comment=None):
         """
 
         :param process:
         :param flow:
         :param direction:
         :param termination: external id of terminating process or None (note: this is uuid for ecospold2)
+        :param comment: documentary information about the exchange
         :return:
         """
         # assert process.entity_type == 'process', "- we'll allow null exchanges and fragment-terminated exchanges"
@@ -49,12 +50,29 @@ class Exchange(object):
         self._flow = flow
         self._direction = direction
         self._termination = None
+        self._comment = comment  # don't bother to serialize these yet...
         if termination is not None:
             self._termination = str(termination)
         # self._hash_tuple =
         self._hash = hash((process.uuid, flow.external_ref, direction, self._termination))  # have to use uuid because
         # process's external_ref is not set until after exchanges are populated!
         self._is_reference = False
+
+    @property
+    def comment(self):
+        return self._comment
+
+    @comment.setter
+    def comment(self, value):
+        """
+        Comment is cumulative.  This should be generalized to the other entities.. after ContextRefactor...
+        :param value:
+        :return:
+        """
+        if self._comment is None:
+            self._comment = str(value)
+        else:
+            self._comment += '\n%s' % str(value)
 
     @property
     def origin(self):
@@ -65,7 +83,8 @@ class Exchange(object):
         return self.process.is_entity
 
     def make_ref(self, query):
-        return Exchange(self._process.make_ref(query), self._flow.make_ref(query), self.direction, self.termination)
+        return Exchange(self._process.make_ref(query), self._flow.make_ref(query), self.direction,
+                        termination=self.termination, comment=self.comment)
 
     @property
     def is_reference(self):
@@ -243,7 +262,7 @@ class ExchangeValue(Exchange):
         """
         if isinstance(allocated, ExchangeValue):
             return cls(allocated.process, allocated.flow, allocated.direction, value=allocated[reference],
-                       termination=allocated.termination)
+                       termination=allocated.termination, comment=allocated.comment)
         elif isinstance(allocated, Exchange):
             return allocated
 
@@ -280,7 +299,7 @@ class ExchangeValue(Exchange):
 
     def make_ref(self, query):
         return ExchangeValue(self._process.make_ref(query), self._flow.make_ref(query), self.direction,
-                             self.termination, value=self._value, value_dict=self._value_dict)
+                             self.termination, value=self._value, value_dict=self._value_dict, comment=self.comment)
 
     @property
     def value(self):

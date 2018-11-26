@@ -10,6 +10,7 @@ class AllocationGrid(BaseTableOutput):
     """
     _near_headings = 'Direction', 'Ref'  # should be overridden
     _returns_sets = True
+    _far_headings = 'Flow', 'Comment'
 
     def _generate_items(self, alloc_inv):
         """
@@ -27,7 +28,13 @@ class AllocationGrid(BaseTableOutput):
         :param item: an allocated exchange
         :return: 3-tuple: direction, is_ref (bool), flow name, flow compartment
         """
-        return item.direction, False, '; '.join(item.flow['Compartment']), item.flow['Name']
+        row = item.direction, False, '; '.join(item.flow['Compartment']), item.flow['Name']
+        if row not in self._notes:
+            self._notes[row] = self._pull_note_from_item(item)
+        return row
+
+    def _pull_note_from_item(self, item):
+        return item.comment
 
     def _canonical(self, item):
         """
@@ -35,11 +42,13 @@ class AllocationGrid(BaseTableOutput):
         :param item:
         :return:
         """
-        _p = self._ar.get(item.termination)
-        if _p is None:
-            print('%s => None' % item.termination)
-            return item.termination
-        return '[%s] %s' % (_p['SpatialScope'], _p['Name'])
+        term = item.termination
+        if term is not None:
+            term = self._ar.get(item.termination)
+        if term is None:
+            return '%s %s' % (item.unit, item.flow)
+        else:
+            return '%s %s' % (item.unit, term)
 
     def _extract_data_from_item(self, objects):
         """
@@ -54,10 +63,7 @@ class AllocationGrid(BaseTableOutput):
             value = item.value
             if value is None:
                 continue
-            if item.termination is None:
-                d[item.flow['Name']] += value
-            else:
-                d[self._canonical(item)] += value
+            d[self._canonical(item)] += value
         return d
 
     def _add_alloc_column(self, col_idx, arg, ref):

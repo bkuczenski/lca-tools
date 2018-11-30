@@ -79,8 +79,6 @@ class BaseTableOutput(object):
         """
         row = item
         # if not self._returns_sets:
-        if row not in self._notes:
-            self._notes[row] = self._pull_note_from_item(item)
         return row,
 
     def _pull_note_from_item(self, item):
@@ -209,12 +207,18 @@ class BaseTableOutput(object):
         for arg in args:
             self.add_column(arg)
 
+    def _add_rowitem(self, col_idx, item, row=None):
+        if row is None:
+            row = self._pull_row_from_item(item)
+        self._rows.add(row)
+        if row not in self._notes:
+            self._notes[row] = self._pull_note_from_item(item)
+        self._d[row, col_idx].append(item)
+
     def add_column(self, arg):
         col_idx = len(self._columns)
         for k in self._generate_items(arg):
-            row = self._pull_row_from_item(k)
-            self._rows.add(row)
-            self._d[row, col_idx].append(k)
+            self._add_rowitem(col_idx, k)
         self._columns.append(arg)
 
     def _sorted_rows(self):
@@ -297,3 +301,20 @@ class BaseTableOutput(object):
             prev = row
 
         return df
+
+    def to_excel(self, xl_writer, sheetname, width_scaling=0.75):
+        """
+        Must supply a pandas XlsxWriter. This routine does not save the document.
+        :param xl_writer:
+        :param sheetname:
+        :param width_scaling:
+        :return:
+        """
+        df = self.dataframe()
+        df.to_excel(xl_writer, sheet_name=sheetname)
+        sht = xl_writer.sheets[sheetname]
+
+        for k in self._near_headings + self._far_headings:
+            ix = df.columns.tolist().index(k) + 1
+            mx = max([7, width_scaling * df[k].astype(str).str.len().max()])
+            sht.set_column(ix, ix, width=mx)

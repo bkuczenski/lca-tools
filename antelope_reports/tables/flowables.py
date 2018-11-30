@@ -134,6 +134,7 @@ class FlowablesGrid(BaseTableOutput):
         :param include_flows: either None (include all flows) or an iterable of flowables to include
         :param quell_locations:  for characterizations, suppress reporting of locations other than GLO. [not yet impl.]
         """
+        print('!!NOTE: _far_headings must be set')
         self._qdb = qdb
         if include_flows is not None:
             include_fbs = set([qdb.f_index(qdb.parse_flow(x)[0]) for x in include_flows])

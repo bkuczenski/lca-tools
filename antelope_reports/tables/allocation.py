@@ -77,17 +77,14 @@ class AllocationGrid(BaseTableOutput):
         for k in self._generate_items(arg.inventory(ref_flow=ref)):
             if k.value is not None:
                 count = True
-                row = self._pull_row_from_item(k)
-                self._rows.add(row)
-                self._d[row, col_idx].append(k)
+                self._add_rowitem(col_idx, k)
         return count
 
     def _add_alloc_refs(self, arg, flow=None):
         col_idx = len(self._columns)
         for k in arg.references(flow=flow):
             row = k.direction, True, '; '.join(k.flow['Compartment']), k.flow['Name']
-            self._rows.add(row)
-            self._d[row, col_idx].append(k)
+            self._add_rowitem(col_idx, k, row=row)
         self._columns.append(arg)
 
     def _sorted_rows(self):

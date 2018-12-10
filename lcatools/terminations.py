@@ -31,6 +31,13 @@ class NonConfigurableInboundEV(Exception):
     pass
 
 
+class UnCachedScore(Exception):
+    """
+    means that we have an LCIA-only node whose score has not been set for the requested LCIA method
+    """
+    pass
+
+
 class FlowTermination(object):
     """
     these are stored by scenario in a dict on the mainland
@@ -387,10 +394,16 @@ class FlowTermination(object):
             else:
                 raise SubFragmentAggregation  # to be caught
 
-        if self.is_bg and self.is_frag:
-            # need bg_lcia method for FragmentRefs
-            # this is probably not currently supported
-            return self.term_node.bg_lcia(lcia_qty=quantity_ref, ref_flow=self.term_flow.external_ref, **kwargs)
+        if self.is_bg:
+            if self.is_fg:
+                # surprisingly not inconsistent! in the current pre-ContextRefactor world, this is how we are handling
+                # cached-LCIA-score nodes
+                raise UnCachedScore('fragment: %s\nquantity: %s' % (self._parent, quantity_ref))
+
+            elif self.is_frag:
+                # need bg_lcia method for FragmentRefs
+                # this is probably not currently supported
+                return self.term_node.bg_lcia(lcia_qty=quantity_ref, ref_flow=self.term_flow.external_ref, **kwargs)
 
         try:
             locale = self.term_node['SpatialScope']
@@ -408,13 +421,19 @@ class FlowTermination(object):
                 # res.set_scale(self.inbound_exchange_value)
         return res
 
-    def score_cache(self, quantity=None, **kwargs):
+    def score_cache(self, quantity=None, ignore_uncached=False, **kwargs):
         if quantity is None:
             return self._score_cache
         if quantity.uuid in self._score_cache:
             return self._score_cache[quantity.uuid]
         else:
-            res = self.compute_unit_score(quantity, **kwargs)
+            try:
+                res = self.compute_unit_score(quantity, **kwargs)
+            except UnCachedScore:
+                if ignore_uncached:
+                    res = LciaResult(quantity)
+                else:
+                    raise
             self._score_cache[quantity.uuid] = res
             return res
 
@@ -442,13 +461,16 @@ class FlowTermination(object):
                                 'score': res.total()})
         return score_cache
 
+    def add_lcia_score(self, quantity, score, scenario=None):
+        res = LciaResult(quantity, scenario=scenario)
+        res.add_summary(self._parent.uuid, self._parent, 1.0, score)
+        self._score_cache.add(res)
+
     def _deserialize_score_cache(self, fg, sc, scenario):
         self._score_cache = LciaResults(self._parent)
         for i in sc:
             q = fg.catalog_ref(i['quantity']['origin'], i['quantity']['externalId'], entity_type='quantity')
-            res = LciaResult(q, scenario=scenario)
-            res.add_summary(self._parent.uuid, self._parent, 1.0, i['score'])
-            self._score_cache.add(res)
+            self.add_lcia_score(q, i['score'], scenario=scenario)
 
     def serialize(self, save_unit_scores=False):
         if self.is_null:

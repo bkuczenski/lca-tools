@@ -327,7 +327,11 @@ class LcEntity(object):
         return str(self)
 
     def __hash__(self):
-        return hash(self.link)
+        if self._origin is None:
+            raise AttributeError('Origin not set!')
+        if self._uuid is None:
+            raise AttributeError('UUID not set!')
+        return hash((self.origin, self.uuid))
 
     def __eq__(self, other):
         """

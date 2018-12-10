@@ -110,7 +110,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
           **kwargs passed to LcFragment
         :return:
         """
-        frag = ed.create_fragment(*args, **kwargs)
+        frag = ed.create_fragment(*args, origin=self.origin, **kwargs)
         self._archive.add_entity_and_children(frag)
         return frag
 

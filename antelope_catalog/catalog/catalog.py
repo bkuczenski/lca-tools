@@ -269,7 +269,10 @@ class LcCatalog(LciaEngine):
         if len([t for t in self._resolver.resources_with_source(resource.source)]) > 0:
             return
         if resource.internal or delete_source:
-            os.remove(resource.source)
+            if os.path.isdir(resource.source):
+                rmtree(resource.source)
+            else:
+                os.remove(resource.source)
             if os.path.exists(self.cache_file(resource.source)):
                 os.remove(self.cache_file(resource.source))
 
@@ -335,6 +338,7 @@ class LcCatalog(LciaEngine):
         """
         res = next(r for r in self._resolver.resources_with_source(source))
         res.check(self)
+        priority = min([priority, res.priority])
         stored = self._resolver.is_permanent(res)
 
         inx_file = self._index_file(source)

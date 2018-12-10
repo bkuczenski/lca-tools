@@ -624,7 +624,7 @@ class LcFragment(LcEntity):
             raise DependentFragment('Fragment exchange value set during traversal')
         if isinstance(scenario, tuple) or isinstance(scenario, set):
             raise ScenarioConflict('Set EV must specify single scenario')
-        if self.reference_entity is None:
+        if 0:  # self.reference_entity is None:  ## terminations no longer have inbound evs
             if scenario in (0, '0', 1, '1', None):
                 self.term.inbound_exchange_value = value
             elif scenario in self._terminations:

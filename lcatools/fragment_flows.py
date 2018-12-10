@@ -261,13 +261,14 @@ def group_ios(parent, ios, include_ref_flow=True):
     return external, internal
 
 
-def frag_flow_lcia(fragmentflows, quantity_ref, scenario=None, refresh=False):
+def frag_flow_lcia(fragmentflows, quantity_ref, scenario=None, refresh=False, ignore_uncached=True):
     """
     Recursive function to compute LCIA of a traversal record contained in a set of Fragment Flows.
     :param fragmentflows:
     :param quantity_ref:
     :param scenario: necessary if any remote traversals are required
     :param refresh: whether to refresh the LCIA CFs
+    :param ignore_uncached: [True] whether to allow zero scores for un-cached, un-computable fragments
     :return:
     """
     result = LciaResult(quantity_ref)
@@ -280,7 +281,7 @@ def frag_flow_lcia(fragmentflows, quantity_ref, scenario=None, refresh=False):
             continue
 
         try:
-            v = ff.term.score_cache(quantity=quantity_ref, refresh=refresh)
+            v = ff.term.score_cache(quantity=quantity_ref, refresh=refresh, ignore_uncached=ignore_uncached)
         except SubFragmentAggregation:
             # if we were given interior fragments, recurse on them. otherwise ask remote.
             if len(ff.subfragments) == 0:

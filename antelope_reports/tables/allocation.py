@@ -128,3 +128,9 @@ class AllocationGrid(BaseTableOutput):
         self._ar = archive
         self._report_unallocated = bool(report_unallocated)
         super(AllocationGrid, self).__init__(*prefs)
+
+    def to_excel(self, xl_writer, sheetname, width_scaling=0.75):
+        super(AllocationGrid, self).to_excel(xl_writer, sheetname, width_scaling=width_scaling)
+        ix = self._near_headings.index('Ref') + 1
+        center_ref = xl_writer.book.add_format({'align': 'center', 'bold': True})
+        xl_writer.sheets[sheetname].set_column(ix, ix, cell_format=center_ref)

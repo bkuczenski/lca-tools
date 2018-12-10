@@ -316,6 +316,7 @@ class Qdb(BasicArchive):
         for q in self.entities_by_type('quantity'):
             try:
                 self._q.set_entity(q['Name'], q)
+                self.add_synonyms(q['Name'], *self._q_terms(q))
             except EntityFound:
                 pass
             except KeyError:

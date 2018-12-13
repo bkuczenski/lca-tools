@@ -560,7 +560,7 @@ class Qdb(BasicArchive):
                 syns = []
             syns.extend(terms)
             ent['Synonyms'] = syns
-            self.save()
+            # self.save()
             # also update the entity ref
             ent.make_ref(BasicQuery(self))['Synonyms'] = syns
 

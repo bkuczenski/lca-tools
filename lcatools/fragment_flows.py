@@ -199,21 +199,22 @@ class FragmentFlow(object):
         pass
 
 
-def group_ios(parent, ios, include_ref_flow=True):
+def group_ios(parent, ffs, include_ref_flow=True):
     """
     Utility function for dealing with a traversal result (list of FragmentFlows)
     Creates a list of cutoff flows from the inputs and outputs from a fragment traversal.
     ios is a list of FragmentFlows
     :param parent: the node generating the cutoffs
-    :param ios: a list of fragment flows resulting from a traversal of the parent
+    :param ffs: a list of fragment flows resulting from a traversal of the parent
     :param include_ref_flow: [True] whether to include the reference fragment and adjust for autoconsumption
     :return: [list of grouped IO flows], [list of internal non-null flows]
     """
     out = defaultdict(float)
     internal = []
     external = []
-    for ff in ios:
+    for ff in ffs:
         if ff.term.is_null:
+            # accumulate IO flows under the convention that inflows are positive, outflows are negative
             if ff.fragment.direction == 'Input':
                 magnitude = ff.magnitude
             else:
@@ -222,10 +223,10 @@ def group_ios(parent, ios, include_ref_flow=True):
         else:
             internal.append(ff)
 
-    # now deal with reference flow
+    # now deal with reference flow-- trivial fragment should wind up with two equal-and-opposite [pass-through] flows
     if include_ref_flow:
         ref_frag = parent.top()
-        ref_mag = ios[0].magnitude
+        ref_mag = ffs[0].magnitude
         if ref_frag.flow in out:  # either pass through or autoconsumption
             val = out[ref_frag.flow]
             if val < 0:
@@ -237,16 +238,20 @@ def group_ios(parent, ios, include_ref_flow=True):
              (a) directions are complementary [meaning equal since ref flow dirn is w.r.t. parent] and 
              (b) magnitude of autoconsumption is smaller
             """
-            if abs(val) < ref_mag and auto_dirn == ref_frag.direction:
-                # in either case, the direction sense of the autoconsumed flow should switch
-                if auto_dirn == 'Output':
-                    out[ref_frag.flow] += ref_mag
-                else:
-                    out[ref_frag.flow] -= ref_mag
+            if auto_dirn == ref_frag.direction:
+                if abs(val) < ref_mag:
+                    # autoconsumption, the direction sense of the autoconsumed flow should switch
+                    if auto_dirn == 'Output':
+                        out[ref_frag.flow] += ref_mag
+                    else:
+                        out[ref_frag.flow] -= ref_mag
 
+                else:
+                    # pass-thru: pre-initialize external with the reference flow, having the opposite direction
+                    external.append(FragmentFlow.cutoff(parent, ref_frag.flow, comp_dir(auto_dirn), ref_mag))
             else:
-                # pass-thru: pre-initialize external with the reference flow
-                external.append(FragmentFlow.cutoff(parent, ref_frag.flow, comp_dir(ref_frag.direction), ref_mag))
+                # cumulation: the directions are both the same... should they be accumulated? for now show up separately
+                external.append(FragmentFlow.cutoff(parent, ref_frag.flow, auto_dirn, ref_mag))
         else:
             # no autoconsumption or pass-through, but we still want the ref flow to show up in the inventory
             external.append(FragmentFlow.cutoff(parent, ref_frag.flow, comp_dir(ref_frag.direction), ref_mag))

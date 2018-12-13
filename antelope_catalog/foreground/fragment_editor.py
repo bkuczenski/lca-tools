@@ -125,13 +125,14 @@ class FragmentEditor(EntityEditor):
             if scen != 0 and scen != 1 and new.observable(scen):
                 new.set_exchange_value(scen, frag.exchange_value(scen))
 
-    def clone_fragment(self, frag, suffix=' (copy)', comment=None, _parent=None):
+    def clone_fragment(self, frag, suffix=' (copy)', comment=None, origin=None, _parent=None):
         """
         Creates duplicates of the fragment and its children. returns the new reference fragment.
         :param frag:
         :param _parent: used internally
         :param suffix: attached to top level fragment
         :param comment: can be used in place of source fragment's comment
+        :param origin: [None] defaults to frag.origin
         :return:
         """
         if _parent is None:
@@ -140,8 +141,10 @@ class FragmentEditor(EntityEditor):
             direction = frag.direction
         if suffix is None:
             suffix = ''
+        if origin is None:
+            origin = frag.origin
         the_comment = comment or frag['Comment']
-        new = self.create_fragment(parent=_parent,
+        new = self.create_fragment(parent=_parent, origin=origin,
                                    Name=frag['Name'] + suffix, StageName=frag['StageName'],
                                    flow=frag.flow, direction=direction, comment=the_comment,
                                    value=frag.cached_ev, balance=frag.balance_flow,
@@ -150,7 +153,9 @@ class FragmentEditor(EntityEditor):
         self.transfer_evs(frag, new)
 
         for t_scen, term in frag.terminations():
-            if term.term_node is frag:
+            if term.is_null:
+                continue
+            elif term.term_node is frag:
                 new.to_foreground(scenario=t_scen)
             else:
                 new.terminate(term.term_node, term_flow=term.term_flow, direction=term.direction,

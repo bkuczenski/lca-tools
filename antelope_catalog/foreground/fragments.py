@@ -205,6 +205,11 @@ class LcFragment(LcEntity):
         return self.reference_entity.top()
 
     def set_parent(self, parent):
+        if self.origin != parent.origin:
+            if self.origin is None:
+                self.origin = parent.origin
+            else:
+                raise AttributeError('Origin mismatch: parent (%s) vs child (%s)' % (parent.origin, self.origin))
         self._set_reference(parent)
         parent.add_child(self)
 
@@ -657,6 +662,10 @@ class LcFragment(LcEntity):
         self._exchange_values = d
 
     def set_balance_flow(self):
+        """
+        A balance flow balances its own reference quantity.
+        :return:
+        """
         if self.balance_flow is False:
             self.reference_entity.set_conserved_quantity(self)
             self._balance_flow = True
@@ -1039,7 +1048,7 @@ class LcFragment(LcEntity):
             # Controversial? The Cached EVs are basically meaningless. Scenarios should strictly be observed flows.
             observed = True
 
-        ffs, _ = self.traverse_node(1.0, scenario, observed=observed)
+        ffs, _ = self._traverse_node(1.0, scenario, observed=observed)
         return ffs
 
     def _traverse_fg_node(self, ff, scenario, observed, frags_seen):
@@ -1100,15 +1109,15 @@ class LcFragment(LcEntity):
 
         for f in self.child_flows:
             try:
-                child_ff, cons = f.traverse_node(node_weight, scenario, observed=observed,
-                                                 frags_seen=set(frags_seen), conserved_qty=self._conserved_quantity)
+                child_ff, cons = f._traverse_node(node_weight, scenario, observed=observed,
+                                                  frags_seen=set(frags_seen), conserved_qty=self._conserved_quantity)
                 if cons is None:
                     self.dbg_print('%.3s -- returned cons_value' % self.uuid, level=3)
                 else:
                     self.dbg_print('%.3s %g returned cons_value' % (self.uuid, cons), level=2)
                     stock += cons
             except BalanceFlowError:
-                self.dbg_print('%.3s bal flow on %.3s' % (self.uuid, f.uuid), level=3)
+                self.dbg_print('%.3s %g bal magnitude on %.3s' % (self.uuid, stock, f.uuid), level=3)
                 bal_f = f
                 child_ff = []
 
@@ -1120,8 +1129,12 @@ class LcFragment(LcEntity):
             # if it is an output, its exchange must equal the balance
             if bal_f.direction == 'Input':
                 stock *= -1
-            bal_ff, _ = bal_f.traverse_node(node_weight, scenario, observed=observed,
-                                            frags_seen=set(frags_seen), conserved_qty=None, _balance=stock)
+                self.dbg_print('%.3s Input: negating balance value' % bal_f.uuid)
+            else:
+                self.dbg_print('%.3s Output: maintaining balance value' % bal_f.uuid)
+            self.dbg_print('%.3s %g balance value passed to %.3s' % (self.uuid, stock, bal_f.uuid))
+            bal_ff, _ = bal_f._traverse_node(node_weight, scenario, observed=observed,
+                                             frags_seen=set(frags_seen), conserved_qty=None, _balance=stock)
             ffs.extend(bal_ff)
 
         return ffs
@@ -1156,7 +1169,7 @@ class LcFragment(LcEntity):
         node_weight = ff.node_weight
         ffs = [ff]
         if term.term_is_bg:
-            bg_ff, _ = term.term_node.traverse_node(node_weight, scenario, observed=observed)
+            bg_ff, _ = term.term_node._traverse_node(node_weight, scenario, observed=observed)
             assert len(bg_ff) == 1
             bg_ff[0].fragment = self
             return bg_ff
@@ -1184,8 +1197,9 @@ class LcFragment(LcEntity):
             # this indicates a non-consumptive pass-thru fragment.
             print('Frag %.5s: Zero inbound exchange' % self.uuid)
             raise ZeroDivisionError
-        if match.fragment.direction == self.direction:
+        if match.fragment.direction == self.direction:  # match direction is w.r.t. subfragment
             # self is driving subfragment in reverse
+            self.dbg_print('%.3s reverse-driven subfragment %.3s' % (self.uuid, match.fragment.uuid))
             in_ex *= -1
 
         # node weight for the driven [downstream] fragment
@@ -1221,8 +1235,8 @@ class LcFragment(LcEntity):
                 continue
 
             self.dbg_print('traversing with ev = %g' % ev, 4)
-            child_ff, _ = f.traverse_node(downstream_nw, scenario, observed=observed,
-                                          frags_seen=frags_seen, _balance=ev)
+            child_ff, _ = f._traverse_node(downstream_nw, scenario, observed=observed,
+                                           frags_seen=frags_seen, _balance=ev)
             ffs.extend(child_ff)
 
         # remaining un-accounted io flows are getting appended, so do scale
@@ -1232,8 +1246,8 @@ class LcFragment(LcEntity):
 
         return ffs
 
-    def traverse_node(self, upstream_nw, scenario,
-                      observed=False, frags_seen=None, conserved_qty=None, _balance=None):
+    def _traverse_node(self, upstream_nw, scenario,
+                       observed=False, frags_seen=None, conserved_qty=None, _balance=None):
 
         """
         If the node has a non-null termination, use that; follow child flows.
@@ -1272,6 +1286,10 @@ class LcFragment(LcEntity):
                 self._cache_balance_ev(_balance, scenario, observed)
 
         magnitude = upstream_nw * ev
+        if self.reference_entity is None:
+            node_weight = upstream_nw
+        else:
+            node_weight = self._node_weight(magnitude, scenario)
 
         conserved_val = None
         conserved = False
@@ -1285,7 +1303,6 @@ class LcFragment(LcEntity):
                 conserved_val *= -1
             self.dbg_print('%.3s conserved_val %g' % (self.uuid, conserved_val), level=2)
 
-        node_weight = self._node_weight(magnitude, scenario)
         term = self.termination(scenario)
 
         # print('%6f %6f %s' % (magnitude, node_weight, self))

@@ -96,6 +96,8 @@ f1 = new_flow('My first flow', 'mass')
 
 mass = f1.reference_entity
 
+# flows
+
 f2 = new_flow('My second flow', 'volume')
 f3 = new_flow('My third flow', 'net calorific value')
 f3w = new_flow('A waste energy flow', 'net calorific value')
@@ -104,36 +106,46 @@ f4.add_characterization(qdb.get_canonical('net calorific value'), value=f4_mj_kg
 f5 = new_flow('yet another mass flow', 'mass')
 f6 = new_flow('An energetic conservation flow', 'net calorific value')
 f7 = new_flow('An ancillary flow', 'number of items')
-f7.add_characterization(qdb.get_canonical('mass'), value=f7_mass)
+f7.add_characterization(mass, value=f7_mass)
 f8 = new_flow('A freight flow', 'freight')
 fp = new_flow('A private flow', 'price')
 
+# parameters
+
+#a1
 a1_vol = 10
 a1_mj_in = 19
-a1_mj_optimistic = a1_mj_in * 0.75
 a1_addl = 0.88
-a1_addl_alt = 1.11
+# a1 scenarios
+a1_mj_optimistic = a1_mj_in * 0.75
+a1_surplus_addl = 1.11
 
+# a2
 a2_kwh = 10
 a2_mj = a2_kwh * 3.6  # kWh converted to MJ
 a2_waste_heat = 5
 a2_private = 61
 a2_item = 0.003
+# a2 scenarios
 a2_eff_waste_heat = 3.5
 a2_eff_private = 49
 
+#a2_alt
 a2_alt_fuel = 1.1 / f4_mj_kg
 a2_alt_tx = 2.6
 
+#aa
 aa_mj_in = 4
-
-
 aa_in = 0.14
 
 
 class FragmentTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        """
+        Build the test fragments
+        :return:
+        """
         cls.a1 = new_fragment(f1, 'Output', Name='A Production Process')
         cls.a2 = new_fragment(f3, 'Output', value=a2_kwh, units='kWh', Name='A conserving energy conversion process')
         cls.af = new_fragment(f4, 'Output', Name='A fuel supply process')
@@ -149,7 +161,7 @@ class FragmentTests(unittest.TestCase):
 
         new_fragment(f7, 'Input', parent=a3)
         new_fragment(f5, 'Input', parent=cls.a1, balance=True).terminate(cls.af, term_flow=f4)  # to be run negated
-        new_fragment(f4, 'Input', parent=cls.a1, value=a1_addl).set_exchange_value('surplus', a1_addl_alt)
+        new_fragment(f4, 'Input', parent=cls.a1, value=a1_addl).set_exchange_value('surplus', a1_surplus_addl)
 
         '''a1
            -<--O   70a01 [       1 kg] A Production Process
@@ -183,7 +195,7 @@ class FragmentTests(unittest.TestCase):
                |  [   1 unit] A private flow
                |     | -<----: be6fa [   0.003 Item(s)] An ancillary flow
                |     x 
-               | =>=---: b1951 [       5 MJ] A waste energy flow
+               | =>=-O   b1951 [       5 MJ] A waste energy flow
                | -<--#:: b09e3 (=      1 MJ) An energetic conservation flow
                x 
         '''
@@ -272,20 +284,23 @@ class FragmentTests(unittest.TestCase):
         self.a1 subfragment of self.a2 with child flow f7 'An ancillary flow'
         :return:
         """
-        ancillary = a2_item * a2_private * a1_mj_in / self.a2.exchange_value()
-        self._check_fragmentflows(self.a2.traverse(None), f7, 'Input', a2_item * a2_private)
-        self._check_fragmentflows(self.a1.traverse(None), f7, 'Input', ancillary)
+        a2_ancillary = a2_item * a2_private
+        a1_ancillary = a2_ancillary * a1_mj_in / self.a2.exchange_value()
+        self._check_fragmentflows(self.a2.traverse(None), f7, 'Input', a2_ancillary)
+        self._check_fragmentflows(self.a1.traverse(None), f7, 'Input', a1_ancillary)
 
     def test_unobserved_traversal(self):
         """
-        A simple unobserved traversal should just result in
+        A simple unobserved traversal should just result in cached evs for observable flows, properly computed balance
         :return:
         """
         ffuobs = [ff for ff in self.a1.traverse() if ff.fragment.reference_entity is self.a1]
         for c in self.a1.child_flows:
             if c.is_balance:
-                continue
-            self._check_fragmentflows(ffuobs, c.flow, c.direction, c.cached_ev)
+                bal = self.a1.exchange_value() - a1_addl
+                self._check_fragmentflows(ffuobs, c.flow, c.direction, bal)
+            else:
+                self._check_fragmentflows(ffuobs, c.flow, c.direction, c.cached_ev)
 
     def test_unobservable_balance(self):
         for f in self.a1.child_flows:
@@ -324,7 +339,7 @@ class FragmentTests(unittest.TestCase):
         default = self.a1.traverse()
         surplus = self.a1.traverse('surplus')
         self._check_fragmentflows(default, f4, 'Input', a1_addl, 1-a1_addl, 1-a1_addl)
-        self._check_fragmentflows(surplus, f4, 'Input', a1_addl_alt, 1-a1_addl_alt, 1-a1_addl_alt)
+        self._check_fragmentflows(surplus, f4, 'Input', a1_surplus_addl, 1 - a1_surplus_addl, 1 - a1_surplus_addl)
 
     def test_scenario_termination(self):
         default = self.a1.traverse()
@@ -378,7 +393,7 @@ class FragmentTests(unittest.TestCase):
         :return:
         """
         ffs = self.a1.traverse('surplus')
-        self._check_fragmentflows(ffs, f5, 'Input', 1 - a1_addl_alt)
+        self._check_fragmentflows(ffs, f5, 'Input', 1 - a1_surplus_addl)
         for f in ffs:
             if f.fragment.top() is self.af:
                 self.assertTrue(f.node_weight < 0)
@@ -404,18 +419,34 @@ class FragmentTests(unittest.TestCase):
                 self.assertTrue(f.node_weight < 0, '%s' % f)
 
     def test_descend_equivalence(self):
+        """
+        Inventory results should not vary regardless of descend (this may require more robust testing)
+        :return:
+        """
         inv_d = self.aa.inventory()
         inv_nd = self.aa.inventory('nondescend')
         self.assertEqual(inv_d, inv_nd)
 
     def test_nondescend_privacy(self):
+        """
+        The internal fragment of fp in self.a2 should be concealed when descend=False, visible when descend=True
+        :return:
+        """
         ff_d = self.aa.traverse()
         ff_nd = self.aa.traverse('nondescend')
         expected_private = aa_mj_in / self.a2.exchange_value() * a2_private
+        expected_waste = aa_mj_in / self.a2.exchange_value() * a2_waste_heat
         self._check_fragmentflows(ff_d, fp, 'Input', expected_private)
         self._check_fragmentflows(ff_nd, fp, 'Input')
+        self._check_fragmentflows(ff_d, f3w, 'Output', expected_waste)
+        self._check_fragmentflows(ff_nd, f3w, 'Output')
 
     def test_nonscenario(self):
+        """
+        A Scenarios specification is just an unordered collection of scenario names. Names for scenarios that are not
+        found in the fragment should simply have no effect.
+        :return:
+        """
         self.assertNotIn('moriarty', [k for k in self.a1.scenarios()])
         ffs = self.a1.traverse()
         ffs_m = self.a1.traverse('moriarty')
@@ -423,7 +454,11 @@ class FragmentTests(unittest.TestCase):
 
     def test_multiple_scenarios(self):
         """
-        Here we combine several different scenarios and look for signatures of each in the traversal results
+        Here we combine several different scenarios and look for signatures of each in the traversal results.
+        'optimistic' reduces a1 energy requirements
+        'efficiency' improves a2 performance
+        'surplus' changes the amount of input received by a1
+        'improvement' substitutes a2_alt for a2
         :return:
         """
         ff_o_e = self.a1.traverse({'optimistic', 'efficiency'})
@@ -433,12 +468,13 @@ class FragmentTests(unittest.TestCase):
 
         ff_o_s_e = self.a1.traverse({'optimistic', 'surplus', 'efficiency'})
         self._check_fragmentflows(ff_o_s_e, f7, 'Input', expected_item)
-        self._check_fragmentflows(ff_o_s_e, f5, 'Input', 1-a1_addl_alt)
+        self._check_fragmentflows(ff_o_s_e, f5, 'Input', 1 - a1_surplus_addl)
 
         ff_o_i_s = self.a1.traverse({'optimistic', 'improvement', 'surplus'})
         expected_another = a1_mj_optimistic / self.a2_alt.exchange_value() * a2_alt_fuel
         self._check_fragmentflows(ff_o_i_s, f7, 'Input')
-        self._check_fragmentflows(ff_o_i_s, f4, 'Input', a1_addl_alt, 1-a1_addl_alt, 1-a1_addl_alt, expected_another)
+        self._check_fragmentflows(ff_o_i_s, f4, 'Input',
+                                  a1_surplus_addl, 1 - a1_surplus_addl, 1 - a1_surplus_addl, expected_another)
 
 
 if __name__ == '__main__':

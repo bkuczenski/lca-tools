@@ -6,6 +6,14 @@ from lcatools.lcia_results import LciaResult, DetailedLciaResult, SummaryLciaRes
 from collections import defaultdict
 
 
+class CumulatingFlows(Exception):
+    """
+    when a fragment includes multiple instances of the reference flow having consistent (i.e. not complementary)
+    directions. Not handled in subfragment traversal bc no valid test case
+    """
+    pass
+
+
 class FragmentFlow(object):
     """
     A FragmentFlow is a an immutable record of a traversal query. essentially an enhanced NodeCache record which
@@ -114,6 +122,15 @@ class FragmentFlow(object):
         return cls(fragment, magnitude, magnitude, term, is_conserved)
 
     def __init__(self, fragment, magnitude, node_weight, term, is_conserved):
+        """
+
+        :param fragment:
+        :param magnitude:
+        :param node_weight:
+        :param term:
+        :param is_conserved:
+        """
+        # TODO: figure out how to cache + propagate scenario applications through aggregation ops
         self.fragment = fragment
         self.magnitude = magnitude
         self.node_weight = node_weight
@@ -253,9 +270,10 @@ def group_ios(parent, ffs, include_ref_flow=True):
                     # pass-thru: pre-initialize external with the reference flow, having the opposite direction
                     external.append(FragmentFlow.cutoff(parent, ref_frag.flow, comp_dir(auto_dirn), ref_mag))
             else:
-                ref_frag.dbg_print('cumulation %g %g' % (val, ref_mag))
-                # cumulation: the directions are both the same... should they be accumulated? for now show up separately
-                external.append(FragmentFlow.cutoff(parent, ref_frag.flow, auto_dirn, ref_mag))
+                ref_frag.dbg_print('cumulation! %g %g' % (val, ref_mag))
+                # cumulation: the directions are both the same... should they be accumulated?  not handled
+                raise CumulatingFlows('%s' % parent)
+                # external.append(FragmentFlow.cutoff(parent, ref_frag.flow, auto_dirn, ref_mag))
         else:
             ref_frag.dbg_print('uncomplicated ref flow')
             # no autoconsumption or pass-through, but we still want the ref flow to show up in the inventory

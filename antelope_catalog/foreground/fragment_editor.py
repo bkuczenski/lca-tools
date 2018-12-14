@@ -144,7 +144,7 @@ class FragmentEditor(EntityEditor):
         new = self.create_fragment(parent=_parent, origin=origin,
                                    Name=frag['Name'] + suffix, StageName=frag['StageName'],
                                    flow=frag.flow, direction=direction, comment=the_comment,
-                                   value=frag.cached_ev, balance=frag.balance_flow,
+                                   value=frag.cached_ev, balance=frag.is_balance,
                                    background=frag.is_background)
 
         self.transfer_evs(frag, new)
@@ -179,7 +179,7 @@ class FragmentEditor(EntityEditor):
         old_parent = fragment.reference_entity
         subfrag = self.create_fragment(parent=old_parent, flow=fragment.flow, direction=fragment.direction,
                                        comment=comment, value=fragment.cached_ev,
-                                       balance=fragment.balance_flow)
+                                       balance=fragment.is_balance)
         self.transfer_evs(fragment, subfrag)
         fragment.clear_evs()
         return subfrag

@@ -496,6 +496,11 @@ class FlowTermination(object):
         return j
 
     def __eq__(self, other):
+        """
+        Terminations are equal if they are both null, or if their term_node, term_flow, and direction are equal
+        :param other:
+        :return:
+        """
         if self is other:
             return True
         if not isinstance(other, FlowTermination):

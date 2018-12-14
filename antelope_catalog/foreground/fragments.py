@@ -536,9 +536,28 @@ class LcFragment(LcEntity):
     def is_background(self):
         return self._background
 
-    @property
-    def scenarios(self):
-        return set(list(self._exchange_values.keys()) + list(self._terminations.keys())).difference({0, 1})
+    def scenarios(self, recurse=True):
+        """
+        Generate a list of scenarios known to the fragment.
+        :param recurse: [True] By default, traverse all child flows, including subfragments. If False, only report
+         the present fragment
+        :return:
+        """
+        scenarios = set(list(self._exchange_values.keys()))
+        for scen, term in self._terminations.items():
+            scenarios.add(scen)
+            if recurse and term.is_subfrag:
+                for k in term.term_node.scenarios(recurse=True):
+                    scenarios.add(k)
+
+        if recurse:
+            for c in self.child_flows:
+                for k in c.scenarios(recurse=True):
+                    scenarios.add(k)
+
+        scenarios -= {0, 1, None}
+        for k in sorted(scenarios):
+            yield k
 
     def _match_scenario_ev(self, scenario):
         match = None
@@ -1043,11 +1062,7 @@ class LcFragment(LcEntity):
                        for f in cos], key=lambda x: (x.direction == 'Input', x.flow['Compartment'],
                                                      x.flow['Name'], x.value), reverse=True)
 
-    def traverse(self, scenario, observed=False):
-        if scenario is not None:
-            # Controversial? The Cached EVs are basically meaningless. Scenarios should strictly be observed flows.
-            observed = True
-
+    def traverse(self, scenario=None, observed=False):
         ffs, _ = self._traverse_node(1.0, scenario, observed=observed)
         return ffs
 
@@ -1290,6 +1305,8 @@ class LcFragment(LcEntity):
             node_weight = upstream_nw
         else:
             node_weight = self._node_weight(magnitude, scenario)
+
+        self.dbg_print('%.3s magnitude: %g node_weight: %g' % (self.uuid, magnitude, node_weight))
 
         conserved_val = None
         conserved = False

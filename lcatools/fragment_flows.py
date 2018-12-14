@@ -184,13 +184,13 @@ class FragmentFlow(object):
 
     def __eq__(self, other):
         """
-        FragmentFlows are equal if they have the same fragment and termination.  magnitudes are allowed to be different
+        FragmentFlows are equal if they have the same fragment, termination, and magnitude
         :param other:
         :return:
         """
         if not isinstance(other, FragmentFlow):
             return False
-        return self.fragment == other.fragment and self.term == other.term  # and self.magnitude == other.magnitude
+        return self.fragment == other.fragment and self.term == other.term  and self.magnitude == other.magnitude
 
     def __hash__(self):
         return hash(self.fragment)
@@ -228,6 +228,7 @@ def group_ios(parent, ffs, include_ref_flow=True):
         ref_frag = parent.top()
         ref_mag = ffs[0].magnitude
         if ref_frag.flow in out:  # either pass through or autoconsumption
+            ref_frag.dbg_print('%.3s either pass through or autoconsumption' % ref_frag.uuid)
             val = out[ref_frag.flow]
             if val < 0:
                 auto_dirn = 'Output'
@@ -240,6 +241,7 @@ def group_ios(parent, ffs, include_ref_flow=True):
             """
             if auto_dirn == ref_frag.direction:
                 if abs(val) < ref_mag:
+                    ref_frag.dbg_print('autoconsumption %g %g' % (val, ref_mag))
                     # autoconsumption, the direction sense of the autoconsumed flow should switch
                     if auto_dirn == 'Output':
                         out[ref_frag.flow] += ref_mag
@@ -247,12 +249,15 @@ def group_ios(parent, ffs, include_ref_flow=True):
                         out[ref_frag.flow] -= ref_mag
 
                 else:
+                    ref_frag.dbg_print('pass thru no effect %g %g' % (val, ref_mag))
                     # pass-thru: pre-initialize external with the reference flow, having the opposite direction
                     external.append(FragmentFlow.cutoff(parent, ref_frag.flow, comp_dir(auto_dirn), ref_mag))
             else:
+                ref_frag.dbg_print('cumulation %g %g' % (val, ref_mag))
                 # cumulation: the directions are both the same... should they be accumulated? for now show up separately
                 external.append(FragmentFlow.cutoff(parent, ref_frag.flow, auto_dirn, ref_mag))
         else:
+            ref_frag.dbg_print('uncomplicated ref flow')
             # no autoconsumption or pass-through, but we still want the ref flow to show up in the inventory
             external.append(FragmentFlow.cutoff(parent, ref_frag.flow, comp_dir(ref_frag.direction), ref_mag))
 

@@ -72,9 +72,6 @@ class FragmentEditor(EntityEditor):
                 frag = LcFragment(uuid, flow, direction, parent=parent, Comment=comment, exchange_value=value,
                                   balance_flow=balance, Name=name, **kwargs)
 
-            # traverse -- may not need to do this anymore if we switch to live traversals for everything
-            parent.traverse(None)  # in fact, let's skip it
-
         """ # can't hack this without a qdb
         if self._qdb.is_elementary(frag.flow):
             frag.terminate(frag.flow)

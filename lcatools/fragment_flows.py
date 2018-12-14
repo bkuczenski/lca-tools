@@ -360,6 +360,9 @@ class GhostFragment(object):
             'Output': '=>='
         }[self.direction]
 
+    def top(self):
+        return self._parent.top()
+
     def __str__(self):
         re = self.reference_entity.uuid[:7]
         return '(%s) %s %.5s %s --:   [%s] %s' % (re, self.dirn, self.uuid, self.dirn,

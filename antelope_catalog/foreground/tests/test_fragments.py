@@ -4,7 +4,7 @@ This is a weakness, ultimately. But the test cases produced here should replace 
 
 Here are the things the fragment traversal is supposed to accomplish / enable:
 
- * sequentially computed node weights, to be multiplied by unit LCIA scores for impact assessment (basic traversal)
+ * sequentially compute node weights, to be multiplied by unit LCIA scores for impact assessment (basic traversal)
 
  * observability of fragments: each fragment has a separate notion of the exchange value it was "born with" and the
    "observed" exchange value set by the modeler.
@@ -20,7 +20,7 @@ Here are the things the fragment traversal is supposed to accomplish / enable:
    (b) termination scenario
    (c) determine valid scenarios for a fragment and subfragments
 
- * Conservation of at most one quantity per fragment by computing the magnitude of a balance flow
+ * Conservation of up to one quantity per fragment by computing the magnitude of a balance flow
 
  * the ability to nest fragments and
    (a) have the outcomes of nested traversals affect higher-level traversals (i.e. flow mapping between subfragment
@@ -38,8 +38,9 @@ Here are the things the fragment traversal is supposed to accomplish / enable:
    (b) by invoking them with a flow whose direction is opposing the fragment's reference direction
 
 Not yet implemented:
- = apply-scenario option for subfragment terminations. Build one electricity grid and traverse each instance differently
- = monte carlo analysis in traversal
+ = apply-scenario option for subfragment terminations. Build one electricity grid and parameterize it for multiple
+   locales; then traverse each instance differently as specified in the termination
+ = stochastic exchange values
  = private subfragments can force nondescend?
 """
 
@@ -56,10 +57,6 @@ origin = 'test.origin'
 qdb = Qdb()
 flow_ed = FlowEditor(qdb)
 frag_ed = FragmentEditor()
-
-mass = qdb.get_canonical('mass')
-ncv = qdb.get_canonical('Net calorific value')
-vol = qdb.get_canonical('volume')
 
 
 def new_flow(name, ref_quantity, context=None, **kwargs):
@@ -96,6 +93,9 @@ f4_mj_kg = 35
 f7_mass = 0.0123
 
 f1 = new_flow('My first flow', 'mass')
+
+mass = f1.reference_entity
+
 f2 = new_flow('My second flow', 'volume')
 f3 = new_flow('My third flow', 'net calorific value')
 f3w = new_flow('A waste energy flow', 'net calorific value')
@@ -125,7 +125,7 @@ a2_eff_private = 49
 a2_alt_fuel = 1.1 / f4_mj_kg
 a2_alt_tx = 2.6
 
-ac_mj_in = 4
+aa_mj_in = 4
 
 
 aa_in = 0.14
@@ -205,9 +205,10 @@ class FragmentTests(unittest.TestCase):
         a3.terminate(cls.a2_alt, scenario='improvement', descend=True)
 
         new_fragment(f5, 'Input', parent=cls.aa, value=aa_in)
-        ac = new_fragment(f3, 'Input', value=ac_mj_in, parent=cls.aa)
+        ac = new_fragment(f3, 'Input', value=aa_mj_in, parent=cls.aa)
         new_fragment(f4, 'Output', parent=cls.aa, balance=True).terminate(cls.af)  # to be run in reverse
         ac.terminate(cls.a2)
+        ac.terminate(cls.a2, scenario='nondescend', descend=False)  # to be run in reverse
         '''aa
            -<--O   b0565 [       1 Item(s)] An auto-consumption process
             [   1 unit] An auto-consumption process
@@ -262,7 +263,7 @@ class FragmentTests(unittest.TestCase):
     def test_unit_conversion_on_flow_termination(self):
         proper_kg = (a2_mj + a2_waste_heat) / f4_mj_kg
         ff = self.a2.traverse(None)
-        mag = next(f.magnitude for f in ff if f.flow == f4)
+        mag = next(f.magnitude for f in ff if f.fragment.flow == f4)
         self.assertEqual(mag, proper_kg)
 
     def test_subfragment_child(self):
@@ -272,7 +273,7 @@ class FragmentTests(unittest.TestCase):
         :return:
         """
         ancillary = a2_item * a2_private * a1_mj_in / self.a2.exchange_value()
-        self._check_fragmentflows(self.a2.traverse(None), f7, 'Input', a2_item)
+        self._check_fragmentflows(self.a2.traverse(None), f7, 'Input', a2_item * a2_private)
         self._check_fragmentflows(self.a1.traverse(None), f7, 'Input', ancillary)
 
     def test_unobserved_traversal(self):
@@ -312,8 +313,8 @@ class FragmentTests(unittest.TestCase):
     def test_scenarios_detection(self):
         self.assertSetEqual({k for k in self.a1.scenarios()}, {'surplus', 'optimistic', 'improvement', 'efficiency'})
         self.assertSetEqual({k for k in self.a2.scenarios()}, {'efficiency'})
-        self.assertSetEqual({k for k in self.aa.scenarios()}, {'efficiency'})
-        self.assertSetEqual({k for k in self.af.scenarios()}, {})
+        self.assertSetEqual({k for k in self.aa.scenarios()}, {'efficiency', 'nondescend'})
+        self.assertSetEqual({k for k in self.af.scenarios()}, set())
 
     def test_scenario_ev(self):
         """
@@ -333,35 +334,111 @@ class FragmentTests(unittest.TestCase):
         self._check_fragmentflows(default, f8, 'Input')  # not present
         self._check_fragmentflows(improved, f8, 'Input', a1_mj_in * a2_alt_tx)  # present
 
+    def test_autoconsumption(self):
+        """
+        fragment self.aa produces f7 "ancillary flows" in the amount of one unit.  but it also depends on fragment
+        self.a2, which has a cutoff input requirement for f7.  The inventory results for self.aa should report only
+        net production of f7
+        :return:
+        """
+        f7_autoconsumption = aa_mj_in / self.a2.exchange_value() * a2_private * a2_item
+        inv = self.aa.inventory()
+        f7_out = next(f for f in inv if f.flow is f7)
+        f5_in = next(f for f in inv if f.flow is f5)
+        self.assertEqual((f7_out.direction, f7_out.value), ('Output', 1 - f7_autoconsumption))
+        self.assertEqual((f5_in.direction, f5_in.value), ('Input', aa_in))
+
     def test_nonreference_subfragment(self):
         """
         A termination to a non-reference flow of a subfragment computes the proper node weight for the subfragment
-        Here we build an ad hoc fragment that requires consumption of f5 'yet another mass flow'-- which is also
+        Here we build an ad hoc fragment that coproduces f5 'yet another mass flow'-- which is also
         required by the autoconsumption fragment self.aa.
 
-        We are going to assume that the ad hoc fragment cannibalizes the input supply of self.aa
+        We are going to assume that the co-product drives additional production of f7 "ancillary flows" by terminating
+        our coproduct flow to self.aa.  This should have the effect of driving the autoconsuming fragment in its
+        forward direction and outputting f7.
         :return:
         """
+        coproduct = 6
         fq = new_flow('transparent aluminum', 'area')
         at = new_fragment(fq, 'Output')
-        new_fragment(f5, 'Output', parent=at, value=6).terminate(self.aa, term_flow=f5)
-
-
+        new_fragment(f5, 'Output', parent=at, value=coproduct).terminate(self.aa, term_flow=f5)
+        # node weight of driven node
+        aa_nw = coproduct / aa_in
+        # unit consumption of f7 by energy production node
+        f7_autoconsumption = aa_mj_in / self.a2.exchange_value() * a2_private * a2_item
+        net_f7_production = aa_nw * (1 - f7_autoconsumption)
+        ffs = at.traverse()
+        self._check_fragmentflows(ffs, f7, 'Output', net_f7_production)
 
     def test_negative_fragment(self):
-        pass
+        """
+        self.a1 balancing flow is negative under the 'surplus' scenario.  self.a1 balancing flow terminates to self.af
+        so if the driving amount is negative, the node weight of the subfragment should be negative.
+        :return:
+        """
+        ffs = self.a1.traverse('surplus')
+        self._check_fragmentflows(ffs, f5, 'Input', 1 - a1_addl_alt)
+        for f in ffs:
+            if f.fragment.top() is self.af:
+                self.assertTrue(f.node_weight < 0)
+
+    def test_balance_nonreference_quantities(self):
+        """
+        self.aa reference product is characterized w.r.t. mass, so balance flow should account for that
+        :return:
+        """
+        ffs = self.aa.traverse()
+        net_balance = aa_in - f7.cf(mass)
+        self._check_fragmentflows(ffs, f4, 'Output', net_balance)
 
     def test_inverted_fragment(self):
-        pass
+        """
+        self.aa produces an output of f5 which is terminated to self.af, which also produces an output of af.  Thus
+        when self.af is the subfragment its node weight should be negative.
+        :return:
+        """
+        ffs = self.aa.traverse('nondescend')  # ensure that the subfragment's dependence on af is concealed
+        for f in ffs:
+            if f.fragment.top() is self.af:
+                self.assertTrue(f.node_weight < 0, '%s' % f)
 
-    def test_descend_traversal(self):
-        pass
+    def test_descend_equivalence(self):
+        inv_d = self.aa.inventory()
+        inv_nd = self.aa.inventory('nondescend')
+        self.assertEqual(inv_d, inv_nd)
 
-    def test_nondescend_traversal(self):
-        pass
+    def test_nondescend_privacy(self):
+        ff_d = self.aa.traverse()
+        ff_nd = self.aa.traverse('nondescend')
+        expected_private = aa_mj_in / self.a2.exchange_value() * a2_private
+        self._check_fragmentflows(ff_d, fp, 'Input', expected_private)
+        self._check_fragmentflows(ff_nd, fp, 'Input')
 
-    def test_autoconsumption(self):
-        pass
+    def test_nonscenario(self):
+        self.assertNotIn('moriarty', [k for k in self.a1.scenarios()])
+        ffs = self.a1.traverse()
+        ffs_m = self.a1.traverse('moriarty')
+        self.assertEqual(ffs, ffs_m)
+
+    def test_multiple_scenarios(self):
+        """
+        Here we combine several different scenarios and look for signatures of each in the traversal results
+        :return:
+        """
+        ff_o_e = self.a1.traverse({'optimistic', 'efficiency'})
+        expected_item = a1_mj_optimistic / self.a2.exchange_value() * a2_eff_private * a2_item
+        self._check_fragmentflows(ff_o_e, f7, 'Input', expected_item)
+        self._check_fragmentflows(ff_o_e, f5, 'Input', 1-a1_addl)
+
+        ff_o_s_e = self.a1.traverse({'optimistic', 'surplus', 'efficiency'})
+        self._check_fragmentflows(ff_o_s_e, f7, 'Input', expected_item)
+        self._check_fragmentflows(ff_o_s_e, f5, 'Input', 1-a1_addl_alt)
+
+        ff_o_i_s = self.a1.traverse({'optimistic', 'improvement', 'surplus'})
+        expected_another = a1_mj_optimistic / self.a2_alt.exchange_value() * a2_alt_fuel
+        self._check_fragmentflows(ff_o_i_s, f7, 'Input')
+        self._check_fragmentflows(ff_o_i_s, f4, 'Input', a1_addl_alt, 1-a1_addl_alt, 1-a1_addl_alt, expected_another)
 
 
 if __name__ == '__main__':

@@ -245,7 +245,7 @@ def group_ios(parent, ffs, include_ref_flow=True):
         ref_frag = parent.top()
         ref_mag = ffs[0].magnitude
         if ref_frag.flow in out:  # either pass through or autoconsumption
-            ref_frag.dbg_print('%.3s either pass through or autoconsumption' % ref_frag.uuid)
+            ref_frag.dbg_print('either pass through or autoconsumption')
             val = out[ref_frag.flow]
             if val < 0:
                 auto_dirn = 'Output'

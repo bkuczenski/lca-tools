@@ -38,6 +38,8 @@ Here are the things the fragment traversal is supposed to accomplish / enable:
    (b) by invoking them with a flow whose direction is opposing the fragment's reference direction
 
 Not yet implemented:
+ = FragmentFlows must specify which scenarios applied to both ev and termination (exactly 1 for each, maybe None)
+   - challenge here is in propagating that info in GhostFragments and aggregations
  = apply-scenario option for subfragment terminations. Build one electricity grid and parameterize it for multiple
    locales; then traverse each instance differently as specified in the termination
  = stochastic exchange values

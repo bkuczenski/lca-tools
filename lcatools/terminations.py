@@ -43,7 +43,7 @@ class FlowTermination(object):
     _term = None
     _term_flow = None
     _direction = None
-    _descend = None
+    _descend = True
 
     """
     these are stored by scenario in a dict on the mainland
@@ -93,7 +93,7 @@ class FlowTermination(object):
             term_node = fg.catalog_ref(origin, external_ref, entity_type='process')
 
         direction = j.pop('direction', None)
-        descend = j.pop('descend', None)
+        descend = j.pop('descend', True)
         term = cls(fragment, term_node, direction=direction, term_flow=term_flow, descend=descend)
         if 'scoreCache' in j.keys():
             term._deserialize_score_cache(fg, j['scoreCache'], scenario)

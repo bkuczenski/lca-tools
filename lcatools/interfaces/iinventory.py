@@ -48,7 +48,7 @@ class InventoryInterface(AbstractQuery):
                                    process, flow, direction=direction, termination=termination, reference=reference,
                                    **kwargs)
 
-    def inventory(self, process, ref_flow=None, **kwargs):
+    def inventory(self, process, ref_flow=None, scenario=None, **kwargs):
         """
         Return a list of exchanges with values. If no reference is supplied, return all unallocated exchanges, including
         reference exchanges.
@@ -64,14 +64,15 @@ class InventoryInterface(AbstractQuery):
          - If the supplied reference flow is a non-reference, non-cutoff flow (i.e. it is a terminated exchange), then
          the appropriate behavior is undefined. The default implementation raises an ExchangeError.
 
-        Note: if this is called on a fragment, the signature is the same but the 'ref_flow' argument is interpreted
-        as a 'scenario' specification instead, inclusive of the fragment's reference exchange
+        Note: if this is called on a fragment, the signature is the same but the 'ref_flow' argument is ignored and
+        the alternative 'scenario' kwarg is accepted
         :param process:
-        :param ref_flow:
+        :param ref_flow: used only for processes
+        :param scenario: used only for fragments
         :return:
         """
         return self._perform_query(_interface, 'inventory', InventoryRequired('No access to exchange data'),
-                                   process, ref_flow=ref_flow, **kwargs)
+                                   process, ref_flow=ref_flow, scenario=scenario, **kwargs)
 
     def exchange_relation(self, process, ref_flow, exch_flow, direction, termination=None, **kwargs):
         """

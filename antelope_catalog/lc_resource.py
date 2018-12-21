@@ -11,9 +11,6 @@ from .catalog_query import INTERFACE_TYPES
 from .providers import create_archive, update_archive
 
 
-new_date = datetime.now().strftime('%Y%m%d')
-
-
 class LcResource(object):
     """
     This is a record that links a semantic reference to a physical data source, and specifies the capabilities
@@ -102,6 +99,9 @@ class LcResource(object):
 
     def make_index(self, index_file):
         self._archive.load_all()
+
+        new_date = datetime.now().strftime('%Y%m%d')  # there's no reason for this to be static
+
         suffix = 'index__%s' % new_date
         # note: archive ref is updated by writing index
         self._archive.write_to_file(index_file, gzip=True, ref_suffix=suffix,

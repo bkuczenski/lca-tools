@@ -1,6 +1,6 @@
-from .interfaces import comp_dir
+from lcatools.interfaces import comp_dir
 
-from lcatools.terminations import FlowTermination, SubFragmentAggregation
+from .terminations import FlowTermination, SubFragmentAggregation
 from lcatools.lcia_results import LciaResult, DetailedLciaResult, SummaryLciaResult
 
 from collections import defaultdict

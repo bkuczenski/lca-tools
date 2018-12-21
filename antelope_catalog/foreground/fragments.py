@@ -4,7 +4,7 @@
 """
 
 import uuid
-from collections import defaultdict
+# from collections import defaultdict
 
 from lcatools.interfaces import comp_dir
 

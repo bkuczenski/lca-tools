@@ -6,7 +6,7 @@ as a ProductFlow in lca-matrix, although the FlowTermination is more powerful.  
 either one from the other.
 """
 
-from .interfaces import PrivateArchive, comp_dir
+from lcatools.interfaces import PrivateArchive, check_direction, comp_dir
 
 from lcatools.exchanges import ExchangeValue
 from lcatools.lcia_results import LciaResult, LciaResults
@@ -39,6 +39,12 @@ class UnCachedScore(Exception):
 
 
 class FlowTermination(object):
+
+    _term = None
+    _term_flow = None
+    _direction = None
+    _descend = None
+
     """
     these are stored by scenario in a dict on the mainland
 
@@ -135,13 +141,37 @@ class FlowTermination(object):
                 term_flow = entity
                 entity = fragment
         self._term = entity  # this must have origin, external_ref, and entity_type, and be operable (if ref)
-        self._descend = True
-        self.term_flow = term_flow or self._parent.flow
         self._score_cache = LciaResults(fragment)
-        self.direction = direction or comp_dir(fragment.direction)
 
+        self.direction = direction
+        self.term_flow = term_flow
         self.descend = descend
-        self.validate_flow_conversion()
+
+    @property
+    def term_flow(self):
+        return self._term_flow
+
+    @term_flow.setter
+    def term_flow(self, term_flow):
+        """
+        Introduce term validation checking here if needed
+        :param term_flow:
+        :return:
+        """
+        if term_flow is None:
+            self._term_flow = self._parent.flow
+        else:
+            self._term_flow = term_flow
+
+    @property
+    def direction(self):
+        return self._direction
+
+    @direction.setter
+    def direction(self, value):
+        if value is None:
+            value = comp_dir(self._parent.direction)
+        self._direction = check_direction(value)
 
     def matches(self, exchange):
         """
@@ -264,16 +294,14 @@ class FlowTermination(object):
             return
         if isinstance(value, bool):
             self._descend = value
+            ''' # this whole section not needed- we can certainly cache LCIA scores for nondescend fragments,
+            and we don't need to blow them away if descend is True; just ignore them.
             if value is True:
                 self.clear_score_cache()  # if it's descend, it should have no score_cache
-                # if it's not descend, the score cache gets set during traversal
+                # if it's not descend, the score gets computed (and not cached) during traversal
+            '''
         else:
             raise ValueError('Descend setting must be True or False')
-
-    def self_terminate(self, term_flow=None):
-        self._term = self._parent
-        self.term_flow = term_flow or self._parent.flow
-        self.clear_score_cache()
 
     @property
     def term_node(self):
@@ -318,9 +346,6 @@ class FlowTermination(object):
                 return 1.0 / self.term_flow.cf(parent_qty)
         return self._parent.flow.cf(tgt_qty)
 
-    def validate_flow_conversion(self):
-        return self.flow_conversion  # deal with it when an error comes up
-
     @property
     def id(self):
         if self.is_null:
@@ -355,7 +380,7 @@ class FlowTermination(object):
         :return:
         """
         if self.is_fg:
-            x = ExchangeValue(self._parent, self._parent.flow, self._parent.direction,
+            x = ExchangeValue(self._parent, self.term_flow, self.direction,
                               value=self.node_weight_multiplier)
             yield x
         elif self.term_is_bg:
@@ -421,14 +446,14 @@ class FlowTermination(object):
                 # res.set_scale(self.inbound_exchange_value)
         return res
 
-    def score_cache(self, quantity=None, ignore_uncached=False, **kwargs):
+    def score_cache(self, quantity=None, ignore_uncached=False, refresh=False, **kwargs):
         if quantity is None:
             return self._score_cache
-        if quantity.uuid in self._score_cache:
+        if quantity.uuid in self._score_cache and refresh is False:
             return self._score_cache[quantity.uuid]
         else:
             try:
-                res = self.compute_unit_score(quantity, **kwargs)
+                res = self.compute_unit_score(quantity, refresh=refresh, **kwargs)
             except UnCachedScore:
                 if ignore_uncached:
                     res = LciaResult(quantity)

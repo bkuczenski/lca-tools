@@ -478,6 +478,14 @@ class FragmentTests(unittest.TestCase):
         self._check_fragmentflows(ff_o_i_s, f4, 'Input',
                                   a1_surplus_addl, 1 - a1_surplus_addl, 1 - a1_surplus_addl, expected_another)
 
+    def test_tuple_scenarios(self):
+        expected_item = a1_mj_optimistic / self.a2.exchange_value() * a2_eff_private * a2_item
+        ff_o_s_e = self.a1.traverse(('optimistic', 'surplus', 'efficiency'))
+        self._check_fragmentflows(ff_o_s_e, f7, 'Input', expected_item)
+        self._check_fragmentflows(ff_o_s_e, f5, 'Input', 1 - a1_surplus_addl)
+
+
+
 
 if __name__ == '__main__':
     unittest.main()

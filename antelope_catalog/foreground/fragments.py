@@ -1078,6 +1078,8 @@ class LcFragment(LcEntity):
                                                      x.flow['Name'], x.value), reverse=True)
 
     def traverse(self, scenario=None, observed=False):
+        if isinstance(scenario, tuple) or isinstance(scenario, list):
+            scenario = set(scenario)
         ffs, _ = self._traverse_node(1.0, scenario, observed=observed)
         return ffs
 
@@ -1303,6 +1305,8 @@ class LcFragment(LcEntity):
         if conserved_qty is not None:
             if self.is_balance:
                 raise FoundBalanceFlow  # to be caught
+            cf = self.flow.cf(conserved_qty)
+            self.dbg_print('consrv cf %g for qty %s' % (cf, conserved_qty), level=3)
             conserved_val = ev * self.flow.cf(conserved_qty)
             if conserved_val != 0:
                 conserved = True

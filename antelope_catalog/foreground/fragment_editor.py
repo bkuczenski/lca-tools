@@ -1,4 +1,6 @@
-from .fragments import LcFragment
+from collections import defaultdict
+
+from .fragments import LcFragment, DependentFragment
 
 from lcatools.interfaces import directions, comp_dir
 from lcatools.interact import parse_math, cyoa, ifinput
@@ -213,3 +215,74 @@ class FragmentEditor(EntityEditor):
         surrogate.terminate(fragment)
 
         return fragment
+
+
+def set_child_exchanges(fragment, scenario=None, reset_cache=False):
+    """
+    This is really client code, doesn't use any private capabilities
+    Set exchange values of child flows based on inventory data for the given scenario.  The termination must be
+     a foreground process.
+
+    In order for this function to work, flows in the node's exchanges have to have the SAME external_ref as the
+    child flows, though origins can differ.  There is no other way for the exchanges to be set automatically from
+    the inventory.  Requiring that the flows have the same name, CAS number, compartment, etc. is too fragile /
+    arbitrary.  The external refs must match.
+
+    This works out okay for databases that use a consistent set of flows internally -- ILCD, thinkstep, and
+    ecoinvent all seem to have that characteristic but ask me again in a year.
+
+    To automatically set child exchanges for different scenarios that use processes from different databases,
+    encapsulate each term node inside a sub-fragment, and then specify different subfragment terminations for the
+    different scenarios.  Then, map each input / output in the sub-fragment to the correct foreground flow using
+    a conserving child flow.
+
+    In that case, the exchange values will be set during traversal, and each sub-fragment's internal exchange
+    values can be set automatically using set_child_exchanges.
+
+    :param fragment:
+    :param scenario: [None] for the default scenario, set observed ev
+    :param reset_cache: [False] if True, for the default scenario set cached ev
+    :return:
+    """
+    term = fragment.termination(scenario)
+    if not term.term_node.entity_type == 'process':
+        raise DependentFragment('Child flows are set during traversal')
+
+    if scenario is None and fragment.reference_entity is None:
+        # this counts as observing the reference flow
+        if fragment.observed_ev == 0:
+            fragment.observed_ev = fragment.cached_ev
+
+    children = defaultdict(list)  # need to allow for differently-terminated child flows -- distinguish by term.id
+
+    for k in fragment.child_flows:
+        key = (k.flow.external_ref, k.direction)
+        children[key].append(k)
+    if len(children) == 0:
+        return
+
+    for x in term.term_node.inventory(ref_flow=term.term_flow, direction=term.direction):
+        if x.value is None:
+            fragment.dbg_print('skipping None-valued exchange: %s' % x)
+            continue
+
+        key = (x.flow.external_ref, x.direction)
+        if key in children:
+            try:
+                if len(children[key]) > 1:
+                    child = next(c for c in children[key] if c.termination(scenario).id == x.termination)
+                else:
+                    child = next(c for c in children[key])
+            except StopIteration:
+                continue
+
+            fragment.dbg_print('setting %s [%10.3g]' % (child, x.value))
+            if scenario is None:
+                if reset_cache:
+                    child.reset_cache()
+                    child.cached_ev = x.value
+                else:
+                    child.observed_ev = x.value
+            else:
+                child.set_exchange_value(scenario, x.value)
+

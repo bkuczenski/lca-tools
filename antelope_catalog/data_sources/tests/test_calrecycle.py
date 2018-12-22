@@ -39,6 +39,10 @@ class CalRecycleTest(unittest.TestCase):
     def test_create_and_load(self):
         self.assertEqual(fg.count_by_type('fragment'), 888)
 
+    def test_scenarios(self):
+        uom = fg['fragments/55']
+        self.assertSetEqual(set(uom.scenarios()), {'sp24', 'quell_eg'})
+
     def test_named_fragment(self):
         self.assertEqual(fg['fragments/43']['Name'], 'Fuels Displacement Mixer - distillate')
 
@@ -82,7 +86,10 @@ class CalRecycleTest(unittest.TestCase):
     def test_lcia_2_frag_uom(self):
         uom = fg['fragments/55']
         res = uom.fragment_lcia(self.gwp)
-        self.assertEqual(floor(res.total()), -94202323)
+        # self.assertEqual(floor(res.total()), -94202323)  # legacy Antelope result-- correct down to private processes
+        self.assertEqual(floor(res.total()), -94671973)  # current correct value 2018/12/21
+        res_eg = uom.fragment_lcia(self.gwp, scenario='quell_eg')
+        self.assertEqual(floor(res_eg.total()), -94357342)  # quell_eg value 2018/12/21
         res = uom.fragment_lcia(self.criteria)
         self.assertEqual(floor(res.total()), 25598)
 

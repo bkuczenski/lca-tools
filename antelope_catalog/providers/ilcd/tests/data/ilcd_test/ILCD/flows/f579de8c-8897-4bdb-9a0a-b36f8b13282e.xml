@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet version="1.0" href="../../stylesheets/flow2html.xsl" type="text/xsl"?>
+<flowDataSet xmlns="http://lca.jrc.it/ILCD/Flow" xmlns:common="http://lca.jrc.it/ILCD/Common" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://lca.jrc.it/ILCD/Flow ../../schemas/ILCD_FlowDataSet.xsd" locations="../ILCDLocations.xml" version="1.1">
+  <flowInformation>
+    <dataSetInformation>
+      <common:UUID>f579de8c-8897-4bdb-9a0a-b36f8b13282e</common:UUID>
+      <name>
+        <baseName xml:lang="en">RNA: natural gas, at consumer</baseName>
+      </name>
+      <classificationInformation>
+        <common:elementaryFlowCategorization name="GaBiFlowCategorization" categories="../GaBiCategories.xml">
+          <common:category level="0" catId="bb5f9165-568f-4bb7-bcd7-41cb1bc75357">Ecoinvent</common:category>
+          <common:category level="1" catId="706a2e3a-4e35-429b-80b9-24b01bf74d62">Natural gas</common:category>
+          <common:category level="2" catId="69e1ea98-a5b1-458a-bd4f-257abac1a17d">fuels</common:category>
+        </common:elementaryFlowCategorization>
+        <common:classification name="GaBiCategories" classes="../GaBiCategories.xml">
+          <common:class level="0" classId="bb5f9165-568f-4bb7-bcd7-41cb1bc75357">Ecoinvent</common:class>
+          <common:class level="1" classId="706a2e3a-4e35-429b-80b9-24b01bf74d62">Natural gas</common:class>
+          <common:class level="2" classId="69e1ea98-a5b1-458a-bd4f-257abac1a17d">fuels</common:class>
+        </common:classification>
+      </classificationInformation>
+    </dataSetInformation>
+    <quantitativeReference>
+      <referenceToReferenceFlowProperty>0</referenceToReferenceFlowProperty>
+    </quantitativeReference>
+  </flowInformation>
+  <modellingAndValidation>
+    <LCIMethod>
+      <typeOfDataSet>Product flow</typeOfDataSet>
+    </LCIMethod>
+    <complianceDeclarations>
+      <compliance>
+        <common:referenceToComplianceSystem refObjectId="9ba3ac1e-6797-4cc0-afd5-1b8f7bf28c6a" version="03.00.000" type="source data set" uri="../sources/9ba3ac1e-6797-4cc0-afd5-1b8f7bf28c6a.xml">
+          <common:shortDescription xml:lang="en">ILCD compliance 1.1</common:shortDescription>
+        </common:referenceToComplianceSystem>
+        <common:approvalOfOverallCompliance>Fully compliant</common:approvalOfOverallCompliance>
+      </compliance>
+    </complianceDeclarations>
+  </modellingAndValidation>
+  <administrativeInformation>
+    <dataEntryBy>
+      <common:timeStamp>2014-07-15T15:43:21+-8:00</common:timeStamp>
+      <common:referenceToDataSetFormat refObjectId="a97a0155-0234-4b87-b4ce-a45da52f2a40" version="03.00.000" type="source data set" uri="../sources/a97a0155-0234-4b87-b4ce-a45da52f2a40.xml">
+        <common:shortDescription xml:lang="en">ILCD format 1.1</common:shortDescription>
+      </common:referenceToDataSetFormat>
+    </dataEntryBy>
+    <publicationAndOwnership>
+      <common:dataSetVersion>24.00.000</common:dataSetVersion>
+    </publicationAndOwnership>
+  </administrativeInformation>
+  <flowProperties>
+    <flowProperty dataSetInternalID="0">
+      <referenceToFlowPropertyDataSet refObjectId="93a60a56-a3c8-11da-a746-0800200c9a66" version="03.00.000" type="flow property data set" uri="../flowproperties/93a60a56-a3c8-11da-a746-0800200c9a66.xml">
+        <common:shortDescription xml:lang="en">Energy (net calorific value)</common:shortDescription>
+      </referenceToFlowPropertyDataSet>
+      <meanValue>1</meanValue>
+    </flowProperty>
+    <flowProperty dataSetInternalID="1">
+      <referenceToFlowPropertyDataSet refObjectId="93a60a56-a3c8-11da-a746-0800200b9a66" version="03.00.000" type="flow property data set" uri="../flowproperties/93a60a56-a3c8-11da-a746-0800200b9a66.xml">
+        <common:shortDescription xml:lang="en">Mass</common:shortDescription>
+      </referenceToFlowPropertyDataSet>
+      <meanValue>0.0204081632653061</meanValue>
+      <relativeStandardDeviation95In>0.000</relativeStandardDeviation95In>
+    </flowProperty>
+    <flowProperty dataSetInternalID="2">
+      <referenceToFlowPropertyDataSet refObjectId="93a60a56-a3c8-22da-a746-0800200c9a66" version="03.00.000" type="flow property data set" uri="../flowproperties/93a60a56-a3c8-22da-a746-0800200c9a66.xml">
+        <common:shortDescription xml:lang="en">Volume</common:shortDescription>
+      </referenceToFlowPropertyDataSet>
+      <meanValue>0.015</meanValue>
+      <relativeStandardDeviation95In>0.000</relativeStandardDeviation95In>
+    </flowProperty>
+    <flowProperty dataSetInternalID="3">
+      <referenceToFlowPropertyDataSet refObjectId="93a60a56-a3c8-13da-a746-0800200c9a66" version="03.00.000" type="flow property data set" uri="../flowproperties/93a60a56-a3c8-13da-a746-0800200c9a66.xml">
+        <common:shortDescription xml:lang="en">Standard volume</common:shortDescription>
+      </referenceToFlowPropertyDataSet>
+      <meanValue>0.015</meanValue>
+      <relativeStandardDeviation95In>0.000</relativeStandardDeviation95In>
+    </flowProperty>
+  </flowProperties>
+</flowDataSet>

@@ -45,7 +45,9 @@ class CalRecycleTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.gwp = cat.query('calrecycle.lcia.elcd').get('370960f4-0a3a-415d-bf3e-e5ce63160bb9')
+        cls.mep = cat.query('calrecycle.lcia.elcd').get('5296e2be-060b-4e50-b033-d45f85f6ac92')
         cls.criteria = cat.query('calrecycle.lcia.traci').get('de6753e3-2e0a-4fb8-b113-331735e26e3d')
+        cls.lcia_map = {2: cls.gwp, 4: cls.mep, 16: cls.criteria}
 
     def test_create_and_load(self):
         self.assertEqual(fg.count_by_type('fragment'), 888)
@@ -125,6 +127,17 @@ class CalRecycleTest(unittest.TestCase):
             self.assertAlmostEqual(res[key].cumulative_result, res_remote[key].cumulative_result, places=12)
         self.assertAlmostEqual(res['EI'].cumulative_result, res_remote['EI'].cumulative_result, places=4)
         self.assertNotAlmostEqual(res['EI'].cumulative_result, res_remote['EI'].cumulative_result, places=6)
+
+    def _validate_antelope(self, frag_id):
+        frag_l = fg['fragments/%d' % frag_id]
+        for lcia_id in (2, 4, 16):
+            res_a = _get_antelope_result(frag_id, lcia_id)
+            res_l = frag_l.fragment_lcia(self.lcia_map[lcia_id], scenario='quell_eg')
+            self.assertAlmostEqual(res_a.total(), res_l.total(), places=10)
+
+    def test_fragment_lcia(self):
+        for frag_id in (15, 20, 24, 30, 36, 42, 44, 50):
+            self._validate_antelope(frag_id)
 
 
 if __name__ == '__main__':

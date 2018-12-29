@@ -148,7 +148,8 @@ class AntelopeInventoryImplementation(InventoryImplementation):
         for ff in ffs:
             if 'fragmentStageID' in ff:
                 ff['StageName'] = self.get_stage_name(ff['fragmentStageID'])
-        return [self._archive.make_fragment_flow(ff) for ff in ffs]
+        return [self._archive.make_fragment_flow(ff)
+                for ff in sorted(ffs, key=lambda x: ('parentFragmentFlowID' in x, x['fragmentFlowID']))]
 
     def fragment_lcia(self, fragment, quantity_ref, scenario=None, refresh=False, **kwargs):
         if scenario is None:

@@ -29,7 +29,7 @@ class ProcessRef(EntityRef):
 
     @property
     def name(self):
-        return '%s [%s]' % (self._d['Name'], self._d['SpatialScope'])
+        return '%s [%s]' % (self['Name'], self['SpatialScope'])
 
     @property
     def default_rx(self):

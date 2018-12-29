@@ -23,9 +23,20 @@ if _run_calrecycle:
     cat = LcCatalog(CATALOG_ROOT)
     crc = CalRecycleConfig(RESOURCES_CONFIG['calrecycle']['data_root'])
     fg = crc.foreground(cat, fg_path='uolca')
+    if fg.frag('aed7a').is_background:
+        fg.frag('aed7a')._background = False  # postfix defect in repo generation
+    if 'calrecycle.antelope' not in cat.references:
+        cat.new_resource('calrecycle.antelope', 'http://www.antelope-lca.net/uo-lca/api/', 'AntelopeV1Client',
+                         store=False, interfaces=['index', 'inventory', 'quantity'], quiet=True)
 
 else:
     fg = None
+
+
+def _get_antelope_result(frag_id, lcia_id):
+    key = 'fragments/%d' % frag_id
+    lcia = 'lciamethods/%d' % lcia_id
+    return cat.query('calrecycle.antelope').get(key).fragment_lcia(lcia)
 
 
 @unittest.skipUnless(_run_calrecycle, "CalRecycle test not enabled")
@@ -58,7 +69,7 @@ class CalRecycleTest(unittest.TestCase):
     def test_traversal(self):
         uom = fg['fragments/55']
         ffs = uom.traverse(None, observed=True)
-        self.assertEqual(len(ffs), 306)  # presumably some ffs went away with uslci bg change 43d35c7
+        self.assertEqual(len(ffs), 322)  # some ffs went away with uslci bg change 43d35c7; a few came back with 110321a
         inv = uom.inventory(None, observed=True)
         light_fuel = next(x for x in inv if x.flow['Name'].startswith('Light Fuel'))
         self.assertEqual(floor(light_fuel.value), 116915718)
@@ -86,13 +97,34 @@ class CalRecycleTest(unittest.TestCase):
     def test_lcia_2_frag_uom(self):
         uom = fg['fragments/55']
         res = uom.fragment_lcia(self.gwp)
-        # self.assertEqual(floor(res.total()), -94202323)  # legacy Antelope result-- correct down to private processes
-        self.assertEqual(floor(res.total()), -94671973)  # current correct value 2018/12/21
+        # self.assertEqual(floor(res.total()), -94202323)  # legacy Antelope result-- eg fail; private processes differ
+        self.assertEqual(floor(res.total()), -94671945)  # current correct value 2018/12/28
         res_eg = uom.fragment_lcia(self.gwp, scenario='quell_eg')
-        self.assertEqual(floor(res_eg.total()), -94357342)  # quell_eg value 2018/12/21
-        res = uom.fragment_lcia(self.criteria)
-        self.assertEqual(floor(res.total()), 25598)
+        self.assertEqual(floor(res_eg.total()), -94357314)  # quell_eg value 2018/12/28
+        res = uom.fragment_lcia(self.criteria, scenario='quell_eg')
+        self.assertEqual(floor(res.total()), 25278)  # current quell_eg value 2018/12/28
 
+    def test_antelope_frag_2_ng_conserv(self):
+        ng2 = fg['fragments/2']
+        ffs_loc = [f for f in ng2.traverse(observed=True) if f.is_conserved]
+        ffs_rem = [f for f in cat.query('calrecycle.antelope').get('fragments/2').traverse() if f.is_conserved]
+        self.assertEqual(len(ffs_loc), len(ffs_rem))
+        for ff in ffs_rem:
+            ffl = next(f for f in ffs_loc if f.fragment.flow['Name'] == ff.fragment.flow['Name'])
+            if ff.fragment.flow['Name'] == ng2.flow['Name']:  # reference fragment: normalization works differently now
+                norm = next(x.value for x in ng2.term.term_node.exchange_values(ng2.flow))
+            else:
+                norm = 1.0
+            self.assertAlmostEqual(ff.node_weight, ffl.node_weight / norm, places=12)
+
+    def test_antelope_frag_2_ng_gwp(self):
+        ng = fg['fragments/2']
+        res = ng.fragment_lcia(self.gwp).aggregate()
+        res_remote = _get_antelope_result(2, 2)
+        for key in ('PE', 'US LCI', 'Natural Gas Supply'):
+            self.assertAlmostEqual(res[key].cumulative_result, res_remote[key].cumulative_result, places=12)
+        self.assertAlmostEqual(res['EI'].cumulative_result, res_remote['EI'].cumulative_result, places=4)
+        self.assertNotAlmostEqual(res['EI'].cumulative_result, res_remote['EI'].cumulative_result, places=6)
 
 
 if __name__ == '__main__':

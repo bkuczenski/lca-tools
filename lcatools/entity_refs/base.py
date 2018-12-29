@@ -92,11 +92,7 @@ class BaseRef(object):
         return self._localitem(item)
 
     def has_property(self, item):
-        try:
-            self.__getitem__(item)
-            return self._localitem(item) is not None
-        except KeyError:
-            return False
+        return self._localitem(item) is not None
 
     def __setitem__(self, key, value):
         key = key.lower()
@@ -289,20 +285,38 @@ class EntityRef(BaseRef):
         return True
 
     def get_item(self, item, force_query=False):
+        """
+        This keeps generating recursion errors. Let's think it through.
+         - first checks locally. If known, great.
+         - if not, need to check remotely by running the query.
+         - the query retrieves the entity and asks has_property
+           -- which causes recursion error if the query actually gets the entity_ref
+           -- so has_property has to not trigger an additional query call, and only asks locally.
+         - fine. So when do we raise a key error?
+        :param item:
+        :param force_query:
+        :return:
+        """
         if not force_query:
             # check local first.  return local_item if present.
             loc = self._localitem(item)
             if loc is not None:
                 return loc
         self._check_query('getitem %s' % item)
-        val = self._query.get_item(self.external_ref, item)
+        try:
+            val = self._query.get_item(self.external_ref, item)
+        except KeyError:
+            return None
         if val is not None and val != '':
             self._d[item] = val
             return val
         return None  # TODO: are we sure we don't want to raise a KeyError here?
 
     def __getitem__(self, item):
-        return self.get_item(item)
+        val = self.get_item(item)
+        if val is None:
+            raise KeyError(item)
+        return val
 
     def serialize(self, **kwargs):
         j = super(EntityRef, self).serialize(**kwargs)

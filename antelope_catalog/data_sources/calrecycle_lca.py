@@ -415,6 +415,12 @@ class CalRecycleImporter(object):
             frag.set_background()
 
     def inv_ethylene_glycol_correction(self):
+        """
+        Legacy Antelope online tool fails to generate nonzero impact scores for inverted processes because
+        the directions don't match on the join.  The model has only one inverted process: avoided ethylene glycol,
+        thinkstep process with UUID 'df09efef-4d73-4b45-a899-1c6d1ca97da0'
+        :return:
+        """
         for f in self._frags.values():
             if f.term.is_process:
                 if f.term.term_node.uuid == 'df09efef-4d73-4b45-a899-1c6d1ca97da0':

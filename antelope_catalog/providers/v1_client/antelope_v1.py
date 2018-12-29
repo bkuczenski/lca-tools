@@ -134,8 +134,6 @@ class AntelopeV1Client(BasicArchive):
     def _get_impact_category(self, cat_id):
         cats = self.get_endpoint('impactcategories')
         cat_id = int(cat_id)
-        if cats[cat_id - 1]['impactCategoryID'] == cat_id:
-            return cats[cat_id - 1]['name']
         try:
             return next(j['name'] for j in cats if j['impactCategoryID'] == cat_id)
         except StopIteration:
@@ -147,7 +145,7 @@ class AntelopeV1Client(BasicArchive):
         :param ff:
         :return:
         """
-        return FragmentFlow.from_antelope_v1(ff, self._make_ref)
+        return FragmentFlow.from_antelope_v1(ff, self._query)
 
     '''
     Entity handling

@@ -1,10 +1,11 @@
 from lcatools.interfaces import comp_dir
 
 from .terminations import FlowTermination, SubFragmentAggregation
+from .characterizations import DuplicateCharacterizationError
 from lcatools.lcia_results import LciaResult, DetailedLciaResult, SummaryLciaResult
 
 from collections import defaultdict
-
+from math import isclose
 
 class CumulatingFlows(Exception):
     """
@@ -48,7 +49,7 @@ class FragmentFlow(object):
 
     """
     @classmethod
-    def from_antelope_v1(cls, j, make_ref):
+    def from_antelope_v1(cls, j, query):
         """
         Need to:
          * create a termination
@@ -58,17 +59,22 @@ class FragmentFlow(object):
          * extract is_conserved
         :param j: JSON-formatted fragmentflow, from a v1 .NET antelope instance.  Must be modified to include StageName
          instead of fragmentStageID
-        :param make_ref: a function that accepts (external_id, e_type, reference_entity, **kwargs) and returns a ref
+        :param query: an antelope v1 catalog query
         :return:
         """
         fpms = j['flowPropertyMagnitudes']
         ref_mag = fpms[0]
         magnitude = ref_mag['magnitude']
-        ref_qty = make_ref('flowproperties/%s' % ref_mag['flowPropertyID'], 'quantity', ref_mag['unit'])
-        flow = make_ref('flows/%s' % j['flowID'], 'flow', ref_qty)
+        flow = query.get('flows/%s' % j['flowID'])
         for fpm in fpms[1:]:
-            mag_qty = make_ref('flowproperties/%s' % fpm['flowPropertyID'], 'quantity', fpm['unit'])
-            flow.add_characterization(mag_qty, value=fpm['magnitude'] / magnitude)
+            mag_qty = query.get('flowproperties/%s' % fpm['flowPropertyID'])
+            val = fpm['magnitude'] / magnitude
+            try:
+                flow.add_characterization(mag_qty, value=val)
+            except DuplicateCharacterizationError:
+                if not isclose(flow.cf(mag_qty), val):
+                    raise ValueError('Characterizations do not match: %g vs %g' % (flow.cf(mag_qty), val))
+
         dirn = j['direction']
 
         if 'parentFragmentFlowID' in j:
@@ -76,23 +82,17 @@ class FragmentFlow(object):
             frag = GhostFragment(parent, flow, dirn)
 
         else:
-            if 'StageName' in j:
-                stage_name = j['StageName']
-            else:
-                stage_name = 'InputOutput'
-            frag = make_ref('fragments/%s' % j['fragmentID'], 'fragment', None,
-                            Name=j['name'], StageName=stage_name)
-            frag.set_config(flow, dirn)
+            frag = query.get('fragments/%s' % j['fragmentID'])
 
         node_type = j['nodeType']
         nw = j['nodeWeight']
         inbound_ev = magnitude / nw
 
         if node_type == 'Process':
-            term_node = make_ref('processes/%s' % j['processID'], 'process', [])
+            term_node = query.get('processes/%s' % j['processID'])
             term = FlowTermination(frag, term_node, term_flow=flow, inbound_ev=inbound_ev)
         elif node_type == 'Fragment':
-            term_node = make_ref('fragments/%s' % j['subFragmentID'], 'fragment', [])
+            term_node = query.get('fragments/%s' % j['subFragmentID'])
             term = FlowTermination(frag, term_node, term_flow=flow, inbound_ev=inbound_ev)
         else:
             term = FlowTermination.null(frag)

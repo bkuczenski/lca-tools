@@ -47,6 +47,12 @@ class FragmentRef(EntityRef):
         return 'frag'
 
     @property
+    def name(self):
+        if self.external_ref is None:
+            return self['Name']
+        return self.external_ref
+
+    @property
     def is_conserved_parent(self):
         return None
 

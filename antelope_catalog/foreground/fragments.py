@@ -1145,6 +1145,7 @@ class LcFragment(LcEntity):
 
         for f in self.child_flows:
             try:
+                # traverse child, collecting conserved value if applicable
                 child_ff, cons = f._traverse_node(node_weight, scenario, observed=observed,
                                                   frags_seen=set(frags_seen), conserved_qty=self._conserved_quantity)
                 if cons is None:
@@ -1261,7 +1262,9 @@ class LcFragment(LcEntity):
         :param conserved_qty: in case the parent node is a conservation node
         :param _balance: used when flow magnitude is determined during traversal, i.e. for balance flows and
         children of fragment nodes
-        :return: an array of FragmentFlow records reporting the traversal
+        :return: 2-tuple: ffs, conserved_val
+          ffs = an array of FragmentFlow records reporting the traversal, beginning with self
+          conserved_val = the magnitude of the flow with respect to the conserved quantity, if applicable (or None)
         """
 
         # first check for cycles
@@ -1301,19 +1304,27 @@ class LcFragment(LcEntity):
         self.dbg_print('magnitude: %g node_weight: %g' % (magnitude, node_weight))
 
         conserved_val = None
-        conserved = False
         if conserved_qty is not None:
             if self.is_balance:
                 raise FoundBalanceFlow  # to be caught
             cf = self.flow.cf(conserved_qty)
             self.dbg_print('consrv cf %g for qty %s' % (cf, conserved_qty), level=3)
             conserved_val = ev * self.flow.cf(conserved_qty)
-            if conserved_val != 0:
+            if conserved_val == 0:
+                conserved = False
+            else:
                 conserved = True
-            if self.direction == 'Output':  # convention: inputs to parent are positive
-                conserved_val *= -1
-            self.dbg_print('conserved_val %g' % conserved_val, level=2)
-
+                if self.direction == 'Output':  # convention: inputs to parent are positive
+                    conserved_val *= -1
+                self.dbg_print('conserved_val %g' % conserved_val, level=2)
+        elif self.is_balance:
+            # traversing balance flow after FoundBalanceFlow exception
+            conserved = True
+        elif self.balance_flow is not None and self.flow.cf(self._conserved_quantity) != 0.0:
+            # parent whose flow is balanced by child flow
+            conserved = True
+        else:
+            conserved = False
 
         # print('%6f %6f %s' % (magnitude, node_weight, self))
         # TODO: figure out how to cache + propagate matched scenarios

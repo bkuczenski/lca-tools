@@ -112,6 +112,9 @@ class AbstractQuery(object):
         return self._perform_query(None, 'get', EntityNotFound('%s/%s' % (self.origin, eid)), eid,
                                    **kwargs)
 
+    def get_uuid(self, external_ref):
+        return self._perform_query(None, 'get_uuid', EntityNotFound('%s/%s' % (self.origin, external_ref)),
+                                   external_ref)
 
 '''# maybe we don't need these?!
 <<<<<<< HEAD
@@ -132,7 +135,4 @@ class AbstractQuery(object):
         return self._perform_query(None, 'get_reference', EntityNotFound('%s/%s' % (self.origin, external_ref)),
                                    external_ref)
 
-    def get_uuid(self, external_ref):
-        return self._perform_query(None, 'get_uuid', EntityNotFound('%s/%s' % (self.origin, external_ref)),
-                                   external_ref)
 '''

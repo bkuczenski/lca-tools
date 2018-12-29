@@ -68,7 +68,10 @@ class FragmentFlow(object):
         flow = query.get('flows/%s' % j['flowID'])
         for fpm in fpms[1:]:
             mag_qty = query.get('flowproperties/%s' % fpm['flowPropertyID'])
-            val = fpm['magnitude'] / magnitude
+            if fpm['magnitude'] == 0:
+                val = 0
+            else:
+                val = fpm['magnitude'] / magnitude
             try:
                 flow.add_characterization(mag_qty, value=val)
             except DuplicateCharacterizationError:
@@ -86,7 +89,10 @@ class FragmentFlow(object):
 
         node_type = j['nodeType']
         nw = j['nodeWeight']
-        inbound_ev = magnitude / nw
+        if magnitude == 0:
+            inbound_ev = 0
+        else:
+            inbound_ev = magnitude / nw
 
         if node_type == 'Process':
             term_node = query.get('processes/%s' % j['processID'])

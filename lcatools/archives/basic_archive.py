@@ -110,7 +110,8 @@ class BasicArchive(EntityStore):
     def _add_children(self, entity):
         if entity.entity_type == 'quantity':
             # reset unit strings- units are such a hack
-            entity.reference_entity._external_ref = entity.reference_entity.unitstring
+            if isinstance(entity.reference_entity, LcUnit):
+                entity.reference_entity._external_ref = entity.reference_entity.unitstring
         elif entity.entity_type == 'flow':
             # need to import all the flow's quantities
             for cf in entity.characterizations():

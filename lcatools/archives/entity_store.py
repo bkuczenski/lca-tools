@@ -423,7 +423,7 @@ class EntityStore(object):
         except KeyError:
             return None
 
-    def _add(self, entity, key):
+    def _add(self, entity, key, quiet=False):
         if key in self._entities:
             raise KeyError('Entity already exists: %s' % key)
 
@@ -431,7 +431,7 @@ class EntityStore(object):
             raise TypeError('Entity type %s not valid!' % entity.entity_type)
 
         if entity.validate():
-            if self._quiet is False:
+            if not (self._quiet or quiet):
                 print('Adding %s entity with %s: %s' % (entity.entity_type, key, entity['Name']))
             if entity.origin is None:
                 assert self._key_to_id(entity.external_ref) == key, 'New entity uuid must match origin repository key!'

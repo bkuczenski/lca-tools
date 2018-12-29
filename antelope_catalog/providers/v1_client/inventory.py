@@ -144,6 +144,9 @@ class AntelopeInventoryImplementation(InventoryImplementation):
             endpoint = 'scenarios/%s/%s/fragmentflows' % (scenario, fragment)
         else:
             endpoint = '%s/fragmentflows' % fragment
+
+        self._archive.fetch_flows(fragment)
+
         ffs = self._archive.get_endpoint(endpoint)
         for ff in ffs:
             if 'fragmentStageID' in ff:

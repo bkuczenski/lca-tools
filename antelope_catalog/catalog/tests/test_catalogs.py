@@ -4,6 +4,7 @@ from ...data_sources.local import TEST_ROOT
 from .. import LcCatalog
 from ...lc_resource import LcResource
 from ...catalog_query import CatalogQuery, READONLY_INTERFACE_TYPES
+from lcatools.archives.tests import basic_archive_src
 
 
 import os
@@ -38,25 +39,26 @@ uslci_bg = LcResource('test.uslci.allocated', '/data/GitHub/lca-tools-datafiles/
                       priority=90,
                       static=True)
 
-work_dir = TEST_ROOT
+
+test_resource = LcResource('test.basic', basic_archive_src, 'json',
+                           interfaces=READONLY_INTERFACE_TYPES)
 
 
 class LcCatalogFixture(unittest.TestCase):
-    work_dir = work_dir
-
     @classmethod
     def setUpClass(cls):
-        os.makedirs(cls.work_dir, exist_ok=True)
-        cls._cat = LcCatalog(cls.work_dir)
+        cls._cat = LcCatalog.make_tester()
         cls._cat.add_resource(uslci_fg)
         cls._cat.add_resource(uslci_bg)
+        cls._cat.add_resource(test_resource)
 
     @classmethod
     def tearDownClass(cls):
-        rmtree(cls.work_dir)
+        rmtree(TEST_ROOT)
 
     def test_resolver_index(self):
-        self.assertSetEqual({r for r in self._cat.references}, {'local.qdb', 'test.uslci', 'test.uslci.allocated'})
+        self.assertSetEqual({r for r in self._cat.references}, {'local.qdb', 'test.uslci', 'test.uslci.allocated',
+                                                                'test.basic'})
 
     def test_priority(self):
         q = CatalogQuery('test.uslci', catalog=self._cat)
@@ -104,6 +106,19 @@ class LcCatalogFixture(unittest.TestCase):
         """
         self.assertTrue(self._cat.has_resource(uslci_fg_dup))
         self.assertFalse(self._cat.has_resource(uslci_fg_bad))
+
+    def test_local_resource(self):
+        inx = self._cat.index_ref(test_resource.reference)
+        self.assertIn(inx, self._cat.references)
+        res = self._cat.get_resource(inx)
+        self.assertTrue(self._cat.has_resource(res))
+        self.assertTrue(res.source.startswith('$CAT_ROOT'))
+        abs_path = self._cat.abs_path(res.source)
+        self.assertEqual(self._cat._localize_source(abs_path), res.source)
+        self.assertEqual(self._cat._index_file(test_resource.source), abs_path)
+        self.assertTrue(os.path.exists(abs_path))
+        self._cat.delete_resource(res, delete_source=True)
+        self.assertFalse(os.path.exists(abs_path))
 
 
 if __name__ == '__main__':

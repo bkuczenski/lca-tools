@@ -1,4 +1,12 @@
 ==========
+Tue Jan 08 10:23:32 -0800 2019
+
+Newest question: how to achieve relative paths in resources?
+ - ans 1: source only matters when a resource is instantiated, an operation to which catalog is an argument
+ - therefore a wildcard in the source path can be substituted with the catalog root
+ - hardcoded paths in the catalog_names property are not so much a problem because they are mainly documentary and the instantiation parameters take precedence (right??)
+
+==========
 Sat Apr 28 15:36:03 -0700 2018
 
 What we're looking at:

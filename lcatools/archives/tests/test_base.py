@@ -59,7 +59,11 @@ test_json = {
          'externalId': 5233,
          'origin': 'local.uslci.clean'
      }],
- 'processes': [
+    'initArgs':
+        {
+            'ns_uuid': 'a9d158e0-d48c-4427-8c55-42719e9e11cc'
+        },
+    'processes': [
      {
          'Classifications': ['Forestry and Logging', 'Logging'],
          'Comment': 'Important note: although most of the data in the US LCI database has undergone some sort of \
@@ -95,9 +99,9 @@ test_json = {
      }],
  'quantities': [
      {
-         'Comment': 'EcoSpold01',
+         'Comment': 'EcoSpold01 with altered uuid',
          'Name': 'EcoSpold Quantity l',
-         'entityId': '21d34f33-b0af-3d82-9bef-3cf03e0db9dc',
+         'entityId': '21d34f33-c0af-3d82-9bef-3cf03e0db9dc',
          'entityType': 'quantity',
          'externalId': 'l',
          'origin': 'local.uslci.clean',
@@ -143,17 +147,22 @@ class LcArchiveTest(unittest.TestCase):
         """
         self.assertIsNone(self._ar[None])
 
-    def test_get_by_id(self):
+    def test_get_by_uuid(self):
         """
         the standard getitem: put in an entity key, get back the entity. Also ensure that spurious external IDs were
         not propagated.
         :return:
         """
-        uuid = '21d34f33-b0af-3d82-9bef-3cf03e0db9dc'
+        uuid = '21d34f33-c0af-3d82-9bef-3cf03e0db9dc'
         ent = self._ar[uuid]
         self.assertEqual(ent.entity_type, 'quantity')
         self.assertNotEqual(ent.external_ref, 'l')
         self.assertEqual(ent.external_ref, uuid)
+
+    def test_get_by_nsuuid(self):
+        uuid = 'cec3a58d-44c3-31f6-9c75-90e6352f0934'
+        ent = self._ar['ha']
+        self.assertEqual(ent.uuid, uuid)
 
     def test_get_entity(self):
         """
@@ -170,18 +179,27 @@ class LcArchiveTest(unittest.TestCase):
         fl_uuid = '9cc0ccce-8e33-35ca-a3c0-c7bb6c397e95'
         q_uuid = '8703965a-7a6b-3e3e-a1cf-d9adf7bf1d9f'
         fl = self._ar[fl_uuid]
-        self.assertEqual(fl.external_ref, fl_uuid)
+        self.assertEqual(self._ar._key_to_nsuuid(fl.external_ref), fl_uuid)
         self.assertIs(self._ar[q_uuid], fl.reference_entity)
 
     def test_name(self):
         self.assertEqual(self._ar.ref, test_json['dataReference'])
 
     def test_json_init(self):
+        """
+        using load_json(), you cannot read namespace uuid automatically from the json. But, you can specify source and
+        ref manually.
+        :return:
+        """
         ar = LcArchive('/my/file')
         ar.load_json(from_json(test_file), jsonfile='/my/test/json')
         self.assertIn(test_json['dataReference'], ar.catalog_names)
         self.assertEqual(ar.ref, 'local.my.file')
         self.assertSequenceEqual([k for k in ar.get_sources(test_json['dataReference'])], [None])
+        uuid = 'cec3a58d-44c3-31f6-9c75-90e6352f0934'
+        ent = ar['ha']
+        self.assertIs(ent, None)
+        self.assertEqual(ar[uuid].external_ref, uuid)
 
 
 class DescendantTest(unittest.TestCase):

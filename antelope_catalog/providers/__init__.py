@@ -5,8 +5,7 @@
 
 import importlib
 
-from lcatools.from_json import from_json
-from lcatools.archives import LcArchive
+from lcatools.archives import LcArchive, archive_from_json
 
 from .ilcd import IlcdArchive, IlcdLcia
 from .ecospold2 import EcospoldV2Archive
@@ -32,22 +31,17 @@ def create_archive(source, ds_type, catalog=None, **kwargs):
     :return:
     """
     if ds_type.lower() == 'json':
-        a = archive_from_json(source, catalog=catalog, **kwargs)
+        a = archive_from_json(source, factory=_provider_factory, catalog=catalog, **kwargs)
     else:
-        a = archive_factory(source, ds_type, **kwargs)
+        cls = _provider_factory(ds_type)
+        a = cls(source, **kwargs)
     return a
 
 
-def update_archive(archive, json_file):
-    archive.load_json(from_json(json_file), jsonfile=json_file)
-
-
-def archive_factory(source, ds_type, **kwargs):
+def _provider_factory(ds_type):
     """
-    creates an archive
-    :param source:
+    Returns an archive class
     :param ds_type:
-    :param kwargs:
     :return:
     """
     ds_type = ds_type.lower()
@@ -79,7 +73,7 @@ def archive_factory(source, ds_type, **kwargs):
     }
     try:
         init_fcn = init_map[ds_type]
-        return init_fcn(source, **kwargs)
+        return init_fcn
 #        'foregroundarchive': ForegroundArchive.load,
 #        'foreground': ForegroundArchive.load
     except KeyError:
@@ -87,9 +81,10 @@ def archive_factory(source, ds_type, **kwargs):
             mod = importlib.import_module('.%s' % ds_type, package='antelope_%s' % ds_type)
         except ImportError as e:
             raise ArchiveError(e)
-        return mod.init_fcn(source, **kwargs)
+        return mod.init_fcn
 
 
+'''
 def archive_from_json(fname, static=True, catalog=None, **archive_kwargs):
     """
     :param fname: JSON filename
@@ -140,3 +135,4 @@ def archive_from_json(fname, static=True, catalog=None, **archive_kwargs):
 
     a.load_json(j, jsonfile=fname)
     return a
+'''

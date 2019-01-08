@@ -3,12 +3,12 @@ import os
 from collections import defaultdict
 from datetime import datetime
 
-from lcatools.archives import InterfaceError
+from lcatools.archives import InterfaceError, update_archive
 
 from .foreground import LcForeground
-from .catalog_query import INTERFACE_TYPES
+from .catalog_query import INTERFACE_TYPES, NoCatalog
 
-from .providers import create_archive, update_archive
+from .providers import create_archive
 
 
 class LcResource(object):
@@ -22,8 +22,8 @@ class LcResource(object):
 
     """
     @classmethod
-    def from_archive(cls, archive, interfaces, **kwargs):
-        source = archive.source
+    def from_archive(cls, archive, interfaces, source=None, **kwargs):
+        source = source or archive.source
         ref = archive.ref
         ds_type = archive.__class__.__name__  # static flag indicates whether archive is complete
         kwargs.update(archive.init_args)
@@ -65,14 +65,21 @@ class LcResource(object):
         if self.source is None:
             if 'download' in self._args:
                 print('Downloading from %s' % self._args['download']['url'])
-                self._source = catalog.download_file(**self._args['download'])
+                self._source = catalog.download_file(localize=True, **self._args['download'])
                 self.write_to_file(catalog.resource_dir)  # update resource file
             else:
                 raise AttributeError('Resource has no source specified and no download information')
-        if self.ds_type.lower() in ('foreground', 'lcforeground'):
-            self._archive = LcForeground(self.source, catalog=catalog, ref=self.reference, **self.init_args)
+        if self.source.startswith('$CAT_ROOT'):
+            try:
+                src = catalog.abs_path(self.source)
+            except AttributeError:
+                raise NoCatalog('Relative path encountered but no catalog supplied')
         else:
-            self._archive = create_archive(self.source, self.ds_type, catalog=catalog, ref=self.reference,
+            src = self.source
+        if self.ds_type.lower() in ('foreground', 'lcforeground'):
+            self._archive = LcForeground(src, catalog=catalog, ref=self.reference, **self.init_args)
+        else:
+            self._archive = create_archive(src, self.ds_type, catalog=catalog, ref=self.reference,
                                            # upstream=catalog.qdb,
                                            **self.init_args)
         if catalog is not None and os.path.exists(catalog.cache_file(self.source)):

@@ -22,6 +22,7 @@ From the catalog_ref file, the catalog should meet the following spec:
 """
 
 import os
+import re
 from shutil import copy2
 import requests
 import hashlib
@@ -48,7 +49,27 @@ class DuplicateEntries(Exception):
 class LcCatalog(LciaEngine):
 
     """
-    Provides REST-style access to LCI information (exclusive of the flow-quantity relation)
+    Provides query-based access to LCI information
+
+    A catalog is stored in the local file system and creates and stores resources relative to its root directory.
+    Subfolders (all accessors return absolute paths):
+    Public subfolders:
+     LcCatalog.resource_dir
+     LcCatalog.archive_dir
+
+    Public filenames:
+     LcCatalog.cache_file(src) returns a sha1 hash of the source filename in the [absolute] cache dir
+     LcCatalog.download_file(src) returns a sha1 hash of the source filename in the [absolute] download dir
+
+    Private folders + files:
+     LcCatalog._download_dir
+     LcCatalog._index_dir
+     LcCatalog._index_file(src) returns a sha1 hash of the source filename in the [absolute] index dir
+     LcCatalog._cache_dir
+     LcCatalog._entity_cache: local entities file in root
+     LcCatalog._reference_qtys: reference quantities file in root
+     LcCatalog._compartments: local compartments file (outmoded in Context Refactor)
+
 
     """
     @property
@@ -85,13 +106,14 @@ class LcCatalog(LciaEngine):
     def cache_file(self, source):
         return os.path.join(self._cache_dir, self._source_hash_file(source) + '.json.gz')
 
-    def download_file(self, url=None, md5sum=None, force=False):
+    def download_file(self, url=None, md5sum=None, force=False, localize=True):
         """
         Download a file from a remote location into the catalog and return its local path.  Optionally validate the
         download with an MD5 digest.
         :param url:
         :param md5sum:
         :param force:
+        :param localize: whether to return the filename relative to the catalog root
         :return:
         """
         local_file = os.path.join(self._download_dir, self._source_hash_file(url))
@@ -100,6 +122,8 @@ class LcCatalog(LciaEngine):
                 print('File exists.. re-downloading.')
             else:
                 print('File already downloaded.  Force=True to re-download.')
+                if localize:
+                    return self._localize_source(local_file)
                 return local_file
 
         r = requests.get(url, stream=True)
@@ -112,6 +136,8 @@ class LcCatalog(LciaEngine):
                     # f.flush() commented by recommendation from J.F.Sebastian
         if md5sum is not None:
             assert md5check.hexdigest() == md5sum, 'MD5 checksum does not match'
+        if localize:
+            return self._localize_source(local_file)
         return local_file
 
     @property
@@ -129,6 +155,18 @@ class LcCatalog(LciaEngine):
     @property
     def _compartments(self):
         return os.path.join(self._rootdir, 'local-compartments.json')
+
+    def _localize_source(self, source):
+        if source.startswith(self._rootdir):
+            return re.sub('^%s' % self._rootdir, '$CAT_ROOT', source)
+        return source
+
+    def abs_path(self, rel_path):
+        if os.path.isabs(rel_path):
+            return rel_path
+        elif rel_path.startswith('$CAT_ROOT'):
+            return re.sub('^\$CAT_ROOT', self.root, rel_path)
+        return os.path.join(self.root, rel_path)
 
     @property
     def root(self):
@@ -149,7 +187,7 @@ class LcCatalog(LciaEngine):
 
     @classmethod
     def make_tester(cls):
-        rmtree(TEST_ROOT)
+        rmtree(TEST_ROOT, ignore_errors=True)
         return cls(TEST_ROOT)
 
     @classmethod
@@ -162,7 +200,7 @@ class LcCatalog(LciaEngine):
         :param rootdir: directory storing LcResource files.
         :param kwargs: passed to Qdb
         """
-        self._rootdir = rootdir
+        self._rootdir = os.path.abspath(rootdir)
         self._make_rootdir()  # this will be a git clone / fork
         self._resolver = LcCatalogResolver(self.resource_dir)
         super(LcCatalog, self).__init__(source=self._reference_qtys, compartments=self._compartments, **kwargs)
@@ -285,7 +323,7 @@ class LcCatalog(LciaEngine):
         :param kwargs:
         :return:
         """
-        res = LcResource.from_archive(archive, interfaces, **kwargs)
+        res = LcResource.from_archive(archive, interfaces, source=self._localize_source(archive.source), **kwargs)
         self._resolver.add_resource(res, store=store)
 
     '''
@@ -342,6 +380,7 @@ class LcCatalog(LciaEngine):
         stored = self._resolver.is_permanent(res)
 
         inx_file = self._index_file(source)
+        inx_local = self._localize_source(inx_file)
         if os.path.exists(inx_file):
             if not force:
                 print('Not overwriting existing index. force=True to override.')
@@ -351,19 +390,19 @@ class LcCatalog(LciaEngine):
                 except StopIteration:
                     # index file exists, but no matching resource
                     inx = archive_from_json(inx_file)
-                    self._resolver.new_resource(inx.ref, inx_file, 'json', priority=priority, store=stored,
-                                                interfaces='index', _internal=True, static=True, preload_archive=inx)
+                    self.new_resource(inx.ref, inx_local, 'json', priority=priority, store=stored,
+                                      interfaces='index', _internal=True, static=True, preload_archive=inx)
                     return inx.ref
 
             print('Re-indexing %s' % source)
         new_ref = res.make_index(inx_file)
-        self._resolver.new_resource(new_ref, inx_file, 'json', priority=priority, store=stored, interfaces='index',
-                                    _internal=True, static=True, preload_archive=res.archive)
+        self.new_resource(new_ref, inx_local, 'json', priority=priority, store=stored, interfaces='index',
+                          _internal=True, static=True, preload_archive=res.archive)
         return new_ref
 
-    def index_resource(self, origin, interface=None, source=None, priority=10, force=False):
+    def index_ref(self, origin, interface=None, source=None, priority=10, force=False):
         """
-        Creates an index for the identified resource.  'origin' and 'interface' must resolve to one or more LcResources
+        Creates an index for the specified resource.  'origin' and 'interface' must resolve to one or more LcResources
         that all have the same source specification.  That source archive gets indexed, and index resources are created
         for all the LcResources that were returned.
 
@@ -398,14 +437,15 @@ class LcCatalog(LciaEngine):
         res.make_cache(self.cache_file(source))
 
     def _background_for_origin(self, ref):
-        inx_ref = self.index_resource(ref, interface='inventory')
-        bk_file = os.path.join(self.archive_dir, '%s_background' % inx_ref)
+        inx_ref = self.index_ref(ref, interface='inventory')
+        bk_file = self._localize_source(os.path.join(self.archive_dir, '%s_background' % inx_ref))
         bk = LcResource(inx_ref, bk_file, 'Background', interfaces='background', priority=99,
                         save_after=True, filetype='.mat', _internal=True)
         bk.check(self)  # ImportError if antelope_background pkg not found
         self.add_resource(bk)
         return bk.make_interface('background')  # when the interface is returned, it will trigger setup_bm
 
+    '''# deprecated-- background stores itself now
     def create_static_archive(self, archive_file, origin, interface=None, source=None, background=True, priority=90):
         """
         Creates a local replica of a static archive, usually for purposes of improving load time in computing
@@ -444,6 +484,7 @@ class LcCatalog(LciaEngine):
                               store=store,
                               _internal=True,
                               static=True)
+    '''
 
     def create_descendant(self, origin, interface=None, source=None, force=False, signifier=None, strict=True,
                           priority=None, **kwargs):
@@ -551,14 +592,15 @@ class LcCatalog(LciaEngine):
             if path.find(os.path.sep) != -1:
                 raise ValueError('Relative path not allowed; use directory name only')
             path = os.path.join(self._rootdir, path)
+        local_path = self._localize_source(path)
 
         if ref is None:
             ref = local_ref(path)
 
         try:
-            res = next(self._resolver.resources_with_source(path))
+            res = next(self._resolver.resources_with_source(local_path))
         except StopIteration:
-            res = self.new_resource(ref, path, 'LcForeground', interfaces=['index', 'foreground'], quiet=quiet)
+            res = self.new_resource(ref, local_path, 'LcForeground', interfaces=['index', 'foreground'], quiet=quiet)
 
         res.check(self)
         return res.make_interface('foreground')
@@ -573,11 +615,12 @@ class LcCatalog(LciaEngine):
         """
         # TODO: testing??
         for res in self._resolver.resolve(reference, strict=False):
+            abs_src = self.abs_path(res.source)
             if res.add_config(config, *args):
                 if res.internal:
-                    if os.path.dirname(res.source) == self._index_dir:
-                        print('Saving updated index %s' % res.source)
-                        res.archive.write_to_file(res.source, gzip=True,
+                    if os.path.dirname(abs_src) == self._index_dir:
+                        print('Saving updated index %s' % abs_src)
+                        res.archive.write_to_file(abs_src, gzip=True,
                                                   exchanges=False, characterizations=False, values=False)
                 else:
                     print('Saving resource configuration for %s' % res.reference)
@@ -585,7 +628,7 @@ class LcCatalog(LciaEngine):
 
             else:
                 if res.internal:
-                    print('Deleting unconfigurable internal resource for %s\nsource: %s' % (res.reference, res.source))
+                    print('Deleting unconfigurable internal resource for %s\nsource: %s' % (res.reference, abs_src))
                     self.delete_resource(res, delete_source=True)
                 else:
                     print('Unable to apply configuration to resource for %s\nsource: %s' % (res.reference, res.source))

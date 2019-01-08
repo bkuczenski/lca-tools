@@ -50,7 +50,7 @@ class BasicArchive(EntityStore):
         """
         source = j.pop('dataSource', None)
         try:
-            ref = j.pop('dataReference')
+            ref = kwargs.pop('ref', j.pop('dataReference'))
         except KeyError:
             if source is None:
                 print('Dictionary must contain at least a dataSource or a dataReference specification.')

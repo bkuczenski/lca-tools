@@ -59,9 +59,10 @@ def archive_factory(ds_type):
                 raise ArchiveError(e)  # what is going on here?
 
 
-def archive_from_json(fname, static=True, catalog=None, **archive_kwargs):
+def archive_from_json(fname, factory=archive_factory, static=True, catalog=None, **archive_kwargs):
     """
     :param fname: JSON filename
+    :param factory: function returning a class
     :param catalog: [None] necessary to retrieve upstream archives, if specified
     :param static: [True]
     :return: an ArchiveInterface
@@ -81,6 +82,5 @@ def archive_from_json(fname, static=True, catalog=None, **archive_kwargs):
                 print('Upstream reference is ambiguous!')
                 archive_kwargs['upstreamReference'] = j['upstreamReference']
 
-    cls = archive_factory(j.pop('dataSourceType'))
+    cls = factory(j.pop('dataSourceType', 'LcArchive'))
     return cls.from_dict(j, jsonfile=fname, quiet=True, static=static, upstream=upstream, **archive_kwargs)
-

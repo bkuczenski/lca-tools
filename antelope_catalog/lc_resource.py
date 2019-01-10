@@ -45,6 +45,13 @@ class LcResource(object):
         """
         source = d.pop('dataSource', None)
         ds_type = d.pop('dataSourceType')
+
+        # patch to deal with changing Background extension handling
+        filetype = d.pop('filetype', None)
+        if filetype is not None:
+            if not source.endswith(filetype):
+                source += filetype
+
         return cls(ref, source, ds_type, **d)
 
     @classmethod
@@ -105,6 +112,8 @@ class LcResource(object):
         self.write_to_file(catalog.resource_dir)
 
     def make_index(self, index_file):
+        if self._archive is None:
+            self._instantiate(None)
         self._archive.load_all()
 
         new_date = datetime.now().strftime('%Y%m%d')  # there's no reason for this to be static
@@ -113,7 +122,7 @@ class LcResource(object):
         # note: archive ref is updated by writing index
         self._archive.write_to_file(index_file, gzip=True, ref_suffix=suffix,
                                     exchanges=False, characterizations=False, values=False)
-        return self._archive.ref
+        return self._archive.names[index_file]
 
     def make_cache(self, cache_file):
         # note: do not make descendant
@@ -250,7 +259,7 @@ class LcResource(object):
 
     @property
     def static(self):
-        return self._static
+        return self._static or self.ds_type.lower() == 'json'
 
     @property
     def init_args(self):

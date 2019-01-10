@@ -213,6 +213,8 @@ class EntityStore(object):
                     raise SourceAlreadyKnown('Source %s already registered to name %s' % (source, k))
         print('%s: %s' % (ref, source))
         self._catalog_names[ref].add(source)
+        if ref == self.ref and self.source is None and rewrite:
+            self._source = source
 
     @property
     def source(self):
@@ -240,7 +242,8 @@ class EntityStore(object):
         for k in self._catalog_names.keys():
             yield k
 
-    def get_names(self):
+    @property
+    def names(self):
         """
         Return a mapping of data source to semantic reference, based on the catalog_names property.  This is used by
         a catalog interface to convert entity origins from physical to semantic.
@@ -253,7 +256,7 @@ class EntityStore(object):
         if self._upstream is None:
             names = dict()
         else:
-            names = self._upstream.get_names()
+            names = self._upstream.names
 
         for k, s in self._catalog_names.items():
             for v in s:
@@ -586,9 +589,10 @@ class EntityStore(object):
         if ref_suffix is not None:
             new_ref = '.'.join([self._serialize_dict['dataReference'], ref_suffix])
             self._serialize_dict['dataReference'] = new_ref
-            self._set_source(new_ref, filename)
+            # self._set_source(new_ref, filename)  # we don't want to change the source on write, only on load
+            self._add_name(new_ref, filename)
         elif self._source is None:
-            self._set_source(self.ref, filename)
+            self._set_source(self.ref, filename)  # unless there was no source to begin with
         if complete:
             s = self._serialize_all(**kwargs)
         else:

@@ -28,7 +28,7 @@ def create_archive(source, ds_type, catalog=None, **kwargs):
 
 
 def update_archive(archive, json_file):
-    archive.load_json(from_json(json_file), jsonfile=json_file)
+    archive.load_from_dict(from_json(json_file), jsonfile=json_file)
 
 
 def archive_factory(ds_type):
@@ -59,7 +59,7 @@ def archive_factory(ds_type):
                 raise ArchiveError(e)  # what is going on here?
 
 
-def archive_from_json(fname, factory=archive_factory, static=True, catalog=None, **archive_kwargs):
+def archive_from_json(fname, factory=archive_factory, catalog=None, **archive_kwargs):
     """
     :param fname: JSON filename
     :param factory: function returning a class
@@ -83,4 +83,4 @@ def archive_from_json(fname, factory=archive_factory, static=True, catalog=None,
                 archive_kwargs['upstreamReference'] = j['upstreamReference']
 
     cls = factory(j.pop('dataSourceType', 'LcArchive'))
-    return cls.from_dict(j, jsonfile=fname, quiet=True, static=static, upstream=upstream, **archive_kwargs)
+    return cls.from_already_open_file(j, fname, quiet=True, upstream=upstream, **archive_kwargs)

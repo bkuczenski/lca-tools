@@ -133,6 +133,6 @@ def archive_from_json(fname, static=True, catalog=None, **archive_kwargs):
         else:
             a.init_args['upstreamReference'] = j['upstreamReference']
 
-    a.load_json(j, jsonfile=fname)
+    a.load_from_dict(j, jsonfile=fname)
     return a
 '''

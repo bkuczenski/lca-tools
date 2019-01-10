@@ -39,7 +39,7 @@ Projecting forward to think about how catalogs are "supposed" to work:
      --= so maybe catalog names is useless? what is it there for?
      	 ans: it's NOT USED AT ALL. WHY is it there? CARVE IT OUT.
 
-   = replace it with what? I do like the association between sources and refs, and of there being some record when data get serialized and de-serialized.  Currently this is hacked in tools, but it should be done in load_json()
+   = replace it with what? I do like the association between sources and refs, and of there being some record when data get serialized and de-serialized.  Currently this is hacked in tools, but it should be done in load_from_dict()
 
 We created catalog_names because we were combining a whole bunch of GaBi extension databases into one archive.  At the time, I guess it made sense to do ref -> source because -- why? all this has been mixed up so many times it's not even clear anymore. esp. now with 'origin' being ref instead of source (which is like 14 months old).  We don't need to honor any of that. in fact, we should not even worry particularly about breaking backward compatibility if, for instance, it really makes more sense for catalog_names to map SOURCE TO REF
 
@@ -55,7 +55,7 @@ OK, so? what's the specification?
 (0) `source` property: this must be a single source identifier, either a local filesystem path or more generally a URI.
     - The source should specify the *original* source of the archive, i.e. how the subclass expects it to behave.  This is required whenever the physical source is going to be queried
     - It's also necessary to provide info documenting the instantiation, in case this is done from json
-      = this should be done from within load_json
+      = this should be done from within load_from_dict
     - a single source is not allowed to provide multiple semantic refs, but multiple sources can be used for a single ref
 
 (1) `catalog_names` property: a generator of semantic references known to the archive (keys to the defaultdict)
@@ -67,18 +67,18 @@ OK, so? what's the specification?
 (2) when serializing, the catalog names are serialized too
     - if the semantic ref changes in serialization, the source must be changed as well
 
-(2a) in load_json, the catalog names are deserialized, but the instantiation params are still master.
+(2a) in load_from_dict, the catalog names are deserialized, but the instantiation params are still master.
 
-(2b) in from_dict, the information encoded in the dict _is_ used for instantiation and so is master.
+(2b) in from_file, the information encoded in the dict _is_ used for instantiation and so is master.
 
 (3) "set names" happens implicitly in the following ways:
     (a) when archive is instantiated, its ref+source is set according to init params
-    (b) when load_json() is run, read in serialized catalog names
+    (b) when load_from_dict() is run, read in serialized catalog names
     (c) when an as-yet-unwritten routine to merge or combine archives runs, combine the names
     (d) when a descendant is created, the new ref and source are added
 
 A corollary of this:
-(A) when instantiating archives from a json source, we want the json file to be the proximate source. However, we also want to log the original source and the original ref.  This means that load_json should add this explicitly, passing over a SourceAlreadyKnown exception.
+(A) when instantiating archives from a json source, we want the json file to be the proximate source. However, we also want to log the original source and the original ref.  This means that load_from_dict should add this explicitly, passing over a SourceAlreadyKnown exception.
 
 Mon 2018-04-30 12:38:27 -0700
 

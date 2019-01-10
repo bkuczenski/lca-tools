@@ -43,7 +43,7 @@ class ExchangesTest(unittest.TestCase):
     """
     @classmethod
     def setUpClass(cls):
-        cls.A = LcArchive.from_dict(from_json(refinery_archive))
+        cls.A = LcArchive.from_file(refinery_archive)
         cls.grid = cls.A[grid_id]
         cls.petro = cls.A[petro_id]
         cls.diesel = cls.A[diesel_id]

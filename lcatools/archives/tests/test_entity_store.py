@@ -16,7 +16,7 @@ class ArchiveInterfaceTest(unittest.TestCase):
 
     def test_ref(self):
         self.assertEqual(self._ar.ref, phony_ref)
-        self.assertEqual(self._ar.get_names()[phony_source], phony_ref)
+        self.assertEqual(self._ar.names[phony_source], phony_ref)
 
     def test_new_ref(self):
         now = datetime.now().strftime('%Y%m%d')

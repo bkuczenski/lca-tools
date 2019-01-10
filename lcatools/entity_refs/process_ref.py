@@ -104,7 +104,9 @@ class ProcessRef(EntityRef):
         return self._query.exchanges(self.external_ref, **kwargs)
 
     def exchange_values(self, flow, direction=None, termination=None, reference=None, **kwargs):
-        return self._query.exchange_values(self.external_ref, flow.external_ref, direction,
+        if not isinstance(flow, str):
+            flow = flow.external_ref
+        return self._query.exchange_values(self.external_ref, flow, direction,
                                            termination=termination, reference=reference, **kwargs)
 
     def inventory(self, ref_flow=None, **kwargs):

@@ -138,7 +138,7 @@ def setUpModule():
 class LcArchiveTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls._ar = LcArchive.from_dict(from_json(test_file))
+        cls._ar = LcArchive.from_file(test_file)
 
     def test_get_none(self):
         """
@@ -187,12 +187,12 @@ class LcArchiveTest(unittest.TestCase):
 
     def test_json_init(self):
         """
-        using load_json(), you cannot read namespace uuid automatically from the json. But, you can specify source and
+        using load_from_dict(), you cannot read namespace uuid automatically from the json. But, you can specify source and
         ref manually.
         :return:
         """
         ar = LcArchive('/my/file')
-        ar.load_json(from_json(test_file), jsonfile='/my/test/json')
+        ar.load_from_dict(from_json(test_file), jsonfile='/my/test/json')
         self.assertIn(test_json['dataReference'], ar.catalog_names)
         self.assertEqual(ar.ref, 'local.my.file')
         self.assertSequenceEqual([k for k in ar.get_sources(test_json['dataReference'])], [None])
@@ -201,17 +201,28 @@ class LcArchiveTest(unittest.TestCase):
         self.assertIs(ent, None)
         self.assertEqual(ar[uuid].external_ref, uuid)
 
+    def test_assign_name(self):
+        ar = LcArchive(test_json['dataSource'], ref='test.basic', ns_uuid=test_json['initArgs']['ns_uuid'])
+        self.assertIsNone(ar.source)
+        self.assertEqual(ar.ref, 'test.basic')
+        ar.load_from_dict(from_json(test_file), jsonfile=test_file)
+        self.assertEqual(ar.source, test_file)
+        self.assertEqual(ar.ref, 'test.basic')
+
 
 class DescendantTest(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
-        rmtree(work_dir)
+        try:
+            rmtree(work_dir)
+        except FileNotFoundError:
+            pass
 
     def test_create_descendant(self):
         new_date = datetime.now().strftime('%Y%m%d')
         sig = 'mybaby'
 
-        ar = LcArchive.from_dict(from_json(test_file))
+        ar = LcArchive.from_file(test_file)
 
         dref = ar.create_descendant(work_dir, signifier=sig, force=True)
         self.assertEqual(dref, ar.ref)

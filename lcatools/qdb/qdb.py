@@ -183,7 +183,7 @@ class Qdb(BasicArchive):
         self._q = SynList.from_json(from_json(quantities))
 
         super(Qdb, self).__init__(source, ref=ref, **kwargs)
-        self.load_json(from_json(source))
+        self.load_from_dict(from_json(source))
 
         if isinstance(compartments, CompartmentManager):
             self.c_mgr = compartments
@@ -837,7 +837,7 @@ class Qdb(BasicArchive):
                 try:
                     factor = self.convert(flow=x.flow, query_q_ind=q_ind, locale=locale, **kwargs)
                 except MissingCompartment:
-                    print('Missing compartment %s; abandoning this exchange' % x.flow['Compartment'])
+                    self._print('Missing compartment %s; abandoning this exchange' % x.flow['Compartment'])
                     continue
                 except ConversionReferenceMismatch:
                     print('Mismatch %s' % x)

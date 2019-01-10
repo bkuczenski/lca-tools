@@ -49,7 +49,7 @@ class BasicArchiveTestCase(unittest.TestCase):
         :return:
         """
         self.assertEqual(self.ar.ref, local_ref(WORKING_FILE))
-        self.ar.load_json(archive_json)
+        self.ar.load_from_dict(archive_json)
         self.assertEqual(self.ar.ref, test_ref)
 
     def test_catalog_ref(self):
@@ -60,12 +60,12 @@ class BasicArchiveTestCase(unittest.TestCase):
     def test_conflicting_ref(self):
         """
         It's an error to instantiate an existing source with a new reference (why? because the source should know its
-        own reference).  If it is desired to load a source without knowing its reference, use BasicArchive.from_dict()
+        own reference).  If it is desired to load a source without knowing its reference, use BasicArchive.from_file()
         :return:
         """
         a = BasicArchive(WORKING_FILE, ref=test_conflict)
         with self.assertRaises(SourceAlreadyKnown):
-            a.load_json(archive_json)
+            a.load_from_dict(archive_json)
 
     def test_conflicting_src(self):
         """
@@ -73,7 +73,7 @@ class BasicArchiveTestCase(unittest.TestCase):
         :return:
         """
         a = BasicArchive(conflict_file, ref=test_ref)
-        a.load_json(archive_json)
+        a.load_from_dict(archive_json)
         self.assertSetEqual(set(k for k in a.get_sources(test_ref)), {conflict_file, WORKING_FILE})
 
 

@@ -65,19 +65,21 @@ class LcArchive(BasicArchive):
     def _lcia_key(quantity):
         return ', '.join([quantity['Method'], quantity['Category'], quantity['Indicator']])
 
-    def load_json(self, j, _check=True, **kwargs):
+    def load_from_dict(self, j, _check=True, jsonfile=None):
         """
         Archives loaded from JSON files are considered static.
         :param j:
         :param _check:
         :return:
         """
-        super(LcArchive, self).load_json(j, _check=False, **kwargs)
+        super(LcArchive, self).load_from_dict(j, _check=False, jsonfile=jsonfile)
         if 'processes' in j:
             for e in j['processes']:
                 self.entity_from_json(e)
         if _check:
             self.check_counter()
+        if jsonfile is not None and jsonfile == self.source:
+            self._loaded = True
 
     def _process_from_json(self, entity_j, uid):
         # note-- we are officially abandoning referenceExchange notation
@@ -176,4 +178,4 @@ class LcArchive(BasicArchive):
         if self.source is None:
             return
         if os.path.exists(self.source):
-            self.load_json(from_json(self.source))
+            self.load_from_dict(from_json(self.source))

@@ -70,7 +70,7 @@ class EcoinventSpreadsheet(LcArchive):
     def load_lci_cache(self):
         if self._bg_cache_loaded is False:
             print('Accessing LCI from %s' % self._bg_filename)
-            self.bg.load_json(from_json(self._lci_cache))
+            self.bg.load_from_dict(from_json(self._lci_cache))
             self._bg_cache_loaded = True
 
     def _fetch(self, entity, **kwargs):

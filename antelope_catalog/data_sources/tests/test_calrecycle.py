@@ -4,6 +4,8 @@ data source as a fixture.
 """
 
 import unittest
+import time
+
 from math import floor
 
 from ... import LcCatalog
@@ -18,6 +20,7 @@ if __name__ == '__main__':
 else:
     _run_calrecycle = check_enabled('calrecycle') or _debug
 
+official_start_time = time.time()
 
 if _run_calrecycle:
     cat = LcCatalog(CATALOG_ROOT)
@@ -28,6 +31,10 @@ if _run_calrecycle:
     if 'calrecycle.antelope' not in cat.references:
         cat.new_resource('calrecycle.antelope', 'http://www.antelope-lca.net/uo-lca/api/', 'AntelopeV1Client',
                          store=False, interfaces=['index', 'inventory', 'quantity'], quiet=True)
+    cr_time = time.time()
+    print('CalRecycle loaded: %.3f' % (cr_time - official_start_time))
+    ar = cat.get_archive('calrecycle.antelope')
+    print('Antelope archive loaded: %.3f' % (time.time() - cr_time))
 
 else:
     fg = None
@@ -41,13 +48,25 @@ def _get_antelope_result(frag_id, lcia_id):
 
 @unittest.skipUnless(_run_calrecycle, "CalRecycle test not enabled")
 class CalRecycleTest(unittest.TestCase):
+    def setUp(self):
+        self.startTime = time.time()
+
+    @staticmethod
+    def _time(_id, starttime):
+        t = time.time() - starttime
+        print("------ %+60.60s: %.3f\n" % (_id, t))
+
+    def tearDown(self):
+        self._time('.'.join(self.id().split('.')[-2:]), self.startTime)
 
     @classmethod
     def setUpClass(cls):
+        cls._time('starting off', official_start_time)
         cls.gwp = cat.query('calrecycle.lcia.elcd').get('370960f4-0a3a-415d-bf3e-e5ce63160bb9')
         cls.mep = cat.query('calrecycle.lcia.elcd').get('5296e2be-060b-4e50-b033-d45f85f6ac92')
         cls.criteria = cat.query('calrecycle.lcia.traci').get('de6753e3-2e0a-4fb8-b113-331735e26e3d')
         cls.lcia_map = {2: cls.gwp, 4: cls.mep, 16: cls.criteria}
+
 
     def test_create_and_load(self):
         self.assertEqual(fg.count_by_type('fragment'), 888)
@@ -136,8 +155,10 @@ class CalRecycleTest(unittest.TestCase):
             self.assertAlmostEqual(res_a.total(), res_l.total(), places=10)
 
     def test_fragment_lcia(self):
+        ar._quiet = False
         for frag_id in (15, 20, 24, 30, 36, 42, 44, 50):
             self._validate_antelope(frag_id)
+        ar._quiet = True
 
 
 if __name__ == '__main__':

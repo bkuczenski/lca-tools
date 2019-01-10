@@ -620,7 +620,8 @@ class BackgroundEngine(object):
             exchs = parent.process.inventory()
 
         for exch in exchs:  # unallocated exchanges
-            if exch is rx:
+            if exch is rx:  # This will only work for literal processes and not process_refs, because
+                # process_ref.reference() returns an RxRef.  Instead we fallback to exch.is_reference
                 continue  # don't add self
             if cutoff_refs:
                 val = pval = exch.value

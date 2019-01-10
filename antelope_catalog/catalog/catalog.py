@@ -302,17 +302,21 @@ class LcCatalog(LciaEngine):
         :return:
         """
         self._resolver.delete_resource(resource)
-        if delete_source is False or resource.source is None or not os.path.isfile(resource.source):
+        abs_src = self.abs_path(resource.source)
+
+        if delete_source is False or resource.source is None or not os.path.isfile(abs_src):
             return
         if len([t for t in self._resolver.resources_with_source(resource.source)]) > 0:
             return
         if resource.internal or delete_source:
-            if os.path.isdir(resource.source):
-                rmtree(resource.source)
+            if os.path.isdir(abs_src):
+                rmtree(abs_src)
             else:
-                os.remove(resource.source)
+                os.remove(abs_src)
             if os.path.exists(self.cache_file(resource.source)):
                 os.remove(self.cache_file(resource.source))
+            if os.path.exists(self.cache_file(abs_src)):
+                os.remove(self.cache_file(abs_src))
 
     def add_existing_archive(self, archive, interfaces=None, store=True, **kwargs):
         """
@@ -438,9 +442,9 @@ class LcCatalog(LciaEngine):
 
     def _background_for_origin(self, ref):
         inx_ref = self.index_ref(ref, interface='inventory')
-        bk_file = self._localize_source(os.path.join(self.archive_dir, '%s_background' % inx_ref))
+        bk_file = self._localize_source(os.path.join(self.archive_dir, '%s_background.mat' % inx_ref))
         bk = LcResource(inx_ref, bk_file, 'Background', interfaces='background', priority=99,
-                        save_after=True, filetype='.mat', _internal=True)
+                        save_after=True, _internal=True)
         bk.check(self)  # ImportError if antelope_background pkg not found
         self.add_resource(bk)
         return bk.make_interface('background')  # when the interface is returned, it will trigger setup_bm

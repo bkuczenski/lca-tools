@@ -12,9 +12,11 @@ import os
 from collections import namedtuple
 
 from ..engine import BackgroundEngine
-from lcatools.interfaces import CONTEXT_STATUS_, ProductFlow
+from lcatools.interfaces import CONTEXT_STATUS_
 from lcatools import from_json, to_json, comp_dir
 
+
+SUPPORTED_FILETYPES = ('.mat', )
 
 _FLATTEN_AF = False
 
@@ -504,9 +506,10 @@ class FlatBackground(object):
             d['B'] = self._B
         savemat(filename, d)
 
-    def write_to_file(self, filename, complete=True, filetype='.mat'):
-        if filetype is None:
-            filetype = os.path.splitext(filename)[1]
+    def write_to_file(self, filename, complete=True):
+        filetype = os.path.splitext(filename)[1]
+        if filetype not in SUPPORTED_FILETYPES:
+            raise ValueError('Unsupported file type %s' % filetype)
         if filetype == '.mat':
             self._write_mat(filename, complete=complete)
         else:

@@ -44,6 +44,7 @@ TO ADD A NEW DATA SOURCE:
 """
 
 from .ecoinvent import EcoinventConfig
+from .ecoinvent_lcia import EcoinventLciaConfig
 from .traci import TraciConfig
 from .calrecycle_lca import CalRecycleConfig
 
@@ -78,6 +79,12 @@ RESOURCES_CONFIG = {
         'source': CalRecycleConfig,
         'data_root': '/data/GitHub/CalRecycle/LCA_Data/',
         'enable_test': True
+    },
+    'ecoinvent_lcia': {
+        'source': EcoinventLciaConfig,
+        'version': '3.1',
+        'data_root': '/data/LCI/Ecoinvent/LCIA/',
+        'enable_test': False
     }
 }
 

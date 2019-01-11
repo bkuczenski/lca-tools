@@ -51,7 +51,7 @@ class EcoinventLcia(BasicArchive):
         self._xl_rows = self._sheet_to_rows(b)
 
     def __init__(self, source, ref=None, sheet_name='impact methods', mass_quantity=None,
-                 value_tag='CF ' + EI_LCIA_VERSION, ns_uuid=None, **kwargs):
+                 value_tag='CF ' + EI_LCIA_VERSION, ns_uuid=None, static=True, **kwargs):
         """
         EI_LCIA_VERSION is presently 3.1 for the spreadsheet named 'LCIA implementation v3.1 2014_08_13.xlsx'
 
@@ -61,13 +61,14 @@ class EcoinventLcia(BasicArchive):
         :param mass_quantity:
         :param value_tag: 'CF ' + EI_LCIA_VERSION
         :param ns_uuid: required
+        :param static: this archive type is always static
         :param kwargs: quiet, upstream
         """
         if ns_uuid is None:
             raise AttributeError('ns_uuid required for LCIA invocation')
         if ref is None:
             ref = '.'.join(['local', 'ecoinvent', EI_LCIA_VERSION, 'lcia'])
-        super(EcoinventLcia, self).__init__(source, ref=ref, ns_uuid=ns_uuid, **kwargs)
+        super(EcoinventLcia, self).__init__(source, ref=ref, ns_uuid=ns_uuid, static=True, **kwargs)
         self._xl_rows = []
         self._sheet_name = sheet_name
         self._value_tag = value_tag

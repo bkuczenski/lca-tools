@@ -595,6 +595,8 @@ class EntityStore(object):
             self._set_source(self.ref, filename)  # unless there was no source to begin with
         if complete:
             s = self._serialize_all(**kwargs)
+            if self._loaded:
+                s['loaded'] = True
         else:
             s = self.serialize(**kwargs)
         if gzip is True:

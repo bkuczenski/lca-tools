@@ -289,16 +289,18 @@ class LcCatalog(LciaEngine):
         self._resolver.add_resource(resource, store=store)
         # self._ensure_resource(resource)
 
-    def delete_resource(self, resource, delete_source=None):
+    def delete_resource(self, resource, delete_source=None, delete_cache=True):
         """
         Removes the resource from the resolver and also removes the serialization. Also deletes the resource's
-        source (and source cache, if present) under the following circumstances:
+        source under the following circumstances:
          (resource is internal AND resources_with_source(resource.source) is empty AND resource.source is a file)
         This can be overridden using he delete_source param (see below)
         :param resource: an LcResource
         :param delete_source: [None] If None, follow default behavior. If True, delete the source even if it is
          not internal (source will not be deleted if other resources refer to it OR if it is not a file). If False,
          do not delete the source.
+        :param delete_cache: [True] whether to delete cache files (you could keep them around if you expect to need
+         them again and you don't think the contents will have changed)
         :return:
         """
         self._resolver.delete_resource(resource)
@@ -313,6 +315,7 @@ class LcCatalog(LciaEngine):
                 rmtree(abs_src)
             else:
                 os.remove(abs_src)
+        if delete_cache:
             if os.path.exists(self.cache_file(resource.source)):
                 os.remove(self.cache_file(resource.source))
             if os.path.exists(self.cache_file(abs_src)):
@@ -404,7 +407,7 @@ class LcCatalog(LciaEngine):
                           _internal=True, static=True, preload_archive=res.archive)
         return new_ref
 
-    def index_ref(self, origin, interface=None, source=None, priority=10, force=False):
+    def index_ref(self, origin, interface=None, source=None, priority=60, force=False):
         """
         Creates an index for the specified resource.  'origin' and 'interface' must resolve to one or more LcResources
         that all have the same source specification.  That source archive gets indexed, and index resources are created
@@ -416,8 +419,8 @@ class LcCatalog(LciaEngine):
         :param origin:
         :param interface: [None]
         :param source: find_single_source input
-        :param priority: [10] priority setting for the new index
-        :param force: [False] if True, create an index even if an interface already exists (will overwrite existing)
+        :param priority: [60] priority setting for the new index
+        :param force: [False] if True, overwrite existing index
         :return:
         """
         source = self._find_single_source(origin, interface, source=source)
@@ -515,6 +518,10 @@ class LcCatalog(LciaEngine):
     '''
     Main data accessor
     '''
+    def _sorted_resources(self, origin, interfaces, strict):
+        for res in sorted(self._resolver.resolve(origin, interfaces, strict=strict),
+                          key=lambda x: (not (x.is_loaded and x.static), x.priority, x.reference != origin)):
+            yield res
 
     def gen_interfaces(self, origin, itype=None, strict=False):
         """
@@ -527,8 +534,8 @@ class LcCatalog(LciaEngine):
         """
         if itype is None:
             itype = 'basic'  # fetch, get properties, uuid, reference
-        for res in sorted(self._resolver.resolve(origin, interfaces=itype, strict=strict),
-                          key=lambda x: (not (x.is_loaded and x.static), x.priority, x.reference != origin)):
+
+        for res in self._sorted_resources(origin, itype, strict):
             res.check(self)
             yield res.make_interface(itype)
 

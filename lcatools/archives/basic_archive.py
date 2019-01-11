@@ -270,6 +270,10 @@ class BasicArchive(EntityStore):
         if 'flows' in j:
             for e in j['flows']:
                 self.entity_from_json(e)
+
+        if 'loaded' in j:
+            self._loaded = j['loaded']
+
         if _check:
             self.check_counter()
 

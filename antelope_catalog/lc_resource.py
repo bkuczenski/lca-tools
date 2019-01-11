@@ -68,8 +68,10 @@ class LcResource(object):
 
         return sorted([cls.from_dict(ref, d) for d in j[ref]], key=lambda x: x.priority)
 
-    def _instantiate(self, catalog):
+    def _instantiate(self, catalog=None):
         if self.source is None:
+            if catalog is None:
+                raise NoCatalog('Remote resource encountered')
             if 'download' in self._args:
                 print('Downloading from %s' % self._args['download']['url'])
                 self._source = catalog.download_file(localize=True, **self._args['download'])
@@ -91,6 +93,7 @@ class LcResource(object):
                                            **self.init_args)
         if catalog is not None and os.path.exists(catalog.cache_file(self.source)):
             update_archive(self._archive, catalog.cache_file(self.source))
+        self._static = self._archive.static
         if self.static and self.ds_type.lower() != 'json':
             self._archive.load_all()  # static json archives are by convention saved in complete form
         self.apply_config()
@@ -113,7 +116,7 @@ class LcResource(object):
 
     def make_index(self, index_file):
         if self._archive is None:
-            self._instantiate(None)
+            self._instantiate()
         self._archive.load_all()
 
         new_date = datetime.now().strftime('%Y%m%d')  # there's no reason for this to be static
@@ -211,6 +214,21 @@ class LcResource(object):
 
         self._args = kwargs
 
+    def __repr__(self):
+        flags = ['']
+        if self.internal:
+            flags.append('_int')
+        if self.static:
+            flags.append('static')
+        if self._archive is not None:
+            flags.append('loaded ')
+        if len(self._config) > 0:
+            flags.append('%d cfg' % len(self._config))
+        fgs = ' '.join(flags)
+
+        return 'LcResource(%s, dataSource=%s:%s, %s [%d]%s)' % (self.reference, self.source, self.ds_type,
+                                                                [k for k in self.interfaces], self.priority, fgs)
+
     def exists(self, path):
         filename = os.path.join(path, self.reference)
         if os.path.exists(filename):
@@ -286,20 +304,23 @@ class LcResource(object):
         """
         self._config[config].add(args)
 
-    def add_config(self, config, *args):
+    def add_config(self, config, *args, store=None):
         """
         Add a configuration setting to the resource, and apply it to the archive.
         :param config:
         :param args: the arguments, in the proper sequence
+        :param store: [None] or bool: default is to store on non-internal resources
         :return: None if archive doesn't support configuration; False if unsuccessful, True if successful
         """
         try:
             cf = self._archive.make_interface('configure')
         except InterfaceError:
             return None
+        if store is None:
+            store = not self.internal  # don't want to store config on internal (derived) archives (?)
 
         if cf.check_config(config, args):
-            if not self.internal:  # don't want to store config on internal (derived) archives
+            if store:
                 self._add_config(config, *args)
             cf.apply_config({config: {args}})
             return True
@@ -351,6 +372,7 @@ class LcResource(object):
             if os.path.exists(path):
                 raise ValueError('Please provide a directory path')
             os.makedirs(path)
+
 
         filename = os.path.join(path, self.reference)
         if os.path.exists(filename):

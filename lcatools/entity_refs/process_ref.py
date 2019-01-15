@@ -43,7 +43,7 @@ class ProcessRef(EntityRef):
 
     @default_rx.setter
     def default_rx(self, value):
-        if not isinstance(value, str):
+        if not isinstance(value, str) and not isinstance(value, int):
             if hasattr(value, 'external_ref'):
                 value = value.external_ref
             elif hasattr(value, 'entity_type'):
@@ -72,7 +72,7 @@ class ProcessRef(EntityRef):
         for x in self.reference_entity:
             if flow is None:
                 yield x
-            elif isinstance(flow, str):
+            elif isinstance(flow, str) and not isinstance(flow, int):
                 if x.flow.external_ref == flow:
                     yield x
             else:
@@ -104,7 +104,7 @@ class ProcessRef(EntityRef):
         return self._query.exchanges(self.external_ref, **kwargs)
 
     def exchange_values(self, flow, direction=None, termination=None, reference=None, **kwargs):
-        if not isinstance(flow, str):
+        if not isinstance(flow, str) and not isinstance(flow, int):
             flow = flow.external_ref
         return self._query.exchange_values(self.external_ref, flow, direction,
                                            termination=termination, reference=reference, **kwargs)

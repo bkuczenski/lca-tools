@@ -98,8 +98,8 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
         :param kwargs:
         :return:
         """
-        fl = self._archive.retrieve_or_fetch_entity(flow_ref)
         pr = self._archive.retrieve_or_fetch_entity(process_ref)
+        fl = self._archive.retrieve_or_fetch_entity(flow_ref)
         if direction is None:
             direction = self._check_direction(pr, fl)
 
@@ -118,14 +118,22 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
         :param kwargs:
         :return:
         """
-        fl = self._archive.retrieve_or_fetch_entity(flow_ref)
         if process_ref is None:
+            fl = self._archive.retrieve_or_fetch_entity(flow_ref)
             for p in self._archive.entities_by_type('process'):
                 for x in p.references():
                     if x.flow is fl and x.direction == direction:
                         x.process.remove_reference(x.flow, x.direction)
         else:
             pr = self._archive.retrieve_or_fetch_entity(process_ref)
+            if flow_ref is None:
+                fds = [(x.flow, x.direction) for x in pr.references()]
+                if direction is not None:
+                    fds = [fd for fd in fds if fd[1] == direction]
+                for fd in fds:
+                    pr.remove_reference(*fd)
+                return
+            fl = self._archive.retrieve_or_fetch_entity(flow_ref)
             if direction is None:
                 direction = self._check_direction(pr, fl)
             pr.remove_reference(fl, direction)

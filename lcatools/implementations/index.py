@@ -96,7 +96,7 @@ class IndexImplementation(BasicImplementation, IndexInterface):
                 yield x
         else:
             cdir = comp_dir(direction)
-            if not isinstance(flow_ref, str):
+            if not isinstance(flow_ref, str) and not isinstance(flow_ref, int):  # NSUUID archives can use integer ids
                 flow_ref = flow_ref.external_ref
             for x in self._terminations[flow_ref]:  # defaultdict, so no KeyError
                 if direction is None:

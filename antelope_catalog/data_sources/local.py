@@ -47,6 +47,7 @@ from .ecoinvent import EcoinventConfig
 from .ecoinvent_lcia import EcoinventLciaConfig
 from .traci import TraciConfig
 from .calrecycle_lca import CalRecycleConfig
+from .uslci import UsLciConfig
 
 
 '''CATALOG_ROOT specifies the local folder that stores the reference catalog
@@ -85,6 +86,10 @@ RESOURCES_CONFIG = {
         'version': '3.1',
         'data_root': '/data/LCI/Ecoinvent/LCIA/',
         'enable_test': False
+    },
+    'uslci': {
+        'source': UsLciConfig,
+        'enable_test': True
     }
 }
 

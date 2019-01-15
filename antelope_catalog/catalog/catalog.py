@@ -392,7 +392,7 @@ class LcCatalog(LciaEngine):
             if not force:
                 print('Not overwriting existing index. force=True to override.')
                 try:
-                    ex_res = next(r for r in self._resolver.resources_with_source(inx_file))
+                    ex_res = next(r for r in self._resolver.resources_with_source(inx_local))
                     return ex_res.reference
                 except StopIteration:
                     # index file exists, but no matching resource

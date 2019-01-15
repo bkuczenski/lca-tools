@@ -160,14 +160,7 @@ class EcospoldV1Archive(LcArchive):
                 f.add_characterization(local_q, value=val)
         return f
 
-    def _create_process(self, filename):
-        """
-        Extract dataset object from XML file
-        :param filename:
-        :return:
-        """
-        o = self._get_objectified_entity(filename)
-
+    def _extract_exchanges(self, o):
         rf = set()  # reference flows
         flowlist = []
 
@@ -193,7 +186,17 @@ class EcospoldV1Archive(LcArchive):
             v = float(exch.get('meanValue'))  # returns none if missing
             if local_q is not f.reference_entity:
                 v = v / f.cf(local_q)
-            flowlist.append((f, d, v))
+            c = exch.get('generalComment')
+            flowlist.append((f, d, v, c))
+        return rf, flowlist
+
+    def _create_process(self, filename):
+        """
+        Extract dataset object from XML file
+        :param filename:
+        :return:
+        """
+        o = self._get_objectified_entity(filename)
 
         p_meta = o.dataset.metaInformation.processInformation
         n = p_meta.referenceFunction.get('name')
@@ -217,9 +220,14 @@ class EcospoldV1Archive(LcArchive):
                           Classifications=cls)
             p.set_external_ref(n)
 
-            for flow, f_dir, val in flowlist:
+            rf, flowlist = self._extract_exchanges(o)
+
+            for flow, f_dir, val, cmt in flowlist:
                 self._print('Exch %s [%s] (%g)' % (flow, f_dir, val))
-                p.add_exchange(flow, f_dir, reference=None, value=val, add_dups=True)
+                x = p.add_exchange(flow, f_dir, reference=None, value=val, add_dups=True)
+                if cmt is not None:
+                    x.comment = cmt
+
             for ref in rf:
                 p.add_reference(ref, 'Output')
 
@@ -238,7 +246,7 @@ class EcospoldV1Archive(LcArchive):
             self._create_process(key + '.xml')
             return self[key]
         except KeyError:
-            print('No way to fetch that key. try load_all()')
+            print('No way to fetch key "%s". try load_all()' % key)
 
         return None
 

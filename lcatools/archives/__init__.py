@@ -49,7 +49,7 @@ def archive_factory(ds_type):
 #        'foreground': ForegroundArchive.load
     except KeyError:
         try:
-            mod = importlib.import_module('providers', package='antelope_catalog')
+            mod = importlib.import_module('.providers', package='antelope_catalog')
             return getattr(mod, ds_type)
         except ImportError:
             try:

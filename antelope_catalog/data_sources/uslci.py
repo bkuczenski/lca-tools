@@ -1,6 +1,6 @@
 from .data_source import DataSource, ResourceInfo
 
-VALID_FORMATS = ('olca', )  # 'ecospold')
+VALID_FORMATS = ('olca', 'ecospold')  # 'ecospold')
 
 
 INFO = {
@@ -101,16 +101,49 @@ INFO = {
             "93a60a56-a3c8-11da-a746-0800200b9a66"
           ]
     ]
-})}
+},
+                         {}),
+    'ecospold': ResourceInfo(None,
+                             'EcospoldV1Archive',
+                             'https://www.dropbox.com/s/xcsxgj5pipgwe43/USLCI_Processes_ecospold1.zip?dl=1',
+                             'f022051ee87c0976e126ebcc2bced017',
+{
+    "set_reference": [
+        ['Natural gas, combusted in industrial equipment', 2176, 'Output']  # hack to force load of flow 2176
+    ],
+    "unset_reference": [
+        ['Crude oil, in refinery', None, 'Output'],  # remove all Output references
+#        [None, 9218, 'Output'],  # recovered energy, generic  # can't sort 'None' :(
+        ['Petroleum refining, at refinery', 32123, 'Output']  # documentary activity flow -- not allocatable
+    ],
+    "characterize_flow": [
+        [775, 'kg', 0.867],  # 1.153 L/kg from ecospold doc
+        [869, 'kg', 0.739],  # 1.353 L/kg from ecospold doc
+        [16694, 'kg', 0.543],  # 1.84 L/kg from ecospold doc
+        [16696, 'kg', 0.944],  # 1.059 L/kg from ecospold doc
+        [16700, 'kg', 0.809],  # 1.236 L/kg from ecospold doc
+        [16702, 'kg', 0.737],  # 1.356 m3/kg from ecospold doc
+        [2176, 'kWh', 11.111]   # see ecospold documentation
+    ],
+    "allocate_by_quantity": [
+        [
+            'Petroleum refining, at refinery', 'kg'
+        ]
+    ]
+},
+                             {
+                                 'prefix': 'USLCI_Processes_ecospold1/USLCI_Processes_ecospold1',
+                                 'ns_uuid': '96386cae-b651-47ca-8fcd-d3a1aebd6034'
+                             })}
 
 
 class UsLciConfig(DataSource):
 
-    _prefix = 'local.uslci'
+    prefix = 'local.uslci'
     _ifaces = ('inventory', 'quantity')
 
     def _ref(self, fmt):
-        return '.'.join([self._prefix, fmt])
+        return '.'.join([self.prefix, fmt])
 
     @property
     def references(self):

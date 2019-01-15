@@ -1,5 +1,7 @@
 """
 from https://stackoverflow.com/questions/2082152
+(see also https://stackoverflow.com/questions/3387691 -- my requirements are specific enough to justify this approach,
+so long as it works)
 """
 
 
@@ -14,6 +16,9 @@ class LowerDictKeys(object):
     def __iter__(self):
         for k in self._orig:
             yield k
+
+    def __str__(self):
+        return self._orig
 
 
 # caseinsensitivedict.py
@@ -48,5 +53,13 @@ class LowerDict(dict):
         key = self.Key(key)
         return super(LowerDict, self).__getitem__(key)
 
+    def pop(self, key, default=None):
+        key = self.Key(key)
+        return super(LowerDict, self).pop(key, default)
+
+    def items(self):
+        # this may be ugly, but.. um.. so's your mother
+        return {str(k): v for k, v in super(LowerDict, self).items()}.items()
+
     def keys(self):
-        return LowerDictKeys(super(LowerDict, self).keys())
+        return {str(k): 0 for k in super(LowerDict, self).keys()}.keys()

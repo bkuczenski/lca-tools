@@ -1,4 +1,5 @@
 import re
+from collections import defaultdict
 from .entity_store import EntityStore, SourceAlreadyKnown
 from ..interfaces import to_uuid
 from ..implementations import BasicImplementation, IndexImplementation, QuantityImplementation
@@ -16,6 +17,11 @@ class EntityExists(Exception):
 
 class InterfaceError(Exception):
     pass
+
+
+class ArchiveError(Exception):
+    pass
+
 
 
 BASIC_ENTITY_TYPES = ('quantity', 'flow')
@@ -37,6 +43,8 @@ class BasicArchive(EntityStore):
 
     """
     _entity_types = set(BASIC_ENTITY_TYPES)
+
+    _drop_fields = defaultdict(list)  # dict mapping entity type to fields that should be omitted from serialization
 
     @classmethod
     def from_file(cls, filename):
@@ -335,10 +343,11 @@ class BasicArchive(EntityStore):
         :return:
         """
         j = super(BasicArchive, self).serialize()
-        j['flows'] = sorted([f.serialize(characterizations=characterizations, values=values, domesticate=domesticate)
+        j['flows'] = sorted([f.serialize(characterizations=characterizations, values=values,
+                                         domesticate=domesticate, drop_fields=self._drop_fields['flow'])
                              for f in self.entities_by_type('flow')],
                             key=lambda x: x['entityId'])
-        j['quantities'] = sorted([q.serialize(domesticate=domesticate)
+        j['quantities'] = sorted([q.serialize(domesticate=domesticate, drop_fields=self._drop_fields['quantity'])
                                   for q in self.entities_by_type('quantity')],
                                  key=lambda x: x['entityId'])
         return j

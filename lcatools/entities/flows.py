@@ -269,8 +269,8 @@ class LcFlow(LcEntity):
                 print('Merge: Adding characterization %s' % k)
                 self.add_characterization(other._characterizations[k])
 
-    def serialize(self, characterizations=False, domesticate=False, **kwargs):
-        j = super(LcFlow, self).serialize(domesticate=domesticate)
+    def serialize(self, characterizations=False, domesticate=False, drop_fields=(), **kwargs):
+        j = super(LcFlow, self).serialize(domesticate=domesticate, drop_fields=drop_fields)
         j.pop(self._ref_field)  # reference reported in characterizations
         if characterizations:
             j['characterizations'] = sorted([x.serialize(**kwargs) for x in self._characterizations.values()],

@@ -234,7 +234,7 @@ class LcEntity(object):
         else:
             return '%s' % self.reference_entity.get_external_ref()
 
-    def serialize(self, domesticate=False):
+    def serialize(self, domesticate=False, drop_fields=()):
         j = {
             'entityId': self.get_uuid(),
             'entityType': self.entity_type,
@@ -245,6 +245,8 @@ class LcEntity(object):
         if domesticate or self._origin is None:
             j.pop('origin')
         for k, v in self._d.items():
+            if k in drop_fields:
+                continue
             if v is None:
                 continue
             elif isinstance(v, list):

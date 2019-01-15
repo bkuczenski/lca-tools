@@ -1,13 +1,9 @@
 from .entity_store import EntityStore, SourceAlreadyKnown
-from .basic_archive import BasicArchive, BASIC_ENTITY_TYPES, InterfaceError
+from .basic_archive import BasicArchive, BASIC_ENTITY_TYPES, InterfaceError, ArchiveError
 from .lc_archive import LcArchive, LC_ENTITY_TYPES
 from ..from_json import from_json
 
 import importlib
-
-
-class ArchiveError(Exception):
-    pass
 
 
 def create_archive(source, ds_type, catalog=None, **kwargs):

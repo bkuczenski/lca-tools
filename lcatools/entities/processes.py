@@ -601,8 +601,8 @@ class LcProcess(LcEntity):
     def merge(self, other):
         raise NotImplemented('This should be done via fragment construction + aggregation')
 
-    def serialize(self, exchanges=False, domesticate=False, **kwargs):
-        j = super(LcProcess, self).serialize(domesticate=domesticate)
+    def serialize(self, exchanges=False, domesticate=False, drop_fields=(), **kwargs):
+        j = super(LcProcess, self).serialize(domesticate=domesticate, drop_fields=drop_fields)
         j.pop(self._ref_field)  # reference reported in exchanges
         if exchanges:
             # if exchanges is true, report all exchanges

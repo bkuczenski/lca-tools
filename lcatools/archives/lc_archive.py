@@ -164,7 +164,8 @@ class LcArchive(BasicArchive):
         """
         j = super(LcArchive, self).serialize(characterizations=characterizations, values=values,
                                              domesticate=domesticate)
-        j['processes'] = sorted([p.serialize(exchanges=exchanges, values=values, domesticate=domesticate)
+        j['processes'] = sorted([p.serialize(exchanges=exchanges, values=values,
+                                             domesticate=domesticate, drop_fields=self._drop_fields['process'])
                                  for p in self.entities_by_type('process')],
                                 key=lambda x: x['entityId'])
         if self._descendant:

@@ -291,8 +291,8 @@ class LcCatalog(LciaEngine):
 
     def delete_resource(self, resource, delete_source=None, delete_cache=True):
         """
-        Removes the resource from the resolver and also removes the serialization. Also deletes the resource's
-        source under the following circumstances:
+        Removes the resource from the resolver and also removes the serialization of the resource. Also deletes the
+        resource's source under the following circumstances:
          (resource is internal AND resources_with_source(resource.source) is empty AND resource.source is a file)
         This can be overridden using he delete_source param (see below)
         :param resource: an LcResource
@@ -402,10 +402,10 @@ class LcCatalog(LciaEngine):
                     return inx.ref
 
             print('Re-indexing %s' % source)
-        new_ref = res.make_index(inx_file)
-        self.new_resource(new_ref, inx_local, 'json', priority=priority, store=stored, interfaces='index',
-                          _internal=True, static=True, preload_archive=res.archive)
-        return new_ref
+        the_index = res.make_index(inx_file, force=force)
+        self.new_resource(the_index.ref, inx_local, 'json', priority=priority, store=stored, interfaces='index',
+                          _internal=True, static=True, preload_archive=the_index)
+        return the_index.ref
 
     def index_ref(self, origin, interface=None, source=None, priority=60, force=False):
         """
@@ -441,7 +441,7 @@ class LcCatalog(LciaEngine):
                 return
             print('Archiving static resource %s' % res)
         res.check(self)
-        res.make_cache(self.cache_file(source))
+        res.make_cache(self.cache_file(self._localize_source(source)))
 
     def _background_for_origin(self, ref):
         inx_ref = self.index_ref(ref, interface='inventory')

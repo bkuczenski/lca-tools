@@ -14,6 +14,11 @@ INFO = {
             "dc72e285-719b-318b-9c9c-c838846a9cf4",
             "d939590b-a0d7-310c-8952-9921ed64a078",
             "Output"
+          ],
+          [
+              '155839ec-d6ab-3ed6-b7c8-45586e676f6d',  # ambiguous termination
+              '9dfc9e7c-3c20-3f4d-9d79-d54ec2d8d08b',
+              'Output'
           ]
     ],
     "set_reference": [
@@ -114,7 +119,9 @@ INFO = {
     "unset_reference": [
         ['Crude oil, in refinery', None, 'Output'],  # remove all Output references
 #        [None, 9218, 'Output'],  # recovered energy, generic  # can't sort 'None' :(
-        ['Petroleum refining, at refinery', 32123, 'Output']  # documentary activity flow -- not allocatable
+        ['Petroleum refining, at refinery', 32123, 'Output'],  # documentary activity flow -- not allocatable
+        ['Bucked and debarked log, hardwood, green, at veneer mill, E', 5339, 'Output'],  # ambiguous term error
+        ['Harvesting, fresh fruit bunch, at farm', 23293, 'Output']  # ambiguous term error
     ],
     "characterize_flow": [
         [775, 'kg', 0.867],  # 1.153 L/kg from ecospold doc

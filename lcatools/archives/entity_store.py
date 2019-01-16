@@ -33,6 +33,35 @@ class InvalidSemanticReference(Exception):
     pass
 
 
+class ReferenceCreationError(Exception):
+    pass
+
+
+def construct_new_ref(ref, signifier):
+    new_date = datetime.now().strftime('%Y%m%d')
+    old_tail = ref.split('.')[-1]
+    if signifier is None:
+        if old_tail == new_date:
+            new_tail = datetime.now().strftime('%Y%m%d-%H%M')
+        else:
+            new_tail = new_date
+    else:
+        if not bool(re.match('[A-Za-z0-9_-]+', signifier)):
+            raise ValueError('Invalid signifier %s' % signifier)
+        new_tail = '.'.join([signifier, new_date])
+
+    if bool(re.search('[0-9-]{6,}$', old_tail)):
+        # strip trailing date
+        new_ref = '.'.join(ref.split('.')[:-1])
+    else:
+        # use current if no date found
+        new_ref = ref
+    new_ref = '.'.join([new_ref, new_tail])
+    if new_ref == ref:
+        raise ReferenceCreationError('%s == %s', (new_ref, ref))
+    return new_ref
+
+
 class EntityStore(object):
     _entity_types = ()  # must be overridden
     '''
@@ -576,23 +605,19 @@ class EntityStore(object):
         """
         return self.serialize(**kwargs)
 
-    def write_to_file(self, filename, gzip=False, complete=False, ref_suffix=None, **kwargs):
+    def write_to_file(self, filename, gzip=False, complete=False, **kwargs):
         """
 
         :param filename:
         :param gzip:
         :param complete:
-        :param ref_suffix:
         :param kwargs: whatever is required by the subclass's serialize method
         :return:
         """
-        if ref_suffix is not None:
-            new_ref = '.'.join([self._serialize_dict['dataReference'], ref_suffix])
-            self._serialize_dict['dataReference'] = new_ref
-            # self._set_source(new_ref, filename)  # we don't want to change the source on write, only on load
-            self._add_name(new_ref, filename)
-        elif self._source is None:
+        if self._source is None:
             self._set_source(self.ref, filename)  # unless there was no source to begin with
+        elif filename not in self.names:
+            self._add_name(self.ref, filename)
         if complete:
             s = self._serialize_all(**kwargs)
             if self._loaded:

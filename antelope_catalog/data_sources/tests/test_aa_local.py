@@ -70,7 +70,7 @@ class LocalCatalog(unittest.TestCase):
                 nres = len([i for i in s.make_resources(ref)])
                 with open(os.path.join(resource_dir, ref), 'r') as fp:
                     xres = len(json.load(fp)[ref])
-                self.assertEqual(nres, xres)
+                self.assertEqual(nres, xres, ref)
 
     def test_c_instantiate_ifaces(self):
         """

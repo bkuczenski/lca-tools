@@ -246,9 +246,7 @@ class EcospoldV1Archive(LcArchive):
             self._create_process(key + '.xml')
             return self[key]
         except KeyError:
-            print('No way to fetch key "%s". try load_all()' % key)
-
-        return None
+            raise KeyError('No way to fetch key "%s". try load_all()' % key)
 
     def _load_all(self):
         """

@@ -12,21 +12,21 @@ import unittest
 from shutil import rmtree
 
 
-uslci_fg = LcResource('test.uslci', '/data/LCI/USLCI/USLCI_Processes_ecospold1.zip', 'ecospold',
+uslci_fg = LcResource('test.uslci', '/data/LCI/USLCI/USLCI_Processes_ecospold1.zip', 'EcospoldV1Archive',
                       interfaces='inventory',
                       priority=40,
                       static=False,
                       prefix='USLCI_Processes_ecospold1/USLCI_Processes_ecospold1')
 
 
-uslci_fg_dup = LcResource('test.uslci', '/data/LCI/USLCI/USLCI_Processes_ecospold1.zip', 'ecospold',
+uslci_fg_dup = LcResource('test.uslci', '/data/LCI/USLCI/USLCI_Processes_ecospold1.zip', 'EcospoldV1Archive',
                           interfaces='inventory',
                           priority=40,
                           static=False,
                           prefix='USLCI_Processes_ecospold1/USLCI_Processes_ecospold1')
 
 
-uslci_fg_bad = LcResource('test.uslci', '/data/LCI/USLCI/junk.zip', 'ecospold',
+uslci_fg_bad = LcResource('test.uslci', '/data/LCI/USLCI/junk.zip', 'EcospoldV1Archive',
                           interfaces='inventory',
                           priority=40,
                           static=False,

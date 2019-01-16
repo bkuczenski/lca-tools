@@ -1,14 +1,13 @@
 import json
 import os
 from collections import defaultdict
-from datetime import datetime
 
-from lcatools.archives import InterfaceError, update_archive
+from lcatools.archives import InterfaceError, index_archive, update_archive, create_archive
 
 from .foreground import LcForeground
 from .catalog_query import INTERFACE_TYPES, NoCatalog
 
-from .providers import create_archive
+# from .providers import create_archive
 
 
 class LcResource(object):
@@ -114,18 +113,14 @@ class LcResource(object):
     def save(self, catalog):
         self.write_to_file(catalog.resource_dir)
 
-    def make_index(self, index_file):
+    def make_index(self, index_file, force=True):
         if self._archive is None:
             self._instantiate()
         self._archive.load_all()
 
-        new_date = datetime.now().strftime('%Y%m%d')  # there's no reason for this to be static
+        the_index = index_archive(self._archive, index_file, force=force)
 
-        suffix = 'index__%s' % new_date
-        # note: archive ref is updated by writing index
-        self._archive.write_to_file(index_file, gzip=True, ref_suffix=suffix,
-                                    exchanges=False, characterizations=False, values=False)
-        return self._archive.names[index_file]
+        return the_index
 
     def make_cache(self, cache_file):
         # note: do not make descendant

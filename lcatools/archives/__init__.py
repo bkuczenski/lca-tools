@@ -1,5 +1,6 @@
 from .entity_store import EntityStore, SourceAlreadyKnown
 from .basic_archive import BasicArchive, BASIC_ENTITY_TYPES, InterfaceError, ArchiveError
+from .archive_index import index_archive, BasicIndex, LcIndex
 from .lc_archive import LcArchive, LC_ENTITY_TYPES
 from ..from_json import from_json
 
@@ -36,7 +37,9 @@ def archive_factory(ds_type):
     dsl = ds_type.lower()
     init_map = {
         'basicarchive': BasicArchive,
+        'basicindex': BasicIndex,
         'lcarchive': LcArchive,
+        'lcindex': LcIndex
     }
     try:
         init_fcn = init_map[dsl]
@@ -47,7 +50,7 @@ def archive_factory(ds_type):
         try:
             mod = importlib.import_module('.providers', package='antelope_catalog')
             return getattr(mod, ds_type)
-        except ImportError:
+        except AttributeError:
             try:
                 mod = importlib.import_module('.%s' % dsl, package='antelope_%s' % dsl)
                 return mod.init_fcn

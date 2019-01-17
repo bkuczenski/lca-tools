@@ -1,6 +1,4 @@
 import unittest
-from collections import namedtuple
-import os
 
 from ... import LcCatalog
 from ..local import CATALOG_ROOT, make_config, check_enabled

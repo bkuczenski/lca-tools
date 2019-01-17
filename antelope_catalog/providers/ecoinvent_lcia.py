@@ -13,6 +13,7 @@ import os
 import xlrd
 
 EI_LCIA_VERSION = '3.1'
+EI_LCIA_NSUUID = '46802ca5-8b25-398c-af10-2376adaa4623'
 
 Ecoinvent_Indicators = os.path.join(os.path.dirname(__file__), 'data',
                                     'list_of_methods_and_indicators_ecoinvent_v3.2.xlsx')
@@ -23,6 +24,7 @@ class EcoinventLcia(BasicArchive):
     Class to import the Ecoinvent LCIA implementation and construct a flow-cf-quantity catalog.
     The external keys are concatenations of the three
     """
+    _ns_uuid_required = True
 
     _drop_fields = ['Change?']
 
@@ -51,7 +53,7 @@ class EcoinventLcia(BasicArchive):
         self._xl_rows = self._sheet_to_rows(b)
 
     def __init__(self, source, ref=None, sheet_name='impact methods', mass_quantity=None,
-                 value_tag='CF ' + EI_LCIA_VERSION, ns_uuid=None, static=True, **kwargs):
+                 value_tag='CF ' + EI_LCIA_VERSION, ns_uuid=EI_LCIA_NSUUID, static=True, **kwargs):
         """
         EI_LCIA_VERSION is presently 3.1 for the spreadsheet named 'LCIA implementation v3.1 2014_08_13.xlsx'
 
@@ -64,8 +66,6 @@ class EcoinventLcia(BasicArchive):
         :param static: this archive type is always static
         :param kwargs: quiet, upstream
         """
-        if ns_uuid is None:
-            raise AttributeError('ns_uuid required for LCIA invocation')
         if ref is None:
             ref = '.'.join(['local', 'ecoinvent', EI_LCIA_VERSION, 'lcia'])
         super(EcoinventLcia, self).__init__(source, ref=ref, ns_uuid=ns_uuid, static=True, **kwargs)

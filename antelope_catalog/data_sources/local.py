@@ -43,6 +43,7 @@ TO ADD A NEW DATA SOURCE:
 
 """
 
+from .gwp_ipcc_2007 import GwpIpcc2007
 from .ecoinvent import EcoinventConfig
 from .ecoinvent_lcia import EcoinventLciaConfig
 from .traci import TraciConfig
@@ -63,9 +64,25 @@ be a dict.
 The contents of the module dict are resource-specific but must include a 'source' field which maps to a config object,
 and a 'data_root' which maps to the _root variable in the DataSource.
 The remaining args are passed as init args to the object.
+
+The RESOURCES_CONFIG dict by default includes all the resources the catalog can make without any site-specific
+configuration.  Use RESOURCES_CONFIG_LOCAL to add and configure local resources.  Still figuring out the best way 
+to actually do all this.  Community input welcome. 
 '''
 
 RESOURCES_CONFIG = {
+    'ipcc2007': {
+        'source': GwpIpcc2007,
+        'enable_test': True
+    },
+    'uslci': {
+        'source': UsLciConfig,
+        'enable_test': True
+    }
+}
+
+
+RESOURCES_CONFIG_LOCAL = {
     'ecoinvent': {
         'source': EcoinventConfig,
         'data_root': '/data/LCI/Ecoinvent/',
@@ -86,13 +103,10 @@ RESOURCES_CONFIG = {
         'version': '3.1',
         'data_root': '/data/LCI/Ecoinvent/LCIA/',
         'enable_test': False
-    },
-    'uslci': {
-        'source': UsLciConfig,
-        'enable_test': True
     }
 }
 
+RESOURCES_CONFIG.update(RESOURCES_CONFIG_LOCAL)  # still trying to figure out the best way to do this
 
 '''OPERATIONAL CONFIG
 Code below this line is used by the local init machinery to setup catalogs / testing

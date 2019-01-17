@@ -40,6 +40,14 @@ class BackgroundInterface(AbstractQuery):
         """
         pass
 
+    def check_bg(self, **kwargs):
+        """
+        Trivial method to force creation of background / check if it exists
+        :param kwargs:
+        :return:
+        """
+        return self._perform_query(_interface, 'check_bg', BackgroundRequired('Background required'), **kwargs)
+
     def foreground_flows(self, search=None, **kwargs):
         """
         Yield a list of ProductFlows, which serialize to: origin, process external ref, reference flow external ref,

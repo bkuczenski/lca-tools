@@ -26,6 +26,9 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
 
         self._index = None
 
+    def check_bg(self, **kwargs):
+        return True
+
     def setup_bm(self, index=None):
         """
         Requires an index interface or catalog query <-- preferred

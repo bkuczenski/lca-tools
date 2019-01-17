@@ -121,7 +121,7 @@ INFO = {
 #        [None, 9218, 'Output'],  # recovered energy, generic  # can't sort 'None' :(
         ['Petroleum refining, at refinery', 32123, 'Output'],  # documentary activity flow -- not allocatable
         ['Bucked and debarked log, hardwood, green, at veneer mill, E', 5339, 'Output'],  # ambiguous term error
-        ['Harvesting, fresh fruit bunch, at farm', 23293, 'Output']  # ambiguous term error
+        ['Harvesting, fresh fruit bunch, at farm (2)', 23293, 'Output']  # terrible naming practice
     ],
     "characterize_flow": [
         [775, 'kg', 0.867],  # 1.153 L/kg from ecospold doc

@@ -38,18 +38,14 @@ natural gas combusted to kWh.  My best guess is on a GCV basis of fuel input, so
 This value must be entered by hand when the USLCI database is loaded.
 """
 conversion_dict = {
-    ('Bq', 'kBq'): .001,
+    ('kBq', 'Bq'): 1000,
     ('t', 'kg'): 1000,
-    ('kg', 't'): .001,
     ('kg*km', 't*km'): .001,
-    ('m2', 'ha'): .0001,
     ('ha', 'm2'): 10000,
     ('sh tn', 't'): 0.907185,
     ('sh tn', 'kg'): 907.185,
-    ('MJ', 'kWh'): 0.2777777,
     ('kWh', 'MJ'): 3.6,
     ('MJ', 'btu'): 947.817,
-    ('l', 'm3'): .001,
     ('m3', 'l'): 1000
 }
 
@@ -94,10 +90,22 @@ class EcospoldV1Archive(LcArchive):
             yield f
 
     def _fetch_filename(self, filename):
-        return self._archive.readfile(filename)
+        """
+        In USLCI (honestly, I've never seen another ecospoldv1 archive so I can't generalize), activities  whose
+        names contain '<' or '>' characters have those characters stripped from the filenames, so we try that here as
+        a workaround.
+        :param filename:
+        :return:
+        """
+        try:
+            s = self._archive.readfile(filename)
+        except KeyError:
+            trim_lg = ''.join(k for k in filename if k not in '<>')
+            s = self._archive.readfile(trim_lg)
+        return s
 
     def _get_objectified_entity(self, filename):
-        o = objectify.fromstring(self._archive.readfile(filename))
+        o = objectify.fromstring(self._fetch_filename(filename))
         if o.nsmap[None] != self.nsmap:
             raise EcospoldVersionError('This class is for EcoSpold v%s only!' % self.nsmap[-2:])
         return o
@@ -152,11 +160,13 @@ class EcospoldV1Archive(LcArchive):
         if exch.get("unit") != f.unit():
             local_q = self._create_quantity(exch.get("unit"))
             if not f.has_characterization(local_q):
-                if (f.unit(), local_q.unit()) not in conversion_dict:
+                if (f.unit(), local_q.unit()) in conversion_dict:
+                    val = conversion_dict[(f.unit(), local_q.unit())]
+                elif (local_q.unit(), f.unit()) in conversion_dict:
+                    val = 1.0 / conversion_dict[(local_q.unit(), f.unit())]
+                else:
                     print('Flow %s needs characterization for unit %s' % (f, local_q))
                     val = parse_math(input('Enter conversion factor 1 %s = x %s' % (f.unit(), local_q)))
-                else:
-                    val = conversion_dict[(f.unit(), local_q.unit())]
                 f.add_characterization(local_q, value=val)
         return f
 

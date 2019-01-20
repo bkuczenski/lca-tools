@@ -28,7 +28,7 @@ if six.PY2:
     str = unicode
 
 
-EcospoldExchange = namedtuple('EcospoldExchange', ('flow', 'direction', 'value', 'termination', 'is_ref'))
+EcospoldExchange = namedtuple('EcospoldExchange', ('flow', 'direction', 'value', 'termination', 'is_ref', 'comment'))
 EcospoldLciaResult = namedtuple('EcospoldLciaResult', ('Method', 'Category', 'Indicator', 'score'))
 
 
@@ -334,7 +334,8 @@ class EcospoldV2Archive(LcArchive):
                 raise DirectionlessExchangeError
             v = float(exch.get('amount'))  # or None if not found
             t = exch.get('activityLinkId')  # or None if not found
-            flowlist.append(EcospoldExchange(f, d, v, t, is_ref))
+            c = '; '.join([str(c) for c in exch.iterchildren() if c.tag == '{%s}comment' % o.nsmap[None]])
+            flowlist.append(EcospoldExchange(f, d, v, t, is_ref, c))
         return flowlist
 
     @staticmethod
@@ -442,8 +443,10 @@ class EcospoldV2Archive(LcArchive):
                                 p.get_uuid(), exch.flow.get_uuid(), exch.termination))
                             is_ref = False
 
-                p.add_exchange(exch.flow, exch.direction, reference=rx, value=exch.value,
-                               termination=term)
+                x = p.add_exchange(exch.flow, exch.direction, reference=rx, value=exch.value,
+                                   termination=term)
+                if len(exch.comment) > 0:
+                    x.comment = exch.comment
 
                 if not self._linked:
                     if is_ref:

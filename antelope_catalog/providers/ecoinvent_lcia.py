@@ -26,7 +26,7 @@ class EcoinventLcia(BasicArchive):
     """
     _ns_uuid_required = True
 
-    _drop_fields = ['Change?']
+    _drop_columns = ['Change?']
 
     @staticmethod
     def _sheet_to_rows(sheet):
@@ -37,7 +37,7 @@ class EcoinventLcia(BasicArchive):
         for row in g:
             d = dict()
             for i, h in enumerate(headings):
-                if h in EcoinventLcia._drop_fields:
+                if h in EcoinventLcia._drop_columns:
                     continue
                 d[h] = row[i].value
             rows.append(d)

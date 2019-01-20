@@ -159,7 +159,7 @@ class BaseTableOutput(object):
         if self._returns_sets:
             the_rows = []
             _ftt = True  # first time through
-            keys = tuple(data_keys)
+            keys = tuple(sorted(data_keys, key=lambda x: x[-2]))
             for k in keys:
                 if not _ftt:
                     the_row = ['' for i in range(len(self._near_headings))]
@@ -277,7 +277,7 @@ class BaseTableOutput(object):
 
         for row in body:
             if self._returns_sets:
-                for subrow in sorted(row, key=lambda x: x[-2]):
+                for subrow in row:  # sorted(row, key=lambda x: x[-2])
                     print(fmt % printable(subrow, width=width))
             else:
                 print(fmt % printable(row, width=width))

@@ -334,7 +334,10 @@ class EcospoldV2Archive(LcArchive):
                 raise DirectionlessExchangeError
             v = float(exch.get('amount'))  # or None if not found
             t = exch.get('activityLinkId')  # or None if not found
-            c = '; '.join([str(c) for c in exch.iterchildren() if c.tag == '{%s}comment' % o.nsmap[None]])
+            try:
+                c = '; '.join([str(c) for c in exch.iterchildren() if c.tag == '{%s}comment' % o.nsmap[None]])
+            except ValueError:
+                c = None
             flowlist.append(EcospoldExchange(f, d, v, t, is_ref, c))
         return flowlist
 

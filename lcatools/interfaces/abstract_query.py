@@ -50,15 +50,17 @@ class AbstractQuery(object):
     def _perform_query(self, itype, attrname, exc, *args, strict=False, **kwargs):
         if self._debug:
             print('Performing %s query, iface %s' % (attrname, itype))
-        for iface in self._iface(itype, strict=strict):
-            try:
-                result = getattr(iface, attrname)(*args, **kwargs)
-            except NotImplementedError:
-                continue
-            except exc.__class__:
-                continue
-            if result is not None:
-                return result
+        try:
+            for iface in self._iface(itype, strict=strict):
+                try:
+                    result = getattr(iface, attrname)(*args, **kwargs)
+                except exc.__class__:
+                    continue
+                if result is not None:
+                    return result
+        except NotImplementedError:
+            pass
+
         raise exc
 
     def _grounded_query(self, origin):

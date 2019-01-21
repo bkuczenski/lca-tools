@@ -32,7 +32,7 @@ from shutil import rmtree
 from lcatools.qdb import LciaEngine, REF_QTYS
 
 
-from lcatools.interfaces import local_ref, EntityNotFound
+from lcatools.interfaces import local_ref, EntityNotFound, InventoryRequired
 from ..catalog_query import CatalogQuery, INTERFACE_TYPES
 from .lc_resolver import LcCatalogResolver
 from ..lc_resource import LcResource
@@ -43,6 +43,10 @@ from lcatools.archives import archive_from_json
 
 
 class DuplicateEntries(Exception):
+    pass
+
+
+class CatalogError(Exception):
     pass
 
 
@@ -534,6 +538,9 @@ class LcCatalog(LciaEngine):
         """
         if itype is None:
             itype = 'basic'  # fetch, get properties, uuid, reference
+
+        if itype == 'inventory':
+            raise CatalogError('shit is cray')
 
         for res in self._sorted_resources(origin, itype, strict):
             res.check(self)

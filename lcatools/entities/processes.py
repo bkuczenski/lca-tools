@@ -49,11 +49,11 @@ class RxRef(object):
         self._process_ref = None
         self._flow_ref = flow
         self._direction = direction
-        # self._value = value
         # self._hash_tuple = (process.uuid, flow.external_ref, direction, None)
         self._hash = hash((process_uuid, flow.external_ref, direction, None))
         self._comment = comment
         # self._is_alloc = process.is_allocated(self)
+        self._cached_value = None
 
     @property
     def process(self):
@@ -86,8 +86,16 @@ class RxRef(object):
 
     @property
     def value(self):
+        '''
         # print('ACCESSING RxRef VALUE')  # need to be cautious about when / why this is used
-        return self.process.reference_value(self.flow)
+        if self._cached_value is None:
+            try:
+                self._cached_value = self.process.reference_value(self.flow.external_ref)
+            except InventoryRequired:
+                return None
+        return self._cached_value
+        '''
+        raise InventoryRequired("Let's go back to being cautious about this")
 
     @property
     def termination(self):
@@ -99,10 +107,9 @@ class RxRef(object):
 
     @property
     def _value_string(self):
-        try:
-            return '%.3g' % self.process.reference_value(self.flow.external_ref)
-        except InventoryRequired:
-            return ' --- '
+        if self._cached_value is not None:
+            return '%.3g' % self._cached_value
+        return ' --- '
 
     @property
     def entity_type(self):

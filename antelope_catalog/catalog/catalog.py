@@ -539,9 +539,6 @@ class LcCatalog(LciaEngine):
         if itype is None:
             itype = 'basic'  # fetch, get properties, uuid, reference
 
-        if itype == 'inventory':
-            raise CatalogError('shit is cray')
-
         for res in self._sorted_resources(origin, itype, strict):
             res.check(self)
             yield res.make_interface(itype)

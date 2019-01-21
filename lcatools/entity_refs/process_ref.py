@@ -66,6 +66,9 @@ class ProcessRef(EntityRef):
         except StopIteration:
             return next(x for x in self.exchange_values(flow=flow))
         '''
+        if hasattr(flow, 'entity_type'):
+            if flow.entity_type == 'exchange':
+                flow = flow.flow
         return next(x for x in self.references(flow=flow))
 
     def references(self, flow=None):
@@ -93,6 +96,8 @@ class ProcessRef(EntityRef):
     '''
 
     def _use_ref_exch(self, ref_flow):
+        if ref_flow.entity_type == 'exchange':
+            ref_flow = ref_flow.flow
         if ref_flow is None and self._default_rx is not None:
             ref_flow = self._default_rx
         return ref_flow

@@ -150,6 +150,10 @@ class ProcessRef(EntityRef):
         ref_flow = self._use_ref_exch(ref_flow)
         return self._query.foreground(self.external_ref, ref_flow=ref_flow, **kwargs)
 
+    def consumers(self, ref_flow=None, **kwargs):
+        ref_flow = self._use_ref_exch(ref_flow)
+        return self._query.consumers(self.external_ref, ref_flow=ref_flow, **kwargs)
+
     def dependencies(self, ref_flow=None, **kwargs):
         ref_flow = self._use_ref_exch(ref_flow)
         return self._query.dependencies(self.external_ref, ref_flow=ref_flow, **kwargs)

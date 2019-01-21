@@ -302,10 +302,11 @@ class EcospoldV2Archive(LcArchive):
 
         raise KeyError('Noted reference exchange %s not found!' % rf_uuid)
 
-    def _collect_exchanges(self, o):
+    def _collect_exchanges(self, o, ref_uuid):
         """
 
         :param o:
+        :param ref_uuid: strictly for diagnostic purposes
         :return:
         """
         flowlist = []
@@ -337,6 +338,11 @@ class EcospoldV2Archive(LcArchive):
             try:
                 c = '; '.join([str(c) for c in exch.iterchildren() if c.tag == '{%s}comment' % o.nsmap[None]])
             except ValueError:
+                ad = find_tag(o, 'activityDescription')
+
+                u = ad.activity.get('id')
+
+                print('Failed reading comment %s_%s: %s' % (u, ref_uuid, exch.get('id')))
                 c = None
             flowlist.append(EcospoldExchange(f, d, v, t, is_ref, c))
         return flowlist
@@ -416,7 +422,7 @@ class EcospoldV2Archive(LcArchive):
         else:
             rx = None
         if exchanges:
-            for exch in self._collect_exchanges(o):
+            for exch in self._collect_exchanges(o, ref_uuid):
                 """
                 If the dataset is linked, all we do is load non-zero exchanges, ideally all with terminations.  Spurious
                  terminations in reference exchanges are dropped (deprecated EI linker feature)

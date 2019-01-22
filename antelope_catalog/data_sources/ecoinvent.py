@@ -2,6 +2,7 @@ import os
 import re
 
 from .data_source import DataSource, DataCollection
+from .ecoinvent_lcia import EcoinventLciaConfig, EI_LCIA_SPREADSHEETS
 
 FILE_PREFIX = ('current_Version_', 'ecoinvent ')
 FILE_EXT = ('7z', 'zip')
@@ -105,8 +106,17 @@ class EcoinventConfig(DataCollection):
             if os.path.isdir(os.path.join(self._root, d)):
                 if re.match('[23]\.[0-9]+', d):
                     yield d
+                if d.lower() == 'lcia':
+                    yield d
 
     def factory(self, data_root, **kwargs):
         for v in self.ecoinvent_versions:
-            for m in ECOINVENT_SYS_MODELS:
-                yield Ecoinvent3Base(data_root, v, m, **kwargs)
+            if v.lower() == 'lcia':
+                lcia_path = os.path.join(data_root, v)
+                for ver, info in EI_LCIA_SPREADSHEETS.items():
+                    if os.path.exists(os.path.join(lcia_path, info.filename)):
+                        yield EcoinventLciaConfig(lcia_path, version=ver)
+            else:
+                for m in ECOINVENT_SYS_MODELS:
+                    yield Ecoinvent3Base(data_root, v, m, **kwargs)
+                    yield EcoinventLciaConfig(os.path.join(data_root, v), version=v)

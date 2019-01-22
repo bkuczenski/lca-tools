@@ -1,6 +1,7 @@
 
 from .base import BaseTableOutput
 from collections import defaultdict
+from lcatools.exchanges import ExchangeValue
 
 
 class AllocationGrid(BaseTableOutput):
@@ -83,8 +84,11 @@ class AllocationGrid(BaseTableOutput):
     def _add_alloc_refs(self, arg, flow=None):
         col_idx = len(self._columns)
         for k in arg.references(flow=flow):
+            rx = ExchangeValue(k.process, k.flow, k.direction, value=1.0)  # we do this to avoid calling RxRef.value
+            # (and because table exchanges are normalized to this value, so 1.0 is the only correct value to report)
+            rx.set_ref(k.process)
             row = k.direction, True, '; '.join(k.flow['Compartment']), k.flow['Name']
-            self._add_rowitem(col_idx, k, row=row)
+            self._add_rowitem(col_idx, rx, row=row)
         self._columns.append(arg)
 
     def _sorted_rows(self):

@@ -11,7 +11,7 @@ from ..implementations import ForegroundImplementation
 
 from lcatools.interfaces import to_uuid
 from lcatools.archives import BasicArchive, BASIC_ENTITY_TYPES
-from .fragments import LcFragment
+from lcatools.entities.fragments import LcFragment
 from lcatools.entity_refs import CatalogRef
 
 

@@ -30,11 +30,11 @@ import os
 import csv
 from collections import namedtuple
 
-from ..foreground.fragment_editor import FragmentEditor, set_child_exchanges
+from lcatools.entities.fragment_editor import FragmentEditor, set_child_exchanges
 from lcatools.interfaces import comp_dir
 
 from .data_source import DataSource, DataCollection
-from ..foreground.fragments import BalanceAlreadySet
+from lcatools.entities.fragments import BalanceAlreadySet
 
 
 SemanticResource = namedtuple('SemanticResource', ('path', 'ref', 'privacy', 'priority'))

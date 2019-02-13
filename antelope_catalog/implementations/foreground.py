@@ -2,7 +2,7 @@ from lcatools.implementations import BasicImplementation
 from lcatools.interfaces import ForegroundInterface, comp_dir, BackgroundRequired, CONTEXT_STATUS_
 
 from lcatools.entities.editor import FlowEditor
-from ..foreground.fragment_editor import FragmentEditor
+from lcatools.entities.fragment_editor import FragmentEditor
 
 
 class FragRecursionError(Exception):

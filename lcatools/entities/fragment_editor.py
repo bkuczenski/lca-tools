@@ -2,9 +2,9 @@ from collections import defaultdict
 
 from .fragments import LcFragment, DependentFragment
 
-from lcatools.interfaces import directions, comp_dir
-from lcatools.interact import parse_math, cyoa, ifinput
-from lcatools.entities.editor import EntityEditor
+from ..interfaces import directions, comp_dir
+from ..interact import parse_math, cyoa, ifinput
+from .editor import EntityEditor
 
 
 class FragmentEditor(EntityEditor):

@@ -50,7 +50,7 @@ import unittest
 # from math import floor
 
 from ..fragment_editor import FragmentEditor
-from lcatools.entities.editor import FlowEditor
+from ..editor import FlowEditor
 from lcatools.qdb import Qdb
 from lcatools.interfaces import CONTEXT_STATUS_
 

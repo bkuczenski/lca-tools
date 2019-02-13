@@ -4,7 +4,7 @@ class for storing static results of a tarjan ordering
 
 from scipy.sparse.csc import csc_matrix
 from scipy.sparse.csr import csr_matrix
-from scipy.sparse.linalg import inv
+from scipy.sparse.linalg import inv, factorized, spsolve
 from scipy.sparse import eye
 from scipy.io import savemat, loadmat
 
@@ -75,7 +75,11 @@ class TermRef(object):
 ExchDef = namedtuple('ExchDef', ('process', 'flow', 'direction', 'term', 'value'))
 
 
-def _iterate_a_matrix(a, y, threshold=1e-8, count=100, quiet=False):
+def _iterate_a_matrix(a, y, threshold=1e-8, count=100, quiet=False, solver=None):
+    if solver == 'spsolve':
+        ima = eye(a.shape[0]) - a
+        x = spsolve(ima, y)
+        return csr_matrix(x).T
     y = csr_matrix(y)  # tested this with ecoinvent: convert to sparse: 280 ms; keep full: 4.5 sec
     total = csr_matrix(y.shape)
     if a is None:
@@ -273,6 +277,8 @@ class FlatBackground(object):
             self._A = lci_db[0].tocsr()
             self._B = lci_db[1].tocsr()
 
+        self._lu = None  # store LU decomposition
+
         self._fg_index = {(k.term_ref, k.flow_ref): i for i, k in enumerate(self._fg)}
         self._bg_index = {(k.term_ref, k.flow_ref): i for i, k in enumerate(self._bg)}
         self._ex_index = {(k.term_ref, k.flow_ref): i for i, k in enumerate(self._ex)}
@@ -380,6 +386,7 @@ class FlatBackground(object):
     @staticmethod
     def _generate_exch_defs(node_ref, data_vec, enumeration):
         rows, cols = data_vec.nonzero()
+        assert all(cols == 0)
         for i in range(len(rows)):
             term = enumeration[rows[i]]
             dat = data_vec.data[i]
@@ -400,6 +407,7 @@ class FlatBackground(object):
         :return:
         """
         rows, cols = data_vec.nonzero()
+        assert all(cols == 0)
         for i in range(len(rows)):
             term = enumeration[rows[i]]
             dat = data_vec.data[i]
@@ -424,10 +432,15 @@ class FlatBackground(object):
     def dependencies(self, process, ref_flow):
         if self.is_in_background(process, ref_flow):
             index = self._bg_index[process, ref_flow]
+            fg_deps = []
             bg_deps = self._A[:, index]
         else:
             index = self._fg_index[process, ref_flow]
+            fg_deps = self._af[:, index]
             bg_deps = self._ad[:, index]
+
+        for x in self._generate_exch_defs(process, fg_deps, self._fg):
+            yield x
 
         for x in self._generate_exch_defs(process, bg_deps, self._bg):
             yield x
@@ -465,8 +478,16 @@ class FlatBackground(object):
             for x in self._generate_em_defs(process, bf_tilde, self._ex):
                 yield x
 
-    def _compute_bg_lci(self, ad, **kwargs):
-        return self._B.dot(_iterate_a_matrix(self._A, ad, **kwargs))
+    def _compute_bg_lci(self, ad, solver=None, **kwargs):
+        if solver == 'factorize':
+            if self._lu is None:
+                ima = eye(self._A.shape[0]) - self._A
+                self._lu = factorized(ima.tocsc())
+        if self._lu is None:
+            bx = _iterate_a_matrix(self._A, ad, solver=solver, **kwargs)
+        else:
+            bx = csr_matrix(self._lu(ad.toarray().flatten())).T
+        return self._B.dot(bx)
 
     def _compute_lci(self, process, ref_flow, **kwargs):
         if self.is_in_background(process, ref_flow):

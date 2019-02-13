@@ -96,10 +96,11 @@ class ProcessRef(EntityRef):
     '''
 
     def _use_ref_exch(self, ref_flow):
-        if ref_flow.entity_type == 'exchange':
+        if ref_flow is None:
+            if self._default_rx is not None:
+                ref_flow = self._default_rx
+        elif ref_flow.entity_type == 'exchange':
             ref_flow = ref_flow.flow
-        if ref_flow is None and self._default_rx is not None:
-            ref_flow = self._default_rx
         return ref_flow
 
     '''

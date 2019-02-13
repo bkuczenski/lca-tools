@@ -75,7 +75,7 @@ class ProcessRef(EntityRef):
         for x in self.reference_entity:
             if flow is None:
                 yield x
-            elif isinstance(flow, str) and not isinstance(flow, int):
+            elif isinstance(flow, str) or isinstance(flow, int):
                 if x.flow.external_ref == flow:
                     yield x
             else:

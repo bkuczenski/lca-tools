@@ -1,7 +1,6 @@
 import unittest
 import os
 
-from lcatools.from_json import from_json
 from lcatools.archives import LcArchive
 
 

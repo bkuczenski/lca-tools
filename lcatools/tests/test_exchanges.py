@@ -1,13 +1,9 @@
 import unittest
-import os
 
-from lcatools.from_json import from_json
 from lcatools.archives import LcArchive
 from lcatools.exchanges import AmbiguousReferenceError, DuplicateExchangeError, ExchangeError
+from lcatools.entities.tests import refinery_archive
 
-
-refinery_archive = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                                '..', 'entities', 'tests', 'test_archive.json'))
 grid_id = '96bffbb9-b875-36cf-8a11-5723c9d239d9'
 petro_id = '0aaf1e13-5d80-37f9-b7bb-81a6b8965c71'
 nox_id = '1827a862-ccac-37ac-9ad7-d2dffe71058c'

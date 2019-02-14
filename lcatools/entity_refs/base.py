@@ -237,6 +237,13 @@ class EntityRef(BaseRef):
     def reference_entity(self):
         return self._reference_entity
 
+    @property
+    def name(self):
+        try:
+            return self['Name']
+        except KeyError:
+            return self.external_ref
+
     def elementary(self, iterable):
         """
         yields flows from iterable that are elementary, using the query's access to qdb

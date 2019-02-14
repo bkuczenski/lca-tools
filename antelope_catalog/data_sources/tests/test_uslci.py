@@ -93,7 +93,7 @@ class UsLciTestContainer(object):
 
         def test_32_lci_fg(self):
             lci = self._get_fg_test_case_lci()
-            self.assertEqual(len(lci), 298 - self._bg_len)
+            self.assertEqual(len(lci), 298 - self._bg_len)  # this works because the bg discrepancy shows up as cutoffs
             lead_vals = {1.5e-09, 2.3e-09, 0.0}
             self.assertSetEqual({round(x.value, 10) for x in lci if x.flow.name.startswith('Lead')}, lead_vals)
 
@@ -109,7 +109,7 @@ class UsLciEcospoldTest(UsLciTestContainer.UsLciTestBase):
     _atype = 'ecospold'
     _initial_count = (5, 97, 5)
     _bg_len = 38
-    _test_case_lcia = 0.0415466
+    _test_case_lcia = 0.0415466  # more robust bc of ocean freight??
 
     def test_get_by_id(self):
         f = cat.query(self.reference).get(2176)  # this flow was loaded via the config mechanism

@@ -59,3 +59,26 @@ class QuantityRef(EntityRef):
 
     def quantity_relation(self, ref_quantity, flowable, compartment, locale='GLO', **kwargs):
         return self._query.quantity_relation(ref_quantity, flowable, compartment, self, locale=locale, **kwargs)
+    '''
+=======
+    def convert(self, from_unit=None, to=None):
+        """
+        Reports the number of 'to' units equal to a 'from_unit'.  Uses the quantity's 'UnitConversion' property.
+        Simply supplying a unit string will report the unit in terms of the quantity's reference [display] unit.
+        :param from_unit: [defaults to reference unit]
+        :param to: [defaults to reference unit]
+        :return:
+        """
+        uc = self.get_item('UnitConversion')
+        if from_unit is None:
+            inbound = 1.0
+        else:
+            inbound = uc[from_unit]
+
+        if to is None:
+            outbound = 1.0
+        else:
+            outbound = uc[to]
+        return outbound / inbound
+>>>>>>> master
+    '''

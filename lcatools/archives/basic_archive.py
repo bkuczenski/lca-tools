@@ -1,10 +1,13 @@
 import re
+from collections import defaultdict
 from .entity_store import EntityStore, SourceAlreadyKnown
 from .term_manager import TermManager
 from ..interfaces import to_uuid
 from ..implementations import BasicImplementation, IndexImplementation, QuantityImplementation
 from lcatools.entities import LcQuantity, LcUnit, LcFlow
-from ..from_json import to_json
+
+from lcatools import from_json, to_json
+
 
 
 class OldJson(Exception):
@@ -16,6 +19,14 @@ class EntityExists(Exception):
 
 
 class ContextCollision(Exception):
+    pass
+
+
+class InterfaceError(Exception):
+    pass
+
+
+class ArchiveError(Exception):
     pass
 
 
@@ -48,33 +59,58 @@ class BasicArchive(EntityStore):
     """
     _entity_types = set(BASIC_ENTITY_TYPES)
 
+    _drop_fields = defaultdict(list)  # dict mapping entity type to fields that should be omitted from serialization
+
     @classmethod
-    def from_dict(cls, j, jsonfile=None, **kwargs):
+    def from_file(cls, filename):
         """
         BasicArchive factory from minimal dictionary.  Must include at least one of 'dataSource' or 'dataReference'
         fields and 0 or more flows or quantities; but note that any flow present must have its reference
         quantities included. The method is inherited by LcArchives which permit processes as well; any process must
         have its exchanged flows (and their respective quantities) included.
-        :param j:
-        :param jsonfile: if the dict originated in a JSON file, report its path to set_source
+        :param filename: The name of the file to be loaded
         :return:
         """
-        source = j.pop('dataSource', None)
+        j = from_json(filename)
         try:
-            ref = j.pop('dataReference')
+            ref = j['dataReference']
         except KeyError:
-            if source is None:
-                print('Dictionary must contain at least a dataSource or a dataReference specification.')
-                return None
-            else:
-                ref = None
+            ref = None
+        init_args = j.pop('initArgs', {})
+        ns_uuid = j.pop('nsUuid', None)  # this is for opening legacy files
+        if ns_uuid is None:
+            ns_uuid = init_args.pop('ns_uuid', None)
+        ar = cls(filename, ref=ref, ns_uuid=ns_uuid, **init_args)
+        ar.load_from_dict(j, jsonfile=filename)
+        return ar
+
+    @classmethod
+    def from_already_open_file(cls, j, filename, ref=None, **kwargs):
+        """
+        This is an in-between function that should probably be refactored away / folded into archive_from_json (which
+        is the only place it's used)
+        :param j:
+        :param filename:
+        :param ref:
+        :param kwargs:
+        :return:
+        """
+        if ref is None:
+            try:
+                ref = j['dataReference']
+            except KeyError:
+                if filename is None:
+                    print('At least one of source filename or ref kwarg or dataReference must be specified')
+                    return None
+                else:
+                    ref = None
         init_args = j.pop('initArgs', {})
         ns_uuid = j.pop('nsUuid', None)  # this is for opening legacy files
         if ns_uuid is None:
             ns_uuid = init_args.pop('ns_uuid', None)
         kwargs.update(init_args)
-        ar = cls(source, ref=ref, ns_uuid=ns_uuid, **kwargs)
-        ar.load_json(j, jsonfile=jsonfile)
+        ar = cls(filename, ref=ref, ns_uuid=ns_uuid, static=True, **kwargs)
+        ar.load_from_dict(j, jsonfile=filename)
         return ar
 
     def __init__(self, *args, contexts=None, flowables=None, term_manager=None, **kwargs):
@@ -118,6 +154,8 @@ class BasicArchive(EntityStore):
             return QuantityImplementation(self)
         elif iface == 'index':
             return IndexImplementation(self)
+        else:
+            raise InterfaceError('Unable to create interface %s' % iface)
 
     def add(self, entity):
         if entity.entity_type not in self._entity_types:
@@ -155,7 +193,8 @@ class BasicArchive(EntityStore):
     def _add_children(self, entity):
         if entity.entity_type == 'quantity':
             # reset unit strings- units are such a hack
-            entity.reference_entity._external_ref = entity.reference_entity.unitstring
+            if isinstance(entity.reference_entity, LcUnit):
+                entity.reference_entity._external_ref = entity.reference_entity.unitstring
         elif entity.entity_type == 'flow':
             self.add_entity_and_children(entity.reference_entity)
 
@@ -255,11 +294,11 @@ class BasicArchive(EntityStore):
         else:
             print('## skipping bad external ref %s for uuid %s' % (ext_ref, uid))
 
-    def load_json(self, j, _check=True, jsonfile=None):
+    def load_from_dict(self, j, _check=True, jsonfile=None):
         """
         Archives loaded from JSON files are considered static.
         :param j:
-        :param _check:
+        :param _check: whether to run check_counter to print out statistics at the end
         :param jsonfile: [None] if present, add to the list of sources for the canonical ref
         :return:
         """
@@ -290,6 +329,10 @@ class BasicArchive(EntityStore):
         if 'flows' in j:
             for e in j['flows']:
                 self.entity_from_json(e)
+
+        if 'loaded' in j:
+            self._loaded = j['loaded']
+
         if _check:
             self.check_counter()
 
@@ -351,12 +394,12 @@ class BasicArchive(EntityStore):
         :return:
         """
         j = super(BasicArchive, self).serialize()
-        j['flows'] = sorted([f.serialize(domesticate=domesticate)
+        j['flows'] = sorted([f.serialize(domesticate=domesticate, drop_fields=self._drop_fields['flow'])
                              for f in self.entities_by_type('flow')],
                             key=lambda x: x['entityId'])
         if characterizations:
             j['characterizations'] = self.tm.serialize_factors(values=values)
-        j['quantities'] = sorted([q.serialize(domesticate=domesticate)
+        j['quantities'] = sorted([q.serialize(domesticate=domesticate, drop_fields=self._drop_fields['quantity'])
                                   for q in self.entities_by_type('quantity')],
                                  key=lambda x: x['entityId'])
         return j

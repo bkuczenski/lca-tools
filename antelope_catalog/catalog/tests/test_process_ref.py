@@ -4,7 +4,6 @@ import os
 from .. import LcCatalog
 from ...data_sources.local import TEST_ROOT
 
-from lcatools import from_json
 from lcatools.archives import LcArchive
 
 cat = LcCatalog(TEST_ROOT)
@@ -13,7 +12,7 @@ blast_furnace = '00420798-e9d1-4de9-8745-09bd85f31db8'
 blast_furnace_gas = 'b254bbdf-fb2b-4878-aec9-2a7820f3f32e'
 
 alt_archive_path = os.path.join(os.path.dirname(__file__), 'blast_furnace_test.json.gz')
-ar = LcArchive.from_dict(from_json(alt_archive_path))
+ar = LcArchive.from_file(alt_archive_path)
 test_ref = ar.ref
 
 cat.add_existing_archive(ar, interfaces='inventory', store=False)

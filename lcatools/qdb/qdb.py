@@ -29,6 +29,7 @@ from .quantity import QdbQuantityImplementation
 from lcatools.from_json import from_json
 from lcatools.lcia_results import LciaResult
 from lcatools.archives import BasicArchive
+from lcatools.basic_query import BasicQuery
 from lcatools.flowdb.compartments import Compartment, CompartmentManager, MissingCompartment
 from lcatools.characterizations import Characterization
 # from lcatools.dynamic_grid import dynamic_grid
@@ -182,7 +183,7 @@ class Qdb(BasicArchive):
         self._q = SynList.from_json(from_json(quantities))
 
         super(Qdb, self).__init__(source, ref=ref, **kwargs)
-        self.load_json(from_json(source))
+        self.load_from_dict(from_json(source))
 
         if isinstance(compartments, CompartmentManager):
             self.c_mgr = compartments
@@ -223,7 +224,7 @@ class Qdb(BasicArchive):
         if q.is_lcia_method():
             ind = self._q.add_set(self._q_terms(q), merge=False)  # allow different versions of the same LCIA method
             if ind is None:  # major design flaw in SynList- add_set should not return None
-                ind = self._q.index(next(_i for _i in self._q_terms(q)))
+                ind = self._q.index(next(self._q_terms(q)))
         else:
             ind = self._q.add_set(self._q_terms(q), merge=True)  # squash together different versions of a ref quantity
         if self._q.entity(ind) is None:
@@ -257,9 +258,7 @@ class Qdb(BasicArchive):
 
     def __getitem__(self, item):
         try:
-            i = self._get_q_ind(item)
-            if i is not None:
-                return self._q.entity(i)
+            return self._get_canonical(item)
         except IndexError:
             pass
         except QuantityNotKnown:
@@ -267,6 +266,19 @@ class Qdb(BasicArchive):
         except NotAQuantity:
             pass
         return super(Qdb, self).__getitem__(item)
+
+    def _get_canonical(self, item):
+        i = self._get_q_ind(item)
+        if i is not None:
+            q = self._q.entity(i)
+            if q is not None:
+                return q
+        raise QuantityNotKnown(item)
+
+    def get_canonical(self, item):
+        q = self._get_canonical(item)
+        return q.make_ref(BasicQuery(self))
+
 
     def save(self):
         self.write_to_file(self.source, characterizations=True, values=True)  # leave out exchanges
@@ -304,6 +316,7 @@ class Qdb(BasicArchive):
         for q in self.entities_by_type('quantity'):
             try:
                 self._q.set_entity(q['Name'], q)
+                self.add_synonyms(q['Name'], *self._q_terms(q))
             except EntityFound:
                 pass
             except KeyError:
@@ -520,6 +533,36 @@ class Qdb(BasicArchive):
         """
         for i in q.uuid, q.link, q.q_name:
             yield i
+        if q.has_property('Synonyms'):
+            syns = q['Synonyms']
+            if isinstance(syns, str):
+                yield syns
+            else:
+                for syn in syns:
+                    yield syn
+
+    def add_synonyms(self, main_term, *terms):
+        if self._q[main_term] is None:
+            if self._f[main_term] is None:
+                raise KeyError(main_term)
+            else:
+                # no way to save new flowable synonyms-- do this after ContextRefactor
+                return NotImplemented
+        else:
+            # we can, however, save quantity synonyms in the local archive
+            self._q.add_synonyms(main_term, *terms)
+            ent = self._q.entity(main_term)
+            if ent.has_property('Synonyms'):
+                syns = ent['Synonyms']
+                if isinstance(syns, str):
+                    syns = [syns]
+            else:
+                syns = []
+            syns.extend(terms)
+            ent['Synonyms'] = syns
+            # self.save()
+            # also update the entity ref
+            ent.make_ref(BasicQuery(self))['Synonyms'] = syns
 
     def add_cf(self, factor, flow=None, interact=False):
         """
@@ -794,7 +837,7 @@ class Qdb(BasicArchive):
                 try:
                     factor = self.convert(flow=x.flow, query_q_ind=q_ind, locale=locale, **kwargs)
                 except MissingCompartment:
-                    print('Missing compartment %s; abandoning this exchange' % x.flow['Compartment'])
+                    self._print('Missing compartment %s; abandoning this exchange' % x.flow['Compartment'])
                     continue
                 except ConversionReferenceMismatch:
                     print('Mismatch %s' % x)

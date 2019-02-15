@@ -11,7 +11,7 @@ from ..implementations import ForegroundImplementation
 
 from lcatools.interfaces import to_uuid
 from lcatools.archives import BasicArchive, BASIC_ENTITY_TYPES
-from .fragments import LcFragment
+from lcatools.entities.fragments import LcFragment
 from lcatools.entity_refs import CatalogRef
 
 
@@ -52,7 +52,7 @@ class LcForeground(BasicArchive):
 
     def _load_entities_json(self, filename):
         with open(filename, 'r') as fp:
-            self.load_json(json.load(fp), jsonfile=filename)
+            self.load_from_dict(json.load(fp), jsonfile=filename)
 
     def _key_to_id(self, key):
         """

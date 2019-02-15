@@ -144,11 +144,15 @@ class AntelopeInventoryImplementation(InventoryImplementation):
             endpoint = 'scenarios/%s/%s/fragmentflows' % (scenario, fragment)
         else:
             endpoint = '%s/fragmentflows' % fragment
+
+        self._archive.fetch_flows(fragment)
+
         ffs = self._archive.get_endpoint(endpoint)
         for ff in ffs:
             if 'fragmentStageID' in ff:
                 ff['StageName'] = self.get_stage_name(ff['fragmentStageID'])
-        return [self._archive.make_fragment_flow(ff) for ff in ffs]
+        return [self._archive.make_fragment_flow(ff)
+                for ff in sorted(ffs, key=lambda x: ('parentFragmentFlowID' in x, x['fragmentFlowID']))]
 
     def fragment_lcia(self, fragment, quantity_ref, scenario=None, refresh=False, **kwargs):
         if scenario is None:
@@ -156,6 +160,9 @@ class AntelopeInventoryImplementation(InventoryImplementation):
         lcia_q = self.get_lcia_quantity(quantity_ref)
         endpoint = 'scenarios/%s/%s/%s/lciaresults' % (scenario, fragment, lcia_q.external_ref)
         lcia_r = self._archive.get_endpoint(endpoint, cache=False)
+        if lcia_r is None or (isinstance(lcia_r, list) and all(i is None for i in lcia_r)):
+            res = LciaResult(lcia_q, scenario=scenario)
+            return res
 
         res = LciaResult(lcia_q, scenario=lcia_r.pop('scenarioID'))
         total = lcia_r.pop('total')

@@ -74,7 +74,8 @@ class FlowEditor(EntityEditor):
         q = LcQuantity.new(name, unit, Comment=comment)
         return q
 
-    def new_flow(self, flow=None, name=None, cas=None, quantity=None, comment=None, compartment=None, local_unit=None):
+    def new_flow(self, flow=None, name=None, cas=None, quantity=None, comment=None, compartment=None, local_unit=None,
+                 **kwargs):
         if flow is None:
             name = name or self.input('Enter flow name: ', 'New flow')
             cas = cas or self.ifinput('Enter CAS number (or none): ', '')
@@ -105,7 +106,7 @@ class FlowEditor(EntityEditor):
                     local_unit = None
 
             flow = LcFlow.new(name, quantity, CasNumber=cas, Compartment=compartment, Comment=comment,
-                              local_unit=local_unit)
+                              local_unit=local_unit, **kwargs)
 
         return flow
 

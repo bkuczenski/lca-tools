@@ -1,15 +1,13 @@
 import json
 import os
 from collections import defaultdict
-from datetime import datetime
+
+from lcatools.archives import InterfaceError, index_archive, update_archive, create_archive
 
 from .foreground import LcForeground
-from .catalog_query import INTERFACE_TYPES
+from .catalog_query import INTERFACE_TYPES, NoCatalog
 
-from .providers import create_archive, update_archive
-
-
-new_date = datetime.now().strftime('%Y%m%d')
+# from .providers import create_archive
 
 
 class LcResource(object):
@@ -23,8 +21,8 @@ class LcResource(object):
 
     """
     @classmethod
-    def from_archive(cls, archive, interfaces, **kwargs):
-        source = archive.source
+    def from_archive(cls, archive, interfaces, source=None, **kwargs):
+        source = source or archive.source
         ref = archive.ref
         ds_type = archive.__class__.__name__  # static flag indicates whether archive is complete
         kwargs.update(archive.init_args)
@@ -46,6 +44,13 @@ class LcResource(object):
         """
         source = d.pop('dataSource', None)
         ds_type = d.pop('dataSourceType')
+
+        # patch to deal with changing Background extension handling
+        filetype = d.pop('filetype', None)
+        if filetype is not None:
+            if not source.endswith(filetype):
+                source += filetype
+
         return cls(ref, source, ds_type, **d)
 
     @classmethod
@@ -62,22 +67,32 @@ class LcResource(object):
 
         return sorted([cls.from_dict(ref, d) for d in j[ref]], key=lambda x: x.priority)
 
-    def _instantiate(self, catalog):
+    def _instantiate(self, catalog=None):
         if self.source is None:
+            if catalog is None:
+                raise NoCatalog('Remote resource encountered')
             if 'download' in self._args:
                 print('Downloading from %s' % self._args['download']['url'])
-                self._source = catalog.download_file(**self._args['download'])
+                self._source = catalog.download_file(localize=True, **self._args['download'])
                 self.write_to_file(catalog.resource_dir)  # update resource file
             else:
                 raise AttributeError('Resource has no source specified and no download information')
-        if self.ds_type.lower() in ('foreground', 'lcforeground'):
-            self._archive = LcForeground(self.source, catalog=catalog, ref=self.reference, **self.init_args)
+        if self.source.startswith('$CAT_ROOT'):
+            try:
+                src = catalog.abs_path(self.source)
+            except AttributeError:
+                raise NoCatalog('Relative path encountered but no catalog supplied')
         else:
-            self._archive = create_archive(self.source, self.ds_type, catalog=catalog, ref=self.reference,
+            src = self.source
+        if self.ds_type.lower() in ('foreground', 'lcforeground'):
+            self._archive = LcForeground(src, catalog=catalog, ref=self.reference, **self.init_args)
+        else:
+            self._archive = create_archive(src, self.ds_type, catalog=catalog, ref=self.reference,
                                            # upstream=catalog.qdb,
                                            **self.init_args)
         if catalog is not None and os.path.exists(catalog.cache_file(self.source)):
             update_archive(self._archive, catalog.cache_file(self.source))
+        self._static = self._archive.static
         if self.static and self.ds_type.lower() != 'json':
             self._archive.load_all()  # static json archives are by convention saved in complete form
         self.apply_config()
@@ -95,13 +110,17 @@ class LcResource(object):
             self._instantiate(catalog)
         return True
 
-    def make_index(self, index_file):
+    def save(self, catalog):
+        self.write_to_file(catalog.resource_dir)
+
+    def make_index(self, index_file, force=True):
+        if self._archive is None:
+            self._instantiate()
         self._archive.load_all()
-        suffix = 'index__%s' % new_date
-        # note: archive ref is updated by writing index
-        self._archive.write_to_file(index_file, gzip=True, ref_suffix=suffix,
-                                    exchanges=False, characterizations=False, values=False)
-        return self._archive.ref
+
+        the_index = index_archive(self._archive, index_file, force=force)
+
+        return the_index
 
     def make_cache(self, cache_file):
         # note: do not make descendant
@@ -186,15 +205,33 @@ class LcResource(object):
         if config:
             for k, v in config.items():
                 for q in v:
-                    self.add_config(k, *q)
+                    self._add_config(k, *q)
 
         self._args = kwargs
+
+    def __repr__(self):
+        flags = ['']
+        if self.internal:
+            flags.append('_int')
+        if self.static:
+            flags.append('static')
+        if self._archive is not None:
+            flags.append('loaded ')
+        if len(self._config) > 0:
+            flags.append('%d cfg' % len(self._config))
+        fgs = ' '.join(flags)
+
+        return 'LcResource(%s, dataSource=%s:%s, %s [%d]%s)' % (self.reference, self.source, self.ds_type,
+                                                                [k for k in self.interfaces], self.priority, fgs)
 
     def exists(self, path):
         filename = os.path.join(path, self.reference)
         if os.path.exists(filename):
-            with open(filename, 'r') as fp:
-                j = json.load(fp)
+            try:
+                with open(filename, 'r') as fp:
+                    j = json.load(fp)
+            except json.JSONDecodeError:
+                return False
 
             if any([self.matches(k) for k in j[self.reference]]):
                 return True
@@ -235,7 +272,7 @@ class LcResource(object):
 
     @property
     def static(self):
-        return self._static
+        return self._static or self.ds_type.lower() == 'json'
 
     @property
     def init_args(self):
@@ -253,14 +290,36 @@ class LcResource(object):
                 return True
         return False
 
-    def add_config(self, config, *args):
+    def _add_config(self, config, *args):
         """
-        Add a configuration option
+        does no validation
         :param config:
-        :param args: the arguments, in the proper sequence
+        :param args:
         :return:
         """
         self._config[config].add(args)
+
+    def add_config(self, config, *args, store=None):
+        """
+        Add a configuration setting to the resource, and apply it to the archive.
+        :param config:
+        :param args: the arguments, in the proper sequence
+        :param store: [None] or bool: default is to store on non-internal resources
+        :return: None if archive doesn't support configuration; False if unsuccessful, True if successful
+        """
+        try:
+            cf = self._archive.make_interface('configure')
+        except InterfaceError:
+            return None
+        if store is None:
+            store = not self.internal  # don't want to store config on internal (derived) archives (?)
+
+        if cf.check_config(config, args):
+            if store:
+                self._add_config(config, *args)
+            cf.apply_config({config: {args}})
+            return True
+        return False
 
     def _serialize_config(self):
         j = dict()
@@ -284,14 +343,16 @@ class LcResource(object):
 
     def matches(self, k):
         """
-        Pretty cheesy.  When we serialize a set of resources, we need to make sure not to include self twice.
+        Pretty cheesy.  When we serialize a set of resources, we need to make sure not to include self twice.  To
+        make the comparison concrete, use a serialized resource as input.
+
         We were using dataSource as a unique identifier for resource entries; but the introduction of download links
          breaks that because a downloadable resource has no source until it's been downloaded.
          The solution is to fallback to download.url ONLY IF the resource has no source specified.
-        :param k:
+        :param k: a serialized LcResource
         :return:
         """
-        if 'dataSource' in k and 'dataSource' is not None:
+        if k['dataSource'] is not None and self.source is not None:
             return k['dataSource'] == self.source
         return k['download']['url'] == self._args['download']['url']
 
@@ -307,10 +368,14 @@ class LcResource(object):
                 raise ValueError('Please provide a directory path')
             os.makedirs(path)
 
+
         filename = os.path.join(path, self.reference)
         if os.path.exists(filename):
-            with open(filename, 'r') as fp:
-                j = json.load(fp)
+            try:
+                with open(filename, 'r') as fp:
+                    j = json.load(fp)
+            except json.JSONDecodeError:
+                j = {self.reference: []}
 
             resources = [k for k in j[self.reference] if not self.matches(k)]
             resources.append(self.serialize())

@@ -1,6 +1,7 @@
 
 from .base import BaseTableOutput
 from collections import defaultdict
+from lcatools.exchanges import ExchangeValue
 
 
 class AllocationGrid(BaseTableOutput):
@@ -10,12 +11,13 @@ class AllocationGrid(BaseTableOutput):
     """
     _near_headings = 'Direction', 'Ref'  # should be overridden
     _returns_sets = True
+    _far_headings = 'Flow', 'Comment'
 
     def _generate_items(self, alloc_inv):
         """
         columns should be seeded with allocated exchanges
 
-        :param flow_collection:
+        :param alloc_inv: the inventory iterable
         :return: allocated exchanges
         """
         for x in alloc_inv:
@@ -27,7 +29,13 @@ class AllocationGrid(BaseTableOutput):
         :param item: an allocated exchange
         :return: 3-tuple: direction, is_ref (bool), flow name, flow compartment
         """
-        return item.direction, False, '; '.join(item.flow['Compartment']), item.flow['Name']
+        row = item.direction, False, '; '.join(item.flow['Compartment']), item.flow['Name']
+        if row not in self._notes:
+            self._notes[row] = self._pull_note_from_item(item)
+        return row
+
+    def _pull_note_from_item(self, item):
+        return item.comment
 
     def _canonical(self, item):
         """
@@ -35,11 +43,13 @@ class AllocationGrid(BaseTableOutput):
         :param item:
         :return:
         """
-        _p = self._ar.retrieve_or_fetch_entity(item.termination)
-        if _p is None:
-            print('%s => None' % item.termination)
-            return item.termination
-        return '[%s] %s' % (_p['SpatialScope'], _p['Name'])
+        term = item.termination
+        if term is not None:
+            term = self._ar.get(item.termination)
+        if term is None:
+            return '%s %s' % (item.unit, item.flow)
+        else:
+            return '%s %s' % (item.unit, term._name)
 
     def _extract_data_from_item(self, objects):
         """
@@ -54,10 +64,7 @@ class AllocationGrid(BaseTableOutput):
             value = item.value
             if value is None:
                 continue
-            if item.termination is None:
-                d[item.flow['Name']] += value
-            else:
-                d[self._canonical(item)] += value
+            d[self._canonical(item)] += value
         return d
 
     def _add_alloc_column(self, col_idx, arg, ref):
@@ -71,17 +78,17 @@ class AllocationGrid(BaseTableOutput):
         for k in self._generate_items(arg.inventory(ref_flow=ref)):
             if k.value is not None:
                 count = True
-                row = self._pull_row_from_item(k)
-                self._rows.add(row)
-                self._d[row, col_idx].append(k)
+                self._add_rowitem(col_idx, k)
         return count
 
     def _add_alloc_refs(self, arg, flow=None):
         col_idx = len(self._columns)
         for k in arg.references(flow=flow):
+            rx = ExchangeValue(k.process, k.flow, k.direction, value=1.0)  # we do this to avoid calling RxRef.value
+            # (and because table exchanges are normalized to this value, so 1.0 is the only correct value to report)
+            rx.set_ref(k.process)
             row = k.direction, True, '; '.join(k.flow['Compartment']), k.flow['Name']
-            self._rows.add(row)
-            self._d[row, col_idx].append(k)
+            self._add_rowitem(col_idx, rx, row=row)
         self._columns.append(arg)
 
     def _sorted_rows(self):
@@ -125,3 +132,9 @@ class AllocationGrid(BaseTableOutput):
         self._ar = archive
         self._report_unallocated = bool(report_unallocated)
         super(AllocationGrid, self).__init__(*prefs)
+
+    def to_excel(self, xl_writer, sheetname, width_scaling=0.75):
+        super(AllocationGrid, self).to_excel(xl_writer, sheetname, width_scaling=width_scaling)
+        ix = self._near_headings.index('Ref') + 1
+        center_ref = xl_writer.book.add_format({'align': 'center', 'bold': True})
+        xl_writer.sheets[sheetname].set_column(ix, ix, cell_format=center_ref)

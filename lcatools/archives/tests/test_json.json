@@ -66,6 +66,9 @@
       "origin": "local.uslci.clean"
     }
   ],
+  "initArgs": {
+    "ns_uuid": "a9d158e0-d48c-4427-8c55-42719e9e11cc"
+  },
   "processes": [
     {
       "Classifications": [
@@ -105,9 +108,9 @@
   ],
   "quantities": [
     {
-      "Comment": "EcoSpold01",
+      "Comment": "EcoSpold01 with altered uuid",
       "Name": "EcoSpold Quantity l",
-      "entityId": "21d34f33-b0af-3d82-9bef-3cf03e0db9dc",
+      "entityId": "21d34f33-c0af-3d82-9bef-3cf03e0db9dc",
       "entityType": "quantity",
       "externalId": "l",
       "origin": "local.uslci.clean",

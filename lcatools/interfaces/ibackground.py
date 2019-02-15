@@ -40,10 +40,18 @@ class BackgroundInterface(AbstractQuery):
         """
         pass
 
+    def check_bg(self, **kwargs):
+        """
+        Trivial method to force creation of background / check if it exists
+        :param kwargs:
+        :return:
+        """
+        return self._perform_query(_interface, 'check_bg', BackgroundRequired('Background required'), **kwargs)
+
     def foreground_flows(self, search=None, **kwargs):
         """
-        Yield a list of ProductFlows, which serialize to: origin, process external ref, reference flow external ref,
-          direction.
+        Yield a list of Reference Exchanges that make up the foreground (e.g. rows/columns of Af).
+        Serialization should include origin, process external ref, flow external ref, direction.
 
         :param search:
         :return: ProductFlows (should be ref-ized somehow)
@@ -53,8 +61,8 @@ class BackgroundInterface(AbstractQuery):
 
     def background_flows(self, search=None, **kwargs):
         """
-        Yield a list of ProductFlows, which serialize to: origin, process external ref, reference flow external ref,
-          direction.
+        Yield a list of Reference Exchanges that make up the background (e.g. rows/columns of Ad)
+        Serialization should include origin, process external ref, flow external ref, direction.
 
         :param search:
         :return: ProductFlows (should be ref-ized somehow)
@@ -65,6 +73,7 @@ class BackgroundInterface(AbstractQuery):
     def exterior_flows(self, direction=None, search=None, **kwargs):
         """
         Yield a list of ExteriorFlows or cutoff flows, which serialize to flow, direction
+        Ultimately this will be origin, flow ref, direction, context. Context=None are cutoffs.
 
         :param direction:
         :param search:
@@ -75,7 +84,7 @@ class BackgroundInterface(AbstractQuery):
 
     def cutoffs(self, direction=None, search=None, **kwargs):
         """
-        Exterior Intermediate Flows
+        Exterior Intermediate Flows- origin, flow ref, direction, with null context
 
         :param direction:
         :param search:
@@ -87,7 +96,8 @@ class BackgroundInterface(AbstractQuery):
 
     def consumers(self, process, ref_flow=None, **kwargs):
         """
-        Generate ProductFlows that include the identified process/ref_flow as a dependency
+        Generate Reference Exchanges which consume the query process, i.e. columns in Af / Ad having nonzero entries
+        in the row corresponding to the query process.
         :param process:
         :param ref_flow:
         :param kwargs:

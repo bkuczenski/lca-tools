@@ -1,9 +1,18 @@
-from .interfaces import comp_dir
+from lcatools.interfaces import comp_dir
 
-from lcatools.terminations import FlowTermination, SubFragmentAggregation
+from .terminations import FlowTermination, SubFragmentAggregation
+from .characterizations import DuplicateCharacterizationError
 from lcatools.lcia_results import LciaResult, DetailedLciaResult, SummaryLciaResult
 
 from collections import defaultdict
+from math import isclose
+
+class CumulatingFlows(Exception):
+    """
+    when a fragment includes multiple instances of the reference flow having consistent (i.e. not complementary)
+    directions. Not handled in subfragment traversal bc no valid test case
+    """
+    pass
 
 
 class FragmentFlow(object):
@@ -40,7 +49,7 @@ class FragmentFlow(object):
 
     """
     @classmethod
-    def from_antelope_v1(cls, j, make_ref):
+    def from_antelope_v1(cls, j, query):
         """
         Need to:
          * create a termination
@@ -50,17 +59,25 @@ class FragmentFlow(object):
          * extract is_conserved
         :param j: JSON-formatted fragmentflow, from a v1 .NET antelope instance.  Must be modified to include StageName
          instead of fragmentStageID
-        :param make_ref: a function that accepts (external_id, e_type, reference_entity, **kwargs) and returns a ref
+        :param query: an antelope v1 catalog query
         :return:
         """
         fpms = j['flowPropertyMagnitudes']
         ref_mag = fpms[0]
         magnitude = ref_mag['magnitude']
-        ref_qty = make_ref('flowproperties/%s' % ref_mag['flowPropertyID'], 'quantity', ref_mag['unit'])
-        flow = make_ref('flows/%s' % j['flowID'], 'flow', ref_qty)
+        flow = query.get('flows/%s' % j['flowID'])
         for fpm in fpms[1:]:
-            mag_qty = make_ref('flowproperties/%s' % fpm['flowPropertyID'], 'quantity', fpm['unit'])
-            flow.characterize(mag_qty, value=fpm['magnitude'] / magnitude, compartment=None)
+            mag_qty = query.get('flowproperties/%s' % fpm['flowPropertyID'])
+            if fpm['magnitude'] == 0:
+                val = 0
+            else:
+                val = fpm['magnitude'] / magnitude
+            try:
+                flow.characterize(mag_qty, value=val, compartment=None)
+            except DuplicateCharacterizationError:
+                if not isclose(flow.cf(mag_qty), val):
+                    raise ValueError('Characterizations do not match: %g vs %g' % (flow.cf(mag_qty), val))
+
         dirn = j['direction']
 
         if 'parentFragmentFlowID' in j:
@@ -68,23 +85,20 @@ class FragmentFlow(object):
             frag = GhostFragment(parent, flow, dirn)
 
         else:
-            if 'StageName' in j:
-                stage_name = j['StageName']
-            else:
-                stage_name = 'InputOutput'
-            frag = make_ref('fragments/%s' % j['fragmentID'], 'fragment', None,
-                            Name=j['name'], StageName=stage_name)
-            frag.set_config(flow, dirn)
+            frag = query.get('fragments/%s' % j['fragmentID'])
 
         node_type = j['nodeType']
         nw = j['nodeWeight']
-        inbound_ev = magnitude / nw
+        if magnitude == 0:
+            inbound_ev = 0
+        else:
+            inbound_ev = magnitude / nw
 
         if node_type == 'Process':
-            term_node = make_ref('processes/%s' % j['processID'], 'process', [])
+            term_node = query.get('processes/%s' % j['processID'])
             term = FlowTermination(frag, term_node, term_flow=flow, inbound_ev=inbound_ev)
         elif node_type == 'Fragment':
-            term_node = make_ref('fragments/%s' % j['subFragmentID'], 'fragment', [])
+            term_node = query.get('fragments/%s' % j['subFragmentID'])
             term = FlowTermination(frag, term_node, term_flow=flow, inbound_ev=inbound_ev)
         else:
             term = FlowTermination.null(frag)
@@ -114,6 +128,15 @@ class FragmentFlow(object):
         return cls(fragment, magnitude, magnitude, term, is_conserved)
 
     def __init__(self, fragment, magnitude, node_weight, term, is_conserved):
+        """
+
+        :param fragment:
+        :param magnitude:
+        :param node_weight:
+        :param term:
+        :param is_conserved:
+        """
+        # TODO: figure out how to cache + propagate scenario applications through aggregation ops
         self.fragment = fragment
         self.magnitude = magnitude
         self.node_weight = node_weight
@@ -184,13 +207,13 @@ class FragmentFlow(object):
 
     def __eq__(self, other):
         """
-        FragmentFlows are equal if they have the same fragment and termination.  magnitudes are allowed to be different
+        FragmentFlows are equal if they have the same fragment, termination, and magnitude
         :param other:
         :return:
         """
         if not isinstance(other, FragmentFlow):
             return False
-        return self.fragment == other.fragment and self.term == other.term  # and self.magnitude == other.magnitude
+        return self.fragment == other.fragment and self.term == other.term  and self.magnitude == other.magnitude
 
     def __hash__(self):
         return hash(self.fragment)
@@ -199,21 +222,22 @@ class FragmentFlow(object):
         pass
 
 
-def group_ios(parent, ios, include_ref_flow=True):
+def group_ios(parent, ffs, include_ref_flow=True):
     """
     Utility function for dealing with a traversal result (list of FragmentFlows)
     Creates a list of cutoff flows from the inputs and outputs from a fragment traversal.
     ios is a list of FragmentFlows
     :param parent: the node generating the cutoffs
-    :param ios: a list of fragment flows resulting from a traversal of the parent
+    :param ffs: a list of fragment flows resulting from a traversal of the parent
     :param include_ref_flow: [True] whether to include the reference fragment and adjust for autoconsumption
     :return: [list of grouped IO flows], [list of internal non-null flows]
     """
     out = defaultdict(float)
     internal = []
     external = []
-    for ff in ios:
+    for ff in ffs:
         if ff.term.is_null:
+            # accumulate IO flows under the convention that inflows are positive, outflows are negative
             if ff.fragment.direction == 'Input':
                 magnitude = ff.magnitude
             else:
@@ -222,11 +246,12 @@ def group_ios(parent, ios, include_ref_flow=True):
         else:
             internal.append(ff)
 
-    # now deal with reference flow
+    # now deal with reference flow-- trivial fragment should wind up with two equal-and-opposite [pass-through] flows
     if include_ref_flow:
         ref_frag = parent.top()
-        ref_mag = ios[0].magnitude
+        ref_mag = ffs[0].magnitude
         if ref_frag.flow in out:  # either pass through or autoconsumption
+            ref_frag.dbg_print('either pass through or autoconsumption')
             val = out[ref_frag.flow]
             if val < 0:
                 auto_dirn = 'Output'
@@ -237,17 +262,26 @@ def group_ios(parent, ios, include_ref_flow=True):
              (a) directions are complementary [meaning equal since ref flow dirn is w.r.t. parent] and 
              (b) magnitude of autoconsumption is smaller
             """
-            if abs(val) < ref_mag and auto_dirn == ref_frag.direction:
-                # in either case, the direction sense of the autoconsumed flow should switch
-                if auto_dirn == 'Output':
-                    out[ref_frag.flow] += ref_mag
-                else:
-                    out[ref_frag.flow] -= ref_mag
+            if auto_dirn == ref_frag.direction:
+                if abs(val) < ref_mag:
+                    ref_frag.dbg_print('autoconsumption %g %g' % (val, ref_mag))
+                    # autoconsumption, the direction sense of the autoconsumed flow should switch
+                    if auto_dirn == 'Output':
+                        out[ref_frag.flow] += ref_mag
+                    else:
+                        out[ref_frag.flow] -= ref_mag
 
+                else:
+                    ref_frag.dbg_print('pass thru no effect %g %g' % (val, ref_mag))
+                    # pass-thru: pre-initialize external with the reference flow, having the opposite direction
+                    external.append(FragmentFlow.cutoff(parent, ref_frag.flow, comp_dir(auto_dirn), ref_mag))
             else:
-                # pass-thru: pre-initialize external with the reference flow
-                external.append(FragmentFlow.cutoff(parent, ref_frag.flow, comp_dir(ref_frag.direction), ref_mag))
+                ref_frag.dbg_print('cumulation! %g %g' % (val, ref_mag))
+                # cumulation: the directions are both the same... should they be accumulated?  not handled
+                raise CumulatingFlows('%s' % parent)
+                # external.append(FragmentFlow.cutoff(parent, ref_frag.flow, auto_dirn, ref_mag))
         else:
+            ref_frag.dbg_print('uncomplicated ref flow')
             # no autoconsumption or pass-through, but we still want the ref flow to show up in the inventory
             external.append(FragmentFlow.cutoff(parent, ref_frag.flow, comp_dir(ref_frag.direction), ref_mag))
 
@@ -261,13 +295,14 @@ def group_ios(parent, ios, include_ref_flow=True):
     return external, internal
 
 
-def frag_flow_lcia(fragmentflows, quantity_ref, scenario=None, refresh=False):
+def frag_flow_lcia(fragmentflows, quantity_ref, scenario=None, refresh=False, ignore_uncached=True):
     """
     Recursive function to compute LCIA of a traversal record contained in a set of Fragment Flows.
     :param fragmentflows:
     :param quantity_ref:
     :param scenario: necessary if any remote traversals are required
     :param refresh: whether to refresh the LCIA CFs
+    :param ignore_uncached: [True] whether to allow zero scores for un-cached, un-computable fragments
     :return:
     """
     result = LciaResult(quantity_ref)
@@ -280,7 +315,7 @@ def frag_flow_lcia(fragmentflows, quantity_ref, scenario=None, refresh=False):
             continue
 
         try:
-            v = ff.term.score_cache(quantity=quantity_ref, refresh=refresh)
+            v = ff.term.score_cache(quantity=quantity_ref, refresh=refresh, ignore_uncached=ignore_uncached)
         except SubFragmentAggregation:
             # if we were given interior fragments, recurse on them. otherwise ask remote.
             if len(ff.subfragments) == 0:
@@ -330,6 +365,9 @@ class GhostFragment(object):
             'Input': '-<-',
             'Output': '=>='
         }[self.direction]
+
+    def top(self):
+        return self._parent.top()
 
     def __str__(self):
         re = self.reference_entity.uuid[:7]

@@ -2,6 +2,7 @@ import os
 import re
 
 from .data_source import DataSource, DataCollection
+from .ecoinvent_lcia import EcoinventLciaConfig, EI_LCIA_SPREADSHEETS
 
 FILE_PREFIX = ('current_Version_', 'ecoinvent ')
 FILE_EXT = ('7z', 'zip')
@@ -47,7 +48,7 @@ class Ecoinvent3Base(DataSource):
         if ref in self._lci_ref:
             yield self._make_resource(ref, self.lci_source, interfaces='inventory', prefix='datasets')
         elif ref in self._inv_ref:
-            yield self._make_resource(ref, self.inv_source, interfaces=('index', 'inventory'), prefix='datasets')
+            yield self._make_resource(ref, self.inv_source, interfaces='inventory', prefix='datasets')
 
     def _fname(self, ftype=None):
         precheck = os.path.join(self.root, self._model)
@@ -105,8 +106,17 @@ class EcoinventConfig(DataCollection):
             if os.path.isdir(os.path.join(self._root, d)):
                 if re.match('[23]\.[0-9]+', d):
                     yield d
+                if d.lower() == 'lcia':
+                    yield d
 
     def factory(self, data_root, **kwargs):
         for v in self.ecoinvent_versions:
-            for m in ECOINVENT_SYS_MODELS:
-                yield Ecoinvent3Base(data_root, v, m, **kwargs)
+            if v.lower() == 'lcia':
+                lcia_path = os.path.join(data_root, v)
+                for ver, info in EI_LCIA_SPREADSHEETS.items():
+                    if os.path.exists(os.path.join(lcia_path, info.filename)):
+                        yield EcoinventLciaConfig(lcia_path, version=ver)
+            else:
+                for m in ECOINVENT_SYS_MODELS:
+                    yield Ecoinvent3Base(data_root, v, m, **kwargs)
+                    yield EcoinventLciaConfig(os.path.join(data_root, v), version=v)

@@ -1,5 +1,17 @@
+from collections import namedtuple, defaultdict
+
 from .basic import BasicImplementation
-from ..interfaces import ConfigureInterface
+from ..interfaces import ConfigureInterface, check_direction
+
+
+ValidConfig = namedtuple('ValidConfig', ('nargs', 'argtypes'))
+
+valid_configs = {
+    'set_reference': ValidConfig(3, ('process', 'flow', 'direction')),
+    'unset_reference': ValidConfig(3, ('process', 'flow', 'direction')),
+    'characterize_flow': ValidConfig(3, ('flow', 'quantity', 'float')),
+    'allocate_by_quantity': ValidConfig(2, ('process', 'quantity'))
+}
 
 
 class ConfigureImplementation(BasicImplementation, ConfigureInterface):
@@ -16,20 +28,54 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
         :return:
         """
         print('Applying configuration to %s' % self._archive)
-        for k in config['set_reference']:
+        _config = defaultdict(set, config)
+        re_index = False
+        for k in _config['set_reference']:
             print('Setting reference %s [%s] for %s' % (k[1], k[2], k[0]))
             self.set_reference(*k)
-        for k in config['unset_reference']:
+            re_index = True
+        for k in _config['unset_reference']:
             print('UnSetting reference %s [%s] for %s' % (k[1], k[2], k[0]))
             self.unset_reference(*k)
-        for k in config['characterize_flow']:
+            re_index = True
+        for k in _config['characterize_flow']:
             print('Characterizing flow %s by %s: %g' % k)
             self.characterize_flow(*k, overwrite=overwrite)
-        for k in config['allocate_by_quantity']:
+        for k in _config['allocate_by_quantity']:
             print('Allocating %s by %s' % k)
             self.allocate_by_quantity(*k, overwrite=overwrite)
-        if hasattr(self._archive, 'bm'):
-            self._archive.bm.re_index()
+        if hasattr(self._archive, 'ti'):
+            self._archive.make_interface('index').re_index()
+
+    def check_config(self, config, c_args, **kwargs):
+        """
+
+        :param config: a configuration entry
+        :param c_args: a tuple of args
+        :param kwargs:
+        :return:
+        """
+        vc = valid_configs[config]
+        if len(c_args) != vc.nargs:
+            raise ValueError('Wrong number of arguments (%d supplied; %d required)' % (len(c_args), vc.nargs))
+        for i, t in enumerate(vc.argtypes):
+            if t == 'float':
+                if isinstance(c_args[i], float):
+                    continue
+            elif t == 'direction':
+                try:
+                    check_direction(c_args[i])
+                except KeyError:
+                    raise ValueError('Argument %d should be a valid direction; not %s' % (i, c_args[i]))
+                continue
+            else:
+                if not isinstance(c_args[i], str):
+                    raise TypeError('Configuraton arguments must be strings and not entities')
+                e = self._archive.retrieve_or_fetch_entity(c_args[i])
+                if e.entity_type == t:
+                    continue
+            raise TypeError('Argument %d should be type %s' % (i, t))
+        return True
 
     @staticmethod
     def _check_direction(pr, fl):
@@ -52,8 +98,8 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
         :param kwargs:
         :return:
         """
-        fl = self._archive.retrieve_or_fetch_entity(flow_ref)
         pr = self._archive.retrieve_or_fetch_entity(process_ref)
+        fl = self._archive.retrieve_or_fetch_entity(flow_ref)
         if direction is None:
             direction = self._check_direction(pr, fl)
 
@@ -72,14 +118,22 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
         :param kwargs:
         :return:
         """
-        fl = self._archive.retrieve_or_fetch_entity(flow_ref)
         if process_ref is None:
+            fl = self._archive.retrieve_or_fetch_entity(flow_ref)
             for p in self._archive.entities_by_type('process'):
                 for x in p.references():
                     if x.flow is fl and x.direction == direction:
                         x.process.remove_reference(x.flow, x.direction)
         else:
             pr = self._archive.retrieve_or_fetch_entity(process_ref)
+            if flow_ref is None:
+                fds = [(x.flow, x.direction) for x in pr.references()]
+                if direction is not None:
+                    fds = [fd for fd in fds if fd[1] == direction]
+                for fd in fds:
+                    pr.remove_reference(*fd)
+                return
+            fl = self._archive.retrieve_or_fetch_entity(flow_ref)
             if direction is None:
                 direction = self._check_direction(pr, fl)
             pr.remove_reference(fl, direction)
@@ -108,6 +162,16 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
         self._archive.tm.add_characterization(flow['Name'], flow.reference_entity, qty, value, context=context,
                                               location=location,
                                               origin=self.origin, overwrite=overwrite)
+        '''
+        if flow.has_characterization(qty):
+            if overwrite:
+                flow.del_characterization(qty)
+            else:
+                print('Flow %s already characterized for %s. Skipping.' % (flow, qty))
+                return
+        flow.add_characterization(qty, value=value, location=location)
+>>>>>>> master
+        '''
 
     def allocate_by_quantity(self, process_ref, quantity_ref, overwrite=False, **kwargs):
         """

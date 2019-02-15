@@ -57,7 +57,7 @@ def _extract_dtype(filename, pathtype=os.path):
     cands = [i for i in re.split(pathtype.sep, filename) if i in typeDirs.values()]
     dtype = [k for k, v in typeDirs.items() if v in cands]
     if len(dtype) == 0:
-        dtype = [None]
+        raise ValueError('No dtype found: %s' % filename)
     return dtype[0]
 
 
@@ -242,8 +242,6 @@ class IlcdArchive(LcArchive):
                 return None
             result = search_results[0]
             dtype = _extract_dtype(result, self._pathtype)
-            if dtype is None:
-                raise ValueError('Search result with no matching dtype')
             return self.objectify(result, dtype=dtype)
         print('No results for %s' % term)
         return None
@@ -252,8 +250,9 @@ class IlcdArchive(LcArchive):
         if uri is not None:
             return self._get_objectified_entity(self._path_from_uri(uri))
         if dtype is None:
-            dtype = _extract_dtype(term, self._pathtype)
-            if dtype is None:  # "still"
+            try:
+                dtype = _extract_dtype(term, self._pathtype)
+            except ValueError:
                 return self._search_for_term(term)
 
         try:
@@ -417,7 +416,10 @@ class IlcdArchive(LcArchive):
                                                    'mixAndLocationTypes',
                                                    'functionalUnitFlowProperties')])))
 
-        g = find_tag(o, 'locationOfOperationSupplyOrProduction', ns=ns).attrib['location']
+        try:
+            g = find_tag(o, 'locationOfOperationSupplyOrProduction', ns=ns).attrib['location']
+        except AttributeError:
+            g = 'GLO'
 
         stt = {'begin': str(find_common(o, 'referenceYear')), 'end': str(find_common(o, 'dataSetValidUntil'))}
 
@@ -461,13 +463,16 @@ class IlcdArchive(LcArchive):
                 f = self._create_dummy_flow_from_exch(f_id, exch)
                 self.add(f)
             v = get_exch_value(exch, ns=ns)
-            exch_list.append((f, f_dir, v))
+            cmt = find_tag(exch, 'generalComment', ns=ns)
+            exch_list.append((f, f_dir, v, cmt))
 
         p = self._create_process_entity(o, ns)
 
-        for flow, f_dir, val in exch_list:
-            p.add_exchange(flow, f_dir, reference=None, value=val,
-                           add_dups=True)  # add_dups: poor quality control on ELCD
+        for flow, f_dir, val, cmt in exch_list:
+            x = p.add_exchange(flow, f_dir, reference=None, value=val,
+                               add_dups=True)  # add_dups: poor quality control on ELCD
+            if len(cmt) > 0:
+                x.comment = cmt
             if rf == flow.get_uuid() and rf_dir == f_dir:
                 p.add_reference(flow, f_dir)
 
@@ -483,7 +488,10 @@ class IlcdArchive(LcArchive):
         :return:
         """
         if dtype is None:
-            dtype = _extract_dtype(term, self._pathtype)
+            try:
+                dtype = _extract_dtype(term, self._pathtype)
+            except ValueError:
+                pass
 
         o = self.objectify(term, dtype=dtype, version=version, **kwargs)
         if o is None:

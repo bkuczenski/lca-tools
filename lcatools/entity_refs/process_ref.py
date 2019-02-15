@@ -28,10 +28,6 @@ class ProcessRef(EntityRef):
             print('reference: %s' % i)
 
     @property
-    def name(self):
-        return '%s [%s]' % (self._d['Name'], self._d['SpatialScope'])
-
-    @property
     def default_rx(self):
         """
         The 'primary' reference exchange of a process CatalogRef.  This is an external_ref for a flow
@@ -43,7 +39,7 @@ class ProcessRef(EntityRef):
 
     @default_rx.setter
     def default_rx(self, value):
-        if not isinstance(value, str):
+        if not isinstance(value, str) and not isinstance(value, int):
             if hasattr(value, 'external_ref'):
                 value = value.external_ref
             elif hasattr(value, 'entity_type'):
@@ -66,13 +62,16 @@ class ProcessRef(EntityRef):
         except StopIteration:
             return next(x for x in self.exchange_values(flow=flow))
         '''
+        if hasattr(flow, 'entity_type'):
+            if flow.entity_type == 'exchange':
+                flow = flow.flow
         return next(x for x in self.references(flow=flow))
 
     def references(self, flow=None):
         for x in self.reference_entity:
             if flow is None:
                 yield x
-            elif isinstance(flow, str):
+            elif isinstance(flow, str) or isinstance(flow, int):
                 if x.flow.external_ref == flow:
                     yield x
             else:
@@ -93,8 +92,11 @@ class ProcessRef(EntityRef):
     '''
 
     def _use_ref_exch(self, ref_flow):
-        if ref_flow is None and self._default_rx is not None:
-            ref_flow = self._default_rx
+        if ref_flow is None:
+            if self._default_rx is not None:
+                ref_flow = self._default_rx
+        elif ref_flow.entity_type == 'exchange':
+            ref_flow = ref_flow.flow
         return ref_flow
 
     '''
@@ -104,7 +106,9 @@ class ProcessRef(EntityRef):
         return self._query.exchanges(self.external_ref, **kwargs)
 
     def exchange_values(self, flow, direction=None, termination=None, reference=None, **kwargs):
-        return self._query.exchange_values(self.external_ref, flow.external_ref, direction,
+        if not isinstance(flow, str) and not isinstance(flow, int):
+            flow = flow.external_ref
+        return self._query.exchange_values(self.external_ref, flow, direction,
                                            termination=termination, reference=reference, **kwargs)
 
     def inventory(self, ref_flow=None, **kwargs):
@@ -147,6 +151,10 @@ class ProcessRef(EntityRef):
     def foreground(self, ref_flow=None, **kwargs):
         ref_flow = self._use_ref_exch(ref_flow)
         return self._query.foreground(self.external_ref, ref_flow=ref_flow, **kwargs)
+
+    def consumers(self, ref_flow=None, **kwargs):
+        ref_flow = self._use_ref_exch(ref_flow)
+        return self._query.consumers(self.external_ref, ref_flow=ref_flow, **kwargs)
 
     def dependencies(self, ref_flow=None, **kwargs):
         ref_flow = self._use_ref_exch(ref_flow)

@@ -1,5 +1,15 @@
 """
-This implements a quantity interface
+This provider needs some work:
+ - the open_workbook call should not happen in the constructor, but in _load_all
+ - then the provider should be marked 'static'
+ - that would enable the init to be instantaneous, and the load to occur through normal channels in LcResource
+ - that would also allow the loaded result to be cached in JSON
+ = model: Ecoinvent LCIA
+
+This suggests that maybe there should be a versioned LCIA base class-- probably in the data_sources hierarchy and not
+the providers hierarchy though...
+On that topic, it is simply foolhardy to try to build a version-agnostic provider class in the ABSENCE of multiple
+versions (as is the case with TRACI)
 """
 
 import xlrd

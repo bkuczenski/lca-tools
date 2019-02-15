@@ -4,19 +4,23 @@ LcArchive subclass that supports rich background computations by providing a Fla
 
 import os
 
-from lcatools.archives import LcArchive
-from .flat_background import FlatBackground
+from lcatools.archives import LcArchive, InterfaceError
+from .flat_background import FlatBackground, SUPPORTED_FILETYPES
 from .implementation import TarjanBackgroundImplementation
 
 
 class TarjanBackground(LcArchive):
 
-    def __init__(self, source, filetype='.mat', save_after=False, **kwargs):
+    def __init__(self, source, save_after=False, **kwargs):
         self._save_after = save_after
-        self._filetype = filetype
+        filetype = os.path.splitext(source)[1]
+        if filetype not in SUPPORTED_FILETYPES:
+            raise ValueError('Unsupported filetype %s' % filetype)
 
+        '''
         if not source.endswith(self._filetype):
             source += self._filetype
+        '''
 
         super(TarjanBackground, self).__init__(source, **kwargs)
 
@@ -29,7 +33,7 @@ class TarjanBackground(LcArchive):
         if iface == 'background':
             return TarjanBackgroundImplementation(self)
         else:
-            raise AttributeError('%s: This class can only implement the background interface' % iface)
+            raise NotImplementedError('%s: This class can only implement the background interface' % iface)
 
     def create_flat_background(self, index):
         """
@@ -47,4 +51,4 @@ class TarjanBackground(LcArchive):
     def write_to_file(self, filename=None, gzip=False, complete=True, **kwargs):
         if filename is None:
             filename = self.source
-        self._flat.write_to_file(filename, complete=complete, filetype=self._filetype, **kwargs)
+        self._flat.write_to_file(filename, complete=complete, **kwargs)

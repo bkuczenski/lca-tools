@@ -2,7 +2,7 @@ from lcatools.implementations import BasicImplementation
 from lcatools.interfaces import ForegroundInterface, comp_dir, BackgroundRequired, CONTEXT_STATUS_
 
 from lcatools.entities.flows import new_flow
-from ..foreground.fragment_editor import create_fragment, clone_fragment, split_subfragment
+from lcatools.entities.fragment_editor import create_fragment, clone_fragment, split_subfragment
 
 
 class FragRecursionError(Exception):
@@ -105,10 +105,11 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         """
 
         :param args: flow, direction (w.r.t. parent)
-        :param kwargs: uuid=None, parent=None, comment=None, value=None, balance=False; **kwargs passed to LcFragment
+        :param kwargs: uuid=None, parent=None, comment=None, value=None, units=None, balance=False; 
+          **kwargs passed to LcFragment
         :return:
         """
-        frag = create_fragment(*args, **kwargs)
+        frag = create_fragment(*args, origin=self.origin, **kwargs)
         self._archive.add_entity_and_children(frag)
         return frag
 

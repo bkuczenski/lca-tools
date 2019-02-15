@@ -23,7 +23,7 @@ from ..xml_widgets import *
 from .ecospold2_index import EcoSpold2IndexImplementation
 
 
-EcospoldExchange = namedtuple('EcospoldExchange', ('flow', 'direction', 'value', 'termination', 'is_ref'))
+EcospoldExchange = namedtuple('EcospoldExchange', ('flow', 'direction', 'value', 'termination', 'is_ref', 'comment'))
 EcospoldLciaResult = namedtuple('EcospoldLciaResult', ('Method', 'Category', 'Indicator', 'score'))
 
 
@@ -297,10 +297,11 @@ class EcospoldV2Archive(LcArchive):
 
         raise KeyError('Noted reference exchange %s not found!' % rf_uuid)
 
-    def _collect_exchanges(self, o):
+    def _collect_exchanges(self, o, ref_uuid):
         """
 
         :param o:
+        :param ref_uuid: strictly for diagnostic purposes
         :return:
         """
         flowlist = []
@@ -329,7 +330,16 @@ class EcospoldV2Archive(LcArchive):
                 raise DirectionlessExchangeError
             v = float(exch.get('amount'))  # or None if not found
             t = exch.get('activityLinkId')  # or None if not found
-            flowlist.append(EcospoldExchange(f, d, v, t, is_ref))
+            try:
+                c = '; '.join([str(c) for c in exch.iterchildren() if c.tag == '{%s}comment' % o.nsmap[None]])
+            except ValueError:
+                ad = find_tag(o, 'activityDescription')
+
+                u = ad.activity.get('id')
+
+                print('Failed reading comment %s_%s: %s' % (u, ref_uuid, exch.get('id')))
+                c = None
+            flowlist.append(EcospoldExchange(f, d, v, t, is_ref, c))
         return flowlist
 
     @staticmethod
@@ -407,7 +417,7 @@ class EcospoldV2Archive(LcArchive):
         else:
             rx = None
         if exchanges:
-            for exch in self._collect_exchanges(o):
+            for exch in self._collect_exchanges(o, ref_uuid):
                 """
                 If the dataset is linked, all we do is load non-zero exchanges, ideally all with terminations.  Spurious
                  terminations in reference exchanges are dropped (deprecated EI linker feature)
@@ -437,8 +447,10 @@ class EcospoldV2Archive(LcArchive):
                                 p.get_uuid(), exch.flow.get_uuid(), exch.termination))
                             is_ref = False
 
-                p.add_exchange(exch.flow, exch.direction, reference=rx, value=exch.value,
-                               termination=term)
+                x = p.add_exchange(exch.flow, exch.direction, reference=rx, value=exch.value,
+                                   termination=term)
+                if len(exch.comment) > 0:
+                    x.comment = exch.comment
 
                 if not self._linked:
                     if is_ref:

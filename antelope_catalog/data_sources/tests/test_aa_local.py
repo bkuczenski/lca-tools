@@ -5,6 +5,10 @@ catalog object.  The clever bit is that the object will be constructed entirely 
 The catalog resources are specified in data_sources.local.  This catalog is used by computation unit-testing routines
 to store persistent data sets to test against.
 
+Because of naming conventions, this test file should run first, creating all the resources in the CATALOG_ROOT, which
+again is a _persistent_ catalog (as opposed to TEST_ROOT, which is made to be blown away).  The later test files will
+use the created resources to test functionality.
+
 see ..local.py for resource configuration details.
 """
 
@@ -32,6 +36,10 @@ class LocalCatalog(unittest.TestCase):
     """
     @classmethod
     def setUpClass(cls):
+        """
+        The setUpClass function creates the catalog and unpacks all test-enabled config specifications
+        :return:
+        """
         cls._configs = dict()
         cls._cat = LcCatalog(CATALOG_ROOT)
         for k, d in RESOURCES_CONFIG.items():
@@ -41,6 +49,10 @@ class LocalCatalog(unittest.TestCase):
                 cls._configs[k] = obj(**d)
 
     def test_folders(self):
+        """
+        Catalog creation should lead to the creation of the catalog root, subdirectories, and reference quantities.
+        :return:
+        """
         self.assertTrue(os.path.isdir(CATALOG_ROOT))
         self.assertTrue(os.path.isdir(resource_dir))
         self.assertTrue(os.path.exists(os.path.join(CATALOG_ROOT, 'reference-quantities.json')))
@@ -53,7 +65,10 @@ class LocalCatalog(unittest.TestCase):
 
     def test_a_make_resources(self):
         """
-        should simply run without errors
+        Installs the resources from the config specifications, but only if the resources do not already exist.
+        Something that's needed here is a way to update resources if the DataSource subclasses change-- presently the
+        only way to do that is to delete the resources (and also any derived source files like indexes or backgrounds)
+        This should simply run without errors, resulting in the creation of any missing resources
         :return:
         """
         # k is resource signifier, s is DataSource subclass
@@ -64,17 +79,21 @@ class LocalCatalog(unittest.TestCase):
                         self._cat.add_resource(res)
 
     def test_b_number_of_resources(self):
+        """
+        This function checks that the number of resources created is correct
+        :return:
+        """
         # k is resource signifier, s is DataSource subclass
         for k, s in self._configs.items():
             for ref in s.references:
                 nres = len([i for i in s.make_resources(ref)])
                 with open(os.path.join(resource_dir, ref), 'r') as fp:
                     xres = len(json.load(fp)[ref])
-                self.assertEqual(nres, xres)
+                self.assertEqual(nres, xres, ref)
 
     def test_c_instantiate_ifaces(self):
         """
-        should simply run without errors
+        This confirms that each interface specified can be created
         :return:
         """
         for k, s in self._configs.items():

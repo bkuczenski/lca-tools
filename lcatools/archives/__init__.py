@@ -1,13 +1,10 @@
 from .entity_store import EntityStore, SourceAlreadyKnown
-from .basic_archive import BasicArchive, BASIC_ENTITY_TYPES
-from .lc_archive import LcArchive
+from .basic_archive import BasicArchive, BASIC_ENTITY_TYPES, InterfaceError, ArchiveError
+from .archive_index import index_archive, BasicIndex, LcIndex
+from .lc_archive import LcArchive, LC_ENTITY_TYPES
 from ..from_json import from_json
 
 import importlib
-
-
-class ArchiveError(Exception):
-    pass
 
 
 def create_archive(source, ds_type, catalog=None, **kwargs):
@@ -28,7 +25,7 @@ def create_archive(source, ds_type, catalog=None, **kwargs):
 
 
 def update_archive(archive, json_file):
-    archive.load_json(from_json(json_file), jsonfile=json_file)
+    archive.load_from_dict(from_json(json_file), jsonfile=json_file)
 
 
 def archive_factory(ds_type):
@@ -40,8 +37,9 @@ def archive_factory(ds_type):
     dsl = ds_type.lower()
     init_map = {
         'basicarchive': BasicArchive,
-        'qdb': BasicArchive,  # do we want / need archive factory to be able to generate an authentic Qdb?
-        'lcarchive': LcArchive
+        'basicindex': BasicIndex,
+        'lcarchive': LcArchive,
+        'lcindex': LcIndex
     }
     try:
         init_fcn = init_map[dsl]
@@ -50,9 +48,9 @@ def archive_factory(ds_type):
 #        'foreground': ForegroundArchive.load
     except KeyError:
         try:
-            mod = importlib.import_module('providers', package='antelope_catalog')
+            mod = importlib.import_module('.providers', package='antelope_catalog')
             return getattr(mod, ds_type)
-        except ImportError:
+        except AttributeError:
             try:
                 mod = importlib.import_module('.%s' % dsl, package='antelope_%s' % dsl)
                 return mod.init_fcn
@@ -60,9 +58,10 @@ def archive_factory(ds_type):
                 raise ArchiveError(e)  # what is going on here?
 
 
-def archive_from_json(fname, static=True, catalog=None, **archive_kwargs):
+def archive_from_json(fname, factory=archive_factory, catalog=None, **archive_kwargs):
     """
     :param fname: JSON filename
+    :param factory: function returning a class
     :param catalog: [None] necessary to retrieve upstream archives, if specified
     :param static: [True]
     :return: an ArchiveInterface
@@ -82,5 +81,5 @@ def archive_from_json(fname, static=True, catalog=None, **archive_kwargs):
                 print('Upstream reference is ambiguous!')
                 archive_kwargs['upstreamReference'] = j['upstreamReference']
 
-    cls = archive_factory(j.pop('dataSourceType'))
-    return cls.from_dict(j, jsonfile=fname, quiet=True, static=static, upstream=upstream, **archive_kwargs)
+    cls = factory(j.pop('dataSourceType', 'LcArchive'))
+    return cls.from_already_open_file(j, fname, quiet=True, upstream=upstream, **archive_kwargs)

@@ -1,5 +1,5 @@
 from .base import EntityRef
-from lcatools.fragment_flows import FragmentFlow, group_ios
+from ..fragment_flows import group_ios
 
 
 class FragmentRef(EntityRef):
@@ -47,6 +47,12 @@ class FragmentRef(EntityRef):
         return 'frag'
 
     @property
+    def name(self):
+        if self.external_ref is None:
+            return self['Name']
+        return self.external_ref
+
+    @property
     def is_conserved_parent(self):
         return None
 
@@ -54,7 +60,7 @@ class FragmentRef(EntityRef):
         return self._query.name_fragment(self, name, **kwargs)
 
     def inventory(self, scenario=None, **kwargs):
-        return self._query.inventory(self.external_ref, ref_flow=scenario, **kwargs)
+        return self._query.inventory(self.external_ref, scenario=scenario, **kwargs)
 
     def traverse(self, scenario=None, **kwargs):
         return self._query.traverse(self.external_ref, scenario=scenario, **kwargs)

@@ -29,6 +29,9 @@ class OpenLcaJsonLdArchive(LcArchive):
 
     def __init__(self, source, prefix=None, skip_index=False, **kwargs):
         super(OpenLcaJsonLdArchive, self).__init__(source, **kwargs)
+
+        self._drop_fields['process'].extend(['processDocumentation'])
+
         self._archive = FileStore(source, internal_prefix=prefix)
 
         self._type_index = None

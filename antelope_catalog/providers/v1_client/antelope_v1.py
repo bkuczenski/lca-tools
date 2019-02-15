@@ -1,21 +1,26 @@
 import json
 from collections import defaultdict
 
-from lcatools.archives import BasicArchive
+from lcatools.archives import BasicArchive, LC_ENTITY_TYPES
 from lcatools.entity_refs import CatalogRef
 from lcatools.fragment_flows import FragmentFlow
 from lcatools import BasicQuery
 
+from antelope_catalog.foreground import FOREGROUND_ENTITY_TYPES
+
 from .inventory import AntelopeInventoryImplementation
 from .quantity import AntelopeQuantityImplementation
+from .index import AntelopeIndexImplementation
 from .exceptions import AntelopeV1Error
 
 
+import requests
+
 try:
-    from urllib.request import urlopen, urljoin
-    from urllib.parse import urlparse
+    # from urllib.request import urlopen, urljoin
+    from urllib.parse import urlparse, urljoin
 except ImportError:
-    from urllib2 import urlopen
+    # from urllib2 import urlopen
     from urlparse import urlparse, urljoin
 
 
@@ -28,11 +33,34 @@ def remote_ref(url):
     return ref
 
 
+class DeferredProcessComment(object):
+    def __init__(self, request, process_id):
+        super(DeferredProcessComment, self).__init__()
+        self._request = request
+        self._ppid = process_id
+        self._comment = None
+
+    @property
+    def comment(self):
+        if self._comment is None:
+            self._comment = self._request(self._ppid)
+        return self._comment
+
+    @property
+    def cached(self):
+        return self._comment is not None
+
+    def __str__(self):
+        return self.comment
+
+
 class AntelopeV1Client(BasicArchive):
     """
     Provider class for .NET-era Antelope servers.  The basic function is to rely on the interface whenever possible
     but also to cache inventory and LCIA results locally as catalog refs.
     """
+    _entity_types = set(FOREGROUND_ENTITY_TYPES).union(set(LC_ENTITY_TYPES))
+
     def __init__(self, source, ref=None, **kwargs):
         """
 
@@ -47,6 +75,8 @@ class AntelopeV1Client(BasicArchive):
 
         self._query = BasicQuery(self)
 
+        self._s = requests.Session()
+
         # a set of dicts where the key is a string-formatted integer and the value is an entity_ref
         self._endpoints = dict()
         self._cached = defaultdict(dict)
@@ -58,9 +88,14 @@ class AntelopeV1Client(BasicArchive):
             'lciamethod': False,
             'fragment': False
         }
+        for fp in self.get_endpoint('flowproperties', cache=False):
+            self._parse_and_save_entity(fp)
+        self._fetched_all['flowproperty'] = True
 
     def make_interface(self, iface):
-        if iface == 'inventory':
+        if iface == 'index':
+            return AntelopeIndexImplementation(self)
+        elif iface == 'inventory':
             return AntelopeInventoryImplementation(self)
         elif iface == 'quantity':
             return AntelopeQuantityImplementation(self)
@@ -98,6 +133,9 @@ class AntelopeV1Client(BasicArchive):
                 yield self._parse_and_save_entity(j)
             self._fetched_all[entity_type] = True
 
+    def fragments(self, **kwargs):
+        return self.entities_by_type('fragment')
+
     def get_uuid(self, ext_ref):
         ent = self.retrieve_or_fetch_entity(ext_ref)
         return ent.uuid
@@ -115,12 +153,22 @@ class AntelopeV1Client(BasicArchive):
         """
         if endpoint in self._endpoints:
             return self._endpoints[endpoint]
-        with urlopen(urljoin(self.source, endpoint)) as response:
-            self._print('Fetching %s from remote server' % endpoint)
-            j = json.loads(response.read())
+
+        self._print('Fetching %s from remote server' % endpoint)
+        url = urljoin(self.source, endpoint)
+        j = json.loads(self._s.get(url).content)
+
         if cache:
             self._endpoints[endpoint] = j
         return j
+
+    def _key_to_id(self, key):
+        return key
+
+    def add(self, entity):
+        if entity.entity_type not in self._entity_types:
+            raise ValueError('%s is not a valid entity type' % entity.entity_type)
+        self._add(entity, entity.external_ref, quiet=True)
 
     def _fetch(self, entity, **kwargs):
         j = self.get_endpoint(entity, cache=False)[0]
@@ -134,12 +182,17 @@ class AntelopeV1Client(BasicArchive):
     def _get_impact_category(self, cat_id):
         cats = self.get_endpoint('impactcategories')
         cat_id = int(cat_id)
-        if cats[cat_id - 1]['impactCategoryID'] == cat_id:
-            return cats[cat_id - 1]['name']
         try:
             return next(j['name'] for j in cats if j['impactCategoryID'] == cat_id)
         except StopIteration:
             raise ValueError('Unknown impact category ID %d' % cat_id)
+
+    def fetch_flows(self, fragment):
+        for f in self.get_endpoint('%s/flows' % fragment, cache=False):
+            ext_ref = 'flows/%d' % f['flowID']
+            if ext_ref in self._entities:
+                continue
+            self._parse_and_save_entity(f)
 
     def make_fragment_flow(self, ff):
         """
@@ -147,7 +200,7 @@ class AntelopeV1Client(BasicArchive):
         :param ff:
         :return:
         """
-        return FragmentFlow.from_antelope_v1(ff, self._make_ref)
+        return FragmentFlow.from_antelope_v1(ff, self._query)
 
     '''
     Entity handling
@@ -167,6 +220,8 @@ class AntelopeV1Client(BasicArchive):
             ent = self._entities[key]
 
         parts = key.split('/')
+        if len(parts) != 2:
+            raise KeyError('%s: Key must be of the format "entity_type/id"' % key)
         if parts[1] in self._cached[parts[0]]:
             ent = self._cached[parts[0]][parts[1]]
         if ent is not None:
@@ -186,7 +241,9 @@ class AntelopeV1Client(BasicArchive):
                 'flowproperty': self._parse_and_save_fp,
                 'fragment': self._parse_and_save_fragment}[j.pop('resourceType').lower()]
         j.pop('links')
-        return func(j)
+        obj = func(j)
+        self.add_entity_and_children(obj)
+        return obj
 
     def _parse_and_save_process(self, j):
         process_id = str(j.pop('processID'))
@@ -194,7 +251,7 @@ class AntelopeV1Client(BasicArchive):
         j['Name'] = j.pop('name')
         j['SpatialScope'] = j.pop('geography')
         j['TemporalScope'] = j.pop('referenceYear')
-        j['Comment'] = self._get_comment(process_id)
+        j['Comment'] = DeferredProcessComment(self._get_comment, process_id)
         ref = self._make_ref(ext_ref, 'process', [], **j)
         self._cached['processes'][process_id] = ref
         return ref

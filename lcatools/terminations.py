@@ -6,7 +6,7 @@ as a ProductFlow in lca-matrix, although the FlowTermination is more powerful.  
 either one from the other.
 """
 
-from .interfaces import PrivateArchive, comp_dir, NoFactorsFound
+from lcatools.interfaces import PrivateArchive, check_direction, comp_dir, NoFactorsFound
 
 from lcatools.exchanges import ExchangeValue
 from lcatools.lcia_results import LciaResult, LciaResults
@@ -31,7 +31,20 @@ class NonConfigurableInboundEV(Exception):
     pass
 
 
+class UnCachedScore(Exception):
+    """
+    means that we have an LCIA-only node whose score has not been set for the requested LCIA method
+    """
+    pass
+
+
 class FlowTermination(object):
+
+    _term = None
+    _term_flow = None
+    _direction = None
+    _descend = True
+
     """
     these are stored by scenario in a dict on the mainland
 
@@ -80,7 +93,7 @@ class FlowTermination(object):
             term_node = fg.catalog_ref(origin, external_ref, entity_type='process')
 
         direction = j.pop('direction', None)
-        descend = j.pop('descend', None)
+        descend = j.pop('descend', True)
         term = cls(fragment, term_node, direction=direction, term_flow=term_flow, descend=descend)
         if 'scoreCache' in j.keys():
             term._deserialize_score_cache(fg, j['scoreCache'], scenario)
@@ -128,13 +141,37 @@ class FlowTermination(object):
                 term_flow = entity
                 entity = fragment
         self._term = entity  # this must have origin, external_ref, and entity_type, and be operable (if ref)
-        self._descend = True
-        self.term_flow = term_flow or self._parent.flow
         self._score_cache = LciaResults(fragment)
-        self.direction = direction or comp_dir(fragment.direction)
 
+        self.direction = direction
+        self.term_flow = term_flow
         self.descend = descend
-        self.validate_flow_conversion()
+
+    @property
+    def term_flow(self):
+        return self._term_flow
+
+    @term_flow.setter
+    def term_flow(self, term_flow):
+        """
+        Introduce term validation checking here if needed
+        :param term_flow:
+        :return:
+        """
+        if term_flow is None:
+            self._term_flow = self._parent.flow
+        else:
+            self._term_flow = term_flow
+
+    @property
+    def direction(self):
+        return self._direction
+
+    @direction.setter
+    def direction(self, value):
+        if value is None:
+            value = comp_dir(self._parent.direction)
+        self._direction = check_direction(value)
 
     def matches(self, exchange):
         """
@@ -257,16 +294,14 @@ class FlowTermination(object):
             return
         if isinstance(value, bool):
             self._descend = value
+            ''' # this whole section not needed- we can certainly cache LCIA scores for nondescend fragments,
+            and we don't need to blow them away if descend is True; just ignore them.
             if value is True:
                 self.clear_score_cache()  # if it's descend, it should have no score_cache
-                # if it's not descend, the score cache gets set during traversal
+                # if it's not descend, the score gets computed (and not cached) during traversal
+            '''
         else:
             raise ValueError('Descend setting must be True or False')
-
-    def self_terminate(self, term_flow=None):
-        self._term = self._parent
-        self.term_flow = term_flow or self._parent.flow
-        self.clear_score_cache()
 
     @property
     def term_node(self):
@@ -317,9 +352,6 @@ class FlowTermination(object):
         except NoFactorsFound:
             return 1.0 / self._parent.flow.reference_entity.cf(self.term_flow).value
 
-    def validate_flow_conversion(self):
-        return self.flow_conversion  # deal with it when an error comes up
-
     @property
     def id(self):
         if self.is_null:
@@ -354,7 +386,7 @@ class FlowTermination(object):
         :return:
         """
         if self.is_fg:
-            x = ExchangeValue(self._parent, self._parent.flow, self._parent.direction,
+            x = ExchangeValue(self._parent, self.term_flow, self.direction,
                               value=self.node_weight_multiplier)
             yield x
         elif self.term_is_bg:
@@ -393,10 +425,16 @@ class FlowTermination(object):
             else:
                 raise SubFragmentAggregation  # to be caught
 
-        if self.is_bg and self.is_frag:
-            # need bg_lcia method for FragmentRefs
-            # this is probably not currently supported
-            return self.term_node.bg_lcia(lcia_qty=quantity_ref, ref_flow=self.term_flow.external_ref, **kwargs)
+        if self.is_bg:
+            if self.is_fg:
+                # surprisingly not inconsistent! in the current pre-ContextRefactor world, this is how we are handling
+                # cached-LCIA-score nodes
+                raise UnCachedScore('fragment: %s\nquantity: %s' % (self._parent, quantity_ref))
+
+            elif self.is_frag:
+                # need bg_lcia method for FragmentRefs
+                # this is probably not currently supported
+                return self.term_node.bg_lcia(lcia_qty=quantity_ref, ref_flow=self.term_flow.external_ref, **kwargs)
 
         try:
             locale = self.term_node['SpatialScope']
@@ -414,13 +452,19 @@ class FlowTermination(object):
                 # res.set_scale(self.inbound_exchange_value)
         return res
 
-    def score_cache(self, quantity=None, **kwargs):
+    def score_cache(self, quantity=None, ignore_uncached=False, refresh=False, **kwargs):
         if quantity is None:
             return self._score_cache
-        if quantity.uuid in self._score_cache:
+        if quantity.uuid in self._score_cache and refresh is False:
             return self._score_cache[quantity.uuid]
         else:
-            res = self.compute_unit_score(quantity, **kwargs)
+            try:
+                res = self.compute_unit_score(quantity, refresh=refresh, **kwargs)
+            except UnCachedScore:
+                if ignore_uncached:
+                    res = LciaResult(quantity)
+                else:
+                    raise
             self._score_cache[quantity.uuid] = res
             return res
 
@@ -448,13 +492,16 @@ class FlowTermination(object):
                                 'score': res.total()})
         return score_cache
 
+    def add_lcia_score(self, quantity, score, scenario=None):
+        res = LciaResult(quantity, scenario=scenario)
+        res.add_summary(self._parent.uuid, self._parent, 1.0, score)
+        self._score_cache.add(res)
+
     def _deserialize_score_cache(self, fg, sc, scenario):
         self._score_cache = LciaResults(self._parent)
         for i in sc:
             q = fg.catalog_ref(i['quantity']['origin'], i['quantity']['externalId'], entity_type='quantity')
-            res = LciaResult(q, scenario=scenario)
-            res.add_summary(self._parent.uuid, self._parent, 1.0, i['score'])
-            self._score_cache.add(res)
+            self.add_lcia_score(q, i['score'], scenario=scenario)
 
     def serialize(self, save_unit_scores=False):
         if self.is_null:
@@ -480,6 +527,11 @@ class FlowTermination(object):
         return j
 
     def __eq__(self, other):
+        """
+        Terminations are equal if they are both null, or if their term_node, term_flow, and direction are equal
+        :param other:
+        :return:
+        """
         if self is other:
             return True
         if not isinstance(other, FlowTermination):

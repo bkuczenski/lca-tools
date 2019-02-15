@@ -32,6 +32,35 @@ class InvalidSemanticReference(Exception):
     pass
 
 
+class ReferenceCreationError(Exception):
+    pass
+
+
+def construct_new_ref(ref, signifier):
+    new_date = datetime.now().strftime('%Y%m%d')
+    old_tail = ref.split('.')[-1]
+    if signifier is None:
+        if old_tail == new_date:
+            new_tail = datetime.now().strftime('%Y%m%d-%H%M')
+        else:
+            new_tail = new_date
+    else:
+        if not bool(re.match('[A-Za-z0-9_-]+', signifier)):
+            raise ValueError('Invalid signifier %s' % signifier)
+        new_tail = '.'.join([signifier, new_date])
+
+    if bool(re.search('[0-9-]{6,}$', old_tail)):
+        # strip trailing date
+        new_ref = '.'.join(ref.split('.')[:-1])
+    else:
+        # use current if no date found
+        new_ref = ref
+    new_ref = '.'.join([new_ref, new_tail])
+    if new_ref == ref:
+        raise ReferenceCreationError('%s == %s', (new_ref, ref))
+    return new_ref
+
+
 class EntityStore(object):
     _entity_types = ()  # must be overridden
     '''
@@ -221,6 +250,8 @@ class EntityStore(object):
                     raise SourceAlreadyKnown('Source %s already registered to name %s' % (source, k))
         print('%s: %s' % (ref, source))
         self._catalog_names[ref].add(source)
+        if ref == self.ref and self.source is None and rewrite:
+            self._source = source
 
     @property
     def source(self):
@@ -248,7 +279,8 @@ class EntityStore(object):
         for k in self._catalog_names.keys():
             yield k
 
-    def get_names(self):
+    @property
+    def names(self):
         """
         Return a mapping of data source to semantic reference, based on the catalog_names property.  This is used by
         a catalog interface to convert entity origins from physical to semantic.
@@ -261,7 +293,7 @@ class EntityStore(object):
         if self._upstream is None:
             names = dict()
         else:
-            names = self._upstream.get_names()
+            names = self._upstream.names
 
         for k, s in self._catalog_names.items():
             for v in s:
@@ -431,7 +463,7 @@ class EntityStore(object):
         except KeyError:
             return None
 
-    def _add(self, entity, key):
+    def _add(self, entity, key, quiet=False):
         if key in self._entities:
             raise KeyError('Entity already exists: %s' % key)
 
@@ -439,7 +471,7 @@ class EntityStore(object):
             raise TypeError('Entity type %s not valid!' % entity.entity_type)
 
         if entity.validate():
-            if self._quiet is False:
+            if not (self._quiet or quiet):
                 print('Adding %s entity with %s: %s' % (entity.entity_type, key, entity['Name']))
             if entity.origin is None:
                 assert self._key_to_id(entity.external_ref) == key, 'New entity uuid must match origin repository key!'
@@ -581,24 +613,23 @@ class EntityStore(object):
         """
         return self.serialize(**kwargs)
 
-    def write_to_file(self, filename, gzip=False, complete=False, ref_suffix=None, **kwargs):
+    def write_to_file(self, filename, gzip=False, complete=False, **kwargs):
         """
 
         :param filename:
         :param gzip:
         :param complete:
-        :param ref_suffix:
         :param kwargs: whatever is required by the subclass's serialize method
         :return:
         """
-        if ref_suffix is not None:
-            new_ref = '.'.join([self._serialize_dict['dataReference'], ref_suffix])
-            self._serialize_dict['dataReference'] = new_ref
-            self._set_source(new_ref, filename)
-        elif self._source is None:
-            self._set_source(self.ref, filename)
+        if self._source is None:
+            self._set_source(self.ref, filename)  # unless there was no source to begin with
+        elif filename not in self.names:
+            self._add_name(self.ref, filename)
         if complete:
             s = self._serialize_all(**kwargs)
+            if self._loaded:
+                s['loaded'] = True
         else:
             s = self.serialize(**kwargs)
         to_json(s, filename, gzip=gzip)

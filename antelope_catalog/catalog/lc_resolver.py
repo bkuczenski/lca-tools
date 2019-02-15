@@ -48,7 +48,13 @@ class LcCatalogResolver(object):
                     yield res.source
 
     def _update_semantic_ref(self, ref):
-        resources = LcResource.from_json(os.path.join(self._resource_dir, ref))
+        path = os.path.join(self._resource_dir, ref)
+        try:
+            resources = LcResource.from_json(path)
+        except json.JSONDecodeError:
+            print('Skipping Invalid resource file %s' % path)
+            # os.remove(path)
+            return
         self._resources[ref] = resources
 
     def index_resources(self):
@@ -64,6 +70,7 @@ class LcCatalogResolver(object):
         """
         if resource.exists(self._resource_dir) or self.has_resource(resource):
             # do nothing
+            print('Resource already exists')
             return
         if store:
             resource.write_to_file(self._resource_dir)
@@ -128,7 +135,7 @@ class LcCatalogResolver(object):
         if not origin_found:
             raise UnknownOrigin(req)
 
-    def get_resource(self, ref=None, iface=None, source=None, strict=True):
+    def get_resource(self, ref=None, iface=None, source=None, strict=True, include_internal=True):
         """
         The purpose of this function is to allow a user to retrieve a resource by providing enough information to
         identify it uniquely.  If strict is True (default), then parameters are matched exactly and more than one
@@ -144,13 +151,17 @@ class LcCatalogResolver(object):
             _gen = self.resources_with_source(source)
         else:
             _gen = self.resolve(ref, interfaces=iface, strict=strict)
-        matches = sorted([r for r in _gen if not r.internal], key=lambda x: x.priority)
+        if include_internal:
+            matches = sorted([r for r in _gen], key=lambda x: x.priority)
+        else:
+            matches = sorted([r for r in _gen if not r.internal], key=lambda x: x.priority)
         if len(matches) > 1:
             if strict:
                 for k in matches:
                     for i in k.interfaces:
                         print('%s:%s [priority %d]' % (k.source, i, k.priority))
-                raise ValueError('Ambiguous matches for supplied parameters')
+                raise ValueError('Ambiguous matches for supplied parameters\nref: %s iface: %s source: %s' %
+                                 (ref, iface, source))
         elif len(matches) == 0:
             raise KeyError('no resource found; ref:%s iface:%s source=%s' % (ref, iface, source))
         return matches[0]
@@ -161,7 +172,7 @@ class LcCatalogResolver(object):
             os.remove(os.path.join(self._resource_dir, ref))
             return
         with open(os.path.join(self._resource_dir, ref), 'w') as fp:
-            json.dump(fp, {ref: j})
+            json.dump({ref: j}, fp)
 
     def write_resource_files(self):
         for ref, resources in self._resources.items():

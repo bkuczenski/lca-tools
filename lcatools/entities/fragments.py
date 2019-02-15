@@ -4,7 +4,7 @@
 """
 
 import uuid
-from collections import defaultdict
+# from collections import defaultdict
 
 from lcatools.interfaces import comp_dir
 
@@ -21,7 +21,7 @@ class InvalidParentChild(Exception):
     pass
 
 
-class BalanceFlowError(Exception):
+class FoundBalanceFlow(Exception):
     """
     raised if a fragment attempts to traverse a balance flow the normal way
     """
@@ -163,7 +163,7 @@ class LcFragment(LcEntity):
 
         self._private = private
         self._background = background
-        self._balance_flow = False
+        self._is_balance = False
         if balance_flow:
             self.set_balance_flow()
 
@@ -192,7 +192,7 @@ class LcFragment(LcEntity):
 
     def dbg_print(self, qwer, level=1):
         if level < self.__dbg_threshold:
-            print(qwer)
+            print('%.3s %s' % (self.uuid, qwer))
 
     def make_ref(self, query):
         ref = super(LcFragment, self).make_ref(query)
@@ -205,6 +205,11 @@ class LcFragment(LcEntity):
         return self.reference_entity.top()
 
     def set_parent(self, parent):
+        if self.origin != parent.origin:
+            if self.origin is None:
+                self.origin = parent.origin
+            else:
+                raise AttributeError('Origin mismatch: parent (%s) vs child (%s)' % (parent.origin, self.origin))
         self._set_reference(parent)
         parent.add_child(self)
 
@@ -295,15 +300,15 @@ class LcFragment(LcEntity):
                 terms[k] = v.serialize()
         return terms
 
-    def serialize(self, save_unit_scores=False):
-        j = super(LcFragment, self).serialize(domesticate=True)  # once you save a fragment, it's yours
+    def serialize(self, save_unit_scores=False, domesticate=True, **kwargs):
+        j = super(LcFragment, self).serialize(domesticate=True, **kwargs)  # once you save a fragment, it's yours
 
         j.update({
             'flow': self.flow.uuid,  # TODO: should be external ref-- phaseout uuids generally
             'direction': self.direction,
             'isPrivate': self._private,
             'isBackground': self._background,
-            'isBalanceFlow': self.balance_flow,
+            'isBalanceFlow': self.is_balance,
             'exchangeValues': self._serialize_evs(),
             'terminations': self._serialize_terms(save_unit_scores=save_unit_scores),
             'tags': self._d
@@ -349,7 +354,7 @@ class LcFragment(LcEntity):
         print('%20.20s: %g' % ('Observed', self.observed_ev))
         for k in evs:
             print('%20.20s: %g' % (k, self.exchange_value(k)))
-        if self.balance_flow:
+        if self.is_balance:
             print('\nBalance flow: True (%s)' % self.flow.reference_entity)
         else:
             print('\nBalance flow: False')
@@ -450,7 +455,7 @@ class LcFragment(LcEntity):
     def _check_observability(self, scenario=None):
         if self.reference_entity is None:
             return True
-        elif self.balance_flow:
+        elif self.is_balance:
             self.dbg_print('observability: value set by balance.')
             return False
         elif self.reference_entity.termination(scenario).is_subfrag:
@@ -531,19 +536,37 @@ class LcFragment(LcEntity):
     def is_background(self):
         return self._background
 
-    @property
-    def scenarios(self):
-        return set(list(self._exchange_values.keys()) + list(self._terminations.keys())).difference({0, 1})
+    def scenarios(self, recurse=True):
+        """
+        Generate a list of scenarios known to the fragment.
+        :param recurse: [True] By default, traverse all child flows, including subfragments. If False, only report
+         the present fragment
+        :return:
+        """
+        scenarios = set(list(self._exchange_values.keys()))
+        for scen, term in self._terminations.items():
+            scenarios.add(scen)
+            if recurse and term.is_subfrag:
+                for k in term.term_node.scenarios(recurse=True):
+                    scenarios.add(k)
+
+        if recurse:
+            for c in self.child_flows:
+                for k in c.scenarios(recurse=True):
+                    scenarios.add(k)
+
+        scenarios -= {0, 1, None}
+        for k in sorted(scenarios):
+            yield k
 
     def _match_scenario_ev(self, scenario):
-        match = None
         if isinstance(scenario, set):
-            for scen in scenario:
-                if scen in self._exchange_values.keys():
-                    if match is not None:
-                        raise ScenarioConflict('fragment: %s\nexchange value: %s, %s' % (self, scenario, match))
-                    match = scen
-            return match
+            match = [scen for scen in scenario if scen in self._exchange_values.keys()]
+            if len(match) == 0:
+                return None
+            elif len(match) > 1:
+                raise ScenarioConflict('fragment: %s\nexchange value matches: %s' % (self, match))
+            return match[0]
         if scenario in self._exchange_values.keys():
             return scenario
         return None
@@ -551,15 +574,13 @@ class LcFragment(LcEntity):
     def _match_scenario_term(self, scenario):
         if scenario == 0 or scenario == '0' or scenario is None:
             return None
-        match = None
         if isinstance(scenario, set):
-            for scen in scenario:
-                if scen in self._terminations.keys():
-                    if match is not None:
-                        raise ScenarioConflict('fragment: %s\ntermination: %s, %s' % (self, scenario, match))
-                    match = scen
-
-            return match
+            match = [scen for scen in scenario if scen in self._terminations.keys()]
+            if len(match) == 0:
+                return None
+            elif len(match) > 1:
+                raise ScenarioConflict('fragment: %s\ntermination matches: %s' % (self, match))
+            return match[0]
         if scenario in self._terminations.keys():
             return scenario
         return None
@@ -598,7 +619,7 @@ class LcFragment(LcEntity):
                  '*' exchange value affected under scenario
                  '%' both termination and exchange value affected under scenario
         """
-        if self.balance_flow:
+        if self.is_balance:
             return '='
         match_e = self._match_scenario_ev(scenario)
         match_t = self._match_scenario_term(scenario)
@@ -624,7 +645,7 @@ class LcFragment(LcEntity):
             raise DependentFragment('Fragment exchange value set during traversal')
         if isinstance(scenario, tuple) or isinstance(scenario, set):
             raise ScenarioConflict('Set EV must specify single scenario')
-        if self.reference_entity is None:
+        if 0:  # self.reference_entity is None:  ## terminations no longer have inbound evs
             if scenario in (0, '0', 1, '1', None):
                 self.term.inbound_exchange_value = value
             elif scenario in self._terminations:
@@ -640,14 +661,27 @@ class LcFragment(LcEntity):
                 self._exchange_values[scenario] = value
 
     @property
+    def conserved(self):
+        return self._conserved_quantity is not None
+
+    @property
     def balance_flow(self):
-        return self._balance_flow
+        if self.conserved:
+            try:
+                return next(f for f in self.child_flows if f.is_balance)
+            except StopIteration:
+                raise MissingFlow('No balance flow found')
+        else:
+             return None
+
+    @property
+    def is_balance(self):
+        return self._is_balance
 
     def reverse_direction(self):
         """
-        Changes the direction of a fragment to its complement, and negates all stored exchange values.
-        Does NOT change termination directions- since the direction of the fragment flow is arbitrary- but the
-        direction of the termination is not.
+        Changes the direction of a fragment to its complement, since the direction of the fragment flow is arbitrary.
+        negates all stored exchange values, so as to have no effect on traversal computations.
         :return:
         """
         d = dict()
@@ -657,14 +691,18 @@ class LcFragment(LcEntity):
         self._exchange_values = d
 
     def set_balance_flow(self):
-        if self.balance_flow is False:
+        """
+        A balance flow balances its own reference quantity.
+        :return:
+        """
+        if self.is_balance is False:
             self.reference_entity.set_conserved_quantity(self)
-            self._balance_flow = True
+            self._is_balance = True
 
     def unset_balance_flow(self):
-        if self.balance_flow:
+        if self.is_balance:
             self.reference_entity.unset_conserved_quantity()
-            self._balance_flow = False
+            self._is_balance = False
 
     def set_conserved_quantity(self, child):
         if child.reference_entity != self:
@@ -673,7 +711,7 @@ class LcFragment(LcEntity):
             print('%.5s conserving %s' % (self.uuid, self._conserved_quantity))
             raise BalanceAlreadySet
         self._conserved_quantity = child.flow.reference_entity
-        self.dbg_print('%.5s setting balance from %.5s: %s' % (self.uuid, child.uuid, self._conserved_quantity))
+        self.dbg_print('setting balance from %.5s: %s' % (child.uuid, self._conserved_quantity))
 
     @property
     def is_conserved_parent(self):
@@ -682,6 +720,7 @@ class LcFragment(LcEntity):
     def unset_conserved_quantity(self):
         self._conserved_quantity = None
 
+    '''
     def balance(self, scenario=None, observed=False):
         """
         display a balance the inputs and outputs from a fragment termination.  This probably needs to be reimagined and
@@ -745,6 +784,7 @@ class LcFragment(LcEntity):
             net += mag
 
         print('----------\n %+10.4g net' % net)
+    '''
 
     '''
     Terminations and related functions
@@ -824,13 +864,15 @@ class LcFragment(LcEntity):
             return self._terminations[match]
         # if None in self._terminations.keys():  # this should be superfluous, as match will be None
         #     return self._terminations[None]
-        return None
+        raise ScenarioConflict('No match found for %s' % scenario)
 
     def terminations(self):
         return self._terminations.items()
 
+    '''
     def set_child_exchanges(self, scenario=None, reset_cache=False):
         """
+        This is really client code, doesn't use any private capabilities
         Set exchange values of child flows based on inventory data for the given scenario.  The termination must be
          a foreground process.
 
@@ -898,10 +940,10 @@ class LcFragment(LcEntity):
 
     def _node_weight(self, magnitude, scenario):
         term = self.termination(scenario)
-        '''
+        '.'.'.
         if self.reference_entity is None and term.is_fg:
             return magnitude / self.exchange_value(scenario, observed=observed)
-        '''
+        '.'.'.
         if term is None or term.is_null:
             return magnitude
 
@@ -942,6 +984,7 @@ class LcFragment(LcEntity):
             match = self._match_scenario_ev(scenario)
             if match is not None:
                 self._exchange_values[match] = _balance
+    '''
 
     def fragment_lcia(self, quantity_ref, scenario=None, refresh=False):
         """
@@ -1035,12 +1078,10 @@ class LcFragment(LcEntity):
                        for f in cos], key=lambda x: (x.direction == 'Input', x.flow['Compartment'],
                                                      x.flow['Name'], x.value), reverse=True)
 
-    def traverse(self, scenario, observed=False):
-        if scenario is not None:
-            # Controversial? The Cached EVs are basically meaningless. Scenarios should strictly be observed flows.
-            observed = True
-
-        ffs, _ = self.traverse_node(1.0, scenario, observed=observed)
+    def traverse(self, scenario=None, observed=False):
+        if isinstance(scenario, tuple) or isinstance(scenario, list):
+            scenario = set(scenario)
+        ffs, _ = self._traverse_node(1.0, scenario, observed=observed)
         return ffs
 
     def _traverse_fg_node(self, ff, scenario, observed, frags_seen):
@@ -1064,7 +1105,7 @@ class LcFragment(LcEntity):
         because direction is always interpreted relative to the parent).
 
         So then we traverse the child flows, let's say none of them have kg C characterization, and so our stock
-        remains -3999 kg. WHen we hit the balancing fragment "atmospheric carbon in", we catch the BalanceFlowError
+        remains -3999 kg. WHen we hit the balancing fragment "atmospheric carbon in", we catch the FoundBalanceFlow
         and come back to it.
 
         When we come back, we re-negate the stock to +3999 and pass that as _balance to the balancing flow, which
@@ -1075,7 +1116,11 @@ class LcFragment(LcEntity):
         it's a foreground node then the stock is simply 1, and the node_weight already accounts for the exchange
         value and scales the balancing flow correctly.
 
-        :param ff: a FragmentFlow containing the termination to recurse into
+        Were we to do this non-'live' or with some kind of stack, we could conceivably balance multiple quantities with
+        additional fragment flows, but I'm pretty sure the same effect can be achieved by nesting conserving fragments.
+        This also requires the modeler to specify a resolution order and cuts the need for elaborate error checking.
+
+        :param ff: a FragmentFlow containing the foreground termination to recurse into
         :param scenario:
         :param observed:
         :param frags_seen:
@@ -1097,19 +1142,20 @@ class LcFragment(LcEntity):
             stock *= self._conserved_quantity.cf(self.flow).value
             if self.direction == 'Input':  # convention: inputs to self are positive
                 stock *= -1
-            self.dbg_print('%.3s %g inbound-balance' % (self.uuid, stock), level=2)
+            self.dbg_print('%g inbound-balance' % stock, level=2)
 
         for f in self.child_flows:
             try:
-                child_ff, cons = f.traverse_node(node_weight, scenario, observed=observed,
-                                                 frags_seen=set(frags_seen), conserved_qty=self._conserved_quantity)
+                # traverse child, collecting conserved value if applicable
+                child_ff, cons = f._traverse_node(node_weight, scenario, observed=observed,
+                                                  frags_seen=set(frags_seen), conserved_qty=self._conserved_quantity)
                 if cons is None:
-                    self.dbg_print('%.3s -- returned cons_value' % self.uuid, level=3)
+                    self.dbg_print('-- returned cons_value', level=3)
                 else:
-                    self.dbg_print('%.3s %g returned cons_value' % (self.uuid, cons), level=2)
+                    self.dbg_print('%g returned cons_value' % cons, level=2)
                     stock += cons
-            except BalanceFlowError:
-                self.dbg_print('%.3s bal flow on %.3s' % (self.uuid, f.uuid), level=3)
+            except FoundBalanceFlow:
+                self.dbg_print('%g bal magnitude on %.3s' % (stock, f.uuid), level=3)
                 bal_f = f
                 child_ff = []
 
@@ -1121,8 +1167,12 @@ class LcFragment(LcEntity):
             # if it is an output, its exchange must equal the balance
             if bal_f.direction == 'Input':
                 stock *= -1
-            bal_ff, _ = bal_f.traverse_node(node_weight, scenario, observed=observed,
-                                            frags_seen=set(frags_seen), conserved_qty=None, _balance=stock)
+                self.dbg_print('%.3s Input: negating balance value' % bal_f.uuid)
+            else:
+                self.dbg_print('%.3s Output: maintaining balance value' % bal_f.uuid)
+            self.dbg_print('%g balance value passed to %.3s' % (stock, bal_f.uuid))
+            bal_ff, _ = bal_f._traverse_node(node_weight, scenario, observed=observed,
+                                             frags_seen=set(frags_seen), conserved_qty=None, _balance=stock)
             ffs.extend(bal_ff)
 
         return ffs
@@ -1143,8 +1193,11 @@ class LcFragment(LcEntity):
          - otherwise, the subfragment inventory is taken and grouped, and the matching flow is found, and the magnitude
            of the matching flow is used to normalize the downstream node weight.
 
+         - then the inventory of the subfragment is used to apply exchange values to child fragments, and traversal
+           recursion continues.
 
-        :param ff:
+
+        :param ff: a FragmentFlow containing the non-fg subfragment termination to recurse into
         :param scenario:
         :param observed:
         :param frags_seen:
@@ -1154,58 +1207,17 @@ class LcFragment(LcEntity):
         '''
 
         term = ff.term
-        node_weight = ff.node_weight
-        ffs = [ff]
         if term.term_is_bg:
-            bg_ff, _ = term.term_node.traverse_node(node_weight, scenario, observed=observed)
+            # collapse trivial bg terminations into the parent fragment flow
+            bg_ff, _ = term.term_node._traverse_node(ff.node_weight, scenario, observed=observed)
             assert len(bg_ff) == 1
             bg_ff[0].fragment = self
             return bg_ff
 
-        unit_inv, subfrags = term.term_node.unit_inventory(scenario=scenario, observed=observed)
+        # traverse the subfragment, match the driven flow, compute downstream node weight and normalized inventory
+        ffs, unit_inv, downstream_nw = _do_subfragment_traversal(ff, scenario, observed)
 
-        # find the inventory flow that matches us
-        # use term_flow over term_node.flow because that allows client code to specify inverse traversal knowing
-        #  only the sought flow.
-        # unit_inventory guarantees that there is exactly one of these flows
-        try:
-            match = next(k for k in unit_inv if k.fragment.flow == term.term_flow)
-        except StopIteration:
-            print('Flow mismatch Traversing:\n%s' % self)
-            print('Term flow: %s' % term.term_flow.link)
-            print(term.serialize())
-            for k in unit_inv:
-                print('%s' % k.fragment.flow.link)
-            raise MissingFlow('Term flow: %s' % term.term_flow.link)
-
-        unit_inv.remove(match)
-
-        in_ex = match.magnitude  # this is the inbound exchange value for the driven fragment
-        if in_ex == 0:
-            # this indicates a non-consumptive pass-thru fragment.
-            print('Frag %.5s: Zero inbound exchange' % self.uuid)
-            raise ZeroDivisionError
-        if match.fragment.direction == self.direction:
-            # self is driving subfragment in reverse
-            in_ex *= -1
-
-        # node weight for the driven [downstream] fragment
-        downstream_nw = node_weight / in_ex
-
-        # then we add the results of the subfragment, either in aggregated or disaggregated form
-        if term.descend:
-            # if appending, we are traversing in situ, so do scale
-            self.dbg_print('descending', level=0)
-            for i in subfrags:
-                i.scale(downstream_nw)
-            ffs.extend(subfrags)
-        else:
-            # if aggregating, we are only setting unit scores- so don't scale
-            self.dbg_print('aggregating', level=0)
-            ffs[0].aggregate_subfragments(subfrags, scenario=scenario, observed=observed)  # include params to reproduce
-            ffs[0].node_weight = downstream_nw
-
-        # next we traverse our own child flows, determining the exchange values from the subfrag traversal
+        # next we traverse our own child flows, determining the exchange values from the normalized unit inventory
         for f in self.child_flows:
             self.dbg_print('Handling child flow %s' % f, 4)
             ev = 0.0
@@ -1222,8 +1234,8 @@ class LcFragment(LcEntity):
                 continue
 
             self.dbg_print('traversing with ev = %g' % ev, 4)
-            child_ff, _ = f.traverse_node(downstream_nw, scenario, observed=observed,
-                                          frags_seen=frags_seen, _balance=ev)
+            child_ff, _ = f._traverse_node(downstream_nw, scenario, observed=observed,
+                                           frags_seen=frags_seen, _balance=ev)
             ffs.extend(child_ff)
 
         # remaining un-accounted io flows are getting appended, so do scale
@@ -1233,8 +1245,8 @@ class LcFragment(LcEntity):
 
         return ffs
 
-    def traverse_node(self, upstream_nw, scenario,
-                      observed=False, frags_seen=None, conserved_qty=None, _balance=None):
+    def _traverse_node(self, upstream_nw, scenario,
+                       observed=False, frags_seen=None, conserved_qty=None, _balance=None):
 
         """
         If the node has a non-null termination, use that; follow child flows.
@@ -1251,7 +1263,9 @@ class LcFragment(LcEntity):
         :param conserved_qty: in case the parent node is a conservation node
         :param _balance: used when flow magnitude is determined during traversal, i.e. for balance flows and
         children of fragment nodes
-        :return: an array of FragmentFlow records reporting the traversal
+        :return: 2-tuple: ffs, conserved_val
+          ffs = an array of FragmentFlow records reporting the traversal, beginning with self
+          conserved_val = the magnitude of the flow with respect to the conserved quantity, if applicable (or None)
         """
 
         # first check for cycles
@@ -1265,31 +1279,56 @@ class LcFragment(LcEntity):
             frags_seen.add(self.uuid)
 
         if _balance is None:
-            ev = self.exchange_value(scenario, observed=observed)
+            _scen_ev = self._match_scenario_ev(scenario)
+            ev = self.exchange_value(_scen_ev, observed=observed)
         else:
-            self.dbg_print('%.3s %g balance' % (self.uuid, _balance), level=2)
+            # _scen_ev = None
+            self.dbg_print('%g balance' % _balance, level=2)
             ev = _balance
+            '''
             if self._check_observability(scenario):
                 self._cache_balance_ev(_balance, scenario, observed)
+            '''
 
         magnitude = upstream_nw * ev
+        _scen_term = self._match_scenario_term(scenario)
+        term = self._terminations[_scen_term]
+
+        if self.reference_entity is None:
+            node_weight = upstream_nw
+        else:
+            if term.is_null:
+                node_weight = magnitude
+            else:
+                node_weight = magnitude * term.node_weight_multiplier
+
+        self.dbg_print('magnitude: %g node_weight: %g' % (magnitude, node_weight))
 
         conserved_val = None
-        conserved = False
         if conserved_qty is not None:
-            if self.balance_flow:
-                raise BalanceFlowError  # to be caught
+            if self.is_balance:
+                raise FoundBalanceFlow  # to be caught
+            cf = self.flow.cf(conserved_qty)
+            self.dbg_print('consrv cf %g for qty %s' % (cf, conserved_qty), level=3)
             conserved_val = ev * conserved_qty.cf(self.flow).value
-            if conserved_val != 0:
+            if conserved_val == 0:
+                conserved = False
+            else:
                 conserved = True
-            if self.direction == 'Output':  # convention: inputs to parent are positive
-                conserved_val *= -1
-            self.dbg_print('%.3s conserved_val %g' % (self.uuid, conserved_val), level=2)
-
-        node_weight = self._node_weight(magnitude, scenario)
-        term = self.termination(scenario)
+                if self.direction == 'Output':  # convention: inputs to parent are positive
+                    conserved_val *= -1
+                self.dbg_print('conserved_val %g' % conserved_val, level=2)
+        elif self.is_balance:
+            # traversing balance flow after FoundBalanceFlow exception
+            conserved = True
+        elif self.balance_flow is not None and self.flow.cf(self._conserved_quantity) != 0.0:
+            # parent whose flow is balanced by child flow
+            conserved = True
+        else:
+            conserved = False
 
         # print('%6f %6f %s' % (magnitude, node_weight, self))
+        # TODO: figure out how to cache + propagate matched scenarios
         ff = FragmentFlow(self, magnitude, node_weight, term, conserved)
 
         '''
@@ -1297,16 +1336,99 @@ class LcFragment(LcEntity):
         '''
         if term.is_null or self.is_background or magnitude == 0:
             # cutoff and background both end traversal
-            self.dbg_print('%.3s cutoff or bg' % self.uuid)
+            self.dbg_print('cutoff or bg')
             return [ff], conserved_val
 
         if term.is_fg or term.term_node.entity_type == 'process':
-            self.dbg_print('%.3s fg' % self.uuid)
+            self.dbg_print('fg')
             ffs = self._traverse_fg_node(ff, scenario, observed, frags_seen)
 
         else:
-            self.dbg_print('%.3s subfrag' % self.uuid)
+            self.dbg_print('subfrag')
             ffs = self._traverse_subfragment(ff, scenario, observed, frags_seen)
 
-        # if descend is true- we give back everything- otherwise we aggregate
         return ffs, conserved_val
+
+
+def _do_subfragment_traversal(ff, scenario, observed):
+    """
+    This turns out to be surprisingly complicated. So we now have:
+     - LcFragment._traverse_node <-- which is called recursively
+      + scenario matching + finds ev and term
+      - selects handler based on term type:
+       - LcFragment._subfragment_traversal
+       |- invokes (static) _do_subfragment_traversal
+       ||- calls [internally recursive] term_node.unit_inventory, which is just a wrapper for
+       || - (static) group_ios
+       ||  + reference flow and autoconsumption handling
+       || /
+       ||/
+       |+ reference flow matching and normalizing
+       + child flow matching and further recursion --> into LcFragment._traverse_node
+      /
+     /
+     ffs, conserved_val
+
+
+     - (static) group_ios
+     - nested inside LcFragment.unit_inventory, which is really just a wrapper
+     - called from
+     - called from
+
+    :param ff:
+    :param scenario:
+    :param observed:
+    :return:
+    """
+    term = ff.term
+    node_weight = ff.node_weight
+    self = ff.fragment
+
+    unit_inv, subfrags = term.term_node.unit_inventory(scenario=scenario, observed=observed)
+
+    # find the inventory flow that matches us
+    # use term_flow over term_node.flow because that allows client code to specify inverse traversal knowing
+    #  only the sought flow.
+    # unit_inventory guarantees that there is exactly one of these flows (except in the case of cumulating flows!
+    # see group_ios)
+    try:
+        match = next(k for k in unit_inv if k.fragment.flow == term.term_flow)
+    except StopIteration:
+        print('Flow mismatch Traversing:\n%s' % self)
+        print('Term flow: %s' % term.term_flow.link)
+        print(term.serialize())
+        for k in unit_inv:
+            print('%s' % k.fragment.flow.link)
+        raise MissingFlow('Term flow: %s' % term.term_flow.link)
+
+    unit_inv.remove(match)
+
+    in_ex = match.magnitude  # this is the inbound exchange value for the driven fragment
+    if in_ex == 0:
+        # this indicates a non-consumptive pass-thru fragment.
+        print('Frag %.5s: Zero inbound exchange' % self.uuid)
+        raise ZeroDivisionError
+    if match.fragment.direction == self.direction:  # match direction is w.r.t. subfragment
+        # self is driving subfragment in reverse
+        self.dbg_print('reverse-driven subfragment %.3s' % match.fragment.uuid)
+        in_ex *= -1
+
+    # node weight for the driven [downstream] fragment
+    downstream_nw = node_weight / in_ex
+
+    # then we add the results of the subfragment, either in aggregated or disaggregated form
+    if term.descend:
+        # if appending, we are traversing in situ, so do scale
+        self.dbg_print('descending', level=0)
+        for i in subfrags:
+            i.scale(downstream_nw)
+        ffs = [ff]
+        ffs.extend(subfrags)
+    else:
+        # if aggregating, we are only setting unit scores- so don't scale
+        self.dbg_print('aggregating', level=0)
+        ff.aggregate_subfragments(subfrags, scenario=scenario, observed=observed)  # include params to reproduce
+        ff.node_weight = downstream_nw
+        ffs = [ff]
+
+    return ffs, unit_inv, downstream_nw

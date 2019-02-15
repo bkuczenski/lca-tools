@@ -38,18 +38,14 @@ natural gas combusted to kWh.  My best guess is on a GCV basis of fuel input, so
 This value must be entered by hand when the USLCI database is loaded.
 """
 conversion_dict = {
-    ('Bq', 'kBq'): .001,
+    ('kBq', 'Bq'): 1000,
     ('t', 'kg'): 1000,
-    ('kg', 't'): .001,
     ('kg*km', 't*km'): .001,
-    ('m2', 'ha'): .0001,
     ('ha', 'm2'): 10000,
     ('sh tn', 't'): 0.907185,
     ('sh tn', 'kg'): 907.185,
-    ('MJ', 'kWh'): 0.2777777,
     ('kWh', 'MJ'): 3.6,
     ('MJ', 'btu'): 947.817,
-    ('l', 'm3'): .001,
     ('m3', 'l'): 1000
 }
 
@@ -94,10 +90,22 @@ class EcospoldV1Archive(LcArchive):
             yield f
 
     def _fetch_filename(self, filename):
-        return self._archive.readfile(filename)
+        """
+        In USLCI (honestly, I've never seen another ecospoldv1 archive so I can't generalize), activities  whose
+        names contain '<' or '>' characters have those characters stripped from the filenames, so we try that here as
+        a workaround.
+        :param filename:
+        :return:
+        """
+        try:
+            s = self._archive.readfile(filename)
+        except KeyError:
+            trim_lg = ''.join(k for k in filename if k not in '<>')
+            s = self._archive.readfile(trim_lg)
+        return s
 
     def _get_objectified_entity(self, filename):
-        o = objectify.fromstring(self._archive.readfile(filename))
+        o = objectify.fromstring(self._fetch_filename(filename))
         if o.nsmap[None] != self.nsmap:
             raise EcospoldVersionError('This class is for EcoSpold v%s only!' % self.nsmap[-2:])
         return o
@@ -151,23 +159,17 @@ class EcospoldV1Archive(LcArchive):
         if exch.get("unit") != f.unit():
             local_q = self._create_quantity(exch.get("unit"))
             if len([z for z in self.tm.factors_for_flowable(f, quantity=local_q)]) == 0:
-                if (f.unit(), local_q.unit()) not in conversion_dict:
+                if (f.unit(), local_q.unit()) in conversion_dict:
+                    val = conversion_dict[(f.unit(), local_q.unit())]
+                elif (local_q.unit(), f.unit()) in conversion_dict:
+                    val = 1.0 / conversion_dict[(local_q.unit(), f.unit())]
+                else:
                     print('Flow %s needs characterization for unit %s' % (f, local_q))
                     val = parse_math(input('Enter conversion factor 1 %s = x %s' % (f.unit(), local_q)))
-                else:
-                    val = conversion_dict[(f.unit(), local_q.unit())]
-
                 self.tm.add_characterization(f['Name'], f.reference_entity, local_q, val, context=f.context)
         return f
 
-    def _create_process(self, filename):
-        """
-        Extract dataset object from XML file
-        :param filename:
-        :return:
-        """
-        o = self._get_objectified_entity(filename)
-
+    def _extract_exchanges(self, o):
         rf = set()  # reference flows
         flowlist = []
 
@@ -193,7 +195,17 @@ class EcospoldV1Archive(LcArchive):
             v = float(exch.get('meanValue'))  # returns none if missing
             if local_q is not f.reference_entity:
                 v = v / local_q.cf(f).value
-            flowlist.append((f, d, v))
+            c = exch.get('generalComment')
+            flowlist.append((f, d, v, c))
+        return rf, flowlist
+
+    def _create_process(self, filename):
+        """
+        Extract dataset object from XML file
+        :param filename:
+        :return:
+        """
+        o = self._get_objectified_entity(filename)
 
         p_meta = o.dataset.metaInformation.processInformation
         n = p_meta.referenceFunction.get('name')
@@ -217,9 +229,14 @@ class EcospoldV1Archive(LcArchive):
                           Classifications=cls)
             p.set_external_ref(n)
 
-            for flow, f_dir, val in flowlist:
+            rf, flowlist = self._extract_exchanges(o)
+
+            for flow, f_dir, val, cmt in flowlist:
                 self._print('Exch %s [%s] (%g)' % (flow, f_dir, val))
-                p.add_exchange(flow, f_dir, reference=None, value=val, add_dups=True)
+                x = p.add_exchange(flow, f_dir, reference=None, value=val, add_dups=True)
+                if cmt is not None:
+                    x.comment = cmt
+
             for ref in rf:
                 p.add_reference(ref, 'Output')
 
@@ -238,9 +255,7 @@ class EcospoldV1Archive(LcArchive):
             self._create_process(key + '.xml')
             return self[key]
         except KeyError:
-            print('No way to fetch that key. try load_all()')
-
-        return None
+            raise KeyError('No way to fetch key "%s". try load_all()' % key)
 
     def _load_all(self):
         """

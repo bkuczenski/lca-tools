@@ -1,0 +1,40 @@
+==========
+Tue Jan 15 11:48:25 -0800 2019
+
+I cannot figure out how to deal with this source | reference | index | descendant situation.  I keep coding to corner cases and carving myself into a corner as a result.
+
+Let's summarize some first principles.  An archive has:
+
+ * above all, a physical source, which reports where it came from, and which can only be set at instantiation (and in exceptional circumstances via _set_source)
+
+ * a dictionary of catalog_names, which maps semantic references to data sources.  The contents of this dictionary are context-specific and not [presently] bound by any general principles, other than that the archive's source must be present in the dict
+
+ * the archive's canonical reference is determined by finding the key in catalog_names that returns the archive's source
+
+ * write_to_file has three use cases I can think of:
+
+   1. When creating an archive from scratch, to be able to save it
+      - here, if the archive's source is None, it should be set to the destination file
+
+   2. To cache the local contents of an archive
+      - here, the source and source type should be preserved, and the destination file should not be stored in the cache (instead, it will be added to catalog names when the cache is restored by supplying jsonfile as an argument).  The cache file should not be instantiated as a standalone archive because it will probably get confused
+
+   3. To create a descendant of the archive
+      - here, the destination file essentially represents a new archive, with its own source and semantic reference.  The current implementation of this is a mess and does not serve any clear purpose, since it modifies the current archive. The only place it is used is in one exploratory USLCI walkthrough (from January of 2018-- oyyy)
+
+   4. The current problem case is to create an index of an archive.
+      - this is a special case which is really not well handled.  Moreover, this is a classic 'create descendant' application that doesn't use create_descendant.  I Think this needs to change.
+
+SO: how should create_descendant work?
+
+ - new archive MUST have different source AND ref from old archive
+ - client code can supply neither, either, or both of: source, ref for the new archive. Whatever is not supplied should be automatically generated
+ - new archive should store all of old archive's catalog_names
+ - all of old archive's current entities should be added to new archive
+ - load_all should NOT be called implicitly. If anything, it could be a bool argument
+ - it should have an index=False param which [True] specifies to exclude exchs, characterizations, and values
+ - it should automatically generate a new reference by supplying a signifier and appending a date stamp
+ - 
+
+Tue 2019-01-15 23:34:45 -0800
+done.

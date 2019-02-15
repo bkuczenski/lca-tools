@@ -1,7 +1,7 @@
 import unittest
 import os
 
-from lcatools.archives import archive_from_json
+from lcatools.archives import LcArchive
 
 
 refinery_archive = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_archive.json')
@@ -12,6 +12,6 @@ petro_id = '0aaf1e13-5d80-37f9-b7bb-81a6b8965c71'
 class BasicEntityTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.A = archive_from_json(refinery_archive)
+        cls.A = LcArchive.from_file(refinery_archive)
         cls.grid = cls.A[grid_id]
         cls.petro = cls.A[petro_id]

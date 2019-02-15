@@ -245,6 +245,13 @@ class EntityRef(BaseRef):
     def reference_entity(self):
         return self._reference_entity
 
+    @property
+    def name(self):
+        try:
+            return self['Name']
+        except KeyError:
+            return self.external_ref
+
     def elementary(self, iterable):
         """
         yields flows from iterable that are elementary, using the query's access to qdb
@@ -293,6 +300,18 @@ class EntityRef(BaseRef):
         return True
 
     def get_item(self, item, force_query=False):
+        """
+        This keeps generating recursion errors. Let's think it through.
+         - first checks locally. If known, great.
+         - if not, need to check remotely by running the query.
+         - the query retrieves the entity and asks has_property
+           -- which causes recursion error if the query actually gets the entity_ref
+           -- so has_property has to not trigger an additional query call, and only asks locally.
+         - fine. So when do we raise a key error?
+        :param item:
+        :param force_query:
+        :return:
+        """
         if not force_query:
             # check local first.  return Localitem if present.
             try:
@@ -301,14 +320,20 @@ class EntityRef(BaseRef):
             except KeyError:
                 pass
         self._check_query('getitem %s' % item)
-        val = self._query.get_item(self.external_ref, item)
+        try:
+            val = self._query.get_item(self.external_ref, item)
+        except KeyError:
+            return None
         if val is not None and val != '':
             self._d[item] = val
             return val
         raise KeyError(item)
 
     def __getitem__(self, item):
-        return self.get_item(item)
+        val = self.get_item(item)
+        if val is None:
+            raise KeyError(item)
+        return val
 
     def serialize(self, **kwargs):
         j = super(EntityRef, self).serialize(**kwargs)

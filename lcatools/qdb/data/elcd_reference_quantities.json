@@ -1,12 +1,37 @@
 {
   "@context": "https://bkuczenski.github.io/lca-tools-datafiles/context.jsonld",
   "catalogNames": {
-    "local.qdb": "/data/GitHub/lca-tools/lcatools/providers/data/elcd_reference_quantities.json"
+    "local.qdb": [
+      "/data/GitHub/lca-tools/lcatools/qdb/data/elcd_reference_quantities.json"
+    ]
   },
-  "dataReference": "local.qdb",
-  "dataSource": "/data/GitHub/lca-tools/lcatools/providers/data/elcd_reference_quantities.json",
+  "dataSource": "/data/GitHub/lca-tools/lcatools/qdb/data/elcd_reference_quantities.json",
   "dataSourceType": "Qdb",
   "flows": [
+    {
+      "CasNumber": "",
+      "Comment": "EcoSpold02 Flow",
+      "Compartment": [
+        "Intermediate Flows"
+      ],
+      "Name": "electricity, high voltage",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "77ae64fa-7e74-4252-9c3b-889c1cd20bfc"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "93a60a56-a3c8-11da-a746-0800200c9a66",
+          "value": 3.6
+        }
+      ],
+      "entityId": "66c93e71-f32b-4591-901c-55395db5c132",
+      "entityType": "flow",
+      "externalId": "66c93e71-f32b-4591-901c-55395db5c132",
+      "origin": "local.ecoinvent.3.2.cutoff"
+    },
     {
       "CasNumber": "",
       "Comment": "Reference elementary flow of the International Reference Life Cycle Data System (ILCD).",
@@ -25,8 +50,7 @@
         {
           "entityType": "characterization",
           "isReference": true,
-          "quantity": "93a60a56-a3c8-11da-a746-0800200c9a66",
-          "value": 1.0
+          "quantity": "93a60a56-a3c8-11da-a746-0800200c9a66"
         }
       ],
       "entityId": "e2fba107-6555-11dd-ad8b-0800200c9a66",
@@ -52,8 +76,7 @@
         {
           "entityType": "characterization",
           "isReference": true,
-          "quantity": "93a60a56-a3c8-11da-a746-0800200c9a66",
-          "value": 1.0
+          "quantity": "93a60a56-a3c8-11da-a746-0800200c9a66"
         }
       ],
       "entityId": "fe0acd60-3ddc-11dd-a6f8-0050c2490048",
@@ -79,8 +102,7 @@
         {
           "entityType": "characterization",
           "isReference": true,
-          "quantity": "93a60a56-a3c8-11da-a746-0800200c9a66",
-          "value": 1.0
+          "quantity": "93a60a56-a3c8-11da-a746-0800200c9a66"
         }
       ],
       "entityId": "fe0acd60-3ddc-11dd-a6f9-0050c2490048",
@@ -106,8 +128,7 @@
         {
           "entityType": "characterization",
           "isReference": true,
-          "quantity": "93a60a56-a3c8-11da-a746-0800200c9a66",
-          "value": 1.0
+          "quantity": "93a60a56-a3c8-11da-a746-0800200c9a66"
         },
         {
           "entityType": "characterization",
@@ -138,8 +159,7 @@
         {
           "entityType": "characterization",
           "isReference": true,
-          "quantity": "93a60a56-a3c8-11da-a746-0800200c9a66",
-          "value": 1.0
+          "quantity": "93a60a56-a3c8-11da-a746-0800200c9a66"
         }
       ],
       "entityId": "fe0acd60-3ddc-11dd-a6fc-0050c2490048",
@@ -148,7 +168,10 @@
       "origin": "local.elcd.3.2"
     }
   ],
-  "processes": [],
+  "initArgs": {
+    "dataReference": "local.qdb",
+    "ns_uuid": "77833297-6780-49bf-a61a-0cb707dce700"
+  },
   "quantities": [
     {
       "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
@@ -219,7 +242,7 @@
         "Mg": 0.001,
         "g": 1000.0,
         "kg": 1.0,
-        "kt": 5000.0,
+        "kt": 0.000001,
         "lb av": 2.2046226218487757,
         "long tn": 0.0009842065276110606,
         "mg": 1000000.0,
@@ -244,7 +267,7 @@
         "Mg": 0.001,
         "g": 1000.0,
         "kg": 1.0,
-        "kt": 5000.0,
+        "kt": 0.000001,
         "lb av": 2.2046226218487757,
         "long tn": 0.0009842065276110606,
         "mg": 1000000.0,
@@ -269,7 +292,7 @@
         "Mg": 0.001,
         "g": 1000.0,
         "kg": 1.0,
-        "kt": 5000.0,
+        "kt": 0.000001,
         "lb av": 2.2046226218487757,
         "long tn": 0.0009842065276110606,
         "mg": 1000000.0,
@@ -286,6 +309,25 @@
       "externalId": "flowproperties/64b8e725-b0ba-4837-abb9-62dc0e7b9f6f",
       "origin": "elcd.3.2",
       "referenceUnit": "kg"
+    },
+    {
+      "Comment": "EcoSpold02. This is not an ILCD reference quantity.",
+      "Name": "Electric energy",
+      "UnitConversion": {
+        "GWh": 0.000001,
+        "MWh": 0.001,
+        "MJ": 3.6
+      },
+      "Synonyms": [
+        "kWh",
+        "EcoSpold Quantity kWh",
+        "Electricity"
+      ],
+      "entityId": "77ae64fa-7e74-4252-9c3b-889c1cd20bfc",
+      "entityType": "quantity",
+      "externalId": "77ae64fa-7e74-4252-9c3b-889c1cd20bfc",
+      "origin": "local.ecoinvent.3.2.cutoff",
+      "referenceUnit": "kWh"
     },
     {
       "Comment": "",
@@ -324,7 +366,7 @@
         "Mg": 0.001,
         "g": 1000.0,
         "kg": 1.0,
-        "kt": 5000.0,
+        "kt": 0.000001,
         "lb av": 2.2046226218487757,
         "long tn": 0.0009842065276110606,
         "mg": 1000000.0,
@@ -345,6 +387,11 @@
     {
       "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
       "Name": "Goods transport (mass*distance)",
+      "Synonyms": [
+        "Freight",
+        "tkm",
+        "t*km"
+      ],
       "UnitConversion": {
         "kg*km": 1000.0,
         "lb*mi": 1369.889285547942,
@@ -418,7 +465,7 @@
         "Mg": 0.001,
         "g": 1000.0,
         "kg": 1.0,
-        "kt": 5000.0,
+        "kt": 0.000001,
         "lb av": 2.2046226218487757,
         "long tn": 0.0009842065276110606,
         "mg": 1000000.0,
@@ -638,7 +685,7 @@
         "Mg": 0.001,
         "g": 1000.0,
         "kg": 1.0,
-        "kt": 5000.0,
+        "kt": 0.000001,
         "lb av": 2.2046226218487757,
         "long tn": 0.0009842065276110606,
         "mg": 1000000.0,

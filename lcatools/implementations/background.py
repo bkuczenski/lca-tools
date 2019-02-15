@@ -19,12 +19,15 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
     The default Background Implementation exposes an ordinary inventory database as a collection of LCI results.
     Because it does not perform any ordering, there is no way to distinguish between foreground and background
     elements in a database using the proxy. It is thus inconsistent for the same resource to implement both
-    inventory and [proxy] background interfaces from the same data archive.
+    inventory and [proxy] background interfaces from the same resource.
     """
     def __init__(self, *args, **kwargs):
         super(BackgroundImplementation, self).__init__(*args, **kwargs)
 
         self._index = None
+
+    def check_bg(self, **kwargs):
+        return True
 
     def setup_bm(self, index=None):
         """
@@ -126,8 +129,7 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
         self.setup_bm()
         ref_flow = self._ensure_ref_flow(ref_flow)
         p = self._index.get(process)
-        for rx in p.reference(ref_flow):
-            yield rx  # should be just one exchange
+        yield p.reference(ref_flow)  # should be just one exchange
 
     def is_in_scc(self, process, ref_flow=None, **kwargs):
         """

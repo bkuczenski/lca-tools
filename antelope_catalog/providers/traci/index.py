@@ -1,4 +1,4 @@
-from ...implementations import IndexImplementation
+from lcatools.implementations import IndexImplementation
 
 
 class Traci21IndexImplementation(IndexImplementation):

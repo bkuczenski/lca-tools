@@ -50,15 +50,17 @@ class AbstractQuery(object):
     def _perform_query(self, itype, attrname, exc, *args, strict=False, **kwargs):
         if self._debug:
             print('Performing %s query, iface %s' % (attrname, itype))
-        for iface in self._iface(itype, strict=strict):
-            try:
-                result = getattr(iface, attrname)(*args, **kwargs)
-            except NotImplementedError:
-                continue
-            except exc.__class__:
-                continue
-            if result is not None:
-                return result
+        try:
+            for iface in self._iface(itype, strict=strict):
+                try:
+                    result = getattr(iface, attrname)(*args, **kwargs)
+                except exc.__class__:
+                    continue
+                if result is not None:
+                    return result
+        except NotImplementedError:
+            pass
+
         raise exc
 
     def _grounded_query(self, origin):
@@ -112,6 +114,9 @@ class AbstractQuery(object):
         return self._perform_query(None, 'get', EntityNotFound('%s/%s' % (self.origin, eid)), eid,
                                    **kwargs)
 
+    def get_uuid(self, external_ref):
+        return self._perform_query(None, 'get_uuid', EntityNotFound('%s/%s' % (self.origin, external_ref)),
+                                   external_ref)
 
 '''# maybe we don't need these?!
 <<<<<<< HEAD
@@ -132,7 +137,4 @@ class AbstractQuery(object):
         return self._perform_query(None, 'get_reference', EntityNotFound('%s/%s' % (self.origin, external_ref)),
                                    external_ref)
 
-    def get_uuid(self, external_ref):
-        return self._perform_query(None, 'get_uuid', EntityNotFound('%s/%s' % (self.origin, external_ref)),
-                                   external_ref)
 '''

@@ -30,11 +30,11 @@ import os
 import csv
 from collections import namedtuple
 
-from ..foreground.fragment_editor import create_fragment
+from lcatools.entities.fragment_editor import create_fragment, set_child_exchanges
 from lcatools.interfaces import comp_dir
 
 from .data_source import DataSource, DataCollection
-from ..foreground.fragments import BalanceAlreadySet
+from lcatools.entities.fragments import BalanceAlreadySet
 
 
 SemanticResource = namedtuple('SemanticResource', ('path', 'ref', 'privacy', 'priority'))
@@ -74,7 +74,7 @@ class CalRecycleArchive(DataSource):
         yield 'inventory'
         if self._info.privacy > 0 or ref == 'calrecycle.uolca.core':
             yield 'background'
-        else:
+        if self._info.privacy == 0:
             yield 'quantity'
 
     def make_resources(self, ref):
@@ -171,7 +171,7 @@ class CalRecycleImporter(object):
         :param fg_path: ['fg'] either a directory name in the catalog root, or an absolute path
         :return: a foreground archive containing the model
         """
-        imp = cls(data_root, **kwargs)
+        imp = cls(data_root, origin=origin, **kwargs)
 
         qi = cat.query(origin)
         try:
@@ -189,6 +189,8 @@ class CalRecycleImporter(object):
             imp.pe_sp24_correction(cat)
 
             imp.uslci_bg_elec_correction()
+
+            imp.inv_ethylene_glycol_correction()
 
             imp.set_balances()
 
@@ -210,7 +212,10 @@ class CalRecycleImporter(object):
         if not self._quiet:
             print(*args)
 
-    def __init__(self, data_root, quiet=True):
+    def __init__(self, data_root, origin, quiet=True):
+        if origin is None:
+            raise ValueError('origin is required')
+        self._origin = origin
         self._quiet = quiet
         self._root = data_root
         self._stages = dict_from_csv(os.path.join(self.fragment_dir, 'FragmentStage.csv'))
@@ -291,7 +296,7 @@ class CalRecycleImporter(object):
             # must be a reference flow
             frag_uuid = ff['Fragment']['FragmentUUID']
             frag = create_fragment(flow, comp_dir(direction), uuid=frag_uuid, StageName=stage, Name=name,
-                                   FragmentFlowID=ff['FragmentFlowID'])
+                                   FragmentFlowID=ff['FragmentFlowID'], origin=self._origin)
             self._fragments[ff['Fragment']['FragmentID']] = frag
         else:
             try:
@@ -339,7 +344,7 @@ class CalRecycleImporter(object):
             if term_node.origin in private_roots:
                 frag.set_background()
             else:
-                frag.set_child_exchanges()
+                set_child_exchanges(frag)
         elif ff['NodeTypeID'] == '2':
             term_frag = self._fragments[ff['SubFragment']['SubFragmentID']]
             term_flow = qi.get(ff['SubFragment']['FlowUUID'])
@@ -403,10 +408,22 @@ class CalRecycleImporter(object):
         flows out of foreground disclosures
         :return:
         """
-        uslci_bg_ffids = ('14', '26', '38', '50', '62', '74', '92')
+        uslci_bg_ffids = ('14', '26', '38', '50', '62', '74')
         for i in uslci_bg_ffids:
             frag = self._frags[i]
             frag.set_background()
+
+    def inv_ethylene_glycol_correction(self):
+        """
+        Legacy Antelope online tool fails to generate nonzero impact scores for inverted processes because
+        the directions don't match on the join.  The model has only one inverted process: avoided ethylene glycol,
+        thinkstep process with UUID 'df09efef-4d73-4b45-a899-1c6d1ca97da0'
+        :return:
+        """
+        for f in self._frags.values():
+            if f.term.is_process:
+                if f.term.term_node.uuid == 'df09efef-4d73-4b45-a899-1c6d1ca97da0':
+                    f.set_exchange_value(scenario='quell_eg', value=0.0)
 
 
 if __name__ == '__main__':

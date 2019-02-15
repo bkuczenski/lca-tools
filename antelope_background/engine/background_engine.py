@@ -190,6 +190,11 @@ class BackgroundEngine(object):
         self.tstack.add_to_stack(pf)
 
     def _rm_product_flow_children(self, bad_pf):
+        """
+        This needs desperately to be tested
+        :param bad_pf:
+        :return:
+        """
         while 1:
             pf = self.tstack.pop_from_stack()
             self._print('!!!removing %s' % pf)
@@ -200,6 +205,10 @@ class BackgroundEngine(object):
                 if z is pf:
                     break
                 self._print('--!removing %s' % z)
+            while self._interior_incoming[-1].parent is pf:
+                self._interior_incoming.pop()
+            while self._cutoff_incoming[-1].parent is pf:
+                self._cutoff_incoming.pop()
             if pf is bad_pf:
                 break
 
@@ -278,7 +287,8 @@ class BackgroundEngine(object):
                 term = terms[0]
             else:
                 if strategy == 'abort':
-                    print('Ambiguous termination found for %s: %s' % (exch.direction, exch.flow))
+                    print('flow: %s\nAmbiguous termination found for %s: %s' % (exch.flow.external_ref,
+                                                                                exch.direction, exch.flow))
                     raise TerminationError
                 elif strategy == 'first':
                     term = terms[0]
@@ -574,13 +584,9 @@ class BackgroundEngine(object):
             self._traverse_term_exchanges(j, multi_term, default_allocation, net_coproducts)
         except TerminationError:
             self._rm_product_flow_children(j)
-            print('Termination Error')
+            print('Termination Error: process %s: ref_flow %s, ' % (j.process.external_ref, j.flow.external_ref))
 
-            # reset incoming
-            self._interior_incoming = []  # terminated entries -> added to the component graph
-            self._cutoff_incoming = []  # entries with no termination -> emissions
-
-            j = None
+            raise
 
         sys.setrecursionlimit(old_recursion_limit)
         return j
@@ -614,7 +620,8 @@ class BackgroundEngine(object):
             exchs = parent.process.inventory()
 
         for exch in exchs:  # unallocated exchanges
-            if exch is rx:
+            if exch is rx:  # This will only work for literal processes and not process_refs, because
+                # process_ref.reference() returns an RxRef.  Instead we fallback to exch.is_reference
                 continue  # don't add self
             if cutoff_refs:
                 val = pval = exch.value

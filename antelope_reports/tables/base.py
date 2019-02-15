@@ -20,6 +20,7 @@ Most likely, I could modify dynamic_grid to *return* a dataframe instead of draw
 """
 
 from collections import defaultdict
+from pandas import DataFrame
 
 
 def printable(tup, width=8):
@@ -67,6 +68,7 @@ class BaseTableOutput(object):
     """
 
     _near_headings = '',  # should be overridden
+    _far_headings = '', # should be overridden
     _returns_sets = False
 
     def _pull_row_from_item(self, item):
@@ -76,9 +78,7 @@ class BaseTableOutput(object):
         :return: always a tuple.  default item,
         """
         row = item
-        if not self._returns_sets:
-            if row not in self._notes:
-                self._notes[row] = self._pull_note_from_item(item)
+        # if not self._returns_sets:
         return row,
 
     def _pull_note_from_item(self, item):
@@ -119,7 +119,7 @@ class BaseTableOutput(object):
         header = self._near_headings
         for i, _ in enumerate(self._columns):
             header += ('C%d' % i),
-        header += '',  # placeholder for row notes / subitem keys
+        header += self._far_headings  # placeholder for row notes / subitem keys
         return header
 
     def _build_near_header(self, row, prev):
@@ -159,7 +159,7 @@ class BaseTableOutput(object):
         if self._returns_sets:
             the_rows = []
             _ftt = True  # first time through
-            keys = tuple(data_keys)
+            keys = tuple(sorted(data_keys, key=lambda x: x[-2]))
             for k in keys:
                 if not _ftt:
                     the_row = ['' for i in range(len(self._near_headings))]
@@ -169,6 +169,10 @@ class BaseTableOutput(object):
                     else:
                         the_row.append(None)
                 the_row.append(k)
+                if _ftt:
+                    the_row.append(self._notes[row])
+                else:
+                    the_row.append('')
                 the_rows.append(the_row)
                 _ftt = False
             return the_rows
@@ -193,9 +197,7 @@ class BaseTableOutput(object):
             if criterion is not None:
                 print('Ignoring non-callable criterion')
 
-            def criterion(x):
-                return True
-            self._criterion = criterion
+            self._criterion = lambda x: True
 
         self._rows = set()  # set of valid keys to dict
         self._notes = dict()
@@ -205,12 +207,18 @@ class BaseTableOutput(object):
         for arg in args:
             self.add_column(arg)
 
+    def _add_rowitem(self, col_idx, item, row=None):
+        if row is None:
+            row = self._pull_row_from_item(item)
+        self._rows.add(row)
+        if row not in self._notes:
+            self._notes[row] = self._pull_note_from_item(item)
+        self._d[row, col_idx].append(item)
+
     def add_column(self, arg):
         col_idx = len(self._columns)
         for k in self._generate_items(arg):
-            row = self._pull_row_from_item(k)
-            self._rows.add(row)
-            self._d[row, col_idx].append(k)
+            self._add_rowitem(col_idx, k)
         self._columns.append(arg)
 
     def _sorted_rows(self):
@@ -254,14 +262,22 @@ class BaseTableOutput(object):
             fmt += '%%-%d.%ds ' % (width, width)
             rem_width -= 1
 
+        if rem_width < 0:
+            # uh oh negative rem width: widen freely; set remainder to 10 chars
+            max_width -= (rem_width - 10)
+            rem_width = 10
+
         fmt += '%%-%d.%ds' % (rem_width, rem_width)
+
+        if self._returns_sets:
+            fmt += ' %s'
 
         print(fmt % header)
         print('-' * max_width)
 
         for row in body:
             if self._returns_sets:
-                for subrow in sorted(row, key=lambda x: x[-1]):
+                for subrow in row:  # sorted(row, key=lambda x: x[-2])
                     print(fmt % printable(subrow, width=width))
             else:
                 print(fmt % printable(row, width=width))
@@ -270,3 +286,35 @@ class BaseTableOutput(object):
         print('\nColumns:')
         for i, c in enumerate(self._columns):
             print('C%d: %s' % (i, c))
+
+    def dataframe(self):
+        df = DataFrame(columns=self._header_row())
+        prev = None
+        for row in self._sorted_rows():
+            if self._returns_sets:
+                for r in self._build_row(row):
+                    d = dict(zip(self._header_row(), printable(r)))
+                    df = df.append(d, ignore_index=True)
+            else:
+                d = dict(zip(self._header_row(), printable(self._build_row(row, prev=prev))))
+                df = df.append(d, ignore_index=True)
+            prev = row
+
+        return df
+
+    def to_excel(self, xl_writer, sheetname, width_scaling=0.75):
+        """
+        Must supply a pandas XlsxWriter. This routine does not save the document.
+        :param xl_writer:
+        :param sheetname:
+        :param width_scaling:
+        :return:
+        """
+        df = self.dataframe()
+        df.to_excel(xl_writer, sheet_name=sheetname)
+        sht = xl_writer.sheets[sheetname]
+
+        for k in self._near_headings + self._far_headings:
+            ix = df.columns.tolist().index(k) + 1
+            mx = max([7, width_scaling * df[k].astype(str).str.len().max()])
+            sht.set_column(ix, ix, width=mx)

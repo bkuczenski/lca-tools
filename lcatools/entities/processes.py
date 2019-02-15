@@ -43,14 +43,15 @@ class RxRef(object):
     A placeholder object to store reference exchange info for process_refs.  It can be modified to interoperate in
     places where exchanges are expected, e.g by having equivalent equality tests, hashes, etc., as needed.
     """
-    def __init__(self, process_uuid, flow, direction):
+    def __init__(self, process_uuid, flow, direction, comment=None):
         self._process_ref = None
         self._flow_ref = flow
         self._direction = direction
-        # self._value = value
         # self._hash_tuple = (process.uuid, flow.external_ref, direction, None)
         self._hash = hash((process_uuid, flow.external_ref, direction, None))
+        self._comment = comment
         # self._is_alloc = process.is_allocated(self)
+        self._cached_value = None
 
     @property
     def process(self):
@@ -72,9 +73,27 @@ class RxRef(object):
         return self._direction
 
     @property
+    def unit(self):
+        return self._flow_ref.unit()
+
+    @property
+    def comment(self):
+        if self._comment is None:
+            return ''
+        return self._comment
+
+    @property
     def value(self):
+        '''
         # print('ACCESSING RxRef VALUE')  # need to be cautious about when / why this is used
-        return self.process.reference_value(self.flow)
+        if self._cached_value is None:
+            try:
+                self._cached_value = self.process.reference_value(self.flow.external_ref)
+            except InventoryRequired:
+                return None
+        return self._cached_value
+        '''
+        raise InventoryRequired("Let's go back to being cautious about this")
 
     @property
     def termination(self):
@@ -86,10 +105,9 @@ class RxRef(object):
 
     @property
     def _value_string(self):
-        try:
-            return '%.3g' % self.process.reference_value(self.flow.external_ref)
-        except InventoryRequired:
-            return ' --- '
+        if self._cached_value is not None:
+            return '%.3g' % self._cached_value
+        return ' --- '
 
     @property
     def entity_type(self):
@@ -179,10 +197,13 @@ class LcProcess(LcEntity):
             self._d['Classifications'] = []
 
     def _make_ref_ref(self, query):
-        return [RxRef(self.uuid, x.flow.make_ref(query), x.direction) for x in self.references()]
+        return [RxRef(self.uuid, x.flow.make_ref(query), x.direction, comment=x.comment) for x in self.references()]
 
     def __str__(self):
         return '%s [%s]' % (self._d['Name'], self._d['SpatialScope'])
+
+    def __len__(self):
+        return len(self._exchanges)
 
     def _validate_reference(self, ref_set):
         for x in ref_set:
@@ -589,8 +610,8 @@ class LcProcess(LcEntity):
     def merge(self, other):
         raise NotImplemented('This should be done via fragment construction + aggregation')
 
-    def serialize(self, exchanges=False, domesticate=False, **kwargs):
-        j = super(LcProcess, self).serialize(domesticate=domesticate)
+    def serialize(self, exchanges=False, domesticate=False, drop_fields=(), **kwargs):
+        j = super(LcProcess, self).serialize(domesticate=domesticate, drop_fields=drop_fields)
         j.pop(self._ref_field)  # reference reported in exchanges
         if exchanges:
             # if exchanges is true, report all exchanges

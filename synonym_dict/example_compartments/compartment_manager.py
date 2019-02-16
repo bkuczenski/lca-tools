@@ -9,8 +9,8 @@ So I'm going to bow to the reserved keyword and call these things compartments i
 
 from ..synonym_dict import SynonymDict
 from .context import Context
-import json
 
+NullContext = Context.null()
 
 # these are not-really-subcompartments whose names should be modified if they have parents
 NONSPECIFIC_LOWER = {'unspecified', 'non-specific', 'nonspecific', 'unknown', 'undefined', 'none'}
@@ -26,7 +26,7 @@ class CompartmentManager(SynonymDict):
     _syn_type = Context
     _ignore_case = True
 
-    _null_context = Context.null()
+    _null_context = NullContext
 
     def _add_from_dict(self, j):
         """

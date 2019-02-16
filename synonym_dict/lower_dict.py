@@ -1,6 +1,8 @@
 """
 Case-insensitive dict
 from https://stackoverflow.com/questions/2082152
+(see also https://stackoverflow.com/questions/3387691 -- my requirements are specific enough to justify this approach,
+so long as it works)
 """
 
 
@@ -22,10 +24,10 @@ class LowerDict(dict):
     class Key(str):
         def __new__(cls, key):
             # perform the transform at instantiation for performance-- why not?
-            return super(LowerDict.Key, cls).__new__(LowerDict.Key, str(key).strip().lower())
+            return super(LowerDict.Key, cls).__new__(LowerDict.Key, str(key).strip())
 
         def __hash__(self):
-            return super(LowerDict.Key, self).__hash__()
+            return hash(self.lower())
 
         def __eq__(self, other):
             return self.lower() == other.strip().lower()
@@ -52,6 +54,14 @@ class LowerDict(dict):
 
     def keys(self):
         return LowerDictKeys(super(LowerDict, self).keys())
+
+    '''
+    # NOTE: as of 2019/02/15, in merge master, I cannot replicate the behavior that inspired this addition
+    # So I'm leaving it commented out but present, so that it can be reinstated [and tested] if a test case is found 
+    def items(self):
+        # this may be ugly, but.. um.. so's your mother
+        return {str(k): v for k, v in super(LowerDict, self).items()}.items()
+    '''
 
     def get(self, key, default=None):
         try:

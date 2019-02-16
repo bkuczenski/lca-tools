@@ -1,5 +1,5 @@
 from .context import Context, InvalidSense, InconsistentSense
-from .compartment_manager import CompartmentManager, NonSpecificContext
+from .compartment_manager import CompartmentManager, NonSpecificContext, NullContext
 import unittest
 
 
@@ -76,7 +76,7 @@ class CompartmentManagerTest(unittest.TestCase):
 
     def test_null(self):
         cx = self.cm[None]
-        self.assertIs(cx, self.cm._null_context)
+        self.assertIs(cx, NullContext)
 
     def test_add_hier(self):
         self.cm.add_compartments(['emissions', 'emissions to air', 'emissions to urban air'])

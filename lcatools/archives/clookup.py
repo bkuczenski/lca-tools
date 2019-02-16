@@ -10,6 +10,7 @@ Flow characterization is the very complex data problem: the "quantity relation" 
  - context / compartment
  - location / locale
 to a numeric output, namely the amount of the query quantity that corresponds to a unit of the reference quantity.
+Technically, this amount also has uncertainty / other quantitative characteristics.
 
 The idea behind a CLookup is that it contains all known characterizations for a given flowable [substance] with respect
 to a given quantity.  The CLookup is selected by specifying the flowable and the quantity, and then the CLookup is used

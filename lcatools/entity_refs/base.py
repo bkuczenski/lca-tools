@@ -110,6 +110,10 @@ class BaseRef(object):
 
     @property
     def _name(self):
+        """
+        This should be the same as _name for entities; whereas str(ref) prepends origin
+        :return:
+        """
         if self.has_property('Name'):
             addl = self._addl
             name = self['Name']

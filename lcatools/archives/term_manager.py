@@ -291,6 +291,11 @@ class TermManager(object):
         return self._canonical_q(quantity).external_ref
 
     def qlookup(self, quantity):
+        """
+        Returns a CLookup or SCLookup object that maps
+        :param quantity:
+        :return:
+        """
         return self._q_dict[self._canonical_q(quantity)]
 
     def factors_for_flowable(self, flowable, quantity=None, context=None, dist=0):

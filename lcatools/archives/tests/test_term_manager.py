@@ -4,6 +4,23 @@ import unittest
 
 
 class TermManagerTest(unittest.TestCase):
+    """
+    This needs some serious development.
+
+    Things to test:
+    __getitem__: finds context by synonym; else returns None
+    add_flow: multiple test cases:
+     - add new item
+     - add existing item (idempotency)
+     - check reverse mapping
+     - add conflicting item; prune
+     - add conflicting item; merge
+    add_cf-- why does this exist? Either this should call add_characterization or vice versa
+    add_characterization
+
+
+
+    """
     @classmethod
     def setUpClass(cls):
         cls.tm = TermManager(quiet=False)

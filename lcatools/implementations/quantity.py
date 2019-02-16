@@ -206,9 +206,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
 
     def quantity_conversions(self, flow, query_quantity, ref_quantity=None, context=None, locale='GLO', **kwargs):
         """
-        Return a single number that converts the a unit of the reference quantity into the query quantity for the
-        given flowable, compartment, and locale (default 'GLO').  If the locale is not found, this would be a great
-        place to run a spatial best-match algorithm.
+        Return a comprehensive set of conversion results for the provided inputs.
         :param flow: a string that is synonymous with a flowable characterized by the query quantity
         :param query_quantity: convert to this quantty
         :param ref_quantity: [None] convert for 1 unit of this quantity
@@ -228,7 +226,9 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
 
     def cf(self, flow, quantity, ref_quantity=None, context=None, locale='GLO', strategy=None, allow_proxy=True, **kwargs):
         """
-        Reports the first / best result of a quantity conversion
+        Reports the first / best result of a quantity conversion.  Returns a single number that converts the a unit of
+        the reference quantity into the query quantity for the given flowable, context, and locale (default 'GLO').
+        If the locale is not found, this would be a great place to run a spatial best-match algorithm.
 
         :param flow:
         :param quantity:

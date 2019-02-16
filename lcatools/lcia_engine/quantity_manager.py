@@ -1,5 +1,4 @@
 from synonym_dict import SynonymDict, SynonymSet
-import json
 
 
 class QuantityUnitMismatch(Exception):
@@ -11,14 +10,26 @@ class QuantityAlreadySet(Exception):
 
 
 def _quantity_terms(quantity):
-    yield quantity.q_name
     yield quantity['Name']
     yield str(quantity)
     yield quantity.uuid
     yield quantity.link
+    if quantity.has_property('Synonyms'):
+        syns = quantity['Synonyms']
+        if isinstance(syns, str):
+            yield syns
+        else:
+            for syn in syns:
+                yield syn
 
 
 class QuantitySynonyms(SynonymSet):
+    """
+    QuantitySynonyms are string terms that all refer to the same quantity of measure. They must all have the same
+    unit, because they are used to define the unit of measure of flowables.  To repeat: quantity instances that have
+    the same dimensionality but different units (e.g. kWh and MJ) are NOT SYNONYMS but distinct quantities. The
+    LciaEngine should be able to handle conversions between these kinds of quantities.
+    """
     @classmethod
     def new(cls, quantity):
         return cls(*_quantity_terms(quantity), quantity=quantity)
@@ -53,6 +64,8 @@ class QuantitySynonyms(SynonymSet):
             if self._validate_quantity(item):
                 self._quantity = item
                 self._unit = item.unit()
+                for term in _quantity_terms(item):
+                    self.add_term(term)
             else:
                 raise TypeError('Quantity fails validation (%s)' % type(item))
         else:
@@ -63,8 +76,8 @@ class QuantitySynonyms(SynonymSet):
             raise TypeError('Child set is not a Quantity synonym set (%s)' % type(other))
         if self._quantity is None:
             self.quantity = other.quantity
-        if other.unit() != self.unit:
-            raise QuantityUnitMismatch('incoming %s (canonical %s)' % (other.unit(), self._quantity.unit()))
+        if other.unit != self.unit:
+            raise QuantityUnitMismatch('incoming %s (canonical %s)' % (other.unit, self._quantity.unit()))
         super(QuantitySynonyms, self).add_child(other, force=force)
 
     @property

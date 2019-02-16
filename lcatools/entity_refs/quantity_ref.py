@@ -13,11 +13,9 @@ class QuantityRef(EntityRef):
         return self.reference_entity.unitstring
 
     @property
-    def q_name(self):
-        return '%s [%s]' % (self.get_item('Name'), self.unit())
-
-    @property
     def _addl(self):
+        if self.is_lcia_method():
+            return '%s] [LCIA' % self.unit()
         return self.unit()
 
     def serialize(self, **kwargs):

@@ -8,7 +8,7 @@ So I'm going to bow to the reserved keyword and call these things compartments i
 """
 
 from ..synonym_dict import SynonymDict
-from .context import Context
+from .compartment import Compartment
 
 NullContext = Context.null()
 
@@ -75,9 +75,9 @@ class CompartmentManager(SynonymDict):
 
     def add_compartments(self, comps):
         """
-        comps should be a list of Context objects or strings, in descending order
+        comps should be a list of Compartment objects or strings, in descending order
         :param comps:
-        :return: the last (most specific) Context created
+        :return: the last (most specific) Compartment created
         """
         current = None
         for c in comps:

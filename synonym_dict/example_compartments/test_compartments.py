@@ -1,4 +1,4 @@
-from .context import Context, InvalidSense, InconsistentSense
+from .compartment import Compartment, InvalidSense, InconsistentSense
 from .compartment_manager import CompartmentManager, NonSpecificContext, NullContext
 import unittest
 

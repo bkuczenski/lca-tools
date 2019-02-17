@@ -30,7 +30,7 @@ def valid_sense(sense):
     return v
 
 
-class Context(SynonymSet):
+class Compartment(SynonymSet):
     """
     A context is an environmental or social "compartment" that exchanges some "flow" with a technological "activity"
     in a process-flow product system.  Contexts are defined by a hierarchical structure and each instance has an
@@ -57,22 +57,22 @@ class Context(SynonymSet):
     def add_term(self, term):
         if self.is_null:
             raise NullContext
-        return super(Context, self).add_term(term)
+        return super(Compartment, self).add_term(term)
 
     def add_child(self, other, force=False):
         if self.is_null:
             raise NullContext
-        return super(Context, self).add_child(other, force=force)
+        return super(Compartment, self).add_child(other, force=force)
 
     def __init__(self, *args, parent=None, sense=None):
-        super(Context, self).__init__(*args)
+        super(Compartment, self).__init__(*args)
         self._parent = None
         self._sense = None
         self._subcompartments = set()
-        if isinstance(parent, Context):
+        if isinstance(parent, Compartment):
             self.parent = parent  # use setter
         elif parent is not None:
-            raise TypeError('Parent must be a Context, not %s' % type(parent))
+            raise TypeError('Parent must be a Compartment, not %s' % type(parent))
         if sense is not None:
             self.sense = sense
 
@@ -147,7 +147,7 @@ class Context(SynonymSet):
                 yield t
 
     def serialize(self):
-        d = super(Context, self).serialize()
+        d = super(Compartment, self).serialize()
         if self._parent is None:
             if self.sense is not None:
                 d['sense'] = self.sense

@@ -54,10 +54,10 @@ class Characterization(object):
             origin = flow.origin
         return cls(flow['Name'], flow.reference_entity, quantity, context, origin=origin, **kwargs)
 
-    def __init__(self, flowable, ref_quantity, query_quantity, context, origin=None, **kwargs):
+    def __init__(self, flow_name, ref_quantity, query_quantity, context, origin=None, **kwargs):
         """
 
-        :param flow:
+        :param flow_name: a canonical string
         :param quantity:
         :param value: passed to add_value if present
         :param location: 'GLO' passed to add_value if present
@@ -67,7 +67,7 @@ class Characterization(object):
         assert ref_quantity.entity_type == 'quantity', "'ref_quantity' must be an LcQuantity"
         assert query_quantity.entity_type == 'quantity', "'query_quantity' must be an LcQuantity"
 
-        self.flowable = flowable
+        self.flowable = str(flow_name)
         self.quantity = query_quantity
         self._ref_q = ref_quantity
         self._context = context
@@ -203,9 +203,9 @@ class Characterization(object):
     def __str__(self):
         if self.is_null:
             return '%s has %s %s' % (self.flowable, self.quantity, self.quantity.reference_entity)
-        return '%s [%s / %s] %s (%s)' % ('\n'.join(['%6.3g [%s]' % (v, k) for k, v in self._locations.items()]),
-                                         self.quantity.unit(), self.ref_quantity.unit(), self.flowable,
-                                         self.quantity['Name'])
+        return '%s [%s / %s] %s: %s (%s)' % ('\n'.join(['%6.3g [%s]' % (v, k) for k, v in self._locations.items()]),
+                                             self.quantity.unit(), self.ref_quantity.unit(), self.flowable, self.context,
+                                             self.quantity['Name'])
 
     def q_view(self):
         if self.quantity is self.ref_quantity:

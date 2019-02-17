@@ -286,8 +286,8 @@ class SynonymDict(object):
         :return:
         """
         obj = self._d[syn]
+        self._add_term(term, obj)  # checks TermExists
         obj.add_term(term)
-        self._add_term(term, obj)
 
     def del_term(self, term):
         """

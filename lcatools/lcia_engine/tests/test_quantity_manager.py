@@ -38,6 +38,12 @@ class QuantityTest(unittest.TestCase):
         with self.assertRaises(QuantityUnitMismatch):
             qsyn.add_child(qsynx)
 
+    def test_serialize(self):
+        pass
+
+    def test_deserialize(self):
+        pass
+
 
 class QuantityManagerTest(unittest.TestCase):
     def test_create(self):
@@ -64,6 +70,9 @@ class QuantityManagerTest(unittest.TestCase):
         qmgr.add_quantity(dummy_x)
         self.assertIs(qmgr[dummy_x['Name']], dummy_q)
         self.assertIs(qmgr[dummy_x.uuid], dummy_x)
+
+    def test_add_from_dict(self):
+        pass
 
 
 if __name__ == '__main__':

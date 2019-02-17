@@ -183,6 +183,16 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         return qr_results, qr_geog, qr_mismatch
 
     def _get_flowable_info(self, flow, ref_quantity, context):
+        """
+        Basically we take what we get for flow, unless we're missing ref_quantity or context.
+        If flow is not entity_type='flow', we try to fetch a flow and if that fails we return what we were given.
+        If we're given a flow and/or an external ref that looks up, then flowable, ref qty, and context are taken from
+        it (unless they were provided)
+        :param flow:
+        :param ref_quantity:
+        :param context:
+        :return:
+        """
         # skip the lookup if all terms are given
         if ref_quantity is None or context is None:
             if hasattr(flow, 'entity_type') and flow.entity_type == 'flow':
@@ -193,7 +203,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
             if f is None:
                 flowable = flow
             else:
-                flowable = f['Name']
+                flowable = f.flowable
                 if ref_quantity is None:
                     ref_quantity = f.reference_entity
                 if context is None:
@@ -328,7 +338,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
                 res.add_cutoff(x)
                 continue
             ref_q = self.get_canonical(x.flow.reference_entity)
-            cf = self.cf(ref_q, x.flow['Name'], x.termination, locale=locale,
+            cf = self.cf(ref_q, x.flow.flowable, x.termination, locale=locale,
                                         **kwargs)
             res.add_score(x.process, x, cf)
             # TODO: lcia_result remodel

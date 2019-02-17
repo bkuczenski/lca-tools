@@ -2,8 +2,7 @@
 A class to keep track of "flowable" objects: substances, materials, products, or services which are exchanged between
 activities or between an activity and a context.
 
-Some flowables which are chemicals or substances have CAS numbers.  Others do not.  For simplicity, the Flowable
-class is only permitted to have CAS number children.
+Some flowables which are chemicals or substances have CAS numbers.  Others do not.
 """
 
 
@@ -43,7 +42,8 @@ class Flowable(SynonymSet):
             except DuplicateChild:
                 return
         else:
-            raise NotSupported('Flowables are only allowed to have CasNumber children')
+            super(Flowable, self).add_child(other)
+            # raise NotSupported('Flowables are only allowed to have CasNumber children')
 
     @property
     def cas_numbers(self):

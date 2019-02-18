@@ -2,6 +2,7 @@
 SynonymSet
 A set of synonyms in a hashable collection
 """
+import re
 from uuid import uuid4
 
 
@@ -113,6 +114,16 @@ class SynonymSet(object):
             if term in c:
                 found.append(c)
         return tuple(found)
+
+    def contains_string(self, pattern, ignore_case=False):
+        if ignore_case:
+            srch = re.compile(pattern, flags=re.IGNORECASE)
+        else:
+            srch = re.compile(pattern)
+        for t in self.terms:
+            if bool(srch.search(t)):
+                return t
+        return False
 
     def has_child(self, other):
         return other in self._children

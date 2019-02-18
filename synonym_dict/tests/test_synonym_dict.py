@@ -125,6 +125,12 @@ class SynonymDictTest(unittest.TestCase):
         self.assertIn('aloha', o1)
         self.assertNotIn('aloha', o2)
 
+    def test_prune_idempotent(self):
+        g = SynonymDict()
+        o1 = g.new_object('hello', 'hola', 'hi', 'aloha')
+        o2 = g.new_object('hello', 'hola', 'hi', 'aloha', prune=True)
+        self.assertIs(o2, o1)
+
     def test_pruned_set_name_closure(self):
         g = SynonymDict()
         g.new_object('hello', 'hola', 'hi', 'aloha')

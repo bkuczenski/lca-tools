@@ -10,23 +10,33 @@ So I'm going to bow to the reserved keyword and call these things compartments i
 from ..synonym_dict import SynonymDict
 from .compartment import Compartment
 
-NullContext = Context.null()
+NullCompartment = Compartment.null()
 
 # these are not-really-subcompartments whose names should be modified if they have parents
 NONSPECIFIC_LOWER = {'unspecified', 'non-specific', 'nonspecific', 'unknown', 'undefined', 'none'}
 
 
-class NonSpecificContext(Exception):
+class NonSpecificCompartment(Exception):
+    pass
+
+
+class InconsistentLineage(Exception):
     pass
 
 
 class CompartmentManager(SynonymDict):
 
     _entry_group = 'Compartments'
-    _syn_type = Context
+    _syn_type = Compartment
     _ignore_case = True
 
-    _null_context = NullContext
+    _null_entry = NullCompartment
+
+    def __init__(self, source_file=None):
+        super(CompartmentManager, self).__init__()
+        self.new_object('Resources', sense='source')
+        self.new_object('Emissions', sense='sink')
+        self.load(source_file)
 
     def _add_from_dict(self, j):
         """
@@ -63,26 +73,42 @@ class CompartmentManager(SynonymDict):
         :return:
         """
         if parent is not None:
-            if not isinstance(parent, Context):
+            if not isinstance(parent, Compartment):
                 parent = self._d[parent]
             pn = parent.name
             args = tuple([', '.join([pn, k]) if k.lower() in NONSPECIFIC_LOWER else k for k in args])
         else:
             for k in args:
                 if k.lower() in NONSPECIFIC_LOWER:
-                    raise NonSpecificContext(k)
+                    raise NonSpecificCompartment(k)
         return super(CompartmentManager, self).new_object(*args, parent=parent, **kwargs)
 
-    def add_compartments(self, comps):
+    def add_compartments(self, comps, conflict=None):
         """
         comps should be a list of Compartment objects or strings, in descending order
         :param comps:
+        :param conflict: [None] strategy to resolve inconsistent lineage problems.  None raises exception
+          'match' hunts among the subcompartments of parent for a regex find
+          'skip' simply drops the conflicting entry
         :return: the last (most specific) Compartment created
         """
         current = None
         for c in comps:
             if c in self._d:
                 new = self.get(c)
+                while not new.has_ancestor(current):  # slightly dangerous stratagem
+                    if conflict is None:
+                        raise InconsistentLineage('"%s": existing parent "%s" | incoming parent "%s"' % (c,
+                                                                                                         new.parent,
+                                                                                                         current))
+                    elif conflict == 'match':
+                        try:
+                            new = next(s for s in current.subcompartments if s.contains_string(c, ignore_case=True))
+                        except StopIteration:
+                            conflict = None
+                    elif conflict == 'skip':
+                        new = current
+
             else:
                 new = self.new_object(c, parent=current)
             current = new
@@ -90,5 +116,5 @@ class CompartmentManager(SynonymDict):
 
     def __getitem__(self, item):
         if str(item).lower() in NONSPECIFIC_LOWER:
-            return self._null_context
+            return self._null_entry
         return super(CompartmentManager, self).__getitem__(item)

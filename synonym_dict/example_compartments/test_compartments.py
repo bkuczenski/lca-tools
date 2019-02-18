@@ -1,30 +1,30 @@
 from .compartment import Compartment, InvalidSense, InconsistentSense
-from .compartment_manager import CompartmentManager, NonSpecificContext, NullContext
+from .compartment_manager import CompartmentManager, NonSpecificCompartment, NullCompartment, InconsistentLineage
 import unittest
 
 
 class CompartmentTest(unittest.TestCase):
 
     def test_sense(self):
-        c = Context('emissions to air', sense='sink')
+        c = Compartment('emissions to air', sense='sink')
         self.assertEqual(c.sense, 'Sink')
         with self.assertRaises(InvalidSense):
-            Context('emissions to Mars', sense='extraterrestrial')
+            Compartment('emissions to Mars', sense='extraterrestrial')
         with self.assertRaises(InconsistentSense):
-            Context('resources from urban air', parent=c, sense='source')
+            Compartment('resources from urban air', parent=c, sense='source')
 
     def test_elementary(self):
-        c = Context('eMissions', sense='sink')
-        c1 = Context('emissions to boot', parent=c)
-        d = Context('emulsions', sense='sink')
+        c = Compartment('eMissions', sense='sink')
+        c1 = Compartment('emissions to boot', parent=c)
+        d = Compartment('emulsions', sense='sink')
         self.assertTrue(c1.elementary)
         self.assertFalse(d.elementary)
 
     def test_parent(self):
-        c = Context('emissions', sense='sink')
-        d = Context('emissions to air', parent=c)
-        e = Context('emissions to urban air', parent=d)
-        f = Context('emissions to rural air', 'emissions from high stacks', parent=d)
+        c = Compartment('emissions', sense='sink')
+        d = Compartment('emissions to air', parent=c)
+        e = Compartment('emissions to urban air', parent=d)
+        f = Compartment('emissions to rural air', 'emissions from high stacks', parent=d)
         self.assertEqual(e.sense, 'Sink')
         self.assertSetEqual(set(i for i in d.subcompartments), {e, f})
         self.assertListEqual([str(k) for k in c.self_and_subcompartments], ['emissions', 'emissions to air',
@@ -32,8 +32,8 @@ class CompartmentTest(unittest.TestCase):
                                                                             'emissions to urban air'])
 
     def test_serialize(self):
-        c = Context('emissions', sense='sink')
-        d = Context('emissions to air', parent=c)
+        c = Compartment('emissions', sense='sink')
+        d = Compartment('emissions to air', parent=c)
         j = d.serialize()
         self.assertEqual(j['name'], 'emissions to air')
         self.assertSetEqual(set(j.keys()), {'name', 'synonyms', 'parent'})
@@ -51,10 +51,8 @@ class CompartmentManagerTest(unittest.TestCase):
     """
     def setUp(self):
         self.cm = CompartmentManager()
-        self.cm.new_object('resources', sense='source')
-        self.cm.new_object('emissions', sense='sink')
 
-    def test_add_from_dict(self):
+    def _add_water_dict(self):
         d = {'name': 'water emissions',
              'synonyms': [
                  'emissions to water',
@@ -63,8 +61,15 @@ class CompartmentManagerTest(unittest.TestCase):
              ],
              'parent': 'emissions'}
         self.cm._add_from_dict(d)
+
+    def test_add_from_dict(self):
+        self._add_water_dict()
         self.assertEqual(str(self.cm['water']), 'water emissions')
         self.assertEqual(self.cm['water'].sense, 'Sink')
+
+    def test_0_add_hier(self):
+        self.cm.add_compartments(['emissions', 'emissions to air', 'emissions to urban air'])
+        self.assertIs(self.cm['emissions to air'], self.cm['emissions to urban air'].parent)
 
     def test_idempotent(self):
         """
@@ -76,11 +81,7 @@ class CompartmentManagerTest(unittest.TestCase):
 
     def test_null(self):
         cx = self.cm[None]
-        self.assertIs(cx, NullContext)
-
-    def test_add_hier(self):
-        self.cm.add_compartments(['emissions', 'emissions to air', 'emissions to urban air'])
-        self.assertIs(self.cm['emissions to air'], self.cm['emissions to urban air'].parent)
+        self.assertIs(cx, NullCompartment)
 
     def test_toplevel(self):
         self.cm.add_compartments(['social hotspots', 'labor', 'child labor'])
@@ -92,8 +93,44 @@ class CompartmentManagerTest(unittest.TestCase):
         self.assertEqual(c.parent.name, 'water')
 
     def test_top_level_nonspecific(self):
-        with self.assertRaises(NonSpecificContext):
+        with self.assertRaises(NonSpecificCompartment):
             self.cm.add_compartments(['unspecified', 'unspecified water'])
+
+    '''
+    Potential Glitch cases:
+     * relative add
+     * omitted descendant -> still valid
+     * conflict in specified parent -> InconsistentLineage
+    '''
+    def test_relative_add(self):
+        self._add_water_dict()
+        uw = self.cm['water']
+        ud = self.cm.add_compartments(['water', 'lake water'])
+        self.assertIs(uw, ud.parent)
+        self.assertListEqual(ud.as_list(), ['Emissions', 'water emissions', 'lake water'])
+
+    def test_omitted_descendant(self):
+        ua = self.cm.add_compartments(['emissions', 'to air', 'to urban air'])  # confirm that this exists
+        uc = self.cm.add_compartments(['emissions', 'to urban air', 'to urban center'])
+        self.assertIs(ua, uc.parent)
+
+    def test_inconsistent_lineage(self):
+        self._add_water_dict()
+        with self.assertRaises(InconsistentLineage):
+            self.cm.add_compartments(['resources', 'water'])
+
+    def test_escaped_inconsistent_lineage(self):
+        """
+        When an intermediate descendant conflicts, we can either raise the exception (cautious) or do some clever
+        regex-based predictive guessing (reckless)
+        :return:
+        """
+        self._add_water_dict()
+        rw = self.cm.add_compartments(['resources', 'from water'])
+        fw = self.cm.add_compartments(['resources', 'water', 'fresh water'], conflict='match')
+
+        self.assertIs(fw.parent, rw)
+        self.assertEqual(fw.sense, 'Source')
 
 
 if __name__ == '__main__':

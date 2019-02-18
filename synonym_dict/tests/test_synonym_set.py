@@ -45,6 +45,11 @@ class SynonymSetTest(unittest.TestCase):
         self.assertTrue('aloha' in s)
         self.assertFalse('greetings' in s)
 
+    def test_contains_string(self):
+        s = SynonymSet('hello', 'aloha', 'Ni hao')
+        self.assertEqual(s.contains_string('hao'), 'Ni hao')
+        self.assertFalse(s.contains_string('goober'))
+
     def test_hashable(self):
         s = SynonymSet('hello', 'aloha', 'Ni hao')
         t = SynonymSet('bonjour', 'hola', 'hello', 'Hi')

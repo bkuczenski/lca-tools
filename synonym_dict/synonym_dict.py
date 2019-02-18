@@ -19,13 +19,6 @@ class MergeError(Exception):
     pass
 
 
-class RemoveTermError(Exception):
-    """
-    thrown when something wrong happens removing from the dict
-    """
-    pass
-
-
 class ParentNotFound(Exception):
     pass
 
@@ -206,7 +199,8 @@ class SynonymDict(object):
                 try:
                     obj.set_name(next(k for k in obj.terms if k not in prune_terms))
                 except StopIteration:
-                    raise RemoveTermError('%s' % obj.name)
+                    # no non-pruned terms: nothing to add
+                    return self._d[obj.name]  # give back the current match
             for k in prune_terms:
                 obj.remove_term(k)
             return self.add_or_update_object(obj, merge=False, prune=False)

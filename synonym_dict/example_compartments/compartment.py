@@ -106,7 +106,7 @@ class Compartment(SynonymSet):
     def elementary(self):
         if self.parent is None:
             for t in self.terms:
-                if t.lower() in ELEMENTARY:
+                if t.strip().lower() in ELEMENTARY:
                     return True
             return False
         else:
@@ -123,6 +123,13 @@ class Compartment(SynonymSet):
         self._parent = parent
         parent.register_subcompartment(self)
 
+    def has_ancestor(self, comp):
+        if self._parent is comp:
+            return True
+        if self._parent is not None:
+            return self._parent.has_ancestor(comp)
+        return False
+
     @property
     def subcompartments(self):
         for s in self._subcompartments:
@@ -138,6 +145,7 @@ class Compartment(SynonymSet):
     def deregister_subcompartment(self, sub):
         if sub not in self._subcompartments:
             raise InvalidSubCompartment('Parent %s: subcompartment is not known: %s' % (self, sub))
+        self._subcompartments.remove(sub)  # ??!
 
     @property
     def self_and_subcompartments(self):

@@ -119,7 +119,7 @@ class CompartmentManagerTest(unittest.TestCase):
         with self.assertRaises(InconsistentLineage):
             self.cm.add_compartments(['resources', 'water'])
 
-    def test_escaped_inconsistent_lineage(self):
+    def test_inconsistent_lineage_match(self):
         """
         When an intermediate descendant conflicts, we can either raise the exception (cautious) or do some clever
         regex-based predictive guessing (reckless)
@@ -130,6 +130,19 @@ class CompartmentManagerTest(unittest.TestCase):
         fw = self.cm.add_compartments(['resources', 'water', 'fresh water'], conflict='match')
 
         self.assertIs(fw.parent, rw)
+        self.assertEqual(fw.sense, 'Source')
+
+    def test_inconsistent_lineage_skip(self):
+        """
+        When an intermediate descendant conflicts, we can either raise the exception (cautious) or do some clever
+        regex-based predictive guessing (reckless)
+        :return:
+        """
+        self._add_water_dict()
+        rw = self.cm.add_compartments(['resources', 'from water'])
+        fw = self.cm.add_compartments(['resources', 'water', 'fresh water'], conflict='skip')
+
+        self.assertIs(fw.parent, rw.parent)
         self.assertEqual(fw.sense, 'Source')
 
 

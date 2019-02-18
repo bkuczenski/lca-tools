@@ -123,11 +123,16 @@ class Compartment(SynonymSet):
         self._parent = parent
         parent.register_subcompartment(self)
 
-    def has_ancestor(self, comp):
-        if self._parent is comp:
+    def is_subcompartment(self, comp):
+        """
+        for simplest semantics, a compartment is considered its own subcompartment. With None I could go either way.
+        :param comp:
+        :return:
+        """
+        if comp is self:
             return True
         if self._parent is not None:
-            return self._parent.has_ancestor(comp)
+            return self._parent.is_subcompartment(comp)
         return False
 
     @property

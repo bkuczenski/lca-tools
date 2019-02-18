@@ -96,7 +96,9 @@ class CompartmentManager(SynonymDict):
         for c in comps:
             if c in self._d:
                 new = self.get(c)
-                while not new.has_ancestor(current):  # slightly dangerous stratagem
+                while not new.is_subcompartment(current):  # slightly dangerous stratagem
+                    if current is None:
+                        break
                     if conflict is None:
                         raise InconsistentLineage('"%s": existing parent "%s" | incoming parent "%s"' % (c,
                                                                                                          new.parent,

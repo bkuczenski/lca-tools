@@ -15,6 +15,8 @@ from .iquantity import QuantityInterface, QuantityRequired, NoFactorsFound, Conv
 
 from .iforeground import ForegroundInterface, ForegroundRequired
 
+from .flows import FlowInterface, FlowWithoutContext
+
 import re
 import uuid
 from os.path import splitext
@@ -24,6 +26,9 @@ from collections import namedtuple
 
 uuid_regex = re.compile('([0-9a-f]{8}-?([0-9a-f]{4}-?){3}[0-9a-f]{12})', flags=re.IGNORECASE)
 
+
+class PropertyExists(Exception):
+    pass
 
 
 def to_uuid(_in):

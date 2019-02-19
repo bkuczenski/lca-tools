@@ -11,13 +11,14 @@ LciaEngine adds a Quantity disambiguation layer, which is inherently useful only
 lists of flowables and contexts that would be redundant if loaded into individual archives.  Someday, it might make
 sense to expose it as a massive, central graph db.
 """
-from synonym_dict.example_compartments import Context, CompartmentManager
 from synonym_dict.example_flowables import FlowablesDict
 from synonym_dict import MergeError
 
+from .contexts import ContextManager, Context
 from .clookup import CLookup, SCLookup
 
 from lcatools.characterizations import Characterization
+from lcatools.entity_refs import FlowWithoutContext
 
 
 class UnknownQuantityRef(Exception):
@@ -105,13 +106,13 @@ class TermManager(object):
         :param contexts: optional filename to initialize CompartmentManager
         :param flowables: optional filename to initialize FlowablesDict
         :param merge_strategy:
+           'prune': - on conflict, trim off known synonyms and add the remaining as a new flowable
         :param quiet:
         :param strict_clookup: [True] whether to allow multiple CFs for each quantity / flowable / context tuple
-           'prune':
 
         """
         # the synonym sets
-        self._cm = CompartmentManager(source_file=contexts)
+        self._cm = ContextManager(source_file=contexts)
         self._fm = FlowablesDict(source_file=flowables)
 
         # the CF lookup
@@ -157,39 +158,90 @@ class TermManager(object):
 
     '''
     Info Storage
-    '''
-    def add_compartments(self, compartments):
-        return self._cm.add_compartments(compartments)
+    def set_context(self, context_manager):
+        """
+        A flow will set its own context- but it needs a context manager to do so.
 
-    def add_flow(self, flow, merge_strategy=None):
+        Not sure whether to (a) remove FlowWithoutContext exception and test for None, or (b) allow set_context to
+        abort silently if context is already set. Currently chose (b) because I think I still want the exception.
+
+
+        :param context_manager:
+        :return:
         """
-        Add a flow's terms to the flowables list and add a flowable-to-flow mapping
+        if context_manager.is_context(self._context):
+            # cannot change context once it's set
+            return
+        if self.has_property('Compartment'):
+            _c = context_manager.add_compartments(self['Compartment'])
+        elif self.has_property('Category'):
+            _c = context_manager.add_compartments(self['Category'])
+        else:
+            _c = context_manager.get('none')
+            # raise AttributeError('Flow has no contextual attribute! %s' % self)
+        if not context_manager.is_context(_c):
+            raise TypeError('Context manager did not return a context! %s (%s)' % (_c, type(_c)))
+        self._context = _c
+        self._flowable = context_manager.add_flow(self)
+    '''
+    def _check_context(self, flow):
+        """
+
         :param flow:
-        :param merge_strategy: overrule default merge strategy
-        :return: the Flowable object to which the flow's terms have been added
+        :return:
         """
+        try:
+            c = flow.context
+            compartment = c.as_list()
+        except FlowWithoutContext:
+            if flow.has_property('Compartment'):
+                compartment = flow['Compartment']
+            elif flow.has_property('Context'):
+                compartment = flow['Context']
+            elif flow.has_property('Category'):
+                compartment = flow['Category']
+            elif flow.has_property('Classification'):
+                compartment = flow['Classification']
+            else:
+                flow.context = self._cm.get('none')
+                # don't bother adding origins to null context
+                return
+        _c = self._cm.add_compartments(compartment)
+        _c.add_origin(flow.origin)
+        flow.context = _c
+
+    def _check_flowable(self, flow, fb):
+        try:
+            f = flow.flowable
+            if f not in self._fm:
+                self._fm.add_synonym(f, fb)
+        except FlowWithoutContext:
+            flow.flowable = fb
+
+    def _add_flow_terms(self, flow, merge_strategy=None):
         merge_strategy = merge_strategy or self._merge_strategy
         try:
             fb = self._fm.new_object(*_flowable_terms(flow))
         except MergeError:
             if merge_strategy == 'prune':
                 self._print('\nPruning entry for %s' % flow)
-                s1 = tuple([t for t in filter(lambda z: z not in self._fm, _flowable_terms(flow))])
+                s1 = tuple([t for t in filter(lambda z: z not in self._fm, _flowable_terms(flow))])  # unfamiliar terms
                 if len(s1) == 0:
-                    fb = None
+                    fb = None  # TODO: This is an error, we need to return one of them
                     self._print('No unique terms')
                     s2 = set()
                 else:
                     fb = self._fm.new_object(*s1, prune=True)
-                    s2 = set(self._fm.synonyms(fb.name))
+                    s2 = set(self._fm.synonyms(fb.name))  # terms known to new object
                 if not self._quiet:
                     for k in sorted(set(s1).union(s2), key=lambda x: x in s2):
                         if k in s2:
-                            print(k)
+                            print(k)  # normal
                         else:
-                            print('*%s [%s]' % (k, self._fm[k]))
+                            print('*%s --> [%s]' % (k, self._fm[k]))  # pruned; maps to
 
             elif merge_strategy == 'merge':
+                # this is trivial but
                 self._print('Merging')
                 raise NotImplemented
             else:
@@ -198,6 +250,21 @@ class TermManager(object):
             self._flow_map[_tf].add(flow)
         return fb
 
+    def add_flow(self, flow, merge_strategy='prune'):
+        """
+        We take a flow from outside and add its terminology. That means harmonizing its context with local context
+        (assigning context if none is found); and adding flowable terms to the flowables list and mapping flowable
+        to flow (assigning flowable if none is found)
+
+        :param flow:
+        :param merge_strategy: overrule default merge strategy
+        :return: the Flowable object to which the flow's terms have been added
+        """
+        self._check_context(flow)
+        fb = self._add_flow_terms(flow, merge_strategy=merge_strategy)
+        self._check_flowable(flow, fb)
+
+    '''# I can't figure out what this function is here for
     def add_cf(self, quantity, cf):
         if cf.quantity is cf.flow.reference_entity:
             return
@@ -206,6 +273,7 @@ class TermManager(object):
         for fb in fbs:
             self.qlookup(quantity)[fb].add(cf)  # that some cray shit
             self._fq_map[fb].add(self._canonical_q(quantity))
+    '''
 
     def _find_exact_cf(self, quantity, flowable, context, origin):
         cfs = self.qlookup(quantity)[flowable].find(context, dist=0, origin=origin)
@@ -275,15 +343,9 @@ class TermManager(object):
         except UnknownQuantityRef:
             return None
 
-    @staticmethod
-    def _q_ref(quantity):
-        return quantity.external_ref
-
     def _canonical_q(self, quantity):
-        if hasattr(quantity, 'entity_type'):
-            return quantity
         try:
-            return next(q for q in self._q_dict.keys() if self._q_ref(q) == quantity)
+            return next(q for q in self._q_dict.keys() if q.match(quantity))
         except StopIteration:
             raise UnknownQuantityRef(quantity)
 
@@ -297,6 +359,23 @@ class TermManager(object):
         :return:
         """
         return self._q_dict[self._canonical_q(quantity)]
+
+    def _factors_for_flowable(self, fb, quantity, context, dist):
+        """
+        detach lookup for cleanness
+        :param fb:
+        :param quantity:
+        :param context:
+        :param dist:
+        :return:
+        """
+        if context is None:
+            for cf in self.qlookup(quantity)[fb].cfs():
+                yield cf
+        else:
+            comp = self[context]
+            for cf in self.qlookup(quantity)[fb].find(comp, dist=dist):
+                yield cf
 
     def factors_for_flowable(self, flowable, quantity=None, context=None, dist=0):
         """
@@ -316,13 +395,8 @@ class TermManager(object):
                 for cf in self.factors_for_flowable(fb, quantity=q_ref, context=context, dist=dist):
                     yield cf
         else:
-            if context is None:
-                for cf in self.qlookup(quantity)[fb].cfs():
-                    yield cf
-            else:
-                comp = self[context]
-                for cf in self.qlookup(quantity)[fb].find(comp, dist=dist):
-                    yield cf
+            for cf in self._factors_for_flowable(fb, quantity, context, dist):
+                yield cf
 
     def factors_for_quantity(self, quantity, flowable=None, context=None, dist=0):
         """
@@ -344,9 +418,10 @@ class TermManager(object):
     def get_flowable(self, term):
         return self._fm[term]
 
-    def flowables(self, search=None):
+    def flowables(self, search=None, origin=None):
         """
         WARNING: does not search on all synonyms, only on canonical terms
+        :param origin: not used
         :param search:
         :return:
         """

@@ -3,11 +3,7 @@ import uuid
 
 from .entities import LcEntity
 # from lcatools.entities.quantities import LcQuantity
-# from ..interfaces import trim_cas
-
-
-class FlowWithoutContext(Exception):
-    pass
+from lcatools.entity_refs import FlowInterface, FlowWithoutContext
 
 
 class RefQuantityError(Exception):
@@ -28,7 +24,7 @@ def new_flow(name, ref_quantity, cas_number='', comment='', context=None, compar
     return LcFlow.new(name, ref_quantity, **kwargs)
 
 
-class LcFlow(LcEntity):
+class LcFlow(LcEntity, FlowInterface):
 
     _ref_field = 'referenceQuantity'
     _new_fields = ['CasNumber', 'Compartment']
@@ -46,8 +42,6 @@ class LcFlow(LcEntity):
         super(LcFlow, self).__init__('flow', entity_uuid, **kwargs)
 
         self._local_unit = None
-        self._context = None
-        self._flowable = None
 
         for k in self._new_fields:
             if k not in self._d:
@@ -59,56 +53,11 @@ class LcFlow(LcEntity):
         if local_unit is not None:
             self.set_local_unit(local_unit)
 
-    @property
-    def flowable(self):
-        if self._flowable is None:
-            raise FlowWithoutContext('Context was not set for flow %s!' % self.link)
-        return self._flowable.name
-
-    @property
-    def context(self):
-        """
-        A flow's context needs to be set by its containing archive.  It should be an actual Context object.
-
-        Legitimate question about whether this should raise an exception or return None. For now I think the safe thing
-        is to catch the exception whenever it is noncritical.
-        :return:
-        """
-        if self._context is None:
-            raise FlowWithoutContext('Context was not set for flow %s!' % self.link)
-        return self._context
-
-    def set_context(self, context_manager):
-        """
-        A flow will set its own context- but it needs a context manager to do so.
-
-        Not sure whether to (a) remove FlowWithoutContext exception and test for None, or (b) allow set_context to
-        abort silently if context is already set. Currently chose (b) because I think I still want the exception.
-
-
-        :param context_manager:
-        :return:
-        """
-        if context_manager.is_context(self._context):
-            # cannot change context once it's set
-            return
-        if self.has_property('Compartment'):
-            _c = context_manager.add_compartments(self['Compartment'])
-        elif self.has_property('Category'):
-            _c = context_manager.add_compartments(self['Category'])
-        else:
-            _c = context_manager.get('none')
-            # raise AttributeError('Flow has no contextual attribute! %s' % self)
-        if not context_manager.is_context(_c):
-            raise TypeError('Context manager did not return a context! %s (%s)' % (_c, type(_c)))
-        self._context = _c
-        self._flowable = context_manager.add_flow(self)
-
     def unit(self):
         if self._local_unit is not None:
             print('NOT YET SUPPORTED')
             return self._local_unit
-        return self.reference_entity.unit()
+        return super(LcFlow, self).unit()
 
     def set_local_unit(self, local_unit):
         """
@@ -161,21 +110,6 @@ class LcFlow(LcEntity):
 
     def unset_local_unit(self):
         self._local_unit = None
-
-    def match(self, other):
-        print('Warning: LcFlow.match() method is slapdash')
-        if isinstance(other, str):
-            '''
-            return (self.uuid == other or
-                    (trim_cas(self['CasNumber']) == trim_cas(other) and len(self['CasNumber']) > 4) or
-                    self.external_ref == other)
-        return (self.get_uuid() == other.get_uuid() or
-                self['Name'].lower() == other['Name'].lower() or
-                (trim_cas(self['CasNumber']) == trim_cas(other['CasNumber']) and len(self['CasNumber']) > 4) or
-                self.get_external_ref() == other.get_external_ref())
-            '''
-            return other in self._flowable
-        return other.flowable in self._flowable
 
     def __str__(self):
         cas = self.get('CasNumber')

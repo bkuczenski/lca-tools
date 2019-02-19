@@ -1,26 +1,26 @@
 from collections import defaultdict
 import re
+import os
 
 from .quantity_manager import QuantityManager
 from lcatools.archives.term_manager import TermManager, _flowable_terms  # , Context
+from lcatools.interfaces import FlowWithoutContext
+from .quelled_cf import QuelledCF
 # from synonym_dict.example_flowables import Flowable
 
 
+'''
+Switchable biogenic CO2:
+
+* Biogenic CO2 is CO2, so the flowable used to store CFs is 124-38-9 always
+* Because flowable is looked up within the quantity implementation, we can assign a synonym to the flow itself, and 
+  watch for it
+* Then the switch determines whether or not to quell the CF returned to the user, without changing the database
+'''
 biogenic = re.compile('(biotic|biogenic|non-fossil)', flags=re.IGNORECASE)
-'''
-Thinking on biogenic CO2:
 
-1- it cannot be a distinct flowable at all times, and also be a selectable option
- 1a- 124-38-9 is 124-38-9. CO2 is CO2.
-2- it has to be determined by add_flow; thus flow.flowable needs to distinguish
- 2a- so we use a flowable that is undisclosed child to CO2, and check for it
-3- quantity implementation needs to respect this and use flow.flowable consistently to ID exchanges 
-4- If the flowable matches 
-    A- if quell is true: 0
-    B- if quell is false: if no CF is found
-    CF sh 
 
-'''
+DEFAULT_CONTEXTS = os.path.abspath(os.path.join(os.path.dirname(__file__), 'contexts.json'))
 
 
 class LciaEngine(TermManager):
@@ -29,8 +29,10 @@ class LciaEngine(TermManager):
     I don't think it has to do anything else
     """
 
-    def __init__(self, quantities=None, quell_biogenic_co2=False, **kwargs):
-        super(LciaEngine, self).__init__(**kwargs)
+    def __init__(self, quantities=None, quell_biogenic_co2=False, contexts=None, **kwargs):
+        if contexts is None:
+            contexts = DEFAULT_CONTEXTS
+        super(LciaEngine, self).__init__(contexts=contexts, **kwargs)
 
         self._qm = QuantityManager(source_file=quantities)
 
@@ -55,21 +57,28 @@ class LciaEngine(TermManager):
             return quantity
         return x
 
-    def add_flow(self, flow, merge_strategy=None):
+    def _check_flowable(self, flow, fb):
         """
         Subclass handles two problems: tracking flowables by origin and biogenic CO2.
 
         biogenic: if ANY of the flow's terms match the biogenic
         :param flow:
-        :param merge_strategy:
+        :param fb
         :return:
         """
-        fb = super(LciaEngine, self).add_flow(flow, merge_strategy=merge_strategy)
-        self._fb_by_origin[flow.origin].add(str(fb))
         if '124-38-9' in fb:
             if any([self.is_biogenic(term) for term in _flowable_terms(flow)]):
-                return self._bio_co2
-        return fb
+                fb = self._bio_co2
+                flow.flowable = fb  # force reset flowable
+        else:
+            try:
+                f = flow.flowable
+                if f not in self._fm:
+                    self._fm.add_synonym(f, fb)
+                self._fb_by_origin[flow.origin].add(f)
+            except FlowWithoutContext:
+                flow.flowable = fb
+        self._fb_by_origin[flow.origin].add(str(fb))
 
     def flowables(self, search=None, origin=None):
         if origin is None:
@@ -87,17 +96,23 @@ class LciaEngine(TermManager):
     def is_biogenic(term):
         return bool(biogenic.search(term))
 
-    '''
-    # need to write _quell (which checks compartments and quell setting)
-    # need to write create QuelledCF
+    def _quell_co2(self, flowable, context):
+        """
+        We know this flow is biogenic CO2, so we ask if it is a resource from air, or if it is any emission
+        :param flowable: orig, not looked-up in _fm
+        :param context: from CF
+        :return: bool
+        """
+        if flowable is self._bio_co2:
+            if context.is_subcompartment(self._cm['from air']):
+                return True
+            if context.is_subcompartment(self._cm['Emissions']):
+                return True
+        return False
+
     def factors_for_flowable(self, flowable, quantity=None, context=None, dist=0):
         for k in super(LciaEngine, self).factors_for_flowable(flowable, quantity=quantity, context=context, dist=dist):
-            if flowable is self._bio_co2:
-                if self._quell(k):
-                    yield QuelledCF(k)
-                else:
-                    yield k
+            if self._quell_co2(flowable, k.context):
+                yield QuelledCF.from_cf(k, flowable=self._bio_co2)
             else:
                 yield k
-    '''
-

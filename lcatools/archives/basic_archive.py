@@ -163,13 +163,13 @@ class BasicArchive(EntityStore):
 
         # characterization infrastructure
         if entity.entity_type == 'flow':
-            entity.set_context(self._tm)
+            self.tm.add_flow(entity)
         elif entity.entity_type == 'quantity':
             entity.set_qi(self.make_interface('quantity'))
 
         if entity.uuid is None:  # TODO: eliminate visible UUIDs in favor of NS UUIDs. this will get fleshed out later
             entity.uuid = self._key_to_id(entity.external_ref)
-        if self._tm[entity.external_ref] is not None:
+        if self.tm[entity.external_ref] is not None:
             raise ContextCollision('Entity external_ref %s is already known as a context identifier' %
                                    entity.external_ref)
         self._add(entity, entity.uuid)
@@ -183,7 +183,7 @@ class BasicArchive(EntityStore):
         :param item:
         :return:
         """
-        cx = self._tm.__getitem__(item)
+        cx = self.tm.__getitem__(item)
         if cx is None:
             if hasattr(item, 'external_ref'):  # TODO: should this be uuid?
                 item = item.external_ref
@@ -238,7 +238,9 @@ class BasicArchive(EntityStore):
         else:
             rq = next(c['quantity'] for c in chars if 'isReference' in c and c['isReference'] is True)
         ref_q = self[rq]
-        flow = LcFlow(uid, referenceQuantity=ref_q, **entity_j)
+        return LcFlow(uid, referenceQuantity=ref_q, **entity_j)
+
+    def _add_chars(self, flow, chars):
         for c in chars:
             if 'isReference' in c:
                 if c['isReference'] is True:
@@ -254,9 +256,7 @@ class BasicArchive(EntityStore):
                 # raise KeyError
             if 'value' in c:
                 v = c['value']
-            self.tm.add_characterization(flow['Name'], ref_q, q, v, context=flow.context)
-
-        return flow
+            self.tm.add_characterization(flow['Name'], flow.reference_entity, q, v, context=flow.context)
 
     def _make_entity(self, e, etype, uid):
         if etype == 'quantity':
@@ -284,11 +284,22 @@ class BasicArchive(EntityStore):
             if uid is None:
                 raise OldJson('This entity has no UUID and an invalid external ref')
         etype = e.pop('entityType')
+        if etype == 'flow':
+            # need to delay adding characterizations until after entity is registered with term manager
+            try:
+                chars = e['characterizations']
+            except KeyError:
+                chars = []
+        else:
+            chars = []
         e['origin'] = e.pop('origin', self.ref)
 
         entity = self._make_entity(e, etype, uid)
 
         self.add(entity)
+        if etype == 'flow':
+            self._add_chars(entity, chars)
+
         if self[ext_ref] is entity:
             entity.set_external_ref(ext_ref)
         else:

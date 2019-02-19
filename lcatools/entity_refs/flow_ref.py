@@ -1,9 +1,7 @@
 from .base import EntityRef
 
-from ..interfaces import QuantityRequired
+from .flow_interface import FlowInterface
 
-
-from lcatools.characterizations import Characterization
 
 '''
 FlowRef needs to actually inherit from flow entity and not from EntityRef-- because the flowRef needs to be able
@@ -14,11 +12,7 @@ Think about this for future.  For now, just reimplement everything.
 '''
 
 
-class FlowRefWithoutContext(Exception):
-    pass
-
-
-class FlowRef(EntityRef):
+class FlowRef(EntityRef, FlowInterface):
     """
     Flows can lookup:
     """
@@ -27,67 +21,9 @@ class FlowRef(EntityRef):
     def __init__(self, *args, **kwargs):
         super(FlowRef, self).__init__(*args, **kwargs)
 
-        self._context = None
-        self._flowable = None
-
-    def unit(self):
-        return self.reference_entity.reference_entity
-
-    def match(self, other):
-        """
-        Re-implement flow match method
-        :param other:
-        :return:
-        """
-        '''
-        return (self.uuid == other.uuid or
-                self['Name'].lower() == other['Name'].lower() or
-                (trim_cas(self['CasNumber']) == trim_cas(other['CasNumber']) and len(self['CasNumber']) > 4) or
-                self.external_ref == other.external_ref)  # not sure about this last one! we should check origin too
-        '''
-        if isinstance(other, str):
-            return other in self._flowable
-        return other.flowable in self._flowable
-
     @property
     def _addl(self):
-        return self.reference_entity.unit()
-
-    # the flowable / context stuff is very non-DRY.  Makes me wonder if I really want flow refs AT ALL.
-    def set_context(self, context_manager):
-        """
-        A flow will set its own context- but it needs a context manager to do so.
-
-        Not sure whether to (a) remove FlowWithoutContext exception and test for None, or (b) allow set_context to
-        abort silently if context is already set. Currently chose (b) because I think I still want the exception.
-        :param context_manager:
-        :return:
-        """
-        if context_manager.is_context(self._context):
-            return
-        if self.has_property('Compartment'):
-            _c = context_manager.add_compartments(self['Compartment'])
-        elif self.has_property('Category'):
-            _c = context_manager.add_compartments(self['Category'])
-        else:
-            _c = context_manager.get(None)
-            # raise AttributeError('Flow has no contextual attribute! %s' % self)
-        if not context_manager.is_context(_c):
-            raise TypeError('Context manager did not return a context! %s (%s)' % (_c, type(_c)))
-        self._context = _c
-        self._flowable = context_manager.add_flow(self)
-
-    @property
-    def flowable(self):
-        if self._flowable is None:
-            raise FlowRefWithoutContext('Context was not set for flow ref %s!' % self.link)
-        return self._flowable.name
-
-    @property
-    def context(self):
-        if self._context is None:
-            raise FlowRefWithoutContext('Context was not set for flow ref %s!' % self.link)
-        return self._context
+        return self.unit()
 
     '''
     def has_characterization(self, quantity, location='GLO'):

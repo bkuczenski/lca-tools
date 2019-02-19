@@ -8,12 +8,47 @@ OBJECTIVE: COMPLETE CONTEXT REFACTOR BY 1 March 2019
 What does this mean?
 
  - Qdb, old Synlist, old CompartmentManager are GONE
- - Exchange.termination returns an OBJECT, not a string, or None
- - Archives have a TermManager which maps strings to objects, many-to-one.  Flowables map to strings, which are the canonical names of flowables; contexts map to Context objects
- - Flows can have a context or not-- archives derived from traditional data sources will work the same; but the term manager will be able to easily spit out flowables
+ - Exchange.termination returns a CONTEXT, a string, or None
+ x Archives have a TermManager which maps strings to objects, many-to-one.  Flowables map to strings, which are the canonical names of flowables; contexts map to Context objects
+ x Flows can have a context or not-- archives derived from traditional data sources will work the same; but the term manager will be able to easily spit out flowables
  - 'Compartment' loses all special meaning except in instantiation
  - Characterization Factors are serialized separately from flows, though they can still be deserialized the old-fashioned way
+ - Interfaces rewritten to include flowables and contexts, along with flows, in index
 
+Mon 2019-02-18 15:26:06 -0800
+
+Current usage of Term Manager // Quantity Interface
+
+ Quantity Interface provides:
+  - synonyms (obsolete)
+  - flowables (to index)
+  - compartments (to index.contexts)
+
+  - get_canonical(quantity):
+  - profile(flow): list of cfs for a given flow
+  - characterize(flowable, ref_quantity, query_quantity, value, context=None, location='GLO')
+  - factors(quantity, flowable=None, compartment=None)
+  - cf(flow, quantity, ...) - returns the best cf
+  - quantity_relation - returns the value of the best cf
+  - do_lcia(quantity, inventory, ...) - iterates over inventory
+
+ Term Manager provides:
+  - __getitem__(context)
+  - add_flow(flow)
+  - add_characterization(...) implements characterize()
+  - get_canonical()
+  - qlookup() -> returns the flowable-to-factor lookup
+  - factors_for_flowable() -> used to implement everything
+  - factors_for_quantity() -> wraps f_f_f, implements factors()
+  - get_flowable() -> for index
+  - flowables() -> for index
+  - de/serialization -> for ops
+
+They are HIGHLY overlapping. The question is: is there a normative / design decision that distinguishes the Term Manager from the Quantity Interface? from the Quantity entity
+
+Because remember we have this draggy situation where the quantity entity has to be given an interface- but that's not so bad- that just wraps up the term manager
+
+and YES there is a normative / design decision: the term manager contains all the functionality that gets subclassed by the LciaEngine to work across data sources! boom end of story. stop with the endless introspection and move forward already!
 
 
 ==========

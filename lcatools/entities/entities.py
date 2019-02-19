@@ -4,6 +4,7 @@ import uuid
 from itertools import chain
 from numbers import Number
 from lcatools.entity_refs import CatalogRef
+from lcatools.interfaces import PropertyExists
 
 from synonym_dict import LowerDict
 
@@ -26,10 +27,6 @@ class EntityInitializationError(Exception):
 
 
 class EntityMergeError(Exception):
-    pass
-
-
-class PropertyExists(Exception):
     pass
 
 

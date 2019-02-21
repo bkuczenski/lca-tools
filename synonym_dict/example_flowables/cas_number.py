@@ -3,7 +3,11 @@ accept a variety of inputs; store synonyms for a CAS number of the canonical for
 """
 
 import re
-from ..synonym_set import SynonymSet, NotSupported
+from ..synonym_set import SynonymSet
+
+
+class NotSupported(Exception):
+    pass
 
 
 cas_regex = re.compile('^0*([0-9]{2,6})\W?([0-9]{2})\W?([0-9])$')

@@ -92,7 +92,12 @@ class CompartmentManager(SynonymDict):
           'skip' simply drops the conflicting entry
         :return: the last (most specific) Compartment created
         """
+        if len(comps) == 0:
+            return self._null_entry
         current = None
+        auto_name = '; '.join(comps)
+        if auto_name in self._d:
+            return self[auto_name]
         for c in comps:
             if c in self._d:
                 new = self.get(c)
@@ -114,6 +119,7 @@ class CompartmentManager(SynonymDict):
             else:
                 new = self.new_object(c, parent=current)
             current = new
+        self.add_synonym(auto_name, current.name)
         return current
 
     def __getitem__(self, item):

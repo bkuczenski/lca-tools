@@ -112,6 +112,8 @@ class SynonymDict(object):
     def _add_term(self, term, obj):
         if not isinstance(obj, self._syn_type):
             raise TypeError('Object is not a %s (%s)' % (type(self._syn_type), type(obj)))
+        if len(term.strip()) == 0:
+            return
         self._check_term(term, obj)
         self._d[term] = obj
         self._l[obj][term] = term
@@ -279,6 +281,7 @@ class SynonymDict(object):
         :param syn: the existing synonym
         :return:
         """
+        term = str(term)
         obj = self._d[syn]
         self._add_term(term, obj)  # checks TermExists
         obj.add_term(term)

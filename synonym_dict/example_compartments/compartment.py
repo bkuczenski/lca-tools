@@ -87,6 +87,12 @@ class Compartment(SynonymSet):
             return self.parent.as_list() + [str(self)]
 
     @property
+    def base_terms(self):
+        yield '; '.join(self.as_list())
+        for x in super(Compartment, self).base_terms:
+            yield x
+
+    @property
     def sense(self):
         if self.parent is None:
             return self._sense

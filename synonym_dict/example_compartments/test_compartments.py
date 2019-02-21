@@ -83,6 +83,10 @@ class CompartmentManagerTest(unittest.TestCase):
         cx = self.cm[None]
         self.assertIs(cx, NullCompartment)
 
+    def test_add_null(self):
+        cx = self.cm.add_compartments(())
+        self.assertIs(cx, NullCompartment)
+
     def test_toplevel(self):
         self.cm.add_compartments(['social hotspots', 'labor', 'child labor'])
         self.assertIn('social hotspots', (str(x) for x in self.cm.top_level_compartments))

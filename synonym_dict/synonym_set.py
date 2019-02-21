@@ -18,10 +18,6 @@ class DuplicateChild(Exception):
     pass
 
 
-class NotSupported(Exception):
-    pass
-
-
 class SynonymSet(object):
     """
 
@@ -76,6 +72,8 @@ class SynonymSet(object):
             self.add_child(term)
         else:
             s = str(term)
+            if len(s.strip()) == 0:
+                return
             if self._name is None:
                 self._name = s
             self._terms.add(s)
@@ -137,7 +135,7 @@ class SynonymSet(object):
     def set_name(self, name):
         s = str(name)
         if s not in self._terms:
-            self.add_term(s)
+            self.add_term(s)  # is this desirable? Maybe we want to restrict this to names already in the set?
         self._name = s
 
     def serialize(self):

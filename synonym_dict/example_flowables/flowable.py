@@ -7,7 +7,7 @@ Some flowables which are chemicals or substances have CAS numbers.  Others do no
 
 
 from .cas_number import CasNumber, InvalidCasNumber
-from ..synonym_set import SynonymSet, NotSupported, DuplicateChild
+from ..synonym_set import SynonymSet, DuplicateChild
 
 
 class Flowable(SynonymSet):
@@ -50,8 +50,14 @@ class Flowable(SynonymSet):
         for c in sorted(self._children, key=str):
             yield str(c)
 
+    '''
     def set_name(self, name):
         raise NotSupported
+    '''
+
+    @property
+    def object(self):
+        return self
 
     def serialize(self):
         """

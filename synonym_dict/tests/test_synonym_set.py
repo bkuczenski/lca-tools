@@ -7,6 +7,12 @@ class SynonymSetTest(unittest.TestCase):
         s = SynonymSet()
         self.assertListEqual([k for k in s.terms], [])
 
+    def test_add_empty(self):
+        s = SynonymSet('hello', 'aloha', 'Ni hao')
+        self.assertNotIn('', s)
+        s.add_term('')
+        self.assertNotIn('', s)
+
     def test_terms(self):
         s = SynonymSet('hello', 'aloha', 'Ni hao')
         self.assertListEqual(['Ni hao', 'aloha', 'hello'], [k for k in s.terms])

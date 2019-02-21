@@ -90,6 +90,20 @@ class SynonymDictTest(unittest.TestCase):
         g.add_synonym(' GREETINGS  ', 'bonjour ')
         self.assertEqual(g['greetings'], 'hello')
 
+    def test_disallow_empty_string_silently(self):
+        g = SynonymDict()
+        g.new_object('hello', 'bonjour')
+        g.add_synonym('', 'hello')
+        self.assertNotIn('', g)
+
+    def test_cast_to_str(self):
+        g = SynonymDict()
+        a = g.new_object('the answer', 42)
+        self.assertEqual(g['42'], 'the answer')
+        self.assertIsNone(g.get(42))
+        self.assertIn('42', a)
+        self.assertNotIn(42, a)
+
     def test_remove_object(self):
         g = SynonymDict()
         o1 = g.new_object('hello', 'hola', 'hi', 'aloha')

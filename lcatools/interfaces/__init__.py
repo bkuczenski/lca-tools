@@ -15,8 +15,6 @@ from .iquantity import QuantityInterface, QuantityRequired, NoFactorsFound, Conv
 
 from .iforeground import ForegroundInterface, ForegroundRequired
 
-from .flows import FlowInterface, FlowWithoutContext
-
 import re
 import uuid
 from os.path import splitext

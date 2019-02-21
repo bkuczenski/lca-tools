@@ -155,6 +155,16 @@ class CLookup(object):
     def serialize(self, values=False):
         return {str(c): self._ser_set(cfs, values=values) for c, cfs in self._dict.items()}
 
+    def serialize_for_origin(self, origin, values=False):
+        cxs = dict()
+        for c, cfs in self._dict.items():
+            try:
+                cf_filt = next(cf for cf in cfs if cf.origin == origin)  # duplicate entries per origin not allowed
+            except StopIteration:
+                continue
+            cxs[str(c)] = cf_filt.serialize(values=values, concise=True)
+        return cxs
+
 
 class FactorCollision(Exception):
     pass

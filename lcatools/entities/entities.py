@@ -52,7 +52,7 @@ class LcEntity(object):
         self._d = LowerDict()
 
         self._entity_type = entity_type
-        self.reference_entity = None
+        self._reference_entity = None
         self._origin = origin
 
         self._d['Name'] = ''
@@ -64,6 +64,10 @@ class LcEntity(object):
 
         for k, v in kwargs.items():
             self[k] = v
+
+    @property
+    def reference_entity(self):
+        return self._reference_entity
 
     def _make_ref_ref(self, query):
         if self.reference_entity is not None:
@@ -209,7 +213,7 @@ class LcEntity(object):
         :return:
         """
         self._validate_reference(ref_entity)
-        self.reference_entity = ref_entity
+        self._reference_entity = ref_entity
 
     def has_property(self, prop):
         return prop in self._d

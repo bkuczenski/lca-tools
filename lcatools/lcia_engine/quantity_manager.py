@@ -102,6 +102,8 @@ class QuantityManager(SynonymDict):
     _entry_group = 'Quantities'
     _syn_type = QuantitySynonyms
 
+    _ignore_case = True
+
     def _add_from_dict(self, j):
         name = j['name']
         syns = j.pop('synonyms', [])

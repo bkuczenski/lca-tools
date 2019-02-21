@@ -20,6 +20,10 @@ class FlowRef(EntityRef, FlowInterface):
 
     def __init__(self, *args, **kwargs):
         super(FlowRef, self).__init__(*args, **kwargs)
+        for t in ('name', 'casnumber'):  # have to do this bc we use _d.update() and this seems least crunchy
+            if self.has_property(t):
+                self._flowable.add_term(self._localitem(t))
+        self._flowable.add_term(self.link)
 
     @property
     def _addl(self):
@@ -61,6 +65,16 @@ class FlowRef(EntityRef, FlowInterface):
         for i in self._characterizations.values():
             yield i
     '''
+    def __setitem__(self, key, value):
+        """
+        trade one DRY for another... this is not too bad though.
+        :param key:
+        :param value:
+        :return:
+        """
+        self._catch_context(key, value)
+        self._catch_flowable(key, value)
+        super(FlowRef, self).__setitem__(key, value)
 
     def serialize(self, characterizations=False, domesticate=False, **kwargs):
         j = super(FlowRef, self).serialize(domesticate=domesticate)

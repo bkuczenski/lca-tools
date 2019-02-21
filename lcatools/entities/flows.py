@@ -3,7 +3,7 @@ import uuid
 
 from .entities import LcEntity
 # from lcatools.entities.quantities import LcQuantity
-from lcatools.entity_refs import FlowInterface, FlowWithoutContext
+from lcatools.entity_refs import FlowInterface
 
 
 class RefQuantityError(Exception):
@@ -37,6 +37,31 @@ class LcFlow(LcEntity, FlowInterface):
         :return:
         """
         return cls(uuid.uuid4(), Name=name, ReferenceQuantity=ref_qty, **kwargs)
+
+    def __setitem__(self, key, value):
+        self._catch_context(key, value)
+        self._catch_flowable(key, value)
+        super(LcFlow, self).__setitem__(key, value)
+
+    @property
+    def origin(self):
+        return super(LcFlow, self).origin
+
+    @origin.setter
+    def origin(self, value):
+        super(LcFlow, self).origin = value
+        if self.external_ref is not None:
+            self._flowable.add_term(self.link)
+
+    @property
+    def external_ref(self):
+        return super(LcFlow, self).external_ref
+
+    @external_ref.setter
+    def external_ref(self, value):
+        super(LcFlow, self).external_ref = value
+        if self.origin is not None:
+            self._flowable.add_term(self.link)
 
     def __init__(self, entity_uuid=None, local_unit=None, **kwargs):
         super(LcFlow, self).__init__('flow', entity_uuid, **kwargs)
@@ -117,10 +142,7 @@ class LcFlow(LcEntity, FlowInterface):
             cas = ''
         if len(cas) > 0:
             cas = ' (CAS ' + cas + ')'
-        try:
-            context = '[%s]' % self.context
-        except FlowWithoutContext:
-            context = '(cutoff)'
+        context = '[%s]' % ';'.join(self.context)
         return '%s%s %s' % (self.get('Name'), cas, context)
 
     '''

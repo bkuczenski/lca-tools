@@ -185,7 +185,7 @@ class LcProcess(LcEntity):
         super(LcProcess, self).__init__('process', entity_uuid, **kwargs)
         if self.reference_entity is not None:
             raise AttributeError('How could the reference entity not be None?')
-        self.reference_entity = set()  # it is not possible to specify a valid reference_entity on init
+        self._reference_entity = set()  # it is not possible to specify a valid reference_entity on init
         self._alloc_by_quantity = None
         self._alloc_sum = 0.0
 
@@ -226,7 +226,7 @@ class LcProcess(LcEntity):
 
         if ref_entity.key in self._exchanges:
             if self._exchanges[ref_entity.key].set_ref(self):
-                self.reference_entity.add(ref_entity)
+                self._reference_entity.add(ref_entity)
             else:
                 raise ReferenceSettingFailed('%s\n%s' % (self, ref_entity))
         if self.alloc_qty is not None:

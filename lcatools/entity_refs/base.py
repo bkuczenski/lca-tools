@@ -83,7 +83,6 @@ class BaseRef(object):
             return self._d[item]
         if 'local_%s' % item in self._d:
             return self._d['local_%s' % item]
-        raise KeyError(item)
 
     def __getitem__(self, item):
         """
@@ -318,11 +317,9 @@ class EntityRef(BaseRef):
         """
         if not force_query:
             # check local first.  return Localitem if present.
-            try:
-                loc = self._localitem(item)
+            loc = self._localitem(item)
+            if loc is not None:
                 return loc
-            except KeyError:
-                pass
         self._check_query('getitem %s' % item)
         try:
             val = self._query.get_item(self.external_ref, item)

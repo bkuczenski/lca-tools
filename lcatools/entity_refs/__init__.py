@@ -15,4 +15,4 @@ There are two main subclasses of entity references:
 
 from .catalog_ref import CatalogRef
 from .base import NoCatalog, EntityRefMergeError
-from .flow_interface import FlowInterface, FlowWithoutContext
+from .flow_interface import FlowInterface

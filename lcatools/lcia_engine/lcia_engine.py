@@ -36,6 +36,7 @@ class LciaEngine(TermManager):
 
         self._qm = QuantityManager(source_file=quantities)
 
+        # another reverse mapping
         self._fb_by_origin = defaultdict(set)
 
         # difficult problem, this

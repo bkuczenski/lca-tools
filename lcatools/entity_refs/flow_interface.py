@@ -1,20 +1,56 @@
-from lcatools.interfaces import PropertyExists
 from synonym_dict.example_flowables import Flowable
-from synonym_dict.example_compartments import Compartment
-
-class FlowWithoutContext(Exception):
-    pass
 
 
 class FlowInterface(object):
     """
     An abstract class that establishes common functionality for OBSERVATIONS OF FLOWS.  A Flow consists of:
-     - a reference quantity with a fixed unit [this is pending a bit of a refactor o reference_entity]
-     - a flowable
-     - a context (optionally a null context)
+     - a reference quantity with a fixed unit
+     - a flowable (a list of synonyms for the flowable substnce being described)
+     - a context (a hierarchical list of strings designating the flows 'compartment' or category)
     """
-    _context = None
-    _flowable = None
+    _context = ('cutoff', )
+    _context_set_level = 0
+
+    def _catch_context(self, key, value):
+        """
+        Add a hook to set context in __getitem__ or wherever is appropriate, to capture and automatically set context
+        according to the following precedence:
+         context > compartment > category > class | classification > cutoff (default)
+        :param key:
+        :param value:
+        :return:
+        """
+        try:
+            level = {'none': 0,
+                     'class': 1,
+                     'classification': 1,
+                     'classifications': 1,
+                     'category': 2,
+                     'categories': 2,
+                     'compartment': 3,
+                     'compartments': 3,
+                     'context': 4}[key.lower()]
+        except KeyError:
+            return
+        if isinstance(value, str):
+            value = (value, )
+        if level > self._context_set_level:
+            self._context = tuple(value)
+
+    def _catch_flowable(self, key, value):
+        if key.lower() == 'synonyms':
+            if isinstance(value, str):
+                self._flowable.add_term(value)
+            else:
+                for v in value:
+                    self._flowable.add_term(v)
+        elif key.lower() == 'name':
+            self._flowable.add_term(value)
+            self._flowable.set_name(value)
+        elif key.lower() == 'casnumber':
+            self._flowable.add_term(value)
+
+    _flowable = Flowable()
 
     @property
     def reference_entity(self):
@@ -24,49 +60,31 @@ class FlowInterface(object):
         return self.reference_entity.unit()
 
     @property
-    def configured(self):
-        return not (self._flowable is None or self._context is None)
-
-    @property
-    def flowable(self):
-        if self._flowable is None:
-            raise FlowWithoutContext('Context was not set for flow %s!' % self)
+    def name(self):
         return self._flowable.name
 
-    @flowable.setter
-    def flowable(self, item):
+    @name.setter
+    def name(self, name):
         """
-        allow to reassign flowable but not context
-        :param item:
+
+        :param name:
         :return:
         """
-        # if self._flowable is not None:
-        #     raise PropertyExists('Flowable already set! %s' % self.flowable)
-        if not isinstance(item, Flowable):
-            raise TypeError('not a flowable! (%s)' % type(item))
-        self._flowable = item
+        if name is not None and name in self.synonyms:
+            self._flowable.set_name(name)
 
+    @property
+    def synonyms(self):
+        for t in self._flowable.terms:
+            yield t
 
     @property
     def context(self):
         """
-        A flow's context needs to be set by its containing archive.  It should be an actual Context object.
-
-        Legitimate question about whether this should raise an exception or return None. For now I think the safe thing
-        is to catch the exception whenever it is noncritical.
+        A flow's context is any hierarchical tuple of strings (generic, intermediate, specific).
         :return:
         """
-        if self._context is None:
-            raise FlowWithoutContext('Context was not set for flow %s!' % self)
         return self._context
-
-    @context.setter
-    def context(self, item):
-        if self._context is not None:
-            raise PropertyExists('Context already set! %s' % self.context)
-        if not isinstance(item, Compartment):
-            raise TypeError('Not a compartment! (%s)' % type(item))
-        self._context = item
 
     def match(self, other):
         """
@@ -82,5 +100,5 @@ class FlowInterface(object):
         '''
         if isinstance(other, str):
             return other in self._flowable
-        return other.flowable in self._flowable
+        return any([t in self._flowable for t in other.synonyms])
 

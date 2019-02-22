@@ -9,7 +9,7 @@ from lcatools.flowdb.synlist import Flowables, InconsistentIndices, ConflictingC
 
 
 ECOSPOLD = os.path.join('/data', 'Dropbox', 'data', 'Ecoinvent', '3.2', 'current_Version_3.2_cutoff_lci_ecoSpold02.7z')
-ES_FILE = '00009573-c174-463a-8ebf-183ec587ba0d_7cb72345-4338-4f2d-830f-65bba3530fdb.spold'
+ES_FILE = ('00009573-c174-463a-8ebf-183ec587ba0d', '7cb72345-4338-4f2d-830f-65bba3530fdb')
 
 ELCD = os.path.join('/data', 'Dropbox', 'data', 'ELCD', 'ELCD3.2-a.zip')
 
@@ -18,7 +18,7 @@ SYNONYMS = os.path.join(os.path.dirname(__file__), 'synonyms.json')
 
 def get_ecospold_exchanges(archive=ECOSPOLD, prefix='datasets', file=ES_FILE):
     E = EcospoldV2Archive(archive, prefix=prefix)
-    o = E.objectify(file)
+    o = E.objectify(*file)
     return find_tags(o, 'elementaryExchange')
 
 

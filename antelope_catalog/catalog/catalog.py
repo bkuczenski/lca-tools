@@ -29,14 +29,16 @@ import hashlib
 from shutil import rmtree
 # from collections import defaultdict
 
-from lcatools.qdb import LciaEngine, REF_QTYS
+from lcatools.archives import BasicArchive
+from lcatools.lcia_engine import LciaEngine, DEFAULT_CONTEXTS, DEFAULT_FLOWABLES  #, REF_QTYS
+from lcatools.qdb import REF_QTYS
 
 
-from lcatools.interfaces import local_ref, EntityNotFound, InventoryRequired
+from lcatools.interfaces import local_ref, EntityNotFound
 from ..catalog_query import CatalogQuery, INTERFACE_TYPES
 from .lc_resolver import LcCatalogResolver
 from ..lc_resource import LcResource
-from lcatools.flowdb.compartments import REFERENCE_INT  # reference intermediate flows
+# from lcatools.flowdb.compartments import REFERENCE_INT  # reference intermediate flows
 from ..data_sources.local import TEST_ROOT
 
 from lcatools.archives import archive_from_json
@@ -50,7 +52,7 @@ class CatalogError(Exception):
     pass
 
 
-class LcCatalog(LciaEngine):
+class LcCatalog(object):
 
     """
     Provides query-based access to LCI information
@@ -148,17 +150,33 @@ class LcCatalog(LciaEngine):
     def archive_dir(self):
         return os.path.join(self._rootdir, 'archives')
 
+    '''
     @property
     def _entity_cache(self):
         return os.path.join(self._rootdir, 'entity_cache.json')
+    '''
 
     @property
     def _reference_qtys(self):
         return os.path.join(self._rootdir, 'reference-quantities.json')
 
+    '''
     @property
     def _compartments(self):
+        """
+        Deprecated
+        :return:
+        """
         return os.path.join(self._rootdir, 'local-compartments.json')
+    '''
+
+    @property
+    def _contexts(self):
+        return os.path.join(self._rootdir, 'local-contexts.json')
+
+    @property
+    def _flowables(self):
+        return os.path.join(self._rootdir, 'local-flowables.json')
 
     def _localize_source(self, source):
         if source.startswith(self._rootdir):
@@ -184,8 +202,10 @@ class LcCatalog(LciaEngine):
     def _make_rootdir(self):
         for x in self._dirs:
             os.makedirs(x, exist_ok=True)
-        if not os.path.exists(self._compartments):
-            copy2(REFERENCE_INT, self._compartments)
+        if not os.path.exists(self._contexts):
+            copy2(DEFAULT_CONTEXTS, self._contexts)
+        if not os.path.exists(self._flowables):
+            copy2(DEFAULT_FLOWABLES, self._flowables)
         if not os.path.exists(self._reference_qtys):
             copy2(REF_QTYS, self._reference_qtys)
 
@@ -205,9 +225,9 @@ class LcCatalog(LciaEngine):
         :param kwargs: passed to Qdb
         """
         self._rootdir = os.path.abspath(rootdir)
-        self._make_rootdir()  # this will be a git clone / fork
+        self._make_rootdir()  # this will be a git clone / fork;; clones reference quantities
         self._resolver = LcCatalogResolver(self.resource_dir)
-        super(LcCatalog, self).__init__(source=self._reference_qtys, compartments=self._compartments, **kwargs)
+
         """
         _archives := source -> archive
         _names :=  ref:interface -> source
@@ -217,7 +237,16 @@ class LcCatalog(LciaEngine):
 
         self._queries = dict()  # keep a collection of CatalogQuery instances for each origin
 
-        self.add_existing_archive(self._qdb, interfaces=('index', 'quantity'), store=False)
+        '''
+        LCIA: 
+        '''
+        self._lcia_engine = LciaEngine(contexts=self._contexts, flowables=self._flowables, **kwargs)
+        qdb = BasicArchive.from_file(self._reference_qtys, term_manager=self._lcia_engine)
+        self.add_existing_archive(qdb, interfaces=('index', 'quantity'), store=False)
+
+    @property
+    def lcia_engine(self):
+        return self._lcia_engine
 
     @property
     def sources(self):

@@ -40,6 +40,13 @@ class FlowableTest(unittest.TestCase):
         self.assertNotIn('74-82-8', f)
         self.assertSetEqual(set(f.cas_numbers), set())
 
+    def test_add_duplicate_cas(self):
+        f = Flowable('methane', '74-82-8')
+        self.assertSetEqual({t for t in f.terms}, {'methane', '74828', '74-82-8', '000074828', '000074-82-8'})
+        c = 74828
+        f.add_term(c)
+        self.assertSetEqual({t for t in f.terms}, {'methane', '74828', '74-82-8', '000074828', '000074-82-8'})
+
     def test_rename(self):
         f = Flowable('CO2, biogenic', '124-38-9', 'carbon dioxide (biogenic)')
         self.assertEqual(f.name, 'CO2, biogenic')
@@ -54,6 +61,18 @@ class FlowablesTest(unittest.TestCase):
         j = json.loads(flowables_json)
         for fb in j['Flowables']:
             self.f._add_from_dict(fb)
+
+    def test_load_preserve_child(self):
+        g = FlowablesDict()
+        n = g.new_object('nitrous oxide')
+        o = g.new_object('N2O', 'nitrous oxide', create_child=True)
+        self.assertTrue(n.has_child(o))
+        j = json.loads(flowables_json)
+        for fb in j['Flowables']:
+            g._add_from_dict(fb)
+        self.assertEqual(g['N2O'], g['10024-97-2'])
+        self.assertIs(g['N2O'], n)
+        self.assertTrue(n.has_child(o))
 
     def test_cas_equivalence(self):
         self.assertEqual(self.f[124389], 'carbon dioxide')

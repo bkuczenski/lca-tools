@@ -24,7 +24,10 @@ class FlowablesDict(SynonymDict):
 
     def __getitem__(self, item):
         try:
-            cas = CasNumber(item)
-        except InvalidCasNumber:
             return super(FlowablesDict, self).__getitem__(item)
-        return super(FlowablesDict, self).__getitem__(str(cas))
+        except KeyError:
+            try:
+                cas = CasNumber(item)
+            except InvalidCasNumber:
+                raise KeyError(item)
+            return super(FlowablesDict, self).__getitem__(str(cas))

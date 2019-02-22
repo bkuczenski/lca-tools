@@ -34,7 +34,7 @@ class SynonymDict(object):
     def _add_from_dict(self, j):
         name = j['name']
         syns = j.pop('synonyms', [])
-        self.new_object(name, *syns, merge=False)
+        self.new_object(name, *syns, merge=True)
 
     def load(self, filename=None):
         if filename is None:
@@ -58,7 +58,7 @@ class SynonymDict(object):
         if filename is not None:
             self._filename = filename
         fb = self._list_objects()
-        with open(filename, 'w') as fp:
+        with open(self._filename, 'w') as fp:
             json.dump({self._entry_group: [f.serialize() for f in fb]}, fp, indent=2)
 
     def __init__(self, source_file=None, ignore_case=None):
@@ -134,6 +134,11 @@ class SynonymDict(object):
         """
         for k in sorted(self._l.keys(), key=str):
             yield k
+
+    def objects_with_string(self, pattern):
+        for obj in self.objects:
+            if obj.contains_string(pattern, ignore_case=self._ignore_case):
+                yield obj
 
     def new_object(self, *args, merge=True, create_child=False, prune=False, **kwargs):
         """
@@ -314,6 +319,9 @@ class SynonymDict(object):
             obj = self._d[term]
         for t in sorted(self._l[obj].values()):
             yield t
+
+    def __len__(self):
+        return len(self._l)
 
     def __contains__(self, item):
         return item in self._d

@@ -30,11 +30,12 @@ class SynonymDictTest(unittest.TestCase):
     def test_explicit_merge(self):
         g = SynonymDict()
         o = g.new_object('hello', 'hola', 'hi', 'aloha')
-        g.new_object('Hello', 'HELLO', 'Hi', 'HI')
+        p = g.new_object('Hello', 'HELLO', 'Hi', 'HI')
+        self.assertSetEqual({k for k in g.objects}, {o, p})
         self.assertNotEqual(g['hi'], g['HI'])
         g.merge('hi', 'HI')
         self.assertEqual(g['hi'], g['HI'])
-        self.assertListEqual([k for k in g.objects], [o])  # sort order by string
+        self.assertListEqual([k for k in g.objects], [o])
 
     def test_child(self):
         g = SynonymDict()

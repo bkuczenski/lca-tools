@@ -22,7 +22,7 @@ class Flowable(SynonymSet):
         except InvalidCasNumber:
             super(Flowable, self).add_term(str(term))
             return
-        super(Flowable, self).add_child(cas)
+        self.add_child(cas)
 
     def remove_term(self, term):
         try:

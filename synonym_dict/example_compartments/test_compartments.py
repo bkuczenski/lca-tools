@@ -100,6 +100,11 @@ class CompartmentManagerTest(unittest.TestCase):
         with self.assertRaises(NonSpecificCompartment):
             self.cm.add_compartments(['unspecified', 'unspecified water'])
 
+    def test_retrieve_by_tuple(self):
+        self._add_water_dict()
+        w = self.cm['water']
+        self.assertIs(w, self.cm[('emissions', 'water emissions')])
+
     '''
     Potential Glitch cases:
      * relative add

@@ -83,6 +83,10 @@ class CompartmentManager(SynonymDict):
                     raise NonSpecificCompartment(k)
         return super(CompartmentManager, self).new_object(*args, parent=parent, **kwargs)
 
+    @staticmethod
+    def _tuple_to_name(comps):
+        return '; '.join(comps)
+
     def add_compartments(self, comps, conflict=None):
         """
         comps should be a list of Compartment objects or strings, in descending order
@@ -95,7 +99,7 @@ class CompartmentManager(SynonymDict):
         if len(comps) == 0:
             return self._null_entry
         current = None
-        auto_name = '; '.join(comps)
+        auto_name = self._tuple_to_name(comps)
         if auto_name in self._d:
             return self[auto_name]
         for c in comps:
@@ -123,6 +127,8 @@ class CompartmentManager(SynonymDict):
         return current
 
     def __getitem__(self, item):
+        if isinstance(item, tuple):
+            item = self._tuple_to_name(item)
         if str(item).lower() in NONSPECIFIC_LOWER:
             return self._null_entry
         return super(CompartmentManager, self).__getitem__(item)

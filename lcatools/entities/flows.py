@@ -43,23 +43,15 @@ class LcFlow(LcEntity, FlowInterface):
         self._catch_flowable(key, value)
         super(LcFlow, self).__setitem__(key, value)
 
-    @property
-    def origin(self):
-        return super(LcFlow, self).origin
-
-    @origin.setter
-    def origin(self, value):
-        super(LcFlow, self).origin = value
+    @LcEntity.origin.setter
+    def origin(self, value):  # pycharm lint is documented bug: https://youtrack.jetbrains.com/issue/PY-12803
+        LcEntity.origin.fset(self, value)
         if self.external_ref is not None:
             self._flowable.add_term(self.link)
 
-    @property
-    def external_ref(self):
-        return super(LcFlow, self).external_ref
-
-    @external_ref.setter
+    @LcEntity.external_ref.setter
     def external_ref(self, value):
-        super(LcFlow, self).external_ref = value
+        LcEntity.external_ref.fset(self, value)
         if self.origin is not None:
             self._flowable.add_term(self.link)
 

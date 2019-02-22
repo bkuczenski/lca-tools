@@ -50,7 +50,13 @@ class FlowInterface(object):
         elif key.lower() == 'casnumber':
             self._flowable.add_term(value)
 
-    _flowable = Flowable()
+    __flowable = None
+
+    @property
+    def _flowable(self):
+        if self.__flowable is None:
+            self.__flowable = Flowable()
+        return self.__flowable
 
     @property
     def reference_entity(self):

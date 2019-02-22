@@ -174,7 +174,7 @@ class TermManager(object):
     def _add_flow_terms(self, flow, merge_strategy=None):
         merge_strategy = merge_strategy or self._merge_strategy
         try:
-            fb = self._fm.new_object(*flow.synonyms)
+            fb = self._fm.match_object(*flow.synonyms)
         except MergeError:
             if merge_strategy == 'prune':
                 self._print('\nPruning entry for %s' % flow)
@@ -262,7 +262,11 @@ class TermManager(object):
         """
         if origin is None:
             origin = query_quantity.origin
-        cx = self._cm[context]
+        try:
+            cx = self._cm[context]
+        except KeyError:
+            print([str(x) for x in self._cm._list_objects()])
+            raise
         try:
             fb = self._fm[flowable]
         except KeyError:

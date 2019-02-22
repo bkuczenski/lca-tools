@@ -62,7 +62,7 @@ class BasicArchive(EntityStore):
     _drop_fields = defaultdict(list)  # dict mapping entity type to fields that should be omitted from serialization
 
     @classmethod
-    def from_file(cls, filename):
+    def from_file(cls, filename, **init_args):
         """
         BasicArchive factory from minimal dictionary.  Must include at least one of 'dataSource' or 'dataReference'
         fields and 0 or more flows or quantities; but note that any flow present must have its reference
@@ -76,7 +76,7 @@ class BasicArchive(EntityStore):
             ref = j['dataReference']
         except KeyError:
             ref = None
-        init_args = j.pop('initArgs', {})
+        init_args.update(j.pop('initArgs', {}))
         ns_uuid = j.pop('nsUuid', None)  # this is for opening legacy files
         if ns_uuid is None:
             ns_uuid = init_args.pop('ns_uuid', None)
@@ -161,9 +161,6 @@ class BasicArchive(EntityStore):
         if entity.entity_type not in self._entity_types:
             raise ValueError('%s is not a valid entity type' % entity.entity_type)
 
-        # characterization infrastructure
-        if entity.entity_type == 'flow':
-            self.tm.add_flow(entity)
         elif entity.entity_type == 'quantity':
             entity.set_qi(self.make_interface('quantity'))
 
@@ -173,6 +170,10 @@ class BasicArchive(EntityStore):
             raise ContextCollision('Entity external_ref %s is already known as a context identifier' %
                                    entity.external_ref)
         self._add(entity, entity.uuid)
+        if entity.entity_type == 'flow':
+            # characterization infrastructure
+            self.tm.add_flow(entity)
+
 
     def __getitem__(self, item):
         """
@@ -298,6 +299,7 @@ class BasicArchive(EntityStore):
 
         self.add(entity)
         if etype == 'flow':
+            # characterization infrastructure
             self._add_chars(entity, chars)
 
         if self[ext_ref] is entity:

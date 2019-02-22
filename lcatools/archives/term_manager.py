@@ -215,7 +215,7 @@ class TermManager(object):
         :return: the Flowable object to which the flow's terms have been added
         """
         self._check_context(flow)
-        fb = self._add_flow_terms(flow, merge_strategy=merge_strategy)
+        self._add_flow_terms(flow, merge_strategy=merge_strategy)
 
     '''# I can't figure out what this function is here for
     def add_cf(self, quantity, cf):

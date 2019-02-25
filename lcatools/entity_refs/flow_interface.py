@@ -1,4 +1,4 @@
-from synonym_dict.example_flowables import Flowable
+from synonym_dict import SynonymSet
 
 
 class FlowInterface(object):
@@ -35,27 +35,28 @@ class FlowInterface(object):
         if isinstance(value, str):
             value = (value, )
         if level > self._context_set_level:
+            self._context_set_level = min([level, 3])  # always allow context spec to override
             self._context = tuple(value)
 
     def _catch_flowable(self, key, value):
-        if key.lower() == 'synonyms':
+        if key == 'name':
+            self._flowable.add_term(value)
+            self._flowable.set_name(value)
+        elif key == 'casnumber':
+            self._flowable.add_term(value)
+        elif key == 'synonyms':
             if isinstance(value, str):
                 self._flowable.add_term(value)
             else:
                 for v in value:
                     self._flowable.add_term(v)
-        elif key.lower() == 'name':
-            self._flowable.add_term(value)
-            self._flowable.set_name(value)
-        elif key.lower() == 'casnumber':
-            self._flowable.add_term(value)
 
     __flowable = None
 
     @property
     def _flowable(self):
         if self.__flowable is None:
-            self.__flowable = Flowable()
+            self.__flowable = SynonymSet()
         return self.__flowable
 
     @property

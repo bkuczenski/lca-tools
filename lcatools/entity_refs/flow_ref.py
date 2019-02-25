@@ -73,7 +73,7 @@ class FlowRef(EntityRef, FlowInterface):
         :return:
         """
         self._catch_context(key, value)
-        self._catch_flowable(key, value)
+        self._catch_flowable(key.lower(), value)
         super(FlowRef, self).__setitem__(key, value)
 
     def serialize(self, characterizations=False, domesticate=False, **kwargs):

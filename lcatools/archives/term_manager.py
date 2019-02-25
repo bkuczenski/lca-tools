@@ -173,12 +173,21 @@ class TermManager(object):
 
     def _add_flow_terms(self, flow, merge_strategy=None):
         merge_strategy = merge_strategy or self._merge_strategy
-        try:
-            fb = self._fm.match_object(*flow.synonyms)
-        except MergeError:
+        fb_map = defaultdict(list)
+        for syn in flow.synonyms:
+            # make a list of all the existing flowables that match the incoming flow
+            fb_map[self._fm.get(syn)].append(syn)
+        new_terms = fb_map.pop(None, [])
+        if len(fb_map) == 0:  # all new terms
+            fb = self._fm.new_object(*new_terms)
+        elif len(fb_map) == 1:  # one existing match
+            fb = list(fb_map.keys())[0]
+            for term in new_terms:
+                self._fm.add_synonym(term, fb.name)
+        else:  # > 2 matches-- invoke merge strategy
             if merge_strategy == 'prune':
                 self._print('\nPruning entry for %s' % flow)
-                s1 = tuple([t for t in filter(lambda z: z not in self._fm, flow.synonyms)])  # unfamiliar terms
+                s1 = tuple(new_terms)  # unfamiliar terms
                 if len(s1) == 0:
                     fb = self._fm[flow.name]
                     self._print('No unique terms')
@@ -200,7 +209,9 @@ class TermManager(object):
                 raise NotImplemented
             else:
                 raise ValueError('merge strategy %s' % self._merge_strategy)
-        for _tf in self._fm.matching_flowables(*flow.synonyms):
+        # log the flowables that match the flow
+        self._flow_map[fb].add(flow)
+        for _tf in fb_map.keys():
             self._flow_map[_tf].add(flow)
         return fb
 
@@ -304,10 +315,20 @@ class TermManager(object):
             return None
 
     def _canonical_q(self, quantity):
+        """
+        override here
+        :param quantity:
+        :return:
+        """
+        '''
         try:
             return next(q for q in self._q_dict.keys() if q == quantity)
         except StopIteration:
             raise UnknownQuantityRef(quantity)
+        '''
+        if quantity in self._q_dict:
+            return quantity
+        raise UnknownQuantityRef(quantity)
 
     def _canonical_q_ref(self, quantity):
         return self._canonical_q(quantity).external_ref

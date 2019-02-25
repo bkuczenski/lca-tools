@@ -40,7 +40,7 @@ class LcFlow(LcEntity, FlowInterface):
 
     def __setitem__(self, key, value):
         self._catch_context(key, value)
-        self._catch_flowable(key, value)
+        self._catch_flowable(key.lower(), value)
         super(LcFlow, self).__setitem__(key, value)
 
     @LcEntity.origin.setter
@@ -63,9 +63,6 @@ class LcFlow(LcEntity, FlowInterface):
         for k in self._new_fields:
             if k not in self._d:
                 self._d[k] = ''
-
-        if self['CasNumber'] is None:
-            self['CasNumber'] = ''
 
         if local_unit is not None:
             self.set_local_unit(local_unit)

@@ -20,6 +20,7 @@ class InvalidCasNumber(Exception):
     pass
 
 
+'''
 def _validate_numeric_input(cas):
     if cas < 10**4 or cas >= 10**9:
         raise InvalidCasNumber('Numeric input out of range')
@@ -30,7 +31,7 @@ def _validate_numeric_input(cas):
 
     tup0 = int((cas - tup1) / 100)
     return str(tup0), str(tup1), str(tup2)
-
+'''
 
 def _validate_string_input(cas):
     match = cas_regex.match(cas)
@@ -64,7 +65,7 @@ class CasNumber(SynonymSet):
          - 3 positional arguments that make up a 3-tuple according to above
 
         Produces a synonym set containing both zero-padded and non-zero-padded CAS number strings, both with and without
-        hyphens.  e.g. above input would yield {'000124-38-9', '000124389', '124-38-9', '124389'}
+        hyphens.  e.g. above input would yield {'124-38-9', '124389', '000124-38-9', '000124389'}
         :param cas:
         """
         if len(args) == 1:
@@ -72,16 +73,27 @@ class CasNumber(SynonymSet):
         else:
             cas = tuple(args)
 
-        try:
-            casnumber = int(cas)
-            _tup = _validate_numeric_input(casnumber)
-        except (TypeError, ValueError):
-            if isinstance(cas, str):
-                _tup = _validate_string_input(cas)
-            else:
-                _tup = _validate_tuple_input(cas)
+        if isinstance(cas, tuple):
+            _tup = _validate_tuple_input(cas)
+        else:
+            _tup = _validate_string_input(str(cas))
+
+        self._init = True
 
         super(CasNumber, self).__init__(*_generate_cas_formats(_tup))
+        self._init = False
+
+    def add_term(self, term):
+        if self._init:
+            super(CasNumber, self).add_term(term)
+        else:
+            raise NotSupported('May not add terms to CAS numbers')
+
+    def remove_term(self, term):
+        raise NotSupported('May not remove terms from CAS numbers')
+
+    def add_child(self, other, force=False):
+        raise NotSupported('CAS numbers may not have children')
 
     def set_name(self, name):
         raise NotSupported('May not change canonical name for CAS numbers')

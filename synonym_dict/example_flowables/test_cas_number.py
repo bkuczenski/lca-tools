@@ -1,4 +1,4 @@
-from .cas_number import CasNumber, InvalidCasNumber
+from .cas_number import CasNumber, InvalidCasNumber, NotSupported
 import unittest
 
 
@@ -18,6 +18,14 @@ class CasNumberTest(unittest.TestCase):
             CasNumber(55, 89, 47, 2)
         with self.assertRaises(InvalidCasNumber):
             CasNumber('37205.543.1')
+
+    def test_add_remove(self):
+        c = CasNumber(12345)
+        with self.assertRaises(NotSupported):
+            c.add_term('Floobie')
+        self.assertIn('12-34-5', c)
+        with self.assertRaises(NotSupported):
+            c.remove_term('12-34-5')
 
     def test_equal(self):
         g = CasNumber(124389)

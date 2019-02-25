@@ -92,6 +92,18 @@ class FlowablesTest(unittest.TestCase):
         self.assertEqual(co2.name, 'CO2')
         self.assertEqual(d[self.f['co2']], 420)
 
+    def test_serialize_deserialize(self):
+        self.assertIn('124389', self.f)
+        j = {self.f._entry_group: [f.serialize() for f in self.f._list_objects()]}
+        self.assertEqual(len(j[self.f._entry_group]), len(self.f))
+        co2 = next(f for f in j[self.f._entry_group] if f['name'] == 'carbon dioxide')
+        self.assertListEqual(co2['synonyms'], ['CO2', '124-38-9'])
+        g = FlowablesDict()
+        for f in j[self.f._entry_group]:
+            g._add_from_dict(f)
+        self.assertEqual(len(g), len(self.f))
+        self.assertIn('124389', g)
+
 
 if __name__ == '__main__':
     unittest.main()

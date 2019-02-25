@@ -71,12 +71,15 @@ class SynonymSet(object):
         if hasattr(term, 'terms'):
             self.add_child(term)
         else:
-            s = str(term)
-            if len(s.strip()) == 0:
-                return
-            if self._name is None:
-                self._name = s
-            self._terms.add(s)
+            self._add_term(term)
+
+    def _add_term(self, term):
+        s = str(term)
+        if len(s.strip()) == 0:
+            return
+        if self._name is None:
+            self._name = s
+        self._terms.add(s)
 
     def add_child(self, other, force=False):
         """

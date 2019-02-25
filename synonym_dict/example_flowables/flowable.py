@@ -2,7 +2,9 @@
 A class to keep track of "flowable" objects: substances, materials, products, or services which are exchanged between
 activities or between an activity and a context.
 
-Some flowables which are chemicals or substances have CAS numbers.  Others do not.
+The main point of this set is to manage CAS numbers and their associated synonyms. The CasNumber class accepts string
+or numeric inputs and generates padded and non-padded synonyms that should match any reasonable CAS specification. It
+also handles removing and serializing CAS numbers
 """
 
 
@@ -63,7 +65,8 @@ class Flowable(SynonymSet):
 
     def serialize(self):
         """
-        Keep just names of child sets, since CAS numbers will auto-replicate on add
+        Keep just names of child sets, since CAS numbers will auto-replicate on add, and other child sets should
+        [normatively] behave similarly
         :return:
         """
         d = {

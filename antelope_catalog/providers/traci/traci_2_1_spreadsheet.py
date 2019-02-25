@@ -16,7 +16,7 @@ import xlrd
 from ..xl_dict import XlDict
 from lcatools.archives import BasicArchive
 from lcatools.entities import LcQuantity, LcFlow
-from lcatools.characterizations import Characterization, DuplicateCharacterizationError
+from lcatools.characterizations import DuplicateCharacterizationError
 
 from .q_info import ns_uuid_21 as t_uuid
 from .quantity import Traci21QuantityImplementation, transform_numeric_cas, CAS_regexp, q_info
@@ -86,14 +86,14 @@ class Traci21Factors(BasicArchive):
             return self._methods[col]
         return None
 
-    def _create_flow(self, row, compartment):
+    def _create_flow(self, row):
         flowable = row['Substance Name'].lower()
-        cas = transform_numeric_cas(row['Formatted CAS #'])
-        ext_ref = self._flow_key(flowable, compartment)
+        ext_ref = flowable  # self._flow_key(flowable, compartment)
         u = self._key_to_nsuuid(ext_ref)
         f = self[u]
         if f is None:
-            f = LcFlow(u, external_ref=ext_ref, Name=flowable, Compartment=[compartment], ReferenceQuantity=self._mass,
+            cas = transform_numeric_cas(row['Formatted CAS #'])
+            f = LcFlow(u, external_ref=ext_ref, Name=flowable, ReferenceQuantity=self._mass,
                        CasNumber=cas or '')
             self.add(f)
         return f
@@ -107,9 +107,10 @@ class Traci21Factors(BasicArchive):
                 continue
             if cf == 0.0:
                 continue
-            f = self._create_flow(row, i.Compartment)
+            f = self._create_flow(row)
+            cx = self.tm.add_context(i.Compartment)
             try:
-                self.tm.add_characterization(f['Name'], f.reference_entity, q, cf, context=f.context)
+                self.tm.add_characterization(f['Name'], f.reference_entity, q, cf, context=cx)
             except DuplicateCharacterizationError:
                 continue
 
@@ -131,8 +132,9 @@ class Traci21Factors(BasicArchive):
     """
 
     def _char_from_row_compartment_method(self, row, cm, q, cf):
-        flow = self._create_flow(row, cm)
-        return Characterization(flow, q, value=cf)
+        flow = self._create_flow(row)
+        cx = self.tm.add_context(cm)
+        return self.tm.add_characterization(flow.name, flow.reference_entity, q, cf, context=cx)
 
     def cf_for_method_and_compartment(self, row, method=None, compartment=None):
         for col, val in row.items():

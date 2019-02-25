@@ -5,7 +5,8 @@ import os
 from .quantity_manager import QuantityManager
 from lcatools.archives.term_manager import TermManager  # , Context
 from .quelled_cf import QuelledCF
-# from synonym_dict.example_flowables import Flowable
+
+from synonym_dict.example_flowables import FlowablesDict
 
 
 '''
@@ -35,6 +36,9 @@ class LciaEngine(TermManager):
         if flowables is None:
             flowables = DEFAULT_FLOWABLES
         super(LciaEngine, self).__init__(contexts=contexts, flowables=None, **kwargs)
+
+        # override flowables manager with FlowablesDict-- mainly to upsample CAS numbers for matching
+        self._fm = FlowablesDict(flowables)
 
         self._qm = QuantityManager(source_file=quantities)
 

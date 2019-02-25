@@ -174,7 +174,6 @@ class BasicArchive(EntityStore):
             # characterization infrastructure
             self.tm.add_flow(entity)
 
-
     def __getitem__(self, item):
         """
         Note: this user-friendliness check adds 20% to the execution time of getitem-- so avoid it if possible

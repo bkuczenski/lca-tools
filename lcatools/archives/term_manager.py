@@ -11,8 +11,7 @@ LciaEngine adds a Quantity disambiguation layer, which is inherently useful only
 lists of flowables and contexts that would be redundant if loaded into individual archives.  Someday, it might make
 sense to expose it as a massive, central graph db.
 """
-from synonym_dict.example_flowables import FlowablesDict
-from synonym_dict import MergeError
+from synonym_dict import SynonymDict
 
 from .contexts import ContextManager, Context
 from .clookup import CLookup, SCLookup
@@ -91,7 +90,7 @@ class TermManager(object):
         """
         # the synonym sets
         self._cm = ContextManager(source_file=contexts)
-        self._fm = FlowablesDict(source_file=flowables)
+        self._fm = SynonymDict(source_file=flowables)
 
         # the CF lookup
         _cl_typ = {True: SCLookup,
@@ -162,13 +161,26 @@ class TermManager(object):
         self._context = _c
         self._flowable = context_manager.add_flow(self)
     '''
+    def add_context(self, context):
+        """
+
+        :param context:
+        :return:
+        """
+        if isinstance(context, str):
+            context = (context,)
+        return self._cm.add_compartments(tuple(context))
+
     def _check_context(self, flow):
         """
         The point of this function is simply to log which local context corresponds to the flow's presented context
         :param flow:
         :return:
         """
-        _c = self._cm.add_compartments(flow.context)
+        try:
+            _c = self._cm[flow.context]
+        except KeyError:
+            _c = self._cm.add_compartments(flow.context)
         _c.add_origin(flow.origin)
 
     def _add_flow_terms(self, flow, merge_strategy=None):
@@ -183,7 +195,7 @@ class TermManager(object):
         elif len(fb_map) == 1:  # one existing match
             fb = list(fb_map.keys())[0]
             for term in new_terms:
-                self._fm.add_synonym(term, fb.name)
+                self._fm.add_synonym(term, str(fb))
         else:  # > 2 matches-- invoke merge strategy
             if merge_strategy == 'prune':
                 self._print('\nPruning entry for %s' % flow)
@@ -194,7 +206,7 @@ class TermManager(object):
                     s2 = set()
                 else:
                     fb = self._fm.new_object(*s1, prune=True)
-                    flow.name = fb.name  # flow name in intersection of flow synonyms and new object synonyms
+                    flow.name = str(fb)  # flow name in intersection of flow synonyms and new object synonyms
                     s2 = set(self._fm.synonyms(fb.name))  # known terms synonymous to new object
                 if not self._quiet:
                     for k in sorted(set(s1).union(s2), key=lambda x: x in s2):
@@ -276,8 +288,7 @@ class TermManager(object):
         try:
             cx = self._cm[context]
         except KeyError:
-            print([str(x) for x in self._cm._list_objects()])
-            raise
+            cx = self.add_context(context)
         try:
             fb = self._fm[flowable]
         except KeyError:
@@ -430,6 +441,17 @@ class TermManager(object):
             else:
                 if bool(re.search(search, str(fb), flags=re.IGNORECASE)):
                     yield str(fb)
+
+    def synonyms(self, term):
+        try:
+            c = self._cm[term]
+            return self._cm.synonyms(str(c))
+        except KeyError:
+            try:
+                c = self._fm[term]
+                return self._fm.synonyms(str(c))
+            except KeyError:
+                raise KeyError('Unknown term %s' % term)
 
     '''
     De/Serialization

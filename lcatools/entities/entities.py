@@ -103,13 +103,6 @@ class LcEntity(object):
         """
         return True
 
-    @property
-    def name(self):
-        try:
-            return self._d['Name']
-        except KeyError:
-            return self.external_ref
-
     def map_origin(self, omap, fallback=None):
         """
         This is used to propagate a change in origin semantics. Provide a dict that maps old origins to new origins.

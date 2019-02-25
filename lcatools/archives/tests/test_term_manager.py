@@ -15,16 +15,15 @@ class TermManagerTest(unittest.TestCase):
      - check reverse mapping
      - add conflicting item; prune
      - add conflicting item; merge
-    add_cf-- why does this exist? Either this should call add_characterization or vice versa
-    add_characterization
-
-
+    add_cf-- why does this exist? We do need add_cfs for LciaEngine but not here
+    add_characterization -- really need to specify use cases; use Traci experience to write tests and Ecoinvent LCIA to
+     evaluate their robustness
 
     """
     @classmethod
     def setUpClass(cls):
         cls.tm = TermManager(quiet=False)
-        cls.tm.add_compartments(['emissions', 'emissions to air', 'emissions to urban air'])
+        cls.tm.add_context(['emissions', 'emissions to air', 'emissions to urban air'])
 
     def test_idempotent_context(self):
         """
@@ -40,7 +39,7 @@ class TermManagerTest(unittest.TestCase):
 
     def test_undefined_item(self):
         for k in ('unspecified', 'UNKNOWN', 'Undefined', 'none'):
-            self.assertIs(self.tm[k], self.tm._cm._null_context)
+            self.assertIs(self.tm[k], self.tm._cm._null_entry)
 
     def test_add_flow(self):
         """
@@ -48,3 +47,7 @@ class TermManagerTest(unittest.TestCase):
          * extrac
         :return:
         """
+
+
+if __name__ == '__main__':
+    unittest.main()

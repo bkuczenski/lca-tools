@@ -105,8 +105,9 @@ class SynonymDict(object):
         :return:
         """
         if term in self._d:
-            if check_obj is not None and self._d[term] is not check_obj:
-                self._throw_term_exists(term)
+            if check_obj is not None:
+                if self._d[term] is not check_obj:
+                    self._throw_term_exists(term)
             return self._d[term]
 
     def _add_term(self, term, obj):

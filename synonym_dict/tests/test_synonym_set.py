@@ -46,6 +46,14 @@ class SynonymSetTest(unittest.TestCase):
         self.assertEqual(len(terms), 6)
         self.assertSetEqual(set(terms), {'hello', 'aloha', 'Ni hao', 'bonjour', 'hola', 'Hi'})
 
+    def test_remove_from_child(self):
+        s = SynonymSet('hello', 'aloha', 'Ni hao')
+        t = SynonymSet('bonjour', 'hola', 'hello', 'Hi')
+        s.add_child(t)
+        s.remove_term('hola')
+        self.assertNotIn('hola', t)
+        self.assertNotIn('hola', s)
+
     def test_contains(self):
         s = SynonymSet('hello', 'aloha', 'Ni hao')
         self.assertTrue('aloha' in s)

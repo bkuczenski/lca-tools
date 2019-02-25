@@ -6,7 +6,7 @@ Some flowables which are chemicals or substances have CAS numbers.  Others do no
 """
 
 
-from .cas_number import CasNumber, InvalidCasNumber
+from .cas_number import CasNumber, cas_regex, InvalidCasNumber
 from ..synonym_set import SynonymSet, DuplicateChild
 
 
@@ -17,23 +17,25 @@ class Flowable(SynonymSet):
         :param term:
         :return:
         """
-        try:
-            cas = CasNumber(term)
-        except InvalidCasNumber:
+        if bool(cas_regex.match(str(term))):
+            self.add_child(CasNumber(term))
+        else:
             super(Flowable, self).add_term(str(term))
-            return
-        self.add_child(cas)
 
     def remove_term(self, term):
-        try:
-            cas = CasNumber(term)
-        except InvalidCasNumber:
+        """
+        If term is a CAS number, remove the whole child
+        :param term:
+        :return:
+        """
+        term = str(term)
+        if bool(cas_regex.match(term)):
+            try:
+                self.remove_child(next(c for c in self.children if term in c))
+            except StopIteration:
+                pass
+        else:
             super(Flowable, self).remove_term(str(term))
-            return
-        try:
-            self.remove_child(next(c for c in self.children if str(c) == str(cas)))
-        except StopIteration:
-            pass  # stopgap- we can't remove a CAS multiple times
 
     def add_child(self, other, force=False):
         if isinstance(other, CasNumber):
@@ -43,12 +45,12 @@ class Flowable(SynonymSet):
                 return
         else:
             super(Flowable, self).add_child(other)
-            # raise NotSupported('Flowables are only allowed to have CasNumber children')
 
     @property
     def cas_numbers(self):
         for c in sorted(self._children, key=str):
-            yield str(c)
+            if isinstance(c, CasNumber):
+                yield str(c)
 
     '''
     def set_name(self, name):
@@ -61,16 +63,15 @@ class Flowable(SynonymSet):
 
     def serialize(self):
         """
-        Omits child sets to handle manually
+        Keep just names of child sets, since CAS numbers will auto-replicate on add
         :return:
         """
         d = {
             'name': self._name,
             'synonyms': [t for t in sorted(self._terms) if t != self._name]
         }
-        if len(self._children) > 0:
-            for c in self.cas_numbers:
-                if c == self._name:
-                    continue
-                d['synonyms'].append(c)
+        for c in self.children:
+            if c == self._name:
+                continue
+            d['synonyms'].append(c.name)
         return d

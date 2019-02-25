@@ -128,9 +128,18 @@ class SynonymSet(object):
 
     def remove_term(self, term):
         s = str(term)
+        _rmvd = False
         if s == self._name:
             raise RemoveNameError('%s is currently the name of this set.  Assign a different name before removing.' % s)
-        self._terms.remove(s)
+        if s in self._terms:
+            self._terms.remove(s)
+            _rmvd = True
+        for c in self._children:
+            if s in c:
+                c.remove_term(s)
+                _rmvd = True
+        if _rmvd is False:
+            raise KeyError('Unknown term %s' % term)
 
     def set_name(self, name):
         s = str(name)

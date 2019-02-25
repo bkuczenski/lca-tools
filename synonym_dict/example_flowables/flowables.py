@@ -3,7 +3,6 @@ A JSON-serializable collection of Flowable objects
 """
 
 from .flowable import Flowable
-from .cas_number import CasNumber, InvalidCasNumber
 from ..synonym_dict import SynonymDict
 
 
@@ -21,13 +20,3 @@ class FlowablesDict(SynonymDict):
         """
         for k in self._match_set(args):
             yield k.name
-
-    def __getitem__(self, item):
-        try:
-            return super(FlowablesDict, self).__getitem__(item)
-        except KeyError:
-            try:
-                cas = CasNumber(item)
-            except InvalidCasNumber:
-                raise KeyError(item)
-            return super(FlowablesDict, self).__getitem__(str(cas))

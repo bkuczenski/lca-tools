@@ -183,6 +183,26 @@ class TermManager(object):
             _c = self._cm.add_compartments(flow.context)
         _c.add_origin(flow.origin)
 
+    def _add_pruned_terms(self, name, new_terms):
+        s1 = tuple(new_terms)  # unfamiliar terms
+        if len(s1) == 0:
+            fb = self._fm[name]
+            self._print('No unique terms')
+            s2 = set()
+        else:
+            fb = self._fm.new_object(*s1, prune=True)
+            s2 = set(self._fm.synonyms(fb.name))  # known terms synonymous to new object
+        if not self._quiet:
+            for k in sorted(set(s1).union(s2), key=lambda x: x in s2):
+                if k in s2:
+                    print(k)  # normal
+                else:
+                    print('*%s --> [%s]' % (k, self._fm[k]))  # pruned; maps to
+        return fb
+
+    def _merge_terms(self, dominant, *args):
+        raise NotImplemented
+
     def _add_flow_terms(self, flow, merge_strategy=None):
         merge_strategy = merge_strategy or self._merge_strategy
         fb_map = defaultdict(list)
@@ -192,6 +212,7 @@ class TermManager(object):
         new_terms = fb_map.pop(None, [])
         if len(fb_map) == 0:  # all new terms
             fb = self._fm.new_object(*new_terms)
+            fb.set_name(flow.name)
         elif len(fb_map) == 1:  # one existing match
             fb = list(fb_map.keys())[0]
             for term in new_terms:
@@ -199,26 +220,15 @@ class TermManager(object):
         else:  # > 2 matches-- invoke merge strategy
             if merge_strategy == 'prune':
                 self._print('\nPruning entry for %s' % flow)
-                s1 = tuple(new_terms)  # unfamiliar terms
-                if len(s1) == 0:
-                    fb = self._fm[flow.name]
-                    self._print('No unique terms')
-                    s2 = set()
-                else:
-                    fb = self._fm.new_object(*s1, prune=True)
-                    flow.name = str(fb)  # flow name in intersection of flow synonyms and new object synonyms
-                    s2 = set(self._fm.synonyms(fb.name))  # known terms synonymous to new object
-                if not self._quiet:
-                    for k in sorted(set(s1).union(s2), key=lambda x: x in s2):
-                        if k in s2:
-                            print(k)  # normal
-                        else:
-                            print('*%s --> [%s]' % (k, self._fm[k]))  # pruned; maps to
+                fb = self._add_pruned_terms(flow.name, new_terms)
+                flow.name = str(fb)
 
             elif merge_strategy == 'merge':
                 # this is trivial but
                 self._print('Merging')
-                raise NotImplemented
+                fb = self._merge_terms(*fb_map.keys())
+                for term in new_terms:
+                    self._fm.add_synonym(term, str(fb))
             else:
                 raise ValueError('merge strategy %s' % self._merge_strategy)
         # log the flowables that match the flow
@@ -455,6 +465,22 @@ class TermManager(object):
 
     '''
     De/Serialization
+    
+    Strategy here is that term manager serializations should be totally self-contained and also minimal. 
+    
+    Well, not totally self-contained, since quantities themselves are not going to be messed with.
+    
+    So aside from quantities, which are not going to be messed with, the term manager serialization should be specified
+    by quantity. The routine must determine, for all query quantities listed:
+     (a) the set of reference quantities encountered
+     (b) the set of flowables encountered
+     (c) the set of contexts encountered
+    The reference and query quantities must all be serialized per normal, with others omitted.  The term manager 
+    section should include flowables, contexts, and characterizations, but only the minimal ones required to cover the
+    specified quantities.
+    
+    Then de-serialization is straightforward: after quantities are loaded, simply apply all flowables, contexts, and
+    then characterizations- flows not required!
     '''
     def _serialize_qdict(self, origin, quantity, values=False):
         _ql = self._qaccess(quantity)
@@ -487,6 +513,8 @@ class TermManager(object):
         """
         Argument: the contents of archive['characterizations'], which looks like this (general case):
         'characterizations': {
+          'SynonymSets': [ {flowable}..],
+          'Compartments': [ {context}..],
           query_quantity.external_ref: {
             flowable: {
               context: {
@@ -503,6 +531,8 @@ class TermManager(object):
 
         (single origin case):
         'characterizations': {
+          'SynonymSets': [ {flowable}..],
+          'Compartments': [ {context}..],
           query_quantity.external_ref: {
             flowable: {
               context: {
@@ -518,6 +548,8 @@ class TermManager(object):
         :param j:
         :return:
         """
+        self._cm.load_dict(j)  # automatically pulls out 'Context'
+        self._fm.load_dict(j)
         if origin is None:
             for query_ext_ref, fbs in j.items():
                 query_q = self._canonical_q(query_ext_ref)

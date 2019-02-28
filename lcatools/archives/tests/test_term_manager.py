@@ -1,4 +1,5 @@
 from ..term_manager import TermManager
+from lcatools.entity_refs import FlowInterface
 from ..clookup import Context
 import unittest
 
@@ -47,6 +48,21 @@ class TermManagerTest(unittest.TestCase):
          * extrac
         :return:
         """
+        flow = FlowInterface()
+        for k in ('phosphene', 'phxphn', '1234567'):
+            flow._flowable.add_term(k)
+        flow.origin = 'test.origin'
+        self.tm.add_flow(flow)
+        self.assertEqual(self.tm._fm['1234567'], 'phosphene')
+
+    def test_add_flow_prune(self):
+        pass
+
+    def test_add_flow_merge(self):
+        pass
+
+    def test_add_characterization(self):
+        pass
 
 
 if __name__ == '__main__':

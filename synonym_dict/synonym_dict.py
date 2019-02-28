@@ -36,6 +36,10 @@ class SynonymDict(object):
         syns = j.pop('synonyms', [])
         self.new_object(name, *syns, merge=True)
 
+    def load_dict(self, j):
+        for obj in j[self._entry_group]:
+            self._add_from_dict(obj)
+
     def load(self, filename=None):
         if filename is None:
             if self._filename is None:
@@ -43,11 +47,15 @@ class SynonymDict(object):
             filename = self._filename
         with open(filename, 'r') as fp:
             fbs = json.load(fp)
-        for fb in fbs[self._entry_group]:
-            self._add_from_dict(fb)
+        self.load_dict(fbs)
 
     def _list_objects(self):
         return [f for f in self.objects]
+
+    def serialize(self, objects=None):
+        if objects is None:
+            objects = self._list_objects()
+        return {self._entry_group: [f.serialize() for f in objects]}
 
     def save(self, filename=None):
         """
@@ -57,9 +65,8 @@ class SynonymDict(object):
         """
         if filename is not None:
             self._filename = filename
-        fb = self._list_objects()
         with open(self._filename, 'w') as fp:
-            json.dump({self._entry_group: [f.serialize() for f in fb]}, fp, indent=2)
+            json.dump(self.serialize(), fp, indent=2)
 
     def __init__(self, source_file=None, ignore_case=None):
         """

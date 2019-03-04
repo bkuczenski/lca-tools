@@ -92,6 +92,8 @@ class TermManager(object):
         self._cm = ContextManager(source_file=contexts)
         self._fm = SynonymDict(source_file=flowables)
 
+        self._origins = set()
+
         # the CF lookup
         _cl_typ = {True: SCLookup,
                    False: CLookup}[strict_clookup]
@@ -133,6 +135,9 @@ class TermManager(object):
     def quiet(self):
         return self._quiet
 
+    def add_quantity(self, quantity):
+        self._qaccess(quantity)
+
     '''
     Info Storage
     def set_context(self, context_manager):
@@ -161,6 +166,12 @@ class TermManager(object):
         self._context = _c
         self._flowable = context_manager.add_flow(self)
     '''
+    def _context_and_parents(self, cx):
+        c = self[cx]
+        while c is not None:
+            yield c
+            c = c.parent
+
     def add_context(self, context):
         """
 
@@ -247,6 +258,7 @@ class TermManager(object):
         :param merge_strategy: overrule default merge strategy
         :return: the Flowable object to which the flow's terms have been added
         """
+        self._qaccess(flow.reference_entity)  # ensure exists
         self._check_context(flow)
         self._add_flow_terms(flow, merge_strategy=merge_strategy)
 
@@ -312,6 +324,7 @@ class TermManager(object):
                 new_cf.update_values(**value)
             else:
                 new_cf.add_value(value, location=location)
+            self._origins.add(origin)
 
             # add our new CF to the lookup tree
             self._qaccess(query_quantity)[fb].add(new_cf)
@@ -349,7 +362,10 @@ class TermManager(object):
         '''
         if quantity in self._q_dict:
             return quantity
-        raise UnknownQuantityRef(quantity)
+        try:
+            return next(q for q in self._q_dict.keys() if q.external_ref == quantity or q.uuid == quantity)
+        except StopIteration:
+            raise UnknownQuantityRef(quantity)
 
     def _canonical_q_ref(self, quantity):
         return self._canonical_q(quantity).external_ref
@@ -486,7 +502,7 @@ class TermManager(object):
         _ql = self._qaccess(quantity)
         return {str(fb): cl.serialize_for_origin(origin, values=values) for fb, cl in _ql.items()}
 
-    def serialize_factors(self, origin, *quantities, values=False):
+    def _serialize_factors(self, origin, *quantities, values=False):
         """
         This does not exactly work because, if done from an lcia-engine the result will not be closed to the origin
         specified.  Anyway, in the single-origin case this should be the default.
@@ -509,12 +525,65 @@ class TermManager(object):
                 j[self._canonical_q_ref(q)] = _sq
         return j
 
-    def _add_from_json(self, j, origin=None):
+    def serialize(self, origin, *quantities, values=False):
+        """
+
+        :param origin:
+        :param quantities:
+        :param values:
+        :return: 3-tuple:
+         - serialized term manager as dict,
+         - set of query quantity external refs,
+         - set of reference quantity uuids
+           == not sure WHY UUIDs rather than external refs, but that is what characterizations.py gives us
+        """
+        qqs = set()  # query quantities to serialize
+        rqs = set()  # reference quantities to serialize
+        fbs = set()  # flowables to serialize
+        cxs = set()  # contexts to serialize
+
+        # serialize factors themselves
+        j = {'Characterizations': self._serialize_factors(origin, *quantities, values=values)}
+
+        # identify terms + qs
+        for qq, factors in j['Characterizations'].items():
+            qqs.add(qq)
+            for fb, char in factors.items():
+                fbs.add(fb)
+                for cx, cf in char.items():
+                    for c in self._context_and_parents(cx):
+                        cxs.add(str(c))
+                    try:
+                        rqs.add(cf['ref_quantity'])
+                    except KeyError:
+                        print('%s\n%s' % (cx, cf))
+                        raise
+
+        # add flowables and contexts
+        j.update(self._fm.serialize(obj for obj in self._fm.objects if str(obj) in fbs))
+        j.update(self._cm.serialize(obj for obj in self._cm.objects if str(obj) in cxs))
+
+        return j, qqs, rqs
+
+    def add_from_json(self, j, q_map, origin=None):
+        """
+
+        :param j:
+        :param q_map: a dict whose keys are external_refs and uuids, and whose values are quantities
+        :param origin:
+        :return:
+        """
+        self._cm.load_dict(j)  # automatically pulls out 'Context'
+        self._fm.load_dict(j)
+        self._add_from_json(j['Characterizations'], q_map, origin)
+
+    def _add_from_json(self, j, q_map, origin):
         """
         Argument: the contents of archive['characterizations'], which looks like this (general case):
-        'characterizations': {
+        'termManager': {
           'SynonymSets': [ {flowable}..],
           'Compartments': [ {context}..],
+          'Characterizations': {
           query_quantity.external_ref: {
             flowable: {
               context: {
@@ -548,27 +617,20 @@ class TermManager(object):
         :param j:
         :return:
         """
-        self._cm.load_dict(j)  # automatically pulls out 'Context'
-        self._fm.load_dict(j)
-        if origin is None:
-            for query_ext_ref, fbs in j.items():
-                query_q = self._canonical_q(query_ext_ref)
-                for fb, cxs in fbs.items():
-                    flowable = self._fm[fb]
+        for query_ext_ref, fbs in j.items():
+            query_q = q_map[query_ext_ref]
+            for fb, cxs in fbs.items():
+                flowable = self._fm[fb]
+                if origin is None:
                     for cx, cfs in cxs.items():
                         context = self._cm[cx]
                         for org, spec in cfs.items():
-                            origin = org
-                            ref_q = self._canonical_q(spec['ref_quantity'])
+                            ref_q = q_map[spec['ref_quantity']]
                             self.add_characterization(flowable, ref_q, query_q, spec['value'], context=context,
-                                                      origin=origin)
-        else:
-            for query_ext_ref, fbs in j.items():
-                query_q = self._canonical_q(query_ext_ref)
-                for fb, cxs in fbs.items():
-                    flowable = self._fm[fb]
+                                                      origin=org)
+                else:
                     for cx, spec in cxs.items():
                         context = self._cm[cx]
-                        ref_q = self._canonical_q(spec['ref_quantity'])
+                        ref_q = q_map[spec['ref_quantity']]
                         self.add_characterization(flowable, ref_q, query_q, spec['value'], context=context,
                                                   origin=origin)

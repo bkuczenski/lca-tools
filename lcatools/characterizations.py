@@ -228,13 +228,13 @@ class Characterization(object):
 
     def serialize(self, values=False, concise=False):
         j = {
-            'entityType': self.entity_type,
             'ref_quantity': self.ref_quantity.uuid,
         }
         if self.ref_quantity is self.quantity:
             j['isReference'] = True
         else:
             if not concise:
+                j['entityType'] = self.entity_type,
                 j['query_quantity'] = self.quantity.uuid,
                 j['context'] = str(self.context)
             if values:

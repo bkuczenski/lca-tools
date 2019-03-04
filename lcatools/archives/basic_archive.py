@@ -170,7 +170,9 @@ class BasicArchive(EntityStore):
             raise ContextCollision('Entity external_ref %s is already known as a context identifier' %
                                    entity.external_ref)
         self._add(entity, entity.uuid)
-        if entity.entity_type == 'flow':
+        if entity.entity_type == 'quantity':
+            self.tm.add_quantity(entity)
+        elif entity.entity_type == 'flow':
             # characterization infrastructure
             self.tm.add_flow(entity)
 
@@ -305,6 +307,7 @@ class BasicArchive(EntityStore):
             entity.set_external_ref(ext_ref)
         else:
             print('## skipping bad external ref %s for uuid %s' % (ext_ref, uid))
+        return entity
 
     def load_from_dict(self, j, _check=True, jsonfile=None):
         """
@@ -335,9 +338,15 @@ class BasicArchive(EntityStore):
         if jsonfile is not None:
             self._add_name(self.ref, jsonfile, rewrite=True)
 
+        q_map = dict()
         if 'quantities' in j:
             for e in j['quantities']:
-                self.entity_from_json(e)
+                q = self.entity_from_json(e)
+                q_map[q.uuid] = q
+                q_map[q.external_ref] = q
+        if 'termManager' in j:
+            self.tm.add_from_json(j['termManager'], q_map, self.ref)
+
         if 'flows' in j:
             for e in j['flows']:
                 self.entity_from_json(e)
@@ -410,7 +419,7 @@ class BasicArchive(EntityStore):
                              for f in self.entities_by_type('flow')],
                             key=lambda x: x['entityId'])
         if characterizations:
-            j['characterizations'] = self.tm.serialize_factors(values=values)
+            j['termManager'], _, _ = self.tm.serialize(self.ref, values=values)
         j['quantities'] = sorted([q.serialize(domesticate=domesticate, drop_fields=self._drop_fields['quantity'])
                                   for q in self.entities_by_type('quantity')],
                                  key=lambda x: x['entityId'])
@@ -418,24 +427,15 @@ class BasicArchive(EntityStore):
 
     def export_quantity(self, filename, quantity, domesticate=False, values=True, gzip=False):
         j = super(BasicArchive, self).serialize()
-        j['characterizations'] = dict()
-        _q_seen = set()
-        _queue = [self.tm.get_canonical(quantity)]
-        while len(_queue) > 0:
-            _q = _queue.pop(0)
-            print('Exporting %s' % _q)
-            _q_seen.add(_q)
-            cs = self.tm.serialize_factors(_q, values=values)
-            for qq in cs.values():
-                for cx in qq.values():
-                    for spec in cx.values():
-                        rq = self.tm.get_canonical(spec['ref_quantity'])
-                        if rq not in _q_seen and rq not in _queue:
-                            _queue.append(rq)
-            j['characterizations'].update(cs)
+        j['termManager'], qq, rq = self.tm.serialize(self.ref, quantity, values=values)
+        qs = [self[u] for u in rq]
+        for ref in qq:
+            q = self[ref]
+            if q not in qs:
+                qs.append(q)
 
         j['quantities'] = sorted([q.serialize(domesticate=domesticate)
-                                  for q in _q_seen],
+                                  for q in qs],
                                  key=lambda x: x['entityId'])
         to_json(j, filename, gzip=gzip)
 

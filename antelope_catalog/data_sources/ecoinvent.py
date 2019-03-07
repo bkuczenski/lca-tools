@@ -113,8 +113,8 @@ class EcoinventConfig(DataCollection):
         for v in self.ecoinvent_versions:
             if v.lower() == 'lcia':
                 lcia_path = os.path.join(data_root, v)
-                for ver, info in EI_LCIA_SPREADSHEETS.items():
-                    if os.path.exists(os.path.join(lcia_path, info.filename)):
+                for ver, filename in EI_LCIA_SPREADSHEETS.items():
+                    if os.path.exists(os.path.join(lcia_path, filename)):
                         yield EcoinventLciaConfig(lcia_path, version=ver)
             else:
                 for m in ECOINVENT_SYS_MODELS:

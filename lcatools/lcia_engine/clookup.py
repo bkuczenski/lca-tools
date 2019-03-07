@@ -24,8 +24,7 @@ The dream would be to design a graph database that held all of these parameters 
 that applied to a given query-- that graph database would replace the current Term Manager and everything else under
 its hood. But first we will learn to walk...
 """
-from .contexts import Context
-from lcatools.characterizations import Characterization
+from lcatools.archives.contexts import Context
 from collections import defaultdict
 
 
@@ -68,8 +67,6 @@ class CLookup(object):
                 raise QuantityMismatch('Inbound: %s\nCurrent: %s' % (cf.quantity, self._qid))
 
     def add(self, value):
-        if not isinstance(value, Characterization):
-            raise TypeError('Value is not a Characterization')
         key = value.context
         if isinstance(key, Context):
             self._check_qty(value)
@@ -91,9 +88,9 @@ class CLookup(object):
             for cf in cfs:
                 yield cf
 
-    def _filter_results(self, item, origin):
+    def _context_origin(self, item, origin):
         if origin is None:
-            return self.__getitem__(item)
+            return list(self.__getitem__(item))
         else:
             return [k for k in self.__getitem__(item) if k.origin == origin]
 
@@ -117,7 +114,7 @@ class CLookup(object):
 
         def found(res):
             return len(res) > 0 and return_first
-        results = self._filter_results(item, origin)
+        results = self._context_origin(item, origin)
         if found(results):
             return results
 
@@ -125,20 +122,20 @@ class CLookup(object):
             for s in item.self_and_subcompartments:  # note: this is depth first
                 if s is item:
                     continue  # skip self, just recurse subcompartments
-                results += self._filter_results(s, origin)
+                results += self._context_origin(s, origin)
                 if found(results):
                     return results
 
         if dist > 1:
             item = item.parent
-            results += self._filter_results(item, origin)
+            results += self._context_origin(item, origin)
             if found(results):
                 return results
 
         if dist > 2 and item is not None:
             while item.parent is not None:
                 item = item.parent
-                results += self._filter_results(item, origin)
+                results += self._context_origin(item, origin)
                 if found(results):
                     return results
 

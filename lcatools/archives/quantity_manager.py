@@ -108,11 +108,11 @@ class QuantityManager(SynonymDict):
         name = j['name']
         syns = j.pop('synonyms', [])
         unit = j.pop('unit', None)
-        self.new_object(name, *syns, unit=unit, merge=False)
+        self.new_entry(name, *syns, unit=unit, merge=False)
 
     def add_quantity(self, quantity):
         new_q = QuantitySynonyms.new(quantity)
         try:
-            self.add_or_update_object(new_q, merge=True, create_child=True)
+            self.add_or_update_entry(new_q, merge=True, create_child=True)
         except QuantityUnitMismatch:
-            self.add_or_update_object(new_q, merge=False, prune=True)
+            self.add_or_update_entry(new_q, merge=False, prune=True)

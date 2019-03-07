@@ -14,12 +14,16 @@ sense to expose it as a massive, central graph db.
 from synonym_dict import SynonymDict
 
 from .contexts import ContextManager, Context
-from .clookup import CLookup, SCLookup
+from .quantity_manager import QuantityManager
 
 from lcatools.characterizations import Characterization
 
 
-class UnknownQuantityRef(Exception):
+class FactorCollision(Exception):
+    pass
+
+
+class QuantityConflict(Exception):
     pass
 
 
@@ -77,31 +81,25 @@ class TermManager(object):
 
     The LciaEngine adds another synonym set that maps quantity terms to canonical quantity entities.
     """
-    def __init__(self, contexts=None, flowables=None, merge_strategy='prune', quiet=True,
-                 strict_clookup=True):
+    def __init__(self, contexts=None, flowables=None, quantities=None, merge_strategy='prune', quiet=True):
         """
         :param contexts: optional filename to initialize CompartmentManager
         :param flowables: optional filename to initialize FlowablesDict
         :param merge_strategy:
            'prune': - on conflict, trim off known synonyms and add the remaining as a new flowable
         :param quiet:
-        :param strict_clookup: [True] whether to allow multiple CFs for each quantity / flowable / context tuple
 
         """
         # the synonym sets
         self._cm = ContextManager(source_file=contexts)
         self._fm = SynonymDict(source_file=flowables)
+        self._qm = QuantityManager(source_file=quantities)
 
-        self._origins = set()
-
-        # the CF lookup
-        _cl_typ = {True: SCLookup,
-                   False: CLookup}[strict_clookup]
-        self._q_dict = defaultdict(lambda: defaultdict(_cl_typ))  # this is BEYOND THE PALE...
+        self._q_dict = dict()  # used to map quantities to clookup objects of the above type
 
         # the reverse mappings
         self._flow_map = defaultdict(set)
-        self._fq_map = defaultdict(set)  # to enable listing of all cfs by flowable
+        self._fq_map = dict()  # to enable listing of all cfs by flowable
 
         # config
         self._merge_strategy = merge_strategy
@@ -136,7 +134,15 @@ class TermManager(object):
         return self._quiet
 
     def add_quantity(self, quantity):
-        self._qaccess(quantity)
+        if quantity.entity_type != 'quantity':
+            raise TypeError('Must be quantity type')
+        if quantity.uuid in self._qm:
+            ex = self._qm[quantity.uuid]
+            if not ex is quantity:
+                raise QuantityConflict('Incoming %s does not match existing\n%s' % (ex, quantity))
+        else:
+            self._qm.add_quantity(quantity)
+        return self._canonical_q(quantity)
 
     '''
     Info Storage
@@ -194,6 +200,12 @@ class TermManager(object):
             _c = self._cm.add_compartments(flow.context)
         _c.add_origin(flow.origin)
 
+    def _create_flowable(self, name, *syns, prune=False):
+        fb = self._fm.new_entry(name, *syns, prune=prune).object
+        if fb not in self._fq_map:
+            self._fq_map[fb] = set()
+        return fb
+
     def _add_pruned_terms(self, name, new_terms):
         s1 = tuple(new_terms)  # unfamiliar terms
         if len(s1) == 0:
@@ -201,7 +213,7 @@ class TermManager(object):
             self._print('No unique terms')
             s2 = set()
         else:
-            fb = self._fm.new_object(*s1, prune=True)
+            fb = self._create_flowable(*s1, prune=True)
             s2 = set(self._fm.synonyms(fb.name))  # known terms synonymous to new object
         if not self._quiet:
             for k in sorted(set(s1).union(s2), key=lambda x: x in s2):
@@ -215,6 +227,13 @@ class TermManager(object):
         raise NotImplemented
 
     def _add_flow_terms(self, flow, merge_strategy=None):
+        """
+        This process takes in an inbound FlowInterface instance, identifies the flowable(s) that match its terms, and
+        returns the local flowable that matches the flow's name [sets the flow's name on prune]
+        :param flow:
+        :param merge_strategy:
+        :return:
+        """
         merge_strategy = merge_strategy or self._merge_strategy
         fb_map = defaultdict(list)
         for syn in flow.synonyms:
@@ -222,8 +241,9 @@ class TermManager(object):
             fb_map[self._fm.get(syn)].append(syn)
         new_terms = fb_map.pop(None, [])
         if len(fb_map) == 0:  # all new terms
-            fb = self._fm.new_object(*new_terms)
-            fb.set_name(flow.name)
+            if len(new_terms) == 0:
+                raise AttributeError('Flow appears to have no terms: %s' % flow)
+            fb = self._create_flowable(flow.name, *new_terms)
         elif len(fb_map) == 1:  # one existing match
             fb = list(fb_map.keys())[0]
             for term in new_terms:
@@ -250,42 +270,32 @@ class TermManager(object):
 
     def add_flow(self, flow, merge_strategy='prune'):
         """
-        We take a flow from outside and add its terminology. That means harmonizing its context with local context
-        (assigning context if none is found); and adding flowable terms to the flowables list and mapping flowable
-        to flow (assigning flowable if none is found)
+        We take a flow from outside and add its known terms. That means
+         - adding flow's reference quantity
+         - merging any context with the local context tree;
+         - adding flowable terms to the flowables list;
+         - mapping flow to all flowables (assigning flowable if none is found)
 
         :param flow:
         :param merge_strategy: overrule default merge strategy
         :return: the Flowable object to which the flow's terms have been added
         """
-        self._qaccess(flow.reference_entity)  # ensure exists
+        self.add_quantity(flow.reference_entity)  # ensure exists
         self._check_context(flow)
         self._add_flow_terms(flow, merge_strategy=merge_strategy)
 
-    '''# I can't figure out what this function is here for
-    def add_cf(self, quantity, cf):
-        if cf.quantity is cf.flow.reference_entity:
-            return
-        self.add_flow(cf.flow, merge_strategy='prune')  # don't want to alter existing flowables
-        fbs = self._fm.matching_flowables(*_flowable_terms(cf.flow))
-        for fb in fbs:
-            self.qlookup(quantity)[fb].add(cf)  # that some cray shit
-            self._fq_map[fb].add(self._canonical_q(quantity))
-    '''
-
-    def _find_exact_cf(self, quantity, flowable, context, origin):
-        try:
-            cfs = self.qlookup(quantity)[flowable].find(context, dist=0, origin=origin)
-        except UnknownQuantityRef:
-            return None
-        if len(cfs) > 0:
-            if len(cfs) > 1:  # can only happen if quantity's origin is None ??
-                try:
-                    return next(cf for cf in cfs if cf.origin is None)
-                except StopIteration:
-                    # this should never happen
-                    return next(cf for cf in cfs if cf.origin == quantity.origin)
-            return list(cfs)[0]
+    def _find_exact_cf(self, qq, fb, cx, origin):
+        """
+        origin not used in this version
+        :param qq:
+        :param fb:
+        :param cx:
+        :param origin:
+        :return:
+        """
+        clookup = self._qlookup(qq, fb)
+        if cx in clookup:
+            return clookup[cx]
         return None
 
     def add_characterization(self, flowable, ref_quantity, query_quantity, value, context=None, origin=None,
@@ -314,21 +324,25 @@ class TermManager(object):
         try:
             fb = self._fm[flowable]
         except KeyError:
-            fb = self._fm.new_object(flowable)
+            fb = self._create_flowable(flowable)
 
-        cf = self._find_exact_cf(query_quantity, fb, cx, origin)
+        try:
+            qq = self._canonical_q(query_quantity)
+        except KeyError:
+            qq = self.add_quantity(query_quantity)
+
+        cf = self._find_exact_cf(qq, fb, cx, origin)
+
         if cf is None:
             # create our new Characterization with the supplied info
-            new_cf = Characterization(fb, ref_quantity, query_quantity, context=cx, origin=origin)
+            new_cf = Characterization(fb, ref_quantity, qq, context=cx, origin=origin)
             if isinstance(value, dict):
                 new_cf.update_values(**value)
             else:
                 new_cf.add_value(value, location=location)
-            self._origins.add(origin)
 
             # add our new CF to the lookup tree
-            self._qaccess(query_quantity)[fb].add(new_cf)
-            self._fq_map[fb].add(self._canonical_q(query_quantity))
+            self._qassign(qq, fb, new_cf)
 
             return new_cf
         else:
@@ -345,14 +359,14 @@ class TermManager(object):
     def get_canonical(self, quantity):
         try:
             return self._canonical_q(quantity)
-        except UnknownQuantityRef:
+        except KeyError:
             return None
 
     def _canonical_q(self, quantity):
         """
         override here
-        :param quantity:
-        :return:
+        :param quantity: a quantity entity or descriptor
+        :return: a canonical quantity or raise KeyError
         """
         '''
         try:
@@ -360,95 +374,131 @@ class TermManager(object):
         except StopIteration:
             raise UnknownQuantityRef(quantity)
         '''
-        if quantity in self._q_dict:
-            return quantity
-        try:
-            return next(q for q in self._q_dict.keys() if q.external_ref == quantity or q.uuid == quantity)
-        except StopIteration:
-            raise UnknownQuantityRef(quantity)
+        if isinstance(quantity, str):
+            return self._qm[quantity]
+        return self._qm[quantity.external_ref]
 
     def _canonical_q_ref(self, quantity):
         return self._canonical_q(quantity).external_ref
 
-    def qlookup(self, quantity):
+    def _qlookup(self, qq, fb):
         """
-        Returns a defaultdict that maps flowable to CLookup or SCLookup object.  raises UnknownQuantityRef if not known
-        :param quantity:
-        :return:
-        """
-        return self._q_dict[self._canonical_q(quantity)]
-
-    def _qaccess(self, quantity):
-        """
-        Suppresses the error, for use when new data is being assigned
-        :param quantity:
+        Returns a mapping from context to CF
+        :param qq: a canonical quantity
+        :param fb: a canonical flowable
         :return:
         """
         try:
-            return self.qlookup(quantity)
-        except UnknownQuantityRef:
-            if quantity.entity_type == 'quantity':
-                return self._q_dict[quantity]
-            else:
-                raise TypeError('Not a valid quantity: %s' % quantity)
+            return self._q_dict[qq][fb]
+        except KeyError:
+            return dict()
 
-    def _factors_for_flowable(self, fb, quantity, context, dist):
+    def _new_clookup(self):
+        return dict()
+
+    def _qaccess(self, qq, fb=None):
         """
-        detach lookup for cleanness
-        :param fb:
-        :param quantity:
-        :param context:
-        :param dist:
+        creates an entry if none exists
+        :param qq: a canonical quantity
+        :param fb [None]: a canonical flowable. If None, return the quantity dict
         :return:
         """
-        if context is None:
-            for cf in self.qlookup(quantity)[fb].cfs():
-                yield cf
+        if qq in self._q_dict:
+            qd = self._q_dict[qq]
         else:
-            comp = self[context]
-            for cf in self.qlookup(quantity)[fb].find(comp, dist=dist):
-                yield cf
+            qd = dict()
+            self._q_dict[qq] = qd
+        if fb is None:
+            return qd
+        elif fb in qd:
+            return qd[fb]
+        else:
+            cl = self._new_clookup()
+            qd[fb] = cl
+            return cl
 
-    def factors_for_flowable(self, flowable, quantity=None, context=None, dist=0):
+    @staticmethod
+    def _store_cf(cl, new_cf):
+        """
+        Assigns the cf to the mapping; does subclass-specific collision checking
+        :param cl:
+        :param new_cf:
+        :return:
+        """
+        if new_cf.context in cl:
+            raise FactorCollision
+        cl[new_cf.context] = new_cf
+
+    def _qassign(self, qq, fb, new_cf):
+        """
+        Assigns the new_cf to the canonical quantity and flowable, taking context and origin from new_cf
+        :param qq: a canonical quantity
+        :param fb: a canonical flowable
+        :param new_cf: a characterization, having a canonical context
+        :return:
+        """
+        cl = self._qaccess(qq, fb)
+        self._store_cf(cl, new_cf)
+        self._fq_map[fb].add(qq)
+
+    def _factors_for_flowable(self, fb, qq, cx, **kwargs):
+        """
+        detach lookup for cleanness. canonical everything
+        :param fb:
+        :param qq:
+        :param cx:
+        :param kwargs: used in subclasses
+        :return:
+        """
+        cl = self._qlookup(qq, fb)
+        if cx is None:
+            for v in cl.values():
+                yield v
+        else:
+            if cx in cl:
+                yield cl[cx]
+
+    def factors_for_flowable(self, flowable, quantity=None, context=None, **kwargs):
         """
         This is the method that actually performs the lookup.  Other methods are wrappers for this
         :param flowable:
-        :param quantity:
-        :param context:
-        :param dist: [0] only used if compartment is specified. by default report only exact matches.
+        :param quantity: a quantity known to the quantity manager
+        :param context: [None] default provide all contexts; must explicitly provide 'none' to filter by null context
         :return:
         """
         try:
             fb = self._fm[flowable]
+            if context is None:
+                cx = None
+            else:
+                cx = self._cm[context]
         except KeyError:
             return
         if quantity is None:
-            for q_ref in self._fq_map[fb]:
-                for cf in self.factors_for_flowable(fb, quantity=q_ref, context=context, dist=dist):
+            for qq in self._fq_map[fb]:
+                for cf in self._factors_for_flowable(fb, qq, cx, **kwargs):
                     yield cf
         else:
-            try:
-                for cf in self._factors_for_flowable(fb, quantity, context, dist):
-                    yield cf
-            except UnknownQuantityRef:
-                for k in ():
-                    yield k
+            qq = self._canonical_q(quantity)
+            for cf in self._factors_for_flowable(fb, qq, cx, **kwargs):
+                yield cf
 
-    def factors_for_quantity(self, quantity, flowable=None, context=None, dist=0):
+    def factors_for_quantity(self, quantity, flowable=None, context=None, **kwargs):
         """
+        param dist [0] only used if compartment is specified. by default report only exact matches.
 
         :param quantity:
         :param flowable:
         :param context:
-        :param dist: [0] only used if compartment is specified. by default report only exact matches.
         :return:
         """
+        qq = self._canonical_q(quantity)
         if flowable is not None:
-            for k in self.factors_for_flowable(flowable, quantity=quantity, context=context, dist=dist):
+            for k in self.factors_for_flowable(flowable, quantity=qq, context=context, **kwargs):
                 yield k
         else:
-            for f in self._qaccess(quantity).keys():
-                for k in self.factors_for_flowable(f, quantity=quantity, context=context, dist=dist):
+            for f in self._qaccess(qq).keys():
+                for k in self.factors_for_flowable(f, quantity=qq, context=context, **kwargs):
                     yield k
 
     def get_flowable(self, term):
@@ -468,6 +518,21 @@ class TermManager(object):
                 if bool(re.search(search, str(fb), flags=re.IGNORECASE)):
                     yield str(fb)
 
+    def unmatched_flowables(self, flowables):
+        """
+        Given an iterable of flowable strings, return a list of entries that were not recognized as synonyms to known
+        flowables
+        :param flowables:
+        :return:
+        """
+        unknown = []
+        for fb in flowables:
+            try:
+                self._fm[fb]
+            except KeyError:
+                unknown.append(fb)
+        return unknown
+
     def synonyms(self, term):
         try:
             c = self._cm[term]
@@ -478,6 +543,17 @@ class TermManager(object):
                 return self._fm.synonyms(str(c))
             except KeyError:
                 raise KeyError('Unknown term %s' % term)
+
+    def contexts(self, search=None, origin=None):
+        for cx in self._cm.objects:
+            if origin is not None:
+                if not cx.has_origin(origin):
+                    continue
+            if search is None:
+                yield cx
+            else:
+                if cx.contains_string(search):
+                    yield cx
 
     '''
     De/Serialization
@@ -500,7 +576,9 @@ class TermManager(object):
     '''
     def _serialize_qdict(self, origin, quantity, values=False):
         _ql = self._qaccess(quantity)
-        return {str(fb): cl.serialize_for_origin(origin, values=values) for fb, cl in _ql.items()}
+        return {str(fb):
+                    {str(c): cf.serialize(values=values, concise=True) for c, cf in cl.items() if cf.origin == origin}
+                for fb, cl in _ql.items()}
 
     def _serialize_factors(self, origin, *quantities, values=False):
         """
@@ -515,9 +593,11 @@ class TermManager(object):
         :return:
         """
         if len(quantities) == 0:
-            quantities = self._q_dict.keys()
+            qqs = self._q_dict.keys()
+        else:
+            qqs = [self._canonical_q(q) for q in quantities]
         j = dict()
-        for q in quantities:
+        for q in qqs:
             if q.origin != origin:
                 continue
             _sq = self._serialize_qdict(origin, q, values=values)
@@ -573,8 +653,11 @@ class TermManager(object):
         :param origin:
         :return:
         """
-        self._cm.load_dict(j)  # automatically pulls out 'Context'
+        self._cm.load_dict(j)  # automatically pulls out 'Compartments'
         self._fm.load_dict(j)
+        for f in self._fm.objects:
+            if f not in self._fq_map:
+                self._fq_map[f] = set()
         self._add_from_json(j['Characterizations'], q_map, origin)
 
     def _add_from_json(self, j, q_map, origin):
@@ -620,17 +703,14 @@ class TermManager(object):
         for query_ext_ref, fbs in j.items():
             query_q = q_map[query_ext_ref]
             for fb, cxs in fbs.items():
-                flowable = self._fm[fb]
                 if origin is None:
                     for cx, cfs in cxs.items():
-                        context = self._cm[cx]
                         for org, spec in cfs.items():
                             ref_q = q_map[spec['ref_quantity']]
-                            self.add_characterization(flowable, ref_q, query_q, spec['value'], context=context,
+                            self.add_characterization(fb, ref_q, query_q, spec['value'], context=cx,
                                                       origin=org)
                 else:
                     for cx, spec in cxs.items():
-                        context = self._cm[cx]
                         ref_q = q_map[spec['ref_quantity']]
-                        self.add_characterization(flowable, ref_q, query_q, spec['value'], context=context,
+                        self.add_characterization(fb, ref_q, query_q, spec['value'], context=cx,
                                                   origin=origin)

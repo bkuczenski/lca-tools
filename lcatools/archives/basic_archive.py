@@ -115,7 +115,7 @@ class BasicArchive(EntityStore):
 
     def __init__(self, *args, contexts=None, flowables=None, term_manager=None, **kwargs):
         super(BasicArchive, self).__init__(*args, **kwargs)
-        self._tm = term_manager or TermManager(contexts=contexts, flowables=flowables, strict_clookup=True)
+        self._tm = term_manager or TermManager(contexts=contexts, flowables=flowables)
 
     @property
     def tm(self):
@@ -185,12 +185,12 @@ class BasicArchive(EntityStore):
         :param item:
         :return:
         """
-        cx = self.tm.__getitem__(item)
-        if cx is None:
-            if hasattr(item, 'external_ref'):  # TODO: should this be uuid?
-                item = item.external_ref
-            return super(BasicArchive, self).__getitem__(item)
-        return cx
+        # cx = self.tm.__getitem__(item)
+        # if cx is None:
+        if hasattr(item, 'external_ref'):  # TODO: should this be uuid?
+            item = item.external_ref
+        return super(BasicArchive, self).__getitem__(item)
+        # return cx
 
     def _add_children(self, entity):
         if entity.entity_type == 'quantity':

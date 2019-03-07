@@ -1,7 +1,6 @@
-from ..clookup import CLookup, SCLookup, FactorCollision, QuantityMismatch, DuplicateOrigin
+from ..clookup import CLookup, SCLookup, FactorCollision, QuantityMismatch, DuplicateOrigin, Context
 from ...entities import LcFlow, LcQuantity
 from ...characterizations import Characterization
-from synonym_dict.example_compartments import Context
 import unittest
 
 
@@ -58,15 +57,15 @@ class SingleCfTest(unittest.TestCase):
         g = CLookup()
         g.add(cfua)
         g.add(cfra)
-        self.assertSetEqual(g.find(cx_air, dist=0), set())
+        self.assertEqual(len(g.find(cx_air, dist=0)), 0)
         self.assertSetEqual({x.value for x in g.find(cx_air, dist=1, return_first=False)}, {51, 58})
 
     def test_find_2(self):
         g = CLookup()
         g.add(cg)
-        self.assertSetEqual(g.find(cx_rg, dist=0), set())
-        self.assertSetEqual(g.find(cx_rg, dist=1), set())
-        self.assertSetEqual(g.find(cx_rg, dist=2), {cg})
+        self.assertEqual(len(g.find(cx_rg, dist=0)), 0)
+        self.assertEqual(len(g.find(cx_rg, dist=1)), 0)
+        self.assertListEqual(g.find(cx_rg, dist=2), [cg])
 
 
 if __name__ == '__main__':

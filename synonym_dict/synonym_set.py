@@ -155,10 +155,13 @@ class SynonymSet(object):
         Note that this omits terms in child sets -- by design???
         :return:
         """
-        return {
+        j = {
             'name': self._name,
             'synonyms': [t for t in sorted(self.terms) if t != self._name]
         }
+        if len(j['synonyms']) == 0:
+            j.pop('synonyms')
+        return j
 
     def __str__(self):
         return self._name

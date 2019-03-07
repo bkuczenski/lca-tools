@@ -64,8 +64,8 @@ class FlowablesTest(unittest.TestCase):
 
     def test_load_preserve_child(self):
         g = FlowablesDict()
-        n = g.new_object('nitrous oxide')
-        o = g.new_object('N2O', 'nitrous oxide', create_child=True)
+        n = g.new_entry('nitrous oxide')
+        o = g.new_entry('N2O', 'nitrous oxide', create_child=True)
         self.assertTrue(n.has_child(o))
         j = json.loads(flowables_json)
         for fb in j['Flowables']:
@@ -78,7 +78,7 @@ class FlowablesTest(unittest.TestCase):
         self.assertEqual(self.f[124389], 'carbon dioxide')
 
     def test_add_set(self):
-        self.f.new_object('methane, biogenic', 'ch4', '74-82-8')
+        self.f.new_entry('methane, biogenic', 'ch4', '74-82-8')
         self.assertEqual(self.f.get('000074-82-8'), 'methane')
 
     def test_return_type(self):
@@ -94,7 +94,7 @@ class FlowablesTest(unittest.TestCase):
 
     def test_serialize_deserialize(self):
         self.assertIn('124389', self.f)
-        j = {self.f._entry_group: [f.serialize() for f in self.f._list_objects()]}
+        j = {self.f._entry_group: [f.serialize() for f in self.f._list_entries()]}
         self.assertEqual(len(j[self.f._entry_group]), len(self.f))
         co2 = next(f for f in j[self.f._entry_group] if f['name'] == 'carbon dioxide')
         self.assertListEqual(co2['synonyms'], ['CO2', '124-38-9'])

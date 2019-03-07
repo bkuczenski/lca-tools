@@ -34,8 +34,8 @@ class CompartmentManager(SynonymDict):
 
     def __init__(self, source_file=None):
         super(CompartmentManager, self).__init__()
-        self.new_object('Resources', sense='source')
-        self.new_object('Emissions', sense='sink')
+        self.new_entry('Resources', sense='source')
+        self.new_entry('Emissions', sense='sink')
         self.load(source_file)
 
     def _add_from_dict(self, j):
@@ -48,9 +48,24 @@ class CompartmentManager(SynonymDict):
         name = j.pop('name')
         syns = j.pop('synonyms', [])
         parent = j.pop('parent', None)
-        self.new_object(name, *syns, parent=parent, **j)
+        self.new_entry(name, *syns, parent=parent, **j)
 
-    def _list_objects(self):
+    def load_dict(self, j):
+        comps = j[self._entry_group]
+        subs = []
+        while len(comps) > 0:
+            for obj in comps:
+                if 'parent' in obj:
+                    try:
+                        self._d[obj['parent']]
+                    except KeyError:
+                        subs.append(obj)
+                        continue
+                self._add_from_dict(obj)
+            comps = subs
+            subs = []
+
+    def _list_entries(self):
         comps = []
         for tc in self.top_level_compartments:
             for c in tc.self_and_subcompartments:
@@ -63,7 +78,7 @@ class CompartmentManager(SynonymDict):
             if v.parent is None:
                 yield v
 
-    def new_object(self, *args, parent=None, **kwargs):
+    def new_entry(self, *args, parent=None, **kwargs):
         """
         If a new object is added with unmodified non-specific synonyms like "unspecified", modify them to include their
         parents' name
@@ -81,7 +96,7 @@ class CompartmentManager(SynonymDict):
             for k in args:
                 if k.lower() in NONSPECIFIC_LOWER:
                     raise NonSpecificCompartment(k)
-        return super(CompartmentManager, self).new_object(*args, parent=parent, **kwargs)
+        return super(CompartmentManager, self).new_entry(*args, parent=parent, **kwargs)
 
     @staticmethod
     def _tuple_to_name(comps):
@@ -121,7 +136,7 @@ class CompartmentManager(SynonymDict):
                         new = current
 
             else:
-                new = self.new_object(c, parent=current)
+                new = self.new_entry(c, parent=current)
             current = new
         self.add_synonym(auto_name, current.name)
         return current

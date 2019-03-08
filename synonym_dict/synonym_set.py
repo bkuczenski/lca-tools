@@ -152,7 +152,7 @@ class SynonymSet(object):
 
     def serialize(self):
         """
-        Note that this omits terms in child sets -- by design???
+        Note that this flattens child sets into self- allows for rewrites by assigning children
         :return:
         """
         j = {

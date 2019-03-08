@@ -189,6 +189,12 @@ class SynonymDict(object):
     def add_or_update_entry(self, ent, merge=True, create_child=False, prune=False):
         """
         Returns the entry that contains the input argument's terms
+        If merge is true, merge incoming entries with existing matching entry. If create_child, the new entry is kept
+        intact and added as a child. If more than one existing entry matches, raise MergeError.
+
+        If prune, existing terms are skipped and new terms are added to a new entry.
+
+        merge and prune are mutually inconsistent.  merge wins.
         :param ent:
         :param merge:
         :param create_child:

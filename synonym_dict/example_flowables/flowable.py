@@ -8,7 +8,7 @@ also handles removing and serializing CAS numbers
 """
 
 
-from .cas_number import CasNumber, cas_regex, InvalidCasNumber
+from .cas_number import CasNumber, cas_regex
 from ..synonym_set import SynonymSet, DuplicateChild
 
 
@@ -74,7 +74,7 @@ class Flowable(SynonymSet):
             'synonyms': [t for t in sorted(self._terms) if t != self._name]
         }
         for c in self.children:
-            if c == self._name:
+            if c.name == self._name:
                 continue
             d['synonyms'].append(c.name)
         return d

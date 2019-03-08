@@ -78,6 +78,7 @@ class LciaEngine(TermManager):
         # another reverse mapping
         self._origins = set()
         self._fb_by_origin = defaultdict(set)  # maps origin to flowables having that origin
+        self._fb_by_origin[None] = set(str(k) for k in self._fm.objects)
 
         # difficult problem, this
         self._quell_biogenic = quell_biogenic_co2

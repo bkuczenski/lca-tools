@@ -98,6 +98,21 @@ class CompartmentManager(SynonymDict):
                     raise NonSpecificCompartment(k)
         return super(CompartmentManager, self).new_entry(*args, parent=parent, **kwargs)
 
+    def _merge(self, existing_entry, ent):
+        """
+        Need to check lineage. We adopt the rule: merge is acceptable if both entries have the same top-level
+        compartment or if ent has no parent.  existing entry will obviously be dominant.
+        :param existing_entry:
+        :param ent:
+        :return:
+        """
+        if ent.parent is not None:
+            if not ent.top() is existing_entry.top():
+                raise InconsistentLineage('"%s": existing top %s | incoming top %s' % (ent,
+                                                                                       existing_entry.top(),
+                                                                                       ent.top()))
+        super(CompartmentManager, self)._merge(existing_entry, ent)
+
     @staticmethod
     def _tuple_to_name(comps):
         return '; '.join(comps)

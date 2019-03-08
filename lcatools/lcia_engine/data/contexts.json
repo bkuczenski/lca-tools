@@ -1,22 +1,6 @@
 {
   "Compartments": [
     {
-      "name": "Crude oil (resource)",
-      "synonyms": [
-        "Energy resources",
-        "Material resources",
-        "Natural gas (resource)",
-        "Non renewable energy resources",
-        "Non renewable resources",
-        "Renewable energy resources",
-        "Renewable resources",
-        "Uranium (resource)",
-        "natural resource",
-        "renewable",
-        "resource"
-      ]
-    },
-    {
       "name": "Emissions",
       "synonyms": [],
       "sense": "Sink"
@@ -127,6 +111,7 @@
     {
       "name": "to water",
       "synonyms": [
+        "Water",
         "Emissions to water",
         "Emissions to water, unspecified"
       ],
@@ -199,7 +184,17 @@
     },
     {
       "name": "Resources",
-      "synonyms": [],
+      "synonyms": [
+        "natural resource",
+        "renewable",
+        "resource",
+        "Non renewable energy resources",
+        "Non renewable resources",
+        "Renewable energy resources",
+        "Renewable resources",
+        "Energy resources",
+        "Material resources"
+      ],
       "sense": "Source"
     },
     {
@@ -264,8 +259,10 @@
         "Renewable energy resources from ground",
         "Renewable material resources from ground",
         "Resources from ground",
+        "Natural gas (resource)",
+	"Crude oil (resource)",
+        "Uranium (resource)",
         "fossil-",
-        "ground-",
         "in ground"
       ],
       "parent": "Resources"
@@ -278,7 +275,6 @@
         "Renewable energy resources from water",
         "Renewable material resources from water",
         "Resources from water",
-        "Water",
         "in water"
       ],
       "parent": "Resources"

@@ -69,6 +69,36 @@ class CompartmentManagerTest(unittest.TestCase):
              'parent': 'emissions'}
         self.cm._add_from_dict(d)
 
+    def test_merge_inconsistent(self):
+        d = [
+            {
+                "name": "to water",
+                "parent": "Emissions"
+            },
+            {
+                "name": "fresh water",
+                "synonyms": [
+                    "freshwater"
+                ],
+                "parent": "to water"
+            },
+            {
+                "name": "ground-",
+                "parent": "fresh water"
+            },
+            {
+                "name": "from ground",
+                "synonyms": [
+                    "ground-",
+                ],
+                "parent": "Resources"
+            }
+        ]
+        for k in d[:3]:
+            self.cm._add_from_dict(k)
+        with self.assertRaises(InconsistentLineage):
+            self.cm._add_from_dict(d[3])
+
     def test_add_from_dict(self):
         self._add_water_dict()
         self.assertEqual(str(self.cm['water']), 'water emissions')

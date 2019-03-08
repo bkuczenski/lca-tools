@@ -80,6 +80,11 @@ class Compartment(SynonymSet):
     def object(self):
         return self
 
+    def top(self):
+        if self.parent is None:
+            return self
+        return self.parent.top()
+
     def __iter__(self):
         if self.parent is not None:
             for k in self.parent:

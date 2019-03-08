@@ -23,6 +23,9 @@ class Context(Compartment):
             return False
         return True
 
+    def __repr__(self):
+        return '<Context(%s)>' % ';'.join(self.as_list())
+
 
 NullContext = Context.null()
 

@@ -27,6 +27,13 @@ class QuantityConflict(Exception):
     pass
 
 
+class NoFQEntry(Exception):
+    """
+    This exception has the specific meaning that there is no lookup for the named flow-quantity pair
+    """
+    pass
+
+
 class OriginStrangeness(Exception):
     pass
 
@@ -95,11 +102,13 @@ class TermManager(object):
         self._fm = SynonymDict(source_file=flowables)
         self._qm = QuantityManager(source_file=quantities)
 
-        self._q_dict = dict()  # used to map quantities to clookup objects of the above type
+        self._q_dict = dict()  # dict of dicts. _q_dict[canonical quantity][canonical flowable] -> a context lookup
+        #
+        self._cl_typ = dict
 
         # the reverse mappings
-        self._flow_map = defaultdict(set)
-        self._fq_map = dict()  # to enable listing of all cfs by flowable
+        self._flow_map = defaultdict(set)  # maps flowable to flows having that flowable
+        self._fq_map = dict()  # maps flowable to quantities characterized by that flowable
 
         # config
         self._merge_strategy = merge_strategy
@@ -223,8 +232,59 @@ class TermManager(object):
                     print('*%s --> [%s]' % (k, self._fm[k]))  # pruned; maps to
         return fb
 
-    def _merge_terms(self, dominant, *args):
-        raise NotImplemented
+    def _merge_terms(self, dominant, *syns):
+        """
+        Two parts to this: merge the entries in the flowables manager; update local reverse mappings:
+         _q_dict
+         _fq_map (nonconflicting)
+         _flow_map (nonconflicting)
+        Before we can do either, we need to check for collisions
+        This is just too thorny to take on right now.
+        :param dominant:
+        :param syns:
+        :return:
+        """
+        fq_conflicts = []
+        for f_dict in self._q_dict.values():
+            try:
+                combo = f_dict[dominant]
+            except KeyError:
+                combo = self._cl_typ()
+            for syn in syns:
+                if syn not in f_dict:
+                    continue
+                cl = f_dict[syn]
+                for k in cl.keys():
+                    if k in combo:
+                        cand = (combo[k], cl[k])
+                        if cand[0].value == cand[1].value:
+                            continue
+                        fq_conflicts.append(cand)  # but it's really only a conflict if the cf values differ
+
+        if len(fq_conflicts) > 0:
+            print('%d Merge conflicts encountered' % len(fq_conflicts))
+            return fq_conflicts
+
+        for f_dict in self._q_dict.values():
+            try:
+                combo = f_dict[dominant]
+            except KeyError:
+                combo = self._cl_typ()
+            for syn in syns:
+                if syn not in f_dict:
+                    continue
+                combo.update(f_dict[syn])
+            f_dict[dominant] = combo
+
+        if dominant not in self._fq_map:
+            self._fq_map[dominant] = set()
+        for syn in syns:
+            self._fq_map[dominant] += self._fq_map.pop(syn, set())
+            self._flow_map[dominant] += self._flow_map.pop(syn, set())
+
+        for syn in syns:
+            self._fm.merge(dominant, syn)
+        return dominant
 
     def _add_flow_terms(self, flow, merge_strategy=None):
         """
@@ -258,6 +318,8 @@ class TermManager(object):
                 # this is trivial but
                 self._print('Merging')
                 fb = self._merge_terms(*fb_map.keys())
+                if isinstance(fb, list):
+                    raise FactorCollision(fb)
                 for term in new_terms:
                     self._fm.add_synonym(term, str(fb))
             else:
@@ -284,20 +346,6 @@ class TermManager(object):
         self._check_context(flow)
         self._add_flow_terms(flow, merge_strategy=merge_strategy)
 
-    def _find_exact_cf(self, qq, fb, cx, origin):
-        """
-        origin not used in this version
-        :param qq:
-        :param fb:
-        :param cx:
-        :param origin:
-        :return:
-        """
-        clookup = self._qlookup(qq, fb)
-        if cx in clookup:
-            return clookup[cx]
-        return None
-
     def add_characterization(self, flowable, ref_quantity, query_quantity, value, context=None, origin=None,
                              location='GLO', overwrite=False):
         """
@@ -317,10 +365,12 @@ class TermManager(object):
         """
         if origin is None:
             origin = query_quantity.origin
+
         try:
             cx = self._cm[context]
         except KeyError:
             cx = self.add_context(context)
+
         try:
             fb = self._fm[flowable]
         except KeyError:
@@ -356,6 +406,25 @@ class TermManager(object):
     '''
     Info Retrieval
     '''
+    def _find_exact_cf(self, qq, fb, cx, origin):
+        """
+        The purpose of this function is to retrieve an exact CF if one exists.
+
+        origin used in subclasses
+        :param qq:
+        :param fb:
+        :param cx:
+        :param origin:
+        :return:
+        """
+        try:
+            clookup = self._qlookup(qq, fb)
+        except NoFQEntry:
+            return None
+        if cx in clookup:
+            return clookup[cx]
+        return None
+
     def get_canonical(self, quantity):
         try:
             return self._canonical_q(quantity)
@@ -391,10 +460,7 @@ class TermManager(object):
         try:
             return self._q_dict[qq][fb]
         except KeyError:
-            return dict()
-
-    def _new_clookup(self):
-        return dict()
+            raise NoFQEntry
 
     def _qaccess(self, qq, fb=None):
         """
@@ -413,23 +479,23 @@ class TermManager(object):
         elif fb in qd:
             return qd[fb]
         else:
-            cl = self._new_clookup()
+            cl = self._cl_typ()
             qd[fb] = cl
             return cl
 
     @staticmethod
-    def _store_cf(cl, new_cf):
+    def _store_cf(cl, context, new_cf):
         """
         Assigns the cf to the mapping; does subclass-specific collision checking
         :param cl:
         :param new_cf:
         :return:
         """
-        if new_cf.context in cl:
+        if context in cl:
             raise FactorCollision
-        cl[new_cf.context] = new_cf
+        cl[context] = new_cf
 
-    def _qassign(self, qq, fb, new_cf):
+    def _qassign(self, qq, fb, new_cf, context=None):
         """
         Assigns the new_cf to the canonical quantity and flowable, taking context and origin from new_cf
         :param qq: a canonical quantity
@@ -437,8 +503,10 @@ class TermManager(object):
         :param new_cf: a characterization, having a canonical context
         :return:
         """
+        if context is None:
+            context = new_cf.context
         cl = self._qaccess(qq, fb)
-        self._store_cf(cl, new_cf)
+        self._store_cf(cl, context, new_cf)
         self._fq_map[fb].add(qq)
 
     def _factors_for_flowable(self, fb, qq, cx, **kwargs):
@@ -450,7 +518,10 @@ class TermManager(object):
         :param kwargs: used in subclasses
         :return:
         """
-        cl = self._qlookup(qq, fb)
+        try:
+            cl = self._qlookup(qq, fb)
+        except NoFQEntry:
+            return
         if cx is None:
             for v in cl.values():
                 yield v

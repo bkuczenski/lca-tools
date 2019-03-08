@@ -2,18 +2,12 @@ from collections import defaultdict
 import re
 import os
 
-from lcatools.archives.term_manager import TermManager  # , Context
+from lcatools.archives.term_manager import TermManager, NoFQEntry  # , Context
 from .quelled_cf import QuelledCF
 from .clookup import CLookup, SCLookup
 
 from synonym_dict.example_flowables import FlowablesDict
 
-
-class UnknownQuantityRef(Exception):
-    """
-    This exception has the specific meaning that the named quantity contains no characterizations in the local TM
-    """
-    pass
 
 '''
 Switchable biogenic CO2:
@@ -76,107 +70,17 @@ class LciaEngine(TermManager):
 
         # override flowables manager with FlowablesDict-- mainly to upsample CAS numbers for matching
         self._fm = FlowablesDict()
+        self._configure_flowables(flowables)
 
         # the CF lookup: allow hierarchical traversal over compartments [or, um, use a graph db..]
-        self._cl_typ = {True: SCLookup(),
-                        False: CLookup()}[strict_clookup]  # store initialized to return as null entries
+        self._cl_typ = {True: SCLookup,
+                        False: CLookup}[strict_clookup]  #
         # another reverse mapping
         self._origins = set()
-        self._fb_by_origin = defaultdict(set)
+        self._fb_by_origin = defaultdict(set)  # maps origin to flowables having that origin
 
         # difficult problem, this
         self._quell_biogenic = quell_biogenic_co2
-
-        self._configure_flowables(flowables)
-
-
-    '''# I can't figure out what this function is here for
-    # Instead, we want a function to allow a local quantity to efficiently transfer its CFs into the db 
-    def add_cf(self, quantity, cf):
-        if cf.quantity is cf.flow.reference_entity:
-            return
-        self.add_flow(cf.flow, merge_strategy='prune')  # don't want to alter existing flowables
-        fbs = self._fm.matching_flowables(*_flowable_terms(cf.flow))
-        for fb in fbs:
-            self.qlookup(quantity)[fb].add(cf)  # that some cray shit
-            self._fq_map[fb].add(self._canonical_q(quantity))
-    '''
-
-    def _find_exact_cf(self, qq, fb, cx, origin):
-        try:
-            ql = self._qlookup(qq, fb)
-        except UnknownQuantityRef:
-            return None
-        # cfs = ql._context_origin(cx, origin=origin)
-        cfs = ql.find(cx, dist=0, origin=origin)  # sliiiiightly slower but much better readability
-        if len(cfs) > 0:
-            if len(cfs) > 1:  # can only happen if qq's origin is None ??
-                try:
-                    return next(cf for cf in cfs if cf.origin is None)
-                except StopIteration:
-                    # this should never happen
-                    return next(cf for cf in cfs if cf.origin == qq.origin)
-            return list(cfs)[0]
-        return None
-
-    def _qassign(self, qq, fb, new_cf):
-        super(LciaEngine, self)._qassign(qq, fb, new_cf)
-        self._origins.add(new_cf.origin)
-
-    def _qlookup(self, quantity, flowable=None):
-        """
-        Gives back the quantity cf lookup dict. raises UnknownQuantityRef
-        :param quantity:
-        :return:
-        """
-        cq = self._canonical_q(quantity)  # raises key error if completely unknown
-        if cq not in self._q_dict:
-            raise UnknownQuantityRef(quantity)
-        qdict = self._q_dict[cq]
-        if flowable in qdict:
-            return qdict[flowable]
-        return self._cl_typ
-
-    def _qaccess(self, quantity, flowable=None):
-        """
-        This is the only place new q_dict entries are created.
-        If flowable is None, returns the entire collection for listing
-        :param quantity:
-        :return:
-        """
-        try:
-            qdict = self._qlookup(quantity, flowable)
-        except UnknownQuantityRef:
-            self._q_dict[quantity] = dict()
-            qdict = self._qlookup(quantity)
-        if flowable is None:
-            return qdict
-        if flowable in qdict:
-            return qdict[flowable]
-        qdict[flowable] = type(self._cl_typ)()
-        return qdict[flowable]
-
-    def merge_flowables(self, dominant, *syns):
-        for syn in syns:
-            self._fm.merge(dominant, syn)
-
-    def save_flowables(self, filename=None):
-        self._fm.save(filename)
-
-    def save_contetxts(self, filename=None):
-        self._cm.save(filename)
-
-    @property
-    def quantities(self):
-        for k in self._qm.objects:
-            yield k
-
-    def _canonical_q(self, quantity):
-        x = self._qm[str(quantity)]
-        if x is None:
-            self._qm.add_quantity(quantity)
-            return quantity
-        return x
 
     def _add_flow_terms(self, flow, merge_strategy=None):
         """
@@ -203,7 +107,85 @@ class LciaEngine(TermManager):
             self._fb_by_origin[flow.origin].add(bio)
         return fb
 
+    def import_cfs(self, quantity):
+        """
+        Given a quantity, import its CFs into the local database.  Unfortunately this is still going to be slow because
+        every part of the CF still needs to be canonicalized. The only thing that's saved is creating a new
+        Characterization instance.
+        :param quantity:
+        :return:
+        """
+        try:
+            qq = self._canonical_q(quantity)
+        except KeyError:
+            qq = self.add_quantity(quantity)
+
+        for cf in quantity.factors():
+            try:
+                fb = self._fm[cf.flowable]
+            except KeyError:
+                fb = self._create_flowable(cf.flowable)
+
+            cx = self.add_context(cf.context)
+            self._qassign(qq, fb, cf, context=cx)
+
+    def _find_exact_cf(self, qq, fb, cx, origin):
+        try:
+            ql = self._qlookup(qq, fb)
+        except NoFQEntry:
+            return None
+        # cfs = ql._context_origin(cx, origin=origin)
+        cfs = ql.find(cx, dist=0, origin=origin)  # sliiiiightly slower but much better readability
+        if len(cfs) > 0:
+            if len(cfs) > 1:  # can only happen if qq's origin is None ??
+                try:
+                    return next(cf for cf in cfs if cf.origin is None)
+                except StopIteration:
+                    # this should never happen
+                    return next(cf for cf in cfs if cf.origin == qq.origin)
+            return list(cfs)[0]
+        return None
+
+    @staticmethod
+    def _store_cf(cl, context, new_cf):
+        """
+        Assigns the cf to the mapping; does subclass-specific collision checking
+        :param cl:
+        :param new_cf:
+        :return:
+        """
+        try:
+            cl.add(new_cf, key=context)
+        except TypeError:
+            print(type(cl))
+            raise
+
+    def _qassign(self, qq, fb, new_cf, context=None):
+        super(LciaEngine, self)._qassign(qq, fb, new_cf, context)
+        self._origins.add(new_cf.origin)
+
+    def merge_flowables(self, dominant, *syns):
+        for syn in syns:
+            self._fm.merge(dominant, syn)
+
+    def save_flowables(self, filename=None):
+        self._fm.save(filename)
+
+    def save_contetxts(self, filename=None):
+        self._cm.save(filename)
+
+    @property
+    def quantities(self):
+        for k in self._qm.objects:
+            yield k
+
     def flowables(self, search=None, origin=None):
+        """
+        Adds ability to filter by origin
+        :param search:
+        :param origin:
+        :return:
+        """
         if origin is None:
             for k in super(LciaEngine, self).flowables(search=search):
                 yield k
@@ -237,6 +219,26 @@ class LciaEngine(TermManager):
                 return True
         return False
 
+    def _factors_for_flowable(self, fb, qq, cx, **kwargs):
+        """
+        detach lookup for cleanness. canonical everything
+        :param fb:
+        :param qq:
+        :param cx:
+        :param kwargs: used in subclasses
+        :return:
+        """
+        try:
+            cl = self._qlookup(qq, fb)
+        except NoFQEntry:
+            return
+        if cx is None:
+            for v in cl.cfs():
+                yield v
+        else:
+            for v in cl.find(cx, **kwargs):
+                yield v
+
     def factors_for_flowable(self, flowable, quantity=None, context=None, **kwargs):
         for k in super(LciaEngine, self).factors_for_flowable(flowable, quantity=quantity, context=context, **kwargs):
             if self._quell_co2(flowable, k.context):
@@ -244,7 +246,11 @@ class LciaEngine(TermManager):
             else:
                 yield k
 
+    def add_from_json(self, j, q_map, origin=None):
+        if 'SynonymSets' in j and 'Flowables' not in j:
+            j['Flowables'] = j.pop('SynonymSets')
+        super(LciaEngine, self).add_from_json(j, q_map, origin=origin)
+
     def _serialize_qdict(self, origin, quantity, values=False):
         _ql = self._qaccess(quantity)
         return {str(fb): cl.serialize_for_origin(origin, values=values) for fb, cl in _ql.items()}
-

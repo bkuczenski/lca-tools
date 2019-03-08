@@ -38,6 +38,13 @@ class CompartmentTest(unittest.TestCase):
         self.assertEqual(j['name'], 'emissions to air')
         self.assertSetEqual(set(j.keys()), {'name', 'synonyms', 'parent'})
 
+    def test_iter(self):
+        c = Compartment('emissions', sense='sink')
+        d = Compartment('emissions to air', parent=c)
+        e = Compartment('emissions to urban air', parent=d)
+        self.assertListEqual(e.as_list(), ['emissions', 'emissions to air', 'emissions to urban air'])
+        self.assertTupleEqual(tuple(e), ('emissions', 'emissions to air', 'emissions to urban air'))
+
 
 class CompartmentManagerTest(unittest.TestCase):
     """

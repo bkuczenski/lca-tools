@@ -80,11 +80,18 @@ class Compartment(SynonymSet):
     def object(self):
         return self
 
+    def __iter__(self):
+        if self.parent is not None:
+            for k in self.parent:
+                yield k
+        yield str(self)
+
     def as_list(self):
         if self.parent is None:
             return [str(self)]
         else:
             return self.parent.as_list() + [str(self)]
+        #return list(self)
 
     @property
     def base_terms(self):

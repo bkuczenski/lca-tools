@@ -66,8 +66,9 @@ class CLookup(object):
             if cf.quantity.uuid != self._qid:
                 raise QuantityMismatch('Inbound: %s\nCurrent: %s' % (cf.quantity, self._qid))
 
-    def add(self, value):
-        key = value.context
+    def add(self, value, key=None):
+        if key is None:
+            key = value.context
         if isinstance(key, Context):
             self._check_qty(value)
             if any(k.origin == value.origin for k in self._dict[key]):
@@ -80,7 +81,7 @@ class CLookup(object):
         key = value.context
         self._dict[key].remove(value)
 
-    def compartments(self):
+    def keys(self):
         return self._dict.keys()
 
     def cfs(self):
@@ -172,9 +173,9 @@ class SCLookup(CLookup):
     A Strict CLookup that permits only one CF to be stored per compartment and raises an error if an additional one
     is added.
     """
-    def add(self, value):
+    def add(self, value, key=None):
         if len(self._dict[value.context]) > 0:
             if list(self._dict[value.context])[0] == value:
                 return
             raise FactorCollision('This context already has a CF defined!')
-        super(SCLookup, self).add(value)
+        super(SCLookup, self).add(value, key)

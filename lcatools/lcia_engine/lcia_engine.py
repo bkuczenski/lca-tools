@@ -26,8 +26,16 @@ DEFAULT_FLOWABLES = os.path.abspath(os.path.join(os.path.dirname(__file__), 'dat
 
 class LciaEngine(TermManager):
     """
-    This just adds a Quantity layer to the TermManager and adds instruments to handle flowables by origin.
-    I don't think it has to do anything else
+    This adds several abilities:
+     * track flowables by origin
+       - identify flowables thhat are not recognized
+       - return flowables by origin (all, or only new)
+     * lookup CFs based on context hierarchy
+       - dist = 0: only exact matchh
+       - dist = 1: match or subcompartments
+       - dist = 2: match, subcompartments, or parent
+       - dist = 3: .. or any parent
+     * quell biogenic CO2 in quantity relation lookups
     """
     def _configure_flowables(self, flowables):
         """
@@ -180,18 +188,25 @@ class LciaEngine(TermManager):
         for k in self._qm.objects:
             yield k
 
-    def flowables(self, search=None, origin=None):
+    def flowables(self, search=None, origin=None, new=False):
         """
         Adds ability to filter by origin
         :param search:
         :param origin:
+        :param new: [False] if True, only return flowables that were not known originally
         :return:
         """
         if origin is None:
             for k in super(LciaEngine, self).flowables(search=search):
+                if new:
+                    if k in self._fb_by_origin[None]:
+                        continue
                 yield k
         else:
              for k in self._fb_by_origin[origin]:
+                 if new:
+                     if k in self._fb_by_origin[None]:
+                         continue
                  if search is None:
                      yield k
                  else:

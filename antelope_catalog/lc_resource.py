@@ -69,6 +69,7 @@ class LcResource(object):
 
     def _instantiate(self, catalog=None):
         if self.source is None:
+            # download
             if catalog is None:
                 raise NoCatalog('Remote resource encountered')
             if 'download' in self._args:
@@ -77,6 +78,7 @@ class LcResource(object):
                 self.write_to_file(catalog.resource_dir)  # update resource file
             else:
                 raise AttributeError('Resource has no source specified and no download information')
+
         if self.source.startswith('$CAT_ROOT'):
             try:
                 src = catalog.abs_path(self.source)
@@ -84,11 +86,17 @@ class LcResource(object):
                 raise NoCatalog('Relative path encountered but no catalog supplied')
         else:
             src = self.source
+
+        # setup term mgr: use LciaEngine (if available) for all non-static local resources
+        tm = None
+        if catalog is not None:
+            if not self.static:
+                tm = catalog.lcia_engine
+
         if self.ds_type.lower() in ('foreground', 'lcforeground'):
-            self._archive = LcForeground(src, catalog=catalog, ref=self.reference, **self.init_args)
+            self._archive = LcForeground(src, catalog=catalog, ref=self.reference, term_manager=tm, **self.init_args)
         else:
-            self._archive = create_archive(src, self.ds_type, catalog=catalog, ref=self.reference,
-                                           # upstream=catalog.qdb,
+            self._archive = create_archive(src, self.ds_type, catalog=catalog, ref=self.reference, term_manager=tm,
                                            **self.init_args)
         if catalog is not None and os.path.exists(catalog.cache_file(self.source)):
             update_archive(self._archive, catalog.cache_file(self.source))

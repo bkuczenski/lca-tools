@@ -2,14 +2,16 @@
 Term Manager - used to handle string references to entities that are known by several synonyms.  Specifically:
  - contexts, which are drawn from flows' specified 'Compartment' attributes
  - flowables, which are drawn from flows' uuid, Name, CasNumber, and string representation
+ - quantities, which should be recognizable by external ref or uuid
 
-The main objective of the TermManager is to enable the use of generalized synonym matching and context determination
-in performing LCIA. It collects two kinds of mapping information: mapping string terms to flowables and contexts; and
-mapping (quantity, flowable, context) tuples to [regionalized] characterization objects.
+The main objective of the TermManager is to enable the use of generalized synonym matching in performing LCIA. It
+collects two kinds of mapping information: mapping string terms to flowables and contexts; and mapping (quantity,
+flowable, context) tuples to [regionalized] characterization objects.
 
-LciaEngine adds a Quantity disambiguation layer, which is inherently useful only across data sources, and uses canonical
-lists of flowables and contexts that would be redundant if loaded into individual archives.  Someday, it might make
-sense to expose it as a massive, central graph db.
+LciaEngine is designed to handle information from multiple origins to operate as a qdb in a catalog context.  The
+subclass adds canonical lists of flowables and contexts that would be redundant if loaded into individual archives,
+introduces "smart" hierarchical context lookup (CLookup), and adds the ability to quell biogenic CO2 emissions.
+Someday, it might make sense to expose it as a massive, central graph db.
 """
 from synonym_dict import SynonymDict
 
@@ -53,7 +55,7 @@ class TermManager(object):
     descriptors into a common database of synonyms, and connect those sets of synonyms to a set of entities known
     to the local archive.
 
-    When harvesting terms from a new entity, the general approach is to merge the new entry with an existing entry
+    When harvesting terms from a new flow, the general approach is to merge the new entry with an existing entry
     if the existing one uniquely matches.  If there is more than one match, there are three general strategies:
 
       'prune': trim off the parts that match existing entries and make a new entry with only the distinct terms.
@@ -65,9 +67,10 @@ class TermManager(object):
     (merge_strategy='merge' ensures that this is exactly one flowable), and adds the CF to every flowable that matches.
 
     USAGE MODEL: TODO
-    The Term Manager is basically a giant pile of Characterization objects, structured by two synonym sets mapping
-    string terms to canonical names for flowables and contexts (The LciaEngine adds a third synonym set aggregating
-    synonymous names for quantities).
+    The Term Manager is basically a giant pile of Characterization objects, grouped by canonical query quantity,
+    flowable, and context. The basic TermManager enforces a restriction of one CF per qq | fb | cx combination.  The
+    LciaEngine subclass uses a CLookup that can either be strict or non-strict, but nonetheless enforces one CF per
+    qq | fb | cx | origin combination.
 
     There are thus four things the Term Manager must be able to do:
      - store names of flowables and contexts from source data
@@ -85,8 +88,6 @@ class TermManager(object):
          - second level defaultdict maps flowable canonical name to CLookup / subclass
            - third level CLookup maps context to a set of CFs
      _fq_map: reverse-maps flowable canonical name to a set of quantities that characterize it
-
-    The LciaEngine adds another synonym set that maps quantity terms to canonical quantity entities.
     """
     def __init__(self, contexts=None, flowables=None, quantities=None, merge_strategy='prune', quiet=True):
         """
@@ -211,7 +212,10 @@ class TermManager(object):
 
     def _create_flowable(self, name, *syns, prune=False):
         fb = self._fm.new_entry(name, *syns, prune=prune).object
-        if fb not in self._fq_map:
+        if fb in self._fq_map:
+            self._print('Adding terms to existing flowable %s' % fb)
+        else:
+            self._print('Adding new flowable %s' % fb)
             self._fq_map[fb] = set()
         return fb
 

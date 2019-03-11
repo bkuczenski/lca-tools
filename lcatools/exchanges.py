@@ -244,6 +244,7 @@ class ExchangeValue(Exchange):
     An ExchangeValue is an exchange with a single value (corresponding to unallocated exchange value) plus a dict of
     values allocated to different reference flows.
     """
+    '''
     @classmethod
     def from_exchange(cls, exch, value=None, **kwargs):
         if isinstance(exch, ExchangeValue):
@@ -251,6 +252,7 @@ class ExchangeValue(Exchange):
                 raise DuplicateExchangeError('Exchange exists and has value %g (new value %g)' % (exch.value, value))
             return exch
         return cls(exch.process, exch.flow, exch.direction, value=value, **kwargs)
+    '''
 
     @classmethod
     def from_allocated(cls, allocated, reference):

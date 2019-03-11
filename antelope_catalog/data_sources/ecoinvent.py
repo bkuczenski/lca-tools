@@ -1,8 +1,10 @@
 import os
 import re
+from lxml import objectify
 
 from .data_source import DataSource, DataCollection
 from .ecoinvent_lcia import EcoinventLciaConfig, EI_LCIA_SPREADSHEETS
+from antelope_catalog.providers.file_store import FileStore
 
 FILE_PREFIX = ('current_Version_', 'ecoinvent ')
 FILE_EXT = ('7z', 'zip')
@@ -79,6 +81,18 @@ class Ecoinvent3Base(DataSource):
     def lci_source(self):
         return self._fname('lci')
 
+    def elementary_exchanges(self):
+        for k in (self.inv_source, self.lci_source):
+            try:
+                fs = FileStore(k, internal_prefix='MasterData')
+            except TypeError:
+                continue
+            try:
+                o = objectify.fromstring(fs.readfile('ElementaryExchanges.xml'))
+            except FileNotFoundError:
+                continue
+            yield o
+
 
 class EcoinventConfig(DataCollection):
     """
@@ -120,3 +134,9 @@ class EcoinventConfig(DataCollection):
                 for m in ECOINVENT_SYS_MODELS:
                     yield Ecoinvent3Base(data_root, v, m, **kwargs)
                     yield EcoinventLciaConfig(os.path.join(data_root, v), version=v)
+
+    def elementary_exchanges(self):
+        for k, v in sorted(self._sources.items(), key=lambda x: x[0], reverse=True):
+            if hasattr(v, 'elementary_exchanges'):
+                for e in v.elementary_exchanges():
+                    yield e

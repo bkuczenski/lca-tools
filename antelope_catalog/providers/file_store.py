@@ -104,6 +104,7 @@ class FileStore(object):
                 print(' caching files locally in %s' % self._cache.path)
             return
 
+        self.cache = False
         self.remote = False
         if not os.path.exists(path):
             print('WARNING: path does not resolve.  FileStore will be non-functional.')

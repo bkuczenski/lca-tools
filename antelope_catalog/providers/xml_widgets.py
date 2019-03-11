@@ -15,24 +15,26 @@ def find_ns(nsmap, dtype):
     return next((k for k, v in nsmap.items() if re.search(dtype + '$', v)))
 
 
-def find_tag(o, tag, ns=None):
-    """
-    :param o: objectified element
-    :param tag:
-    :return:
-    """
-    found = o.find('.//{0}{1}'.format('{' + o.nsmap[ns] + '}', tag))
-    return '' if found is None else found
-
-
 def find_tags(o, tag, ns=None):
     """
     :param o: objectified element
     :param tag:
     :return:
     """
-    found = o.findall('.//{0}{1}'.format('{' + o.nsmap[ns] + '}', tag))
-    return [''] if len(found) == 0 else found
+    for found in o.iterfind('.//{0}{1}'.format('{' + o.nsmap[ns] + '}', tag)):
+        yield found
+
+
+def find_tag(o, tag, ns=None):
+    """
+    :param o: objectified element
+    :param tag:
+    :return:
+    """
+    try:
+        return next(find_tags(o, tag, ns=ns))
+    except StopIteration:
+        return ''
 
 
 def find_common(o, tag):
@@ -52,9 +54,9 @@ def render_text_block(el, ns=None):
     :param ns: [None] namespace
     :return:
     """
-    vs = find_tags(el, 'variable', ns=ns)
+    vs = list(find_tags(el, 'variable', ns=ns))
     variables = defaultdict(str)
-    if vs != ['']:
+    if len(vs) > 0:
         try:
             for a in vs:
                 variables[a.attrib['name']] = a.text

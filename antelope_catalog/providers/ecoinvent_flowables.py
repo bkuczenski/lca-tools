@@ -34,7 +34,7 @@ def synonyms_from_ecospold_exchange(exch):
     cas = exch.get('casNumber')
     if cas is not None:
         syns.add(cas)
-    synonym_tag = find_tags(exch, 'synonym')
+    synonym_tag = list(find_tags(exch, 'synonym'))
     if len(synonym_tag) == 1:
         # parse the comma-separated list
         if bool(re.search('etc\.', str(synonym_tag[0]))):

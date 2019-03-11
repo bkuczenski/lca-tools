@@ -360,10 +360,9 @@ class IlcdArchive(LcArchive):
 
         cas = str(find_tag(o, 'CASNumber', ns=ns))
 
-        cat = find_tags(o, 'category', ns='common')
-        if cat == ['']:
-            cat = find_tags(o, 'class', ns='common')
-        cat = [str(i) for i in cat]
+        cat = [str(i) for i in find_tags(o, 'category', ns='common')]
+        if len(cat) == 0:
+            cat = [str(i) for i in find_tags(o, 'class', ns='common')]
 
         ref_to_ref = get_reference_flow_property_id(o, ns=ns)
         chars = []

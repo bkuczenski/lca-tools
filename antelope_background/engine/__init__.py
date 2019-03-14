@@ -6,4 +6,3 @@ No support for parametric uncertainty at present. use bw2 if you want that.
 """
 
 from .background_engine import BackgroundEngine
-from .background_manager import BackgroundManager as OldBackgroundManager

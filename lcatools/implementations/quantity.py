@@ -8,6 +8,10 @@ from ..interfaces import QuantityInterface, NoFactorsFound, ConversionReferenceM
 from ..lcia_results import LciaResult
 
 
+class RefQuantityRequired(Exception):
+    pass
+
+
 class QuantityConversion(object):
     """
     A stack of Quantity Relation results that are composed sequentially in order to render a flow-quantity conversion.
@@ -184,6 +188,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
 
     def _get_flowable_info(self, flow, ref_quantity, context):
         """
+        We need all three defined at the end. So if all given, we take em and look em up.
         Basically we take what we get for flow, unless we're missing ref_quantity or context.
         If flow is not entity_type='flow', we try to fetch a flow and if that fails we return what we were given.
         If we're given a flow and/or an external ref that looks up, then flowable, ref qty, and context are taken from
@@ -210,6 +215,8 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
                     context = f.context
         else:
             flowable = flow
+        if ref_quantity is None:
+            raise RefQuantityRequired
         rq = self.get_canonical(ref_quantity)
         cx = self._archive.tm[context]
         return flowable, rq, cx

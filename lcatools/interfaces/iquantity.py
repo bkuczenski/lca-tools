@@ -69,46 +69,6 @@ class QuantityInterface(AbstractQuery):
     """
     QuantityInterface
     """
-    def synonyms(self, item, **kwargs):
-        """
-        Return a list of synonyms for the object -- quantity, flowable, or compartment
-        :param item:
-        :return: list of strings
-        """
-        return self._perform_query(_interface, 'synonyms', QuantityRequired('Quantity interface required'), item,
-                                   ** kwargs)
-
-    def flowables(self, quantity=None, compartment=None, **kwargs):
-        """
-        Return a list of flowable strings. Use quantity and compartment parameters to narrow the result
-        set to those characterized by a specific quantity, those exchanged with a specific compartment, or both
-        :param quantity:
-        :param compartment:
-        :return: list of pairs: CAS number, name
-        """
-        return self._perform_query(_interface, 'flowables', QuantityRequired('Quantity interface required'),
-                                   quantity=quantity, compartment=compartment, **kwargs)
-
-    def compartments(self, quantity=None, flowable=None, **kwargs):
-        """
-        Return a list of compartment strings. Use quantity and flowable parameters to narrow the result
-        set to those characterized for a specific quantity, those with a specific flowable, or both
-        :param quantity:
-        :param flowable:
-        :return: list of strings
-        """
-        return self._perform_query(_interface, 'compartments', QuantityRequired('Quantity interface required'),
-                                   quantity=quantity, flowable=flowable, **kwargs)
-
-    def profile(self, flow, **kwargs):
-        """
-        Generate characterizations for the named flow, with the reference quantity noted
-        :param flow:
-        :return:
-        """
-        return self._perform_query(_interface, 'profile', QuantityRequired('Must have quantity interface'),
-                                   flow, **kwargs)
-
     def get_canonical(self, quantity, **kwargs):
         """
         Retrieve a canonical quantity based on a synonym or other distinguishable term.  In future this should be
@@ -119,6 +79,15 @@ class QuantityInterface(AbstractQuery):
         return self.make_ref(self._perform_query(_interface, 'get_canonical',
                                                  QuantityRequired('Quantity interface required'),
                                                  quantity, **kwargs))
+
+    def profile(self, flow, **kwargs):
+        """
+        Generate characterizations for the named flow or flowable, with the reference quantity noted
+        :param flow:
+        :return:
+        """
+        return self._perform_query(_interface, 'profile', QuantityRequired('Must have quantity interface'),
+                                   flow, **kwargs)
 
     def characterize(self, flowable, ref_quantity, query_quantity, value, context=None, location='GLO', **kwargs):
         """
@@ -137,23 +106,22 @@ class QuantityInterface(AbstractQuery):
                                    flowable, ref_quantity, query_quantity, value,
                                    context=context, location=location, **kwargs)
 
-    def factors(self, quantity, flowable=None, compartment=None, **kwargs):
+    def factors(self, quantity, flowable=None, context=None, **kwargs):
         """
-        Return characterization factors for the given quantity, subject to optional flowable and compartment
+        Return characterization factors for the given quantity, subject to optional flowable and context
         filter constraints. This is ill-defined because the reference unit is not explicitly reported in current
-        serialization for characterizations (it is implicit in the flow)-- but it can be added to a web service layer.
+        serialization for characterizations (it is implicit in the flow)-- but it can be added as a keyword.
         :param quantity:
         :param flowable:
-        :param compartment:
+        :param context:
         :return: a generator of Characterizations
         """
         return self._perform_query(_interface, 'factors', QuantityRequired('Quantity interface required'),
-                                   quantity, flowable=flowable, compartment=compartment, **kwargs)
+                                   quantity, flowable=flowable, context=context, **kwargs)
 
     def cf(self, flow, quantity, ref_quantity=None, context=None, locale='GLO', strategy=None, **kwargs):
         """
-        Determine a characterization factor value for a given quantity by consulting the flow directly.  This will
-        fall back to a Qdb lookup if the flow's originating resource cannot answer the question.
+        Determine a characterization factor value for a given quantity
         :param flow: flow entity ref or flowable string
         :param quantity:
         :param ref_quantity: [None] if flow is entity, flow.reference_entity is used unless specified

@@ -70,6 +70,29 @@ class IndexInterface(AbstractQuery):
         for i in self._perform_query(_interface, 'flows', IndexRequired('Index access required'), **kwargs):
             yield self.make_ref(i)
 
+    def synonyms(self, item, **kwargs):
+        """
+        Return a list of synonyms for the object -- quantity, flowable, or compartment
+        :param item:
+        :return: list of strings
+        """
+        return self._perform_query(_interface, 'synonyms', IndexRequired('Index interface required'), item,
+                                   ** kwargs)
+
+    def flowables(self, **kwargs):
+        """
+        Generate known flowables by their canonical name
+        :param kwargs:
+        :return:
+        """
+
+    def contexts(self, **kwargs):
+        """
+        Generate known contexts as tuples of canonical names
+        :param kwargs:
+        :return:
+        """
+
     def quantities(self, **kwargs):
         """
         Generate quantities
@@ -101,6 +124,16 @@ class IndexInterface(AbstractQuery):
     API functions- entity-specific -- get accessed by catalog ref
     index interface
     """
+    def unmatched_flows(self, flows, **kwargs):
+        """
+        Takes in a list of flowable terms and generates a sublist of flows that were not recognized as synonyms to any
+        local flows.
+        :param flows:
+        :param kwargs:
+        :return:
+        """
+        pass
+
     def terminate(self, flow, direction=None, **kwargs):
         """
         Find processes that match the given flow and have a complementary direction

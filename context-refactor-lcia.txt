@@ -1,4 +1,130 @@
 ==========
+Wed Mar 13 17:07:12 -0700 2019
+
+We are doing terribly. But we are close!
+
+Auditing quantity implementation=-- what term_manager methods do we use?
+
+ * get_canonical()
+ * factors_for_quantity() [implements factors()]
+ * add_characterization() [implements characterize()]
+ * factors_for_flowable() [implements quantity_conversions]
+ * __getitem__ [retrieves canonical context]
+
+seems good.
+Let's do ExchangeValue.__new__
+
+The situation here is:
+
+ * Exchange has 4 parts: parent, flow[able], direction (wrt parent), optional termination
+ * termination = None means exchange is a CUTOFF
+   = REFERENCE exchanges are the allocatable subset of CUTOFF exchanges
+ * termination = Context with Context.elementary = True means exchange is ELEMENTARY
+ * termination = Context with Context.elementary = False means exchange is a CUTOFF
+ * termination = str means exchange is INTERMEDIATE
+   = implication is that the termination must lookup as a valid external_ref in the local archive
+     - if you want to terminate to something outside the local archive, use a fragment
+
+Exchanges are created ALL OVER the code.  (17 usages in import statements)
+
+So:
+ (a) we need to change the invocation in many places and
+ (b) we need to validate the instantiation.
+
+Let's list all the usages:
+
+antelope_background.background.implementation:
+ (118) foreground() - yields ExchangeValues constructed from ExchDef() which come from TermRef()
+       (should yield strictly intermediate exchanges, except for reference)
+*(122) _direct_exchanges() - yields EVs
+       	+ from _generate_exchange_defs() in the case of dependencies() or ad()
+	+ from _generate_em_defs() in the case of emissions() or bf() or lci()
+	= PROBLEM! the FlatBackground class has no archive and cannot access Contexts
+	  - this means we need to do it in the bg implementation
+	  - easy enoughh- just add a kwarg to _direct_exchhanges() that specifies whether to retrieve a context from tm prior to creating the ExchangeValue
+
+antelope_background.engine.background_manager: (OldBackgroundManager)
+ 12 uses; obsolete so don't bother with this-- should be deleted from ContextRefactor
+
+antelope_catalog.providers.ecospold2.ecospold2:
+ (522) retrieve_lcia_scores(): used to create reference exchange; no changes needed
+
+antelope_catalog.providers.v1_client.inventory:
+*(72) _add_lcia_detail(): used to provide the exchange argument to LciaResult.add_score()
+      - context should be supplied for completeness, but not required for functionality at this time
+
+antelope_reports.tables.allocation:
+ (87) _add_alloc_refs(): used to create a reference exchange for table output; no changes needed
+
+lcatools.lcia_results:
+*(412) LciaResult.from_cfs():
+       - context should be supplied for completeness (grab from CF), not reqd. at this time
+0(568) flatten():
+       - context should be supplied for completeness (cannot grab), not reqd. at this time
+0(586) flatten():
+       - context should be supplied for completeness (cannot grab), not reqd. at this time
+     
+lcatools.terminations:
+?(211) to_exchange():  ## is this method even used? It seems broken
+
+*(389) _unobserved_exchanges(): used to generate exchanges for characterization of fg emissions
+       - definitely needs fixed.  term_node should BE context in this case.
+       ** this leads us to a FlowTermination refactor-- put on stack
+
+lcatools.entities.fragments:
+*(1012) inventory():
+	easy fix (pending FlowTermination refactor)- just provide term.term_node as termination
+	     (actually: need term.term_node.external_ref for non-fg-emissions)
+
+ (1077) cutoffs():
+ 	no change needed- they're cutoffs so termination should be None
+
+lcatools.entities.processes:
+x(353) inventory():       ** need to refactor ExchangeValue.from_allocated()
+x(359) inventory():       ** need to refactor ExchangeValue.from_allocated()
+
+*(573) add_exchange(): fix upstream
+*(577) add_exchange(): fix upstream
+*(581) add_exchange(): fix upstream
+       ** need to fix all invocations of add_exchange()
+
+11 upstream invocations of add_exchange:
+   : 3 in process from json (!!! do we want to be back-compatible?)
+   : 1 in olca JSON-LD
+   : 2 in ecospold2
+   : 1 in ilcd
+   : 1 in ecoinvent spreadsheet (only ref- drop)
+   : 1 in ecospold1
+   : 2 in tests
+
+Tasks on the Stack:
+ * background _direct_exchanges()
+ * v1_client.inventory _add_lcia_detail()
+ * LciaResult.from_cfs()
+ ** FlowTermination refactor:
+    - top-to-bottom review
+    - __init__ type checking
+    - __init__ invocation checking
+    - _unobserved_exchanges()
+    - use of is_fg; add is_context
+    - serialization: context serializes as 'context' not as {'origin':, 'externalId':}
+    - deserialization: symmetric to above; try for bg compatibility
+    - __str__, other diagnostics
+ * fragments.inventory()
+ ** add_exchange() upstream
+
+That's not half bad, actually.
+
+and then remains:
+ - just the CatalogQuery to hijack get_canonical
+ - and rewrite the interfaces. let's do that now
+I think we could get to the testing stage in 8 h work.
+
+
+
+
+
+==========
 Fri Feb 15 12:54:22 -0800 2019
 
 Where are we at?

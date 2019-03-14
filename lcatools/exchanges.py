@@ -1,4 +1,5 @@
 from .interfaces import comp_dir
+from .contexts import Context
 
 
 class ExchangeError(Exception):
@@ -52,10 +53,17 @@ class Exchange(object):
         self._termination = None
         self._comment = comment  # don't bother to serialize these yet...
         if termination is not None:
-            self._termination = str(termination)
+            if isinstance(termination, str):
+                self._termination = termination
+            elif isinstance(termination, Context):
+                self._termination = termination
+            elif hasattr(termination, 'external_ref'):
+                self._termination = termination.external_ref
+            else:
+                raise ValueError('Unintelligible termination: %s' % termination)
         # self._hash_tuple =
         self._hash = hash((process.uuid, flow.external_ref, direction, self._termination))  # have to use uuid because
-        # process's external_ref is not set until after exchanges are populated!
+        # process's external_ref may not be set until after exchanges are populated!
         self._is_reference = False
 
     @property
@@ -105,9 +113,6 @@ class Exchange(object):
     def trim(self):
         return self
 
-    """
-    These all need to be immutable because they form the exchange's hash
-    """
     @property
     def unit(self):
         try:
@@ -124,6 +129,9 @@ class Exchange(object):
     def value(self, exch_val):
         raise ExchangeError('Cannot set Exchange value')
 
+    """
+    These all need to be immutable because they form the exchange's hash
+    """
     @property
     def process(self):
         return self._process

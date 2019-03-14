@@ -15,7 +15,7 @@ Someday, it might make sense to expose it as a massive, central graph db.
 """
 from synonym_dict import SynonymDict
 
-from .contexts import ContextManager, Context
+from lcatools.contexts import ContextManager, Context
 from .quantity_manager import QuantityManager
 
 from lcatools.characterizations import Characterization

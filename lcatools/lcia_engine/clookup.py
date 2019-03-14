@@ -24,7 +24,7 @@ The dream would be to design a graph database that held all of these parameters 
 that applied to a given query-- that graph database would replace the current Term Manager and everything else under
 its hood. But first we will learn to walk...
 """
-from lcatools.archives.contexts import Context
+from lcatools.contexts import Context
 from collections import defaultdict
 
 

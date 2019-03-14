@@ -85,6 +85,8 @@ class IndexInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
+        return self._perform_query(_interface, 'flowables', IndexRequired('Index interface required'),
+                                   ** kwargs)
 
     def contexts(self, **kwargs):
         """
@@ -92,6 +94,18 @@ class IndexInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
+        return self._perform_query(_interface, 'contexts', IndexRequired('Index interface required'),
+                                   ** kwargs)
+
+    def get_context(self, term, **kwargs):
+        """
+        Return the context matching the specified term
+        :param term:
+        :param kwargs:
+        :return:
+        """
+        return self._perform_query(_interface, 'get_context', IndexRequired('Index interface required'),
+                                   term, ** kwargs)
 
     def quantities(self, **kwargs):
         """
@@ -99,15 +113,6 @@ class IndexInterface(AbstractQuery):
         :param kwargs: keyword search
         :return:
         """
-        '''
-        # we're abandoning this behavior of dubious utility
-        try:
-            return self._perform_query(self.interface, 'quantities', CatalogRequired('Catalog access required'),
-                                       **kwargs)
-        except CatalogRequired:
-            return self._perform_query('quantity', 'quantities', CatalogRequired('Catalog or Quantity access required'),
-                                       **kwargs)
-        '''
         for i in self._perform_query(_interface, 'quantities', IndexRequired('Index access required'), **kwargs):
             yield self.make_ref(i)
 
@@ -128,11 +133,12 @@ class IndexInterface(AbstractQuery):
         """
         Takes in a list of flowable terms and generates a sublist of flows that were not recognized as synonyms to any
         local flows.
-        :param flows:
+        :param flows: iterable
         :param kwargs:
         :return:
         """
-        pass
+        return self._perform_query(_interface, 'unmatched_flows', IndexRequired('Index interface required'),
+                                   flows, **kwargs)
 
     def terminate(self, flow, direction=None, **kwargs):
         """

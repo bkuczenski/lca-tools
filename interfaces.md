@@ -14,10 +14,9 @@ the type of the reference entity is as follows:
  | Type | Reference Entity Type |
  |----|-----|
  | quantity | unit |
- | context | natural direction |
  | flow | quantity |
  | process | set of exchanges |
- | fragment | fragment |
+ | fragment | fragment (parent) |
 
 All object types are also permitted to have `None` as a reference, though some operations require a reference to be present.
 
@@ -36,12 +35,13 @@ Handles data discovery and reference and metadata retrieval. "Termination" is a 
  - retrieve properties
  - terminate flows or exchanges
  - get synonyms for entity descriptors
+ - match flowables
 
 QUANTITY
 
 Handle quantitative information about physical measurements or characterizations of flowable entities.
 
- - retrieve canonical quantity [grounded in a semantic reference]
+ - retrieve canonical quantity [according to local reference]
  - retrieve a flow profile (list of characterizations)
  - retrieve characterization factors by quantity
  - convert a given flow between quantities

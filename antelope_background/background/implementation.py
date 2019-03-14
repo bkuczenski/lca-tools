@@ -10,17 +10,49 @@ class InvalidRefFlow(Exception):
 
 
 class TarjanBackgroundImplementation(BackgroundImplementation):
+    """
+    This is the class that does the background interfacing work for partially-ordered databases.  The plumbing is
+    pretty complicated so it deserves some explanation.
+
+    The MRO for this is:
+    (antelope_background.background.implementation.TarjanBackgroundImplementation,
+    lcatools.implementations.background.BackgroundImplementation,
+    lcatools.implementations.basic.BasicImplementation,
+    lcatools.interfaces.ibackground.BackgroundInterface,
+    lcatools.interfaces.abstract_query.AbstractQuery,
+    object)
+
+    So ultimately this is a query object that implements the background interface.
+
+    The __init__ comes from the BasicImplementation, which requires an _archive as first argument.  In the default
+    BackgroundImplementation, this _archive is used to generally access all entities.  However, in the Tarjan background
+    the FlatBackground provides all necessary information-- which boils down to external_refs that can be looked up
+    using a separate implementation.
+
+    The BackgroundImplementation subclasses BasicImplementation and adds an _index attribute.  This index is used for
+    creating the flat background and also for accessing contexts when generating elementary exchanges.
+
+    The necessary conditions to CREATE a flat Tarjan Background are: a valid [invertible] database with complete working
+    index and inventory implementations. This flat background then gets serialized using a numpy [matlab] format, along
+    with a separate index file as json.
+
+    The necessary conditions to RESTORE a flat Tarjan Background are the serialization created above, and an index
+    implementation for retrieving resources and contexts.
+
+    Thus the two routes
+
+    """
 
     @classmethod
-    def from_file(cls, index, savefile, **kwargs):
+    def from_file(cls, res, savefile, **kwargs):
         """
 
-        :param index: data resource providing index information
+        :param res: data resource providing index information
         :param savefile: serialized flat background
         :return:
         """
-        im = cls(index)
-        im._index = index
+        im = cls(res)
+        im._index = res.make_interface('index')
         im._flat = FlatBackground.from_file(savefile, **kwargs)
         return im
 
@@ -117,9 +149,13 @@ class TarjanBackgroundImplementation(BackgroundImplementation):
         for x in self._flat.foreground(process, ref_flow):
             yield ExchangeValue(self[x.process], self[x.flow], x.direction, termination=x.term, value=x.value)
 
-    def _direct_exchanges(self, node, x_iter):
+    def _direct_exchanges(self, node, x_iter, context=False):
         for x in x_iter:
-            yield ExchangeValue(node, self[x.flow], x.direction, termination=x.term, value=x.value)
+            if context is True:
+                term = self._index.get_context(x.term)
+            else:
+                term = x.term
+            yield ExchangeValue(node, self[x.flow], x.direction, termination=term, value=x.value)
 
     def consumers(self, process, ref_flow=None, **kwargs):
         process, ref_flow = self._check_ref(process, ref_flow)

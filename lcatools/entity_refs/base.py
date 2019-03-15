@@ -255,30 +255,6 @@ class EntityRef(BaseRef):
         except KeyError:
             return self.external_ref
 
-    def elementary(self, iterable):
-        """
-        yields flows from iterable that are elementary, using the query's access to qdb
-        :param iterable:
-        :return:
-        """
-        self._check_query('elementary')
-
-        for i in iterable:
-            if self._query.is_elementary(i):
-                yield i
-
-    def intermediate(self, iterable):
-        """
-        yields flows from iterable that are non-elementary, using the query's access to qdb
-        :param iterable:
-        :return:
-        """
-        self._check_query('intermediate')
-
-        for i in iterable:
-            if not self._query.is_elementary(i):
-                yield i
-
     @property
     def resolved(self):
         return True

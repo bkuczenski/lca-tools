@@ -72,8 +72,6 @@ class FlowTermination(object):
         if origin == 'foreground':
             origin = fg.ref
 
-        external_ref = j['externalId']
-
         # handle term flow
         tf_ref = j.pop('termFlow', None)
         if tf_ref is None:
@@ -86,11 +84,15 @@ class FlowTermination(object):
             else:
                 term_flow = fg.catalog_ref(origin, tf_ref, entity_type='flow')
 
-        # handle term_node
-        if origin == fg.ref:
-            term_node = fg[external_ref]
+        if 'context' in j:
+            term_node = fg.tm[j['context']]
         else:
-            term_node = fg.catalog_ref(origin, external_ref, entity_type='process')
+            external_ref = j['externalId']
+            # handle term_node
+            if origin == fg.ref:
+                term_node = fg[external_ref]
+            else:
+                term_node = fg.catalog_ref(origin, external_ref, entity_type='process')
 
         direction = j.pop('direction', None)
         descend = j.pop('descend', True)
@@ -115,20 +117,22 @@ class FlowTermination(object):
     def null(cls, fragment):
         return cls(fragment, None)
 
-    def __init__(self, fragment, entity, direction=None, term_flow=None, descend=True, **kwargs):
+    def __init__(self, fragment, entity, direction=None, term_flow=None, descend=True, inbound_ev=None):
         """
         reference can be None, an entity or a catalog_ref.  It only must have origin, external_ref, and entity_type.
         To use an exchange, use FlowTermination.from_exchange()
          * None - to create a foreground IO / cutoff flow
          * fragment (same as parent) - to create a foreground node.  Must satisfy 'fragment is entity'
-         * catalog ref for process - to link the fragment to a process inventory (uses self.is_background to determine
+         * process or process ref - to link the fragment to a process inventory (uses self.is_background to determine
            foreground or background lookup)
-         * catalog ref for flow - to create a foreground emission (subs parent for term, subs flow for term_flow)
+         * context - to represent the fragment's flow (or term_flow, still supported) as emission
+         * flow or flow ref - no longer supported.  Supply context instead.
 
         :param fragment:
         :param entity:
         :param direction:
-        :param term_flow:
+        :param term_flow: optional flow to match on termination inventory or LCIA.  If flow and term_flow have
+        different reference quantities, quantity conversion is performed during traversal
         :param descend:
         :param inbound_ev: ignored; deprecated
         """
@@ -136,10 +140,9 @@ class FlowTermination(object):
         self._parent = fragment
         if entity is not None:
             if entity.entity_type == 'flow':
-                if term_flow is not None:
-                    raise ValueError('Conflicting termination and term_flow')
-                term_flow = entity
-                entity = fragment
+                raise TypeError('Can no longer terminate fragments with flows. Use context instead')
+            if entity.entity_type not in ('context', 'process', 'fragment'):
+                raise TypeError('Inappropriate termination type: %s' % entity.entity_type)
         self._term = entity  # this must have origin, external_ref, and entity_type, and be operable (if ref)
         self._score_cache = LciaResults(fragment)
 
@@ -173,6 +176,7 @@ class FlowTermination(object):
             value = comp_dir(self._parent.direction)
         self._direction = check_direction(value)
 
+    '''
     def matches(self, exchange):
         """
         returns True if the exchange specifies the same process and flow as the term's process_ref and term_flow
@@ -209,6 +213,7 @@ class FlowTermination(object):
         if self.is_null:
             return None
         return ExchangeValue(self.term_node, self.term_flow, self.direction, value=self.inbound_exchange_value)
+    '''
 
     @property
     def is_local(self):
@@ -219,6 +224,16 @@ class FlowTermination(object):
         if self.is_null:
             return False
         return self._parent.origin == self.term_node.origin
+
+    @property
+    def is_context(self):
+        """
+        termination is a context
+        :return:
+        """
+        if self.is_null:
+            return False
+        return self.term_node.entity_type == 'context'
 
     @property
     def is_frag(self):
@@ -242,7 +257,7 @@ class FlowTermination(object):
         Pending context refactor
         :return:
         """
-        return (not self.is_null) and (self.term_node.entity_type == 'context')
+        return self.is_context and self.term_node.elementary
 
     @property
     def is_fg(self):
@@ -266,7 +281,7 @@ class FlowTermination(object):
         Termination is local and background
         :return:
         """
-        return self.is_local and self.term_node.is_background
+        return self.is_frag and self.is_local and self.term_node.is_background
 
     @property
     def is_subfrag(self):
@@ -306,6 +321,14 @@ class FlowTermination(object):
     @property
     def term_node(self):
         return self._term
+
+    @property
+    def term_ref(self):
+        if self.is_null:
+            return None
+        elif self.is_context:
+            return self.term_node.name
+        return self.term_node.external_ref
 
     @property
     def flow_conversion(self):
@@ -385,27 +408,24 @@ class FlowTermination(object):
           LCIA purposes
         :return:
         """
-        if self.is_fg:
-            x = ExchangeValue(self._parent, self.term_flow, self.direction,
+        if self.is_context:
+            x = ExchangeValue(self._parent, self.term_flow, self.direction, termination=self.term_node,
                               value=self.node_weight_multiplier)
             yield x
-        elif self.term_is_bg:
-            for x in []:
-                yield x
         # elif self.is_frag:  # fragments can have unobserved exchanges too!
         #     for x in []:
         #         yield x
         else:
             children = set()
-            children.add((self.term_flow.external_ref, self.direction))
+            children.add((self.term_flow.external_ref, self.direction, None))
             for c in self._parent.child_flows:
-                children.add((c.flow.external_ref, c.direction))
+                children.add((c.flow.external_ref, c.direction, c.term.term_ref))
             if self.is_bg:
                 iterable = self.term_node.lci(ref_flow=self.term_flow)
             else:
                 iterable = self.term_node.inventory(ref_flow=self.term_flow, direction=self.direction)
             for x in iterable:
-                if (x.flow.external_ref, x.direction) not in children:
+                if (x.flow.external_ref, x.direction, x.term_ref) not in children:
                     yield x
 
     def compute_unit_score(self, quantity_ref, **kwargs):
@@ -419,22 +439,28 @@ class FlowTermination(object):
         :param quantity_ref:
         :return:
         """
-        if self.is_subfrag:
-            if self.descend:
-                return LciaResult(quantity_ref)  # null result for subfragments that are explicitly followed
-            else:
-                raise SubFragmentAggregation  # to be caught
+        if self.is_frag:
+            if self.is_subfrag:
+                if self.descend:
+                    return LciaResult(quantity_ref)  # null result for subfragments that are explicitly followed
+                else:
+                    raise SubFragmentAggregation  # to be caught
 
-        if self.is_bg:
-            if self.is_fg:
-                # surprisingly not inconsistent! in the current pre-ContextRefactor world, this is how we are handling
-                # cached-LCIA-score nodes
-                raise UnCachedScore('fragment: %s\nquantity: %s' % (self._parent, quantity_ref))
+            # either is_fg (no impact) or is_bg or term_is_bg (both equiv)
 
-            elif self.is_frag:
+            elif self.is_bg:
                 # need bg_lcia method for FragmentRefs
                 # this is probably not currently supported
                 return self.term_node.bg_lcia(lcia_qty=quantity_ref, ref_flow=self.term_flow.external_ref, **kwargs)
+
+            else:
+                assert self.is_fg
+
+                # in the current pre-ContextRefactor world, this is how we are handling
+                # cached-LCIA-score nodes
+                # in the post-Context-Refactor world, foreground frags have no impact
+                #raise UnCachedScore('fragment: %s\nquantity: %s' % (self._parent, quantity_ref))
+                return LciaResult(quantity_ref)
 
         try:
             locale = self.term_node['SpatialScope']
@@ -506,10 +532,16 @@ class FlowTermination(object):
     def serialize(self, save_unit_scores=False):
         if self.is_null:
             return {}
-        j = {
-            'origin': self._term.origin,
-            'externalId': self._term.external_ref
-        }
+        if self.is_context:
+            j = {
+                'origin': self._term_flow.origin,
+                'context': self._term.name
+            }
+        else:
+            j = {
+                'origin': self._term.origin,
+                'externalId': self._term.external_ref
+            }
         if self.term_flow != self._parent.flow:
             if self.term_flow.origin == self.term_node.origin:
                 j['termFlow'] = self.term_flow.external_ref
@@ -560,6 +592,12 @@ class FlowTermination(object):
             term = '---:'  # fragment IO
         elif self.is_fg:
             term = '-O  '
+        elif self.is_context:
+            if self.is_emission:
+                term = '-== '
+            else:
+                # TODO: intermediate contexts don't present as cutoffs (because is_null is False)
+                term = '-cx '
         elif self.term_node.entity_type == 'process':
             if self.is_bg:
                 term = '-B* '

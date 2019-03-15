@@ -32,28 +32,6 @@ class BasicQuery(IndexInterface, InventoryInterface, QuantityInterface):
         return self._perform_query(None, 'get_item', EntityNotFound('%s/%s' % (self.origin, external_ref)),
                                    external_ref, item)
 
-    def ensure_lcia_factors(self, quantity):
-        pass
-
-    def do_lcia(self, inventory, quantity, **kwargs):
-        """
-        a very minimal LCIA
-        :param inventory:
-        :param quantity:
-        :param kwargs:
-        :return:
-        """
-        res = LciaResult(quantity)
-        for x in inventory:
-            if x.flow.cf(quantity) != 0:
-                res.add_component(x.flow.external_ref, x.flow)
-                try:
-                    loc = x.process['SpatialScope']
-                except KeyError:
-                    loc = 'GLO'
-                res.add_score(x.flow.external_ref, x, x.flow.factor(quantity), loc)
-        return res
-
     '''
     I think that's all I need to do!
     '''

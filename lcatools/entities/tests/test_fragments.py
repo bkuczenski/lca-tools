@@ -406,7 +406,7 @@ class FragmentTests(unittest.TestCase):
         :return:
         """
         ffs = self.aa.traverse()
-        net_balance = aa_in - f7.cf(mass)
+        net_balance = aa_in - mass.cf(f7)
         self._check_fragmentflows(ffs, f4, 'Output', net_balance)
 
     def test_inverted_fragment(self):

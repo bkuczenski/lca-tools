@@ -72,9 +72,10 @@ lcatools.terminations:
        ** this leads us to a FlowTermination refactor-- put on stack
 
 lcatools.entities.fragments:
-*(1012) inventory():
+0(1012) inventory():
 	easy fix (pending FlowTermination refactor)- just provide term.term_node as termination
 	     (actually: need term.term_node.external_ref for non-fg-emissions)
+	(actually: nothing to fix, as exchanges in inventory() are all cutoffs)
 
  (1077) cutoffs():
  	no change needed- they're cutoffs so termination should be None
@@ -99,10 +100,10 @@ x(359) inventory():       ** need to refactor ExchangeValue.from_allocated()
 
 Tasks on the Stack:
  X background _direct_exchanges()
- .. LciaResult refactor: audit use of QRResult
+ x LciaResult refactor: audit use of QRResult
  X v1_client.inventory _add_lcia_detail()
- * LciaResult.from_cfs()
- ** FlowTermination refactor:
+ 0 LciaResult.from_cfs()
+ x FlowTermination refactor:
     - top-to-bottom review
     - __init__ type checking
     - __init__ invocation checking
@@ -111,7 +112,7 @@ Tasks on the Stack:
     - serialization: context serializes as 'context' not as {'origin':, 'externalId':}
     - deserialization: symmetric to above; try for bg compatibility
     - __str__, other diagnostics
- * fragments.inventory()
+ 0 fragments.inventory()
  ** add_exchange() upstream
 
 That's not half bad, actually.
@@ -122,7 +123,23 @@ and then remains:
 I think we could get to the testing stage in 8 h work.
 
 
+Fri 2019-03-15 13:48:10 -0700
 
+HOLD ON for a fucking second.
+
+HOW EXACTLY is LCIA supposed to work in the new order?
+In the old order, we always used do_lcia() as a QuantityRef method, which fell back to the query implementation of do_lcia, which always felt like a hack.
+
+In the new order, do_lcia is properly implemented in the Quantity Implementation- which returns it to the normal _perform_query() mechanism I THINK.... no need for a BasicQuery overriding implementation. 
+
+Fri 2019-03-15 15:05:27 -0700
+OK OK this is all good.
+
+Remaining tasks:
+ ** add_exchange() upstream
+ - CatalogQuery.get_canonical()
+ - implement the index interface
+ - BIG FAT TESTING
 
 
 ==========

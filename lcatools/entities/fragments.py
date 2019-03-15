@@ -994,7 +994,6 @@ class LcFragment(LcEntity):
         :param refresh:
         :return:
         """
-        quantity_ref.ensure_lcia()
         fragmentflows = self.traverse(scenario=scenario, observed=True)
         return frag_flow_lcia(fragmentflows, quantity_ref, scenario=scenario, refresh=refresh)
 
@@ -1069,7 +1068,8 @@ class LcFragment(LcEntity):
                     '''
                     ref = ff.term.term_node
                     cos.extend([FragmentFlow.cutoff(ff.fragment, i.flow, i.direction, i.value * ff.node_weight)
-                                for i in ref.intermediate(ref.lci(ref_flow=ff.term.term_flow.external_ref))])
+                                for i in ref.lci(ref_flow=ff.term.term_flow.external_ref)
+                                if i.type in ('cutoff', 'context')])
 
         if aggregate:
             cos, _ = group_ios(self, cos, include_ref_flow=False)
@@ -1308,9 +1308,9 @@ class LcFragment(LcEntity):
         if conserved_qty is not None:
             if self.is_balance:
                 raise FoundBalanceFlow  # to be caught
-            cf = self.flow.cf(conserved_qty)
+            cf = conserved_qty.cf(self.flow)
             self.dbg_print('consrv cf %g for qty %s' % (cf, conserved_qty), level=3)
-            conserved_val = ev * conserved_qty.cf(self.flow).value
+            conserved_val = ev * cf.value
             if conserved_val == 0:
                 conserved = False
             else:
@@ -1321,7 +1321,7 @@ class LcFragment(LcEntity):
         elif self.is_balance:
             # traversing balance flow after FoundBalanceFlow exception
             conserved = True
-        elif self.balance_flow is not None and self.flow.cf(self._conserved_quantity) != 0.0:
+        elif self.balance_flow is not None and self._conserved_quantity.cf(self.flow).value != 0.0:
             # parent whose flow is balanced by child flow
             conserved = True
         else:

@@ -193,32 +193,44 @@ class Exchange(object):
         return comp_dir(self.direction)
 
     @property
-    def terminates_to(self):
+    def type(self):
         if self.termination is not None:
-            if self.termination == self.process.uuid:  # should be external_ref?
-                return 'self'
-            elif False:  # hook for elementary flow implementation
+            if isinstance(self.termination, Context):
+                if self.termination.elementary:
+                    return 'elementary'
                 return 'context'
+            elif self.termination == self.process.external_ref:
+                return 'self'
             else:
                 return 'node'
         return 'cutoff'
 
     @property
+    def term_ref(self):
+        if self.termination is None:
+            return None
+        if isinstance(self.termination, Context):
+            return self.termination.name
+        return self.termination
+
+    @property
     def _tflow(self):
         """
         indicates how an exchange is terminated:
-         - cutoff: nothing
-         - elementary flow: with (-) [NOTIMPLEMENTED]
-         - self: with (o)
-         - to process: with '(#)'
+         '   ' - cutoff
+         '(=)' - elementary context
+         '(-)' - other context
+         '(o)' - terminated to self
+         '(#)' - terminated to other node
         :return:
         """
         tmark = {
             'cutoff': '    ',
             'self': '(o) ',
+            'elementary': '(=) ',
             'context': '(-) ',
             'node': '(#) '
-        }[self.terminates_to]
+        }[self.type]
         return tmark + str(self.flow)
 
     def __str__(self):
@@ -237,7 +249,7 @@ class Exchange(object):
             'direction': self.direction,
         }
         if self.termination is not None:
-            j['termination'] = self.termination
+            j['termination'] = self.term_ref
         if self.is_reference:
             j['isReference'] = True
         return j

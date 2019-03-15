@@ -49,9 +49,6 @@ class QuantityRef(EntityRef):
     def characterize(self, flowable, ref_quantity, value, **kwargs):
         return self._query.characterize(flowable, ref_quantity, self, value, **kwargs)
 
-    def ensure_lcia(self):
-        self._query.ensure_lcia_factors(self)
-
     def do_lcia(self, inventory, **kwargs):
         return self._query.do_lcia(inventory, self, **kwargs)
 

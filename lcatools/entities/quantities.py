@@ -61,6 +61,9 @@ class LcQuantity(LcEntity):
         ref_quantity = kwargs.pop('ref_quantity', self)
         return self._qi.profile(flow, ref_quantity=ref_quantity, **kwargs)
 
+    def do_lcia(self, inventory, **kwargs):
+        return self._qi.do_lcia(self, inventory, **kwargs)
+
     """
     Interior utility functions
     These are not exactly exposed by the quantity interface and maybe should be retired

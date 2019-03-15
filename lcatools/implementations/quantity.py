@@ -344,15 +344,17 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
 
         :param quantity:
         :param inventory:
-        :param locale:
+        :param locale: ['GLO']
         :param kwargs:
         :return:
         """
         q = self.get_canonical(quantity)
         res = LciaResult(q)
         for x in inventory:
-            if x.termination is None:
+            if x.type == 'cutoff':
                 res.add_cutoff(x)
+                continue
+            if x.type in ('node', 'self'):
                 continue
             ref_q = self.get_canonical(x.flow.reference_entity)
             try:

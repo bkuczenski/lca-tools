@@ -2,11 +2,9 @@ import unittest
 
 from lcatools.interfaces import comp_dir
 from lcatools.entities.tests import BasicEntityTest
-from lcatools.entities.fragment_editor import FragmentEditor
+from lcatools.entities.fragment_editor import create_fragment
 from lcatools.terminations import FlowTermination
 from lcatools import BasicQuery
-
-f_ed = FragmentEditor()
 
 
 class FlowTerminationTestCase(BasicEntityTest):
@@ -30,7 +28,7 @@ class FlowTerminationTestCase(BasicEntityTest):
 
     def _petro_frag(self):
         rx = next(x for x in self.petro.references() if x.flow['Name'].startswith('Diesel'))
-        return f_ed.create_fragment(rx.flow, rx.direction, origin='test.termination')
+        return create_fragment(rx.flow, rx.direction, origin='test.termination')
 
     def _petro_term(self):
         frag = self._petro_frag()
@@ -57,7 +55,7 @@ class FlowTerminationTestCase(BasicEntityTest):
         frag = self._petro_frag()
         frag.terminate(self.petro)
         lead = next(x for x in self.petro.inventory(frag.flow) if x.flow['Name'].startswith('Lead'))
-        c = f_ed.create_fragment(flow=lead.flow, direction=lead.direction, parent=frag, value=lead.value)
+        c = create_fragment(flow=lead.flow, direction=lead.direction, parent=frag, value=lead.value)
         c.to_foreground()
         return frag
 
@@ -94,7 +92,7 @@ class FlowTerminationTestCase(BasicEntityTest):
         z = next(frag.child_flows)
         q = self._get_coolness()
         res = z.term.compute_unit_score(q)
-        self.assertEqual(res.total(), z.flow.cf(q))
+        self.assertEqual(res.total(), q.cf(z.flow).value)
 
     def test_traversal(self):
         c = self._frag_with_child()

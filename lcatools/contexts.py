@@ -7,6 +7,11 @@ from synonym_dict.example_compartments import Compartment, CompartmentManager
 
 class Context(Compartment):
     _origins = set()
+    entity_type = 'context'
+
+    @property
+    def external_ref(self):
+        return self.name
 
     def add_origin(self, origin):
         self._origins.add(origin)

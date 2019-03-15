@@ -51,9 +51,6 @@ class CatalogQuery(IndexInterface, BackgroundInterface, InventoryInterface, Quan
             return self
         return self._catalog.query(origin)
 
-    def ensure_lcia_factors(self, quantity_ref):
-        self._catalog.load_lcia_factors(quantity_ref)
-
     def __str__(self):
         return '%s for %s (catalog: %s)' % (self.__class__.__name__, self.origin, self._catalog.root)
 
@@ -73,18 +70,6 @@ class CatalogQuery(IndexInterface, BackgroundInterface, InventoryInterface, Quan
                 except StopIteration:
                     raise IndexRequired('Background engine requires index interface')
             yield i
-
-    def is_elementary(self, obj):
-        """
-        accesses the catalog's qdb to detect elementary compartment. Should work on flows or exchanges.
-        :param obj:
-        :return:
-        """
-        if obj.entity_type == 'flow':
-            return self._catalog.is_elementary(obj)
-        elif hasattr(obj, 'flow'):
-            return self._catalog.is_elementary(obj.flow)
-        raise TypeError('Don\'t know how to check elementarity of this: %s' % type(obj))
 
     def resolve(self, itype=INTERFACE_TYPES, strict=False):
         """
@@ -117,7 +102,3 @@ class CatalogQuery(IndexInterface, BackgroundInterface, InventoryInterface, Quan
                                          **kwargs)
             self._entity_cache[eid] = self.make_ref(entity)
         return self._entity_cache[eid]
-
-    def do_lcia(self, inventory, quantity_ref, **kwargs):
-        self.ensure_lcia_factors(quantity_ref)
-        return self._catalog.qdb.do_lcia(quantity_ref, inventory, **kwargs)

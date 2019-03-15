@@ -252,8 +252,9 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
 
     def cf(self, flow, quantity, ref_quantity=None, context=None, locale='GLO', strategy=None, allow_proxy=True, **kwargs):
         """
-        Reports the first / best result of a quantity conversion.  Returns a single number that converts the a unit of
-        the reference quantity into the query quantity for the given flowable, context, and locale (default 'GLO').
+        Reports the first / best result of a quantity conversion.  Returns a single QRResult interface
+        (QuantityConversion result) that converts unit of the reference quantity into the query quantity for the given
+        flowable, context, and locale (default 'GLO').
         If the locale is not found, this would be a great place to run a spatial best-match algorithm.
 
         :param flow:
@@ -266,7 +267,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         :param allow_proxy: [True] in the event of 0 exact results but >0 geographic proxies, return a geographic
           proxy without error.
         :param kwargs:
-        :return:
+        :return: a QRResult object or interface
         """
         qr_results, qr_geog, qr_mismatch = self.quantity_conversions(flow, quantity,
                                                                      ref_quantity=ref_quantity, context=context,
@@ -294,7 +295,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
                 return qr_geog[0]
             elif len(qr_mismatch) > 0:
                 for k in qr_mismatch:
-                    print('Flowable: %s\nfrom: %s\nto: %s' % (k[0].flowable, k.ref, ref_quantity))
+                    print('Flowable: %s\nfrom: %s\nto: %s' % (k.flowable, k.ref, ref_quantity))
                 raise ConversionReferenceMismatch
             else:
                 raise NoFactorsFound
@@ -354,9 +355,14 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
                 res.add_cutoff(x)
                 continue
             ref_q = self.get_canonical(x.flow.reference_entity)
-            cf = self.cf(ref_q, x.flow.flowable, x.termination, locale=locale,
-                                        **kwargs)
-            res.add_score(x.process, x, cf)
+            try:
+                cf = self.cf(ref_q, x.flow.flowable, x.termination, locale=locale,
+                             **kwargs)
+                res.add_score(x.process, x, cf)
+            except NoFactorsFound:
+                res.add_cutoff(x)
+            except ConversionReferenceMismatch:
+                res.add_error(x)
             # TODO: lcia_result remodel
             # should we characterize the flows? to save on lookups? no, leave that to the client
         return res

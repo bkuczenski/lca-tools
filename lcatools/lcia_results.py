@@ -404,6 +404,7 @@ class LciaResult(object):
      so is (theoretically) dynamic. This is not yet useful in practice.  LCIA Results are in sharp need of testing /
      refactoring.
     """
+    '''# Let's leave this out until we hahve a clear use case
     @classmethod
     def from_cfs(cls, fragment, cfs, scenario=None, location=None):
         """
@@ -425,6 +426,7 @@ class LciaResult(object):
                 results[qu].add_score(fragment.get_uuid(), exch, cf)
 
         return results
+    '''
 
     def __init__(self, quantity, scenario=None, private=False, scale=1.0):
         """
@@ -438,6 +440,7 @@ class LciaResult(object):
         self._scale = scale
         self._LciaScores = dict()
         self._cutoffs = []
+        self._errors = []
         self._private = private
         self._autorange = None
         self._failed = []
@@ -527,8 +530,8 @@ class LciaResult(object):
         static values according to a key.  The key is a lambda expression that is applied to each AggregateLciaScore
         component's entity property (components where the lambda fails will all be grouped together).
 
-        The special key '*' will aggregate all components together.  'entity' argument is required in this case to
-        provide a distinguishing key for the result.
+        The special key '*' will aggregate all components together.  'entity_id' argument is required in this case to
+        provide a distinguishing key for the result (falls back to "aggregated result").
 
         :param key: default: lambda x: x.fragment['StageName'] -- assuming the payload is a FragmentFlow
         :param entity_id: a descriptive string for the entity, to allow the aggregation to be distinguished in
@@ -557,6 +560,7 @@ class LciaResult(object):
         """
         Return a new LciaResult in which all groupings have been replaced by a set of AggregatedLciaScores, one
          per elementary flow.
+        Performs some inline testing via equality assertions, but this still deserves unit testing
         :param: _apply_scale: [1.0] apply a node weighting to the components
         :return:
         """
@@ -602,10 +606,6 @@ class LciaResult(object):
             if not isclose(scaled_total, flat.total(), rel_tol=1e-6):
                 raise ValueError('Total differs by greater than 1e-6! (applied scaling=%10.4g)' % _apply_scale)
         return flat
-
-    @property
-    def failed(self):
-        return self._failed
 
     @property
     def is_private(self):
@@ -654,11 +654,38 @@ class LciaResult(object):
         else:
             self._LciaScores[key] = SummaryLciaResult(self, entity, node_weight, unit_score)
 
+    @property
+    def failed_summaries(self):
+        """
+        A list of Summary results that failed to be added to an existing summary. This is mainly diagnostic and should
+        be removed soon.
+        Note the difiference from self.errors(), which is meant to store input exchanges that could not be converted
+        to the query quantity during LCIA.
+        :return:
+        """
+        return self._failed
+
     def add_cutoff(self, exchange):
         self._cutoffs.append(exchange)
 
     def cutoffs(self):
+        """
+        Generates exchanges for which no factor was found during LCIA.
+        :return:
+        """
         for x in self._cutoffs:
+            yield x
+
+    def add_error(self, exchange):
+        self._errors.append(exchange)
+
+    def errors(self):
+        """
+        generates exchanges that could not be converted to the target quantity due to a conversion error.
+        Note the difference from self.failed_summaries, which reports summary scores that could not be added.
+        :return:
+        """
+        for x in self._errors:
             yield x
 
     def keys(self):

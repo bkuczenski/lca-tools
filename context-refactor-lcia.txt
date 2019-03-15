@@ -98,8 +98,9 @@ x(359) inventory():       ** need to refactor ExchangeValue.from_allocated()
    : 2 in tests
 
 Tasks on the Stack:
- * background _direct_exchanges()
- * v1_client.inventory _add_lcia_detail()
+ X background _direct_exchanges()
+ .. LciaResult refactor: audit use of QRResult
+ X v1_client.inventory _add_lcia_detail()
  * LciaResult.from_cfs()
  ** FlowTermination refactor:
     - top-to-bottom review

@@ -18,10 +18,14 @@ class QuantityConversion(object):
     The first QRR added should report the query quantity (numerator) in terms of some reference quantity (denominator);
     then each subsequent QRR should include the prior ref quantity as the query quantity.
 
+    The QuantityConversion has a subset of the interface of a QRResult (flowable, ref, query, context, value), leaving
+    out locale and origin for the time being since they could vary across factors.
+
     For instance, a Quantity conversion from moles of CH4 to GWP 100 might include first the GWP conversion and then
     the mol conversion:
     QuantityConversion(QRResult('methane', 'kg', 'kg CO2eq', 'emissions to air', 'GLO', 'ipcc.2007', 25.0),
                        QRResult('methane', 'mol', 'kg', None, 'GLO', 'local.qdb', 0.016))
+    giving the resulting value of 0.4.
     """
     def __init__(self, *args):
         self._results = []
@@ -53,11 +57,16 @@ class QuantityConversion(object):
 
     @property
     def context(self):
-        return self._results[-1].context
+        return self._results[0].context
 
     @staticmethod
     def _invert_qrr(qrr):
-        return QRResult(qrr.flowable, qrr.ref, qrr.query, qrr.context, qrr.locale, qrr.origin, 1.0 / qrr.value)
+        """
+        swaps the ref and query quantities and inverts the value
+        :param qrr:
+        :return:
+        """
+        return QRResult(qrr.flowable, qrr.query, qrr.ref, qrr.context, qrr.locale, qrr.origin, 1.0 / qrr.value)
 
     def add_inverted_result(self, qrri):
         self.add_result(self._invert_qrr(qrri))

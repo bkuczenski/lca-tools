@@ -56,6 +56,13 @@ class DetailedLciaResult(object):
     Contains exchange, factor, result
     """
     def __init__(self, lc_result, exchange, qrresult):
+        """
+
+        :param lc_result:
+        :param exchange:
+        :param qrresult: meets the QRResult spec: has properties 'flowable', 'ref', 'query', 'context', 'locale',
+        'origin', 'value'
+        """
         assert exchange.flow.reference_entity == qrresult.ref
         self._exchange = exchange
         self._qr = qrresult

@@ -4,7 +4,7 @@ from lcatools.implementations import InventoryImplementation
 from lcatools.interfaces import EntityNotFound
 
 from lcatools.exchanges import ExchangeValue
-from lcatools.characterizations import Characterization
+from lcatools.characterizations import QRResult
 from lcatools.lcia_results import LciaResult
 
 from .exceptions import AntelopeV1Error
@@ -69,9 +69,10 @@ class AntelopeInventoryImplementation(InventoryImplementation):
 
     def _add_lcia_detail(self, res, entity, detail, loc='GLO'):
         flow = self._archive.retrieve_or_fetch_entity('flows/%s' % detail['flowID'])
-        exch = ExchangeValue(entity, flow, detail['direction'], value=detail['quantity'])
-        fact = Characterization(flow, res.quantity, value=detail['factor'], location=loc)
-        res.add_score(entity.external_ref, exch, fact, loc)
+        cx = self._archive.tm[flow.context]
+        exch = ExchangeValue(entity, flow, detail['direction'], termination=cx, value=detail['quantity'])
+        qrr = QRResult(flow.flowable, flow.reference_entity, res.quantity, cx, loc, self.origin, detail['factor'])
+        res.add_score(entity.external_ref, exch, qrr)
 
     @staticmethod
     def check_total(res, check):

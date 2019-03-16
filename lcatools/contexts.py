@@ -1,5 +1,10 @@
 """
 Contexts in this sense are environmental compartments, except they have the added capability to keep lists of origins.
+
+Edelen and Ingwersen et al 2017:
+Recommendations: ...setting an exclusive or inclusive nomenclature for flow context information that includes
+directionality and environmental compartment information."
+"
 """
 
 from synonym_dict.example_compartments import Compartment, CompartmentManager

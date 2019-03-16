@@ -23,6 +23,19 @@ class ConfigureInterface(AbstractQuery):
         return self._perform_query(_interface, 'check_config', ConfigRequired('Configuration Interface required'),
                                    config, c_args, **kwargs)
 
+    def add_terms(self, term_type, *terms, **kwargs):
+        """
+
+        :param term_type: 'flow', 'context', or 'quantity'
+        :param terms: any number of terms that are synonyms for one another, to be added to the term manager
+        :param kwargs:
+
+        Example: add_terms('context', 'emissions', 'NETL Coal Elementary Flows')
+        :return:
+        """
+        return self._perform_query(_interface, 'add_terms', NotImplementedError,
+                                   term_type, *terms, **kwargs)
+
     def set_reference(self, process_ref, flow_ref, direction=None, **kwargs):
         """
         Set a particular exchange as a reference flow for a given process.  The exchange must already exist.  No error

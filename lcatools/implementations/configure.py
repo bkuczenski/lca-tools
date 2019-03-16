@@ -28,16 +28,19 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
         :return:
         """
         print('Applying configuration to %s' % self._archive)
-        _config = defaultdict(set, config)
-        re_index = False
+        _config = defaultdict(set, config)  # do this to avoid KeyErrors
+        # re_index = False
+        for k in _config['add_terms']:
+            print('adding %s synonyms (%s|%d)' % (k[0], k[1], len(k) - 1))
+            self.add_terms(*k)
         for k in _config['set_reference']:
             print('Setting reference %s [%s] for %s' % (k[1], k[2], k[0]))
             self.set_reference(*k)
-            re_index = True
+            # re_index = True
         for k in _config['unset_reference']:
             print('UnSetting reference %s [%s] for %s' % (k[1], k[2], k[0]))
             self.unset_reference(*k)
-            re_index = True
+            # re_index = True
         for k in _config['characterize_flow']:
             print('Characterizing flow %s by %s: %g' % k)
             self.characterize_flow(*k, overwrite=overwrite)
@@ -86,6 +89,17 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
             raise KeyError('No unterminated exchanges found for flow %s' % fl)
         else:
             return exs[0].direction
+
+    def add_terms(self, term_type, *terms, **kwargs):
+        """
+
+        :param term_type:
+        :param terms:
+        :param kwargs:
+        :return:
+        """
+        if term_type == 'context':
+            self._archive.tm.add_terms(term_type, *terms)
 
     def set_reference(self, process_ref, flow_ref, direction=None, **kwargs):
         """

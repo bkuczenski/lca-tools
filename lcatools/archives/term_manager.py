@@ -1,7 +1,10 @@
 """
+Edelen and Ingwersen et al 2017:
+Recommendations: "... separating flowable names from context and unit information ..."
+
 Term Manager - used to handle string references to entities that are known by several synonyms.  Specifically:
- - contexts, which are drawn from flows' specified 'Compartment' attributes
- - flowables, which are drawn from flows' uuid, Name, CasNumber, and string representation
+ - contexts, which are drawn from flows' specified 'Compartment' or other classifying properties
+ - flowables, which are drawn from flows' uuid and external link, and Name, CasNumber, Synonyms properties
  - quantities, which should be recognizable by external ref or uuid
 
 The main objective of the TermManager is to enable the use of generalized synonym matching in performing LCIA. It
@@ -134,6 +137,13 @@ class TermManager(object):
     def _print(self, *args):
         if not self._quiet:
             print(*args)
+
+    def add_terms(self, term_type, *terms, **kwargs):
+        d = {'context': self._cm,
+             'flow': self._fm,
+             'flowable': self._fm,
+             'quantity': self._qm}[term_type]
+        d.new_entry(*terms, **kwargs)
 
     @staticmethod
     def is_context(cx):

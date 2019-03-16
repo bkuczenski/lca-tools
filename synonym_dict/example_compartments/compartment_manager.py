@@ -94,36 +94,45 @@ class CompartmentManager(SynonymDict):
             args = tuple([', '.join([pn, k]) if k.lower() in NONSPECIFIC_LOWER else k for k in args])
         else:
             for k in args:
-                if k.lower() in NONSPECIFIC_LOWER:
+                if str(k).lower() in NONSPECIFIC_LOWER:
                     raise NonSpecificCompartment(k)
         return super(CompartmentManager, self).new_entry(*args, parent=parent, **kwargs)
 
     def _merge(self, existing_entry, ent):
         """
         Need to check lineage. We adopt the rule: merge is acceptable if both entries have the same top-level
-        compartment or if ent has no parent.  existing entry will obviously be dominant.
+        compartment or if ent has no parent.  existing entry will obviously be dominant, but any sense specification
+        will overrule a 'None' sense in either existing or new.
         :param existing_entry:
         :param ent:
         :return:
         """
+        print('merging %s into %s' % (ent, existing_entry))
+        if ent.sense is not None:
+            existing_entry.sense = ent.sense  # this is essentially an assert w/raises InconsistentSense
         if ent.parent is not None:
             if not ent.top() is existing_entry.top():
                 raise InconsistentLineage('"%s": existing top %s | incoming top %s' % (ent,
                                                                                        existing_entry.top(),
                                                                                        ent.top()))
+
         super(CompartmentManager, self)._merge(existing_entry, ent)
+        for sub in list(ent.subcompartments):
+            sub.parent = existing_entry
 
     @staticmethod
     def _tuple_to_name(comps):
         return '; '.join(comps)
 
-    def add_compartments(self, comps, conflict=None):
+    def add_compartments(self, comps, conflict=None, merge_none=True):
         """
         comps should be a list of Compartment objects or strings, in descending order
         :param comps:
         :param conflict: [None] strategy to resolve inconsistent lineage problems.  None raises exception
           'match' hunts among the subcompartments of parent for a regex find
           'skip' simply drops the conflicting entry
+        :param merge_none: [True] preempt lineage errors by allowing an existing entry with no parent to be merged with
+
         :return: the last (most specific) Compartment created
         """
         if len(comps) == 0:
@@ -138,6 +147,11 @@ class CompartmentManager(SynonymDict):
                 while not new.is_subcompartment(current):  # slightly dangerous stratagem
                     if current is None:
                         break
+
+                    if new.parent is None and merge_none:
+                        new.parent = current
+                        continue
+
                     if conflict is None:
                         raise InconsistentLineage('"%s": existing parent "%s" | incoming parent "%s"' % (c,
                                                                                                          new.parent,

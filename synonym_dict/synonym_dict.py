@@ -119,7 +119,7 @@ class SynonymDict(object):
 
     def _add_term(self, term, ent):
         if not isinstance(ent, self._syn_type):
-            raise TypeError('Entry is not a %s (%s)' % (type(self._syn_type), type(ent)))
+            raise TypeError('Entry is not a %s (%s)' % (self._syn_type, type(ent)))
         if len(term.strip()) == 0:
             return
         self._check_term(term, ent)
@@ -215,12 +215,12 @@ class SynonymDict(object):
                     self._merge(s, ent)
                     return s
         elif prune:
-            prune_terms = []
+            prune_terms = set()
             for t in ent.terms:
                 try:
                     self._check_term(t, ent)
                 except TermExists:
-                    prune_terms.append(t)
+                    prune_terms.add(t)
             if ent.name in prune_terms:
                 try:
                     ent.set_name(next(k for k in ent.terms if k not in prune_terms))
@@ -265,8 +265,8 @@ class SynonymDict(object):
     def merge(self, first, second, child=False):
         """
         Merge the sets containing the two terms
-        :param first:
-        :param second:
+        :param first: dominant
+        :param second: removed from dict and merged with first
         :param child: [False] if true, preserve the second entry as a child, rather than merging its content
         :return:
         """

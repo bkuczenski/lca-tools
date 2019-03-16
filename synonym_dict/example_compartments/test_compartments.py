@@ -1,3 +1,4 @@
+from synonym_dict.tests.test_synonym_dict import TestContainer
 from .compartment import Compartment, InvalidSense, InconsistentSense
 from .compartment_manager import CompartmentManager, NonSpecificCompartment, NullCompartment, InconsistentLineage
 import unittest
@@ -46,7 +47,7 @@ class CompartmentTest(unittest.TestCase):
         self.assertTupleEqual(tuple(e), ('emissions', 'emissions to air', 'emissions to urban air'))
 
 
-class CompartmentManagerTest(unittest.TestCase):
+class CompartmentManagerTest(TestContainer.SynonymDictTest):
     """
     What do we want context managers to do?
 
@@ -56,6 +57,16 @@ class CompartmentManagerTest(unittest.TestCase):
      - two, retrieve a context from a string (the syndict already handles this)
      - three, that's really it.  managing the set of canonical contexts is a separate task.
     """
+    def _test_class(self, ignore_case=True):
+        if ignore_case is False:
+            self.skipTest('skipping case sensitive test')
+        else:
+            return CompartmentManager()
+
+    def test_add_object(self):
+        with self.assertRaises(TypeError):
+            super(CompartmentManagerTest, self).test_add_object()
+
     def setUp(self):
         self.cm = CompartmentManager()
 
@@ -69,7 +80,7 @@ class CompartmentManagerTest(unittest.TestCase):
              'parent': 'emissions'}
         self.cm._add_from_dict(d)
 
-    def test_merge_inconsistent(self):
+    def test_merge_inconsistent_sense(self):
         d = [
             {
                 "name": "to water",
@@ -96,7 +107,7 @@ class CompartmentManagerTest(unittest.TestCase):
         ]
         for k in d[:3]:
             self.cm._add_from_dict(k)
-        with self.assertRaises(InconsistentLineage):
+        with self.assertRaises(InconsistentSense):
             self.cm._add_from_dict(d[3])
 
     def test_add_from_dict(self):

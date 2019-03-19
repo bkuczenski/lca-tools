@@ -223,6 +223,7 @@ class Exchange(object):
     def _tflow(self):
         """
         indicates how an exchange is terminated:
+         '{*}' - reference
          '   ' - cutoff
          '(=)' - elementary context
          '(-)' - other context

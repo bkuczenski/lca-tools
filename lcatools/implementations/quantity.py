@@ -171,9 +171,15 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
             if qq.has_property('UnitConversion'):
                 try:
                     fac = qq.convert(to=rq.unit())
-                    return fac
+                    qr_results = [QRResult(flowable, rq, qq, context, locale, qq.origin, fac) ]
+                    return qr_results, [], []
                 except KeyError:
-                    pass
+                    try:
+                        fac = rq.convert(from_unit=qq.unit())
+                        qr_results = [QRResult(flowable, rq, qq, context, locale, rq.origin, fac) ]
+                        return qr_results, [], []
+                    except KeyError:
+                        pass
 
         cfs = [cf for cf in self._archive.tm.factors_for_flowable(flowable, quantity=qq, context=context, **kwargs)]
         if len(cfs) == 0:
@@ -217,7 +223,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
             if f is None:
                 flowable = flow
             else:
-                flowable = f.flowable
+                flowable = f.name
                 if ref_quantity is None:
                     ref_quantity = f.reference_entity
                 if context is None:
@@ -247,6 +253,9 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         """
         flowable, rq, cx = self._get_flowable_info(flow, ref_quantity, context)
         qq = self.get_canonical(query_quantity)
+
+        if qq == rq:  # is?
+            return [QRResult(flowable, rq, qq, context, locale, qq.origin, 1.0)], [], []
 
         return self._quantity_conversions(flowable, rq, qq, context, locale=locale, **kwargs)
 

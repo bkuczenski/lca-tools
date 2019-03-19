@@ -98,6 +98,9 @@ class LcArchive(BasicArchive):
             d = x['direction']
             if 'termination' in x:
                 t = x['termination']
+                cx = self.tm[t]
+                if cx is not None:
+                    t = cx
             if 'value' in x:
                 process.add_exchange(f, d, value=x['value'], termination=t)
 

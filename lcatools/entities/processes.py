@@ -226,6 +226,7 @@ class LcProcess(LcEntity):
 
         if ref_entity.key in self._exchanges:
             if self._exchanges[ref_entity.key].set_ref(self):
+                ref_entity.set_ref(self)
                 self.reference_entity.add(ref_entity)
             else:
                 raise ReferenceSettingFailed('%s\n%s' % (self, ref_entity))

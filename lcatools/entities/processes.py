@@ -435,6 +435,23 @@ class LcProcess(LcEntity):
         except NoExchangeFound:
             return False
 
+    def _alloc_dict(self, quantity=None):
+        """
+        Returns a dict mapping reference key to NON-NORMALIZED allocation factor.  This factor reports the amount of
+        the reference flow, in dimensions of the specified quantity, that is produced by a UNIT activity of the process.
+        Normalized allocation factors are obtained by dividing by the sum of these amounts.
+        :param quantity:
+        :return:
+        """
+        if quantity is None:
+            if self._alloc_by_quantity is None:
+                raise ValueError('An allocation quantity is required to compute normalized allocation factors')
+            quantity = self._alloc_by_quantity
+
+        return {rf: self._exchanges[rf.key].value * rf.flow.cf(quantity)
+                for rf in self.reference_entity
+                if self._exchanges[rf.key].value is not None}
+
     def allocate_by_quantity(self, quantity):
         """
         Store a quantity for partitioning allocation.  All non-reference exchanges will have their exchange values
@@ -453,22 +470,28 @@ class LcProcess(LcEntity):
             self._d.pop('AllocatedByQuantity', None)
             return
 
-        exchs = dict()
-        mags = dict()
-        for rf in self.reference_entity:
-            rfx = self._exchanges[rf.key]
-            if rfx.value is None:
-                continue
-            exchs[rf.flow] = rfx.value
-            mags[rf.flow] = exchs[rf.flow] * rf.flow.cf(quantity)
+        mags = self._alloc_dict(quantity)
 
         total = sum([v for v in mags.values()])
         if total == 0:
+            print('zero total found; not setting allocation by qty %s' % quantity)
             return
 
         self._alloc_by_quantity = quantity
         self._alloc_sum = total
         self['AllocatedByQuantity'] = quantity
+
+    def allocation_factors(self, quantity=None):
+        """
+        Returns a dict mapping reference exchange to that reference's allocation factor according to the specified
+        allocation quantity.
+        If no quantity is specified, the current allocation quantity is used.  DOES NOT AFFECT CURRENT ALLOCATION.
+        :param quantity: allocation quantity
+        :return:
+        """
+        d = self._alloc_dict(quantity)
+        s = sum(d.values())
+        return {k: v / s for k, v in d.items()}
 
     def is_allocated(self, reference, strict=False):
         """

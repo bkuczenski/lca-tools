@@ -44,6 +44,13 @@ class OpenLcaJsonLdArchive(LcArchive):
     def _create_object(self, typ, key):
         return json.loads(self._archive.readfile(os.path.join(typ, key + '.json')))
 
+    def _process_from_json(self, entity_j, uid):
+        process = super(OpenLcaJsonLdArchive, self)._process_from_json(entity_j, uid)
+        if process.has_property('allocationFactors'):
+            # we do not need to replicate 0-valued allocation factors, esp. when there are thousands of them
+            process['allocationFactors'] = [k for k in process['allocationFactors'] if k['value'] != 0]
+        return process
+
     def _clean_object(self, typ, key):
         j = self._create_object(typ, key)
         j.pop('@context')
@@ -175,6 +182,9 @@ class OpenLcaJsonLdArchive(LcArchive):
                'end': p_j['processDocumentation']['validUntil']}
 
         exch = p_j.pop('exchanges')
+
+        if 'allocationFactors' in p_j:
+            p_j['allocationFactors'] = [v for v in p_j['allocationFactors'] if v['value'] != 0]
 
         # leave allocation in place for now
 

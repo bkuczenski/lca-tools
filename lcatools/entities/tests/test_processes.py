@@ -30,6 +30,11 @@ class ProcessesTest(BasicEntityTest):
         for x in self.grid.inventory(ex):
             self.assertEqual(x.value, inv_dict[x.flow] / ex.value)
 
+    def test_allocation_factors(self):
+        af = self.petro.allocation_factors()
+        self.assertEqual(len(af), 9)
+        self.assertAlmostEqual(sum(af.values()), 1.0, places=12)
+
     def test_inv_not_reference(self):
         """
         test implementation of the interface specification for inventory

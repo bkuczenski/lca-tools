@@ -99,7 +99,7 @@ class Exchange(object):
         return self._is_reference
 
     def set_ref(self, setter):
-        if setter is self._process:
+        if setter is self._process and self._termination is None:
             self._is_reference = True
             return True
         return False
@@ -188,6 +188,10 @@ class Exchange(object):
         except AttributeError:
             return False
 
+    def __repr__(self):
+        return '%s(%s, %s, %s)' % (self.__class__.__name__, self._process.external_ref,
+                                   self.direction, self._tflow)
+
     @property
     def comp_dir(self):
         return comp_dir(self.direction)
@@ -203,6 +207,8 @@ class Exchange(object):
                 return 'self'
             else:
                 return 'node'
+        elif self.is_reference:
+            return 'reference'
         return 'cutoff'
 
     @property
@@ -225,6 +231,7 @@ class Exchange(object):
         :return:
         """
         tmark = {
+            'reference': '{*} ',
             'cutoff': '    ',
             'self': '(o) ',
             'elementary': '(=) ',

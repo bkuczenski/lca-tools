@@ -15,6 +15,13 @@ class InvalidSubCompartment(Exception):
     pass
 
 
+class FrozenElementary(Exception):
+    """
+    top-level elementary contexts may not be assigned parents
+    """
+    pass
+
+
 class NullContext(Exception):
     pass
 
@@ -138,8 +145,12 @@ class Compartment(SynonymSet):
     def parent(self, parent):
         if self._parent is not None:
             self._parent.deregister_subcompartment(self)
+        else:
+            if self.elementary and not parent.elementary:
+                raise FrozenElementary
         self._parent = parent
-        parent.register_subcompartment(self)
+        if parent is not None:
+            parent.register_subcompartment(self)
 
     def is_subcompartment(self, comp):
         """

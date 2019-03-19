@@ -174,7 +174,7 @@ class CompartmentManagerTest(TestContainer.SynonymDictTest):
     def test_inconsistent_lineage(self):
         self._add_water_dict()
         with self.assertRaises(InconsistentLineage):
-            self.cm.add_compartments(['resources', 'water'])
+            self.cm.add_compartments(['resources', 'water'], conflict=None)
 
     def test_inconsistent_lineage_match(self):
         """
@@ -201,6 +201,24 @@ class CompartmentManagerTest(TestContainer.SynonymDictTest):
 
         self.assertIs(fw.parent, rw.parent)
         self.assertEqual(fw.sense, 'Source')
+
+    def test_inconsistent_lineage_rename(self):
+        """
+        If we get an inconsistent lineage error on a subcompartment, this is caused by a synonym collision. We can solve
+        it by renaming the new subcompartment to be based on its parent, which must be non-conflicting.
+
+        For rename we use a comma-separated join so that semicolon remains the operative parent-child separator
+        :return:
+        """
+        self._add_water_dict()
+        rw = self.cm.add_compartments(['resources', 'water'], conflict='rename')
+        self.assertIs(rw.parent, self.cm['resources'])
+        self.assertEqual(rw.name, 'Resources, water')
+
+    def test_disregard(self):
+        n = self.cm.add_compartments(['elementary flows', 'emissions', 'air', 'urban air'])
+        self.assertIn('elementary flows', self.cm.disregarded_terms)
+        self.assertListEqual(n.as_list(), ['Emissions', 'air', 'urban air'])
 
 
 if __name__ == '__main__':

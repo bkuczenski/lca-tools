@@ -2,9 +2,21 @@
 Contexts in this sense are environmental compartments, except they have the added capability to keep lists of origins.
 
 Edelen and Ingwersen et al 2017:
-Recommendations: ...setting an exclusive or inclusive nomenclature for flow context information that includes
+"Recommendations: ...setting an exclusive or inclusive nomenclature for flow context information that includes
 directionality and environmental compartment information."
-"
+
+In the antelope architecture, there are two different objectives for handling contexts as-presented by the data source.
+
+ In the default case, for every static resource or stand-alone archive a "TermManager" is created which is captive to
+ the archive.  The role of this class is to collect information from the data source in as close to its native
+ presentation as possible. This creates an "inclusive" nomenclature for the source.
+
+ In the Catalog case, both catalog's local quantity DB is an LciaEngine, which is also shared among all non-static
+ resources (including remote resources).  In this case the objective is to match a given context to the existing
+ (exclusive) nomenclature built-in to the LciaEngine, so that contexts are guaranteed to coincide during LCIA.
+
+In order to accomplish this, the native add_context() method needs to be expansive, fault tolerant, and widely accepting
+of diverse inputs, whereas find_matching_context() needs to be more discerning and rigorous.
 """
 
 from synonym_dict.example_compartments import Compartment, CompartmentManager

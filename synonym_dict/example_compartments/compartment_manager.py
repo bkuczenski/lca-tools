@@ -8,7 +8,7 @@ So I'm going to bow to the reserved keyword and call these things compartments i
 """
 
 from ..synonym_dict import SynonymDict
-from .compartment import Compartment
+from .compartment import Compartment, FrozenElementary
 
 NullCompartment = Compartment.null()
 
@@ -34,6 +34,9 @@ class CompartmentManager(SynonymDict):
 
     def __init__(self, source_file=None):
         super(CompartmentManager, self).__init__()
+
+        self._disregarded = set()  # this is a set of terms that
+
         self.new_entry('Resources', sense='source')
         self.new_entry('Emissions', sense='sink')
         self.load(source_file)
@@ -78,6 +81,26 @@ class CompartmentManager(SynonymDict):
             if v.parent is None:
                 yield v
 
+    @property
+    def disregarded_terms(self):
+        for t in sorted(self._disregarded):
+            yield t
+
+    def _disregard(self, comp):
+        """
+        The compartment's terms are added to the disregard list.  Its child compartments are "orphaned" (brutal!).
+        recurse on parent.
+        :param comp:
+        :return:
+        """
+        for c in comp.subcompartments:
+            c.parent = None
+        for t in comp.terms:
+            self._disregarded.add(t.lower())
+        self.remove_entry(comp)
+        if comp.parent is not None:
+            self._disregard(comp.parent)
+
     def new_entry(self, *args, parent=None, **kwargs):
         """
         If a new object is added with unmodified non-specific synonyms like "unspecified", modify them to include their
@@ -87,6 +110,7 @@ class CompartmentManager(SynonymDict):
         :param kwargs:
         :return:
         """
+        args = tuple(filter(lambda arg: arg.lower() not in self._disregarded, args))
         if parent is not None:
             if not isinstance(parent, Compartment):
                 parent = self._d[parent]
@@ -124,14 +148,52 @@ class CompartmentManager(SynonymDict):
     def _tuple_to_name(comps):
         return '; '.join(comps)
 
-    def add_compartments(self, comps, conflict=None, merge_none=True):
+    def _check_subcompartment_lineage(self, current, c):
+        """
+        Determines whether the incoming compartment name 'c' already exists in the database with an inconsistent
+        lineage from the current parent 'current'.
+
+        If the term is not found, creates a new subcompartment with current as parent.
+
+        If the term is found and has a valid lineage, the found subcompartment is used.
+
+        If the term is found to be an orphan, then current is assigned as its parent, unless the "orphan" is an
+        elementary root context ('emissions' or 'resources'), in which case all terms in current + parents are removed
+        from the dictionary and assigned to _disregarded
+
+        Otherwise, raises InconsistentLineage
+        :param current:
+        :param c:
+        :return:
+        """
+        if c in self._d:
+            new = self.get(c)
+            if current is None:
+                return new
+            if new.is_subcompartment(current):
+                return new
+            if new.parent is None:
+                try:
+                    new.parent = current
+                except FrozenElementary:
+                    self._disregard(current)
+                return new
+            raise InconsistentLineage('"%s": existing parent "%s" | incoming parent "%s"' % (c,
+                                                                                             new.parent,
+                                                                                             current))
+        else:
+            new = self.new_entry(c, parent=current)
+            return new
+
+    def add_compartments(self, comps, conflict='rename'):
         """
         comps should be a list of Compartment objects or strings, in descending order
         :param comps:
-        :param conflict: [None] strategy to resolve inconsistent lineage problems.  None raises exception
+        :param conflict: ['rename'] strategy to resolve inconsistent lineage problems.
+          'rename' changes the name of the conflicting entry to include its native (nonconflicting) parent
           'match' hunts among the subcompartments of parent for a regex find
           'skip' simply drops the conflicting entry
-        :param merge_none: [True] preempt lineage errors by allowing an existing entry with no parent to be merged with
+          None or else: raise InconsistentLineage
 
         :return: the last (most specific) Compartment created
         """
@@ -142,30 +204,22 @@ class CompartmentManager(SynonymDict):
         if auto_name in self._d:
             return self[auto_name]
         for c in comps:
-            if c in self._d:
-                new = self.get(c)
-                while not new.is_subcompartment(current):  # slightly dangerous stratagem
-                    if current is None:
-                        break
+            try:
+                new = self._check_subcompartment_lineage(current, c)
+            except InconsistentLineage as e:
+                if conflict == 'match':
+                    try:
+                        new = next(s for s in current.subcompartments if s.contains_string(c, ignore_case=True))
+                    except StopIteration:
+                        raise e
+                elif conflict == 'skip':
+                    new = current
+                elif conflict == 'rename':
+                    new_c = ', '.join([current.name, c])
+                    new = self._check_subcompartment_lineage(current, new_c)
+                else:
+                    raise e
 
-                    if new.parent is None and merge_none:
-                        new.parent = current
-                        continue
-
-                    if conflict is None:
-                        raise InconsistentLineage('"%s": existing parent "%s" | incoming parent "%s"' % (c,
-                                                                                                         new.parent,
-                                                                                                         current))
-                    elif conflict == 'match':
-                        try:
-                            new = next(s for s in current.subcompartments if s.contains_string(c, ignore_case=True))
-                        except StopIteration:
-                            conflict = None
-                    elif conflict == 'skip':
-                        new = current
-
-            else:
-                new = self.new_entry(c, parent=current)
             current = new
         self.add_synonym(auto_name, current.name)
         return current
@@ -175,4 +229,6 @@ class CompartmentManager(SynonymDict):
             item = self._tuple_to_name(item)
         if str(item).lower() in NONSPECIFIC_LOWER:
             return self._null_entry
+        if str(item).lower() in self._disregarded:
+            return None
         return super(CompartmentManager, self).__getitem__(item)

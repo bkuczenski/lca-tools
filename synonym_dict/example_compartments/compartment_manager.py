@@ -8,7 +8,7 @@ So I'm going to bow to the reserved keyword and call these things compartments i
 """
 
 from ..synonym_dict import SynonymDict
-from .compartment import Compartment, FrozenElementary
+from .compartment import Compartment
 
 NullCompartment = Compartment.null()
 
@@ -32,18 +32,9 @@ class CompartmentManager(SynonymDict):
 
     _null_entry = NullCompartment
 
-    def __init__(self, source_file=None):
-        super(CompartmentManager, self).__init__()
-
-        self._disregarded = set()  # this is a set of terms that
-
-        self.new_entry('Resources', sense='source')
-        self.new_entry('Emissions', sense='sink')
-        self.load(source_file)
-
     def _add_from_dict(self, j):
         """
-        JSON dict has mandatory 'name', optional 'parent', 'sense', and 'synonyms'
+        JSON dict has mandatory 'name', optional 'parent', and 'synonyms'
         We POP from it because it only gets processed once
         :param j:
         :return:
@@ -81,26 +72,6 @@ class CompartmentManager(SynonymDict):
             if v.parent is None:
                 yield v
 
-    @property
-    def disregarded_terms(self):
-        for t in sorted(self._disregarded):
-            yield t
-
-    def _disregard(self, comp):
-        """
-        The compartment's terms are added to the disregard list.  Its child compartments are "orphaned" (brutal!).
-        recurse on parent.
-        :param comp:
-        :return:
-        """
-        for c in comp.subcompartments:
-            c.parent = None
-        for t in comp.terms:
-            self._disregarded.add(t.lower())
-        self.remove_entry(comp)
-        if comp.parent is not None:
-            self._disregard(comp.parent)
-
     def new_entry(self, *args, parent=None, **kwargs):
         """
         If a new object is added with unmodified non-specific synonyms like "unspecified", modify them to include their
@@ -110,7 +81,6 @@ class CompartmentManager(SynonymDict):
         :param kwargs:
         :return:
         """
-        args = tuple(filter(lambda arg: arg.lower() not in self._disregarded, args))
         if parent is not None:
             if not isinstance(parent, Compartment):
                 parent = self._d[parent]
@@ -125,15 +95,12 @@ class CompartmentManager(SynonymDict):
     def _merge(self, existing_entry, ent):
         """
         Need to check lineage. We adopt the rule: merge is acceptable if both entries have the same top-level
-        compartment or if ent has no parent.  existing entry will obviously be dominant, but any sense specification
-        will overrule a 'None' sense in either existing or new.
+        compartment or if ent has no parent.  existing entry will obviously be dominant
         :param existing_entry:
         :param ent:
         :return:
         """
         print('merging %s into %s' % (ent, existing_entry))
-        if ent.sense is not None:
-            existing_entry.sense = ent.sense  # this is essentially an assert w/raises InconsistentSense
         if ent.parent is not None:
             if not ent.top() is existing_entry.top():
                 raise InconsistentLineage('"%s": existing top %s | incoming top %s' % (ent,
@@ -173,10 +140,7 @@ class CompartmentManager(SynonymDict):
             if new.is_subcompartment(current):
                 return new
             if new.parent is None:
-                try:
-                    new.parent = current
-                except FrozenElementary:
-                    self._disregard(current)
+                new.parent = current
                 return new
             raise InconsistentLineage('"%s": existing parent "%s" | incoming parent "%s"' % (c,
                                                                                              new.parent,
@@ -229,6 +193,4 @@ class CompartmentManager(SynonymDict):
             item = self._tuple_to_name(item)
         if str(item).lower() in NONSPECIFIC_LOWER:
             return self._null_entry
-        if str(item).lower() in self._disregarded:
-            return None
         return super(CompartmentManager, self).__getitem__(item)

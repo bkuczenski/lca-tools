@@ -306,6 +306,8 @@ class SynonymDict(object):
         :return:
         """
         term = str(term)
+        if isinstance(syn, self._syn_type):
+            syn = syn.name
         ent = self._d[syn]
         self._add_term(term, ent)  # checks TermExists
         ent.add_term(term)

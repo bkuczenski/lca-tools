@@ -139,6 +139,13 @@ class TestContainer(object):
             self.assertIn('greetings', o1)
             self.assertEqual(g['greetings'], g['hello'])
 
+        def test_add_synonym_entry(self):
+            g = self._test_class()
+            o1 = g.new_entry('hello', 'hola')
+            self.assertIsInstance(o1, g._syn_type)
+            g.add_synonym('greetings', o1)
+            self.assertEqual(g['greetings'], g['hola'])
+
         def test_prune(self):
             g = self._test_class()
             o1 = g.new_entry('hello', 'hola', 'hi', 'aloha')

@@ -1,24 +1,7 @@
 from ..synonym_dict import SynonymSet
 
-ELEMENTARY = {'resources', 'emissions'}
-
-
-class InvalidSense(Exception):
-    pass
-
-
-class InconsistentSense(Exception):
-    pass
-
 
 class InvalidSubCompartment(Exception):
-    pass
-
-
-class FrozenElementary(Exception):
-    """
-    top-level elementary contexts may not be assigned parents
-    """
     pass
 
 
@@ -26,31 +9,13 @@ class NullContext(Exception):
     pass
 
 
-def valid_sense(sense):
-    if sense is None:
-        return None
-    try:
-        v = {'source': 'Source',
-             'sink': 'Sink'}[sense.lower()]
-    except KeyError:
-        raise InvalidSense(sense)
-    return v
-
-
 class Compartment(SynonymSet):
     """
-    A context is an environmental or social "compartment" that exchanges some "flow" with a technological "activity"
+    A compartment is an environmental or social "compartment" that exchanges some "flow" with a technological "activity"
     in a process-flow product system.  Contexts are defined by a hierarchical structure and each instance has an
     optional 'parent' which is a proper superset, if present.
 
-    A context has a natural directional "sense", which is either 'Source', 'Sink', or None.  A Source context
-    generates flows which may be inputs to the activity; a Sink context absorbs flows which are output from the
-    activity.
-
-    If a context has a parent, it inherits the sense of the parent- specifying the opposite sense will raise
-    an error.
-
-    If 'resources' or 'emissions' match any terms in a context, it is considered 'elementary', along with all its
+    If 'resources' or 'emissions' match any terms in a compartment, it is considered 'elementary', along with all its
     subcompartments.
     """
     @classmethod
@@ -71,17 +36,14 @@ class Compartment(SynonymSet):
             raise NullContext
         return super(Compartment, self).add_child(other, force=force)
 
-    def __init__(self, *args, parent=None, sense=None):
+    def __init__(self, *args, parent=None):
         super(Compartment, self).__init__(*args)
         self._parent = None
-        self._sense = None
         self._subcompartments = set()
         if isinstance(parent, Compartment):
             self.parent = parent  # use setter
         elif parent is not None:
             raise TypeError('Parent must be a Compartment, not %s' % type(parent))
-        if sense is not None:
-            self.sense = sense
 
     @property
     def object(self):
@@ -112,32 +74,6 @@ class Compartment(SynonymSet):
             yield x
 
     @property
-    def sense(self):
-        if self.parent is None:
-            return self._sense
-        return self.parent.sense
-
-    @sense.setter
-    def sense(self, value):
-        sense = valid_sense(value)
-        if self.sense is not None and self.sense != sense:
-            raise InconsistentSense('Value %s conflicts with current sense %s' % (sense, self.sense))
-        if self.parent is None:
-            self._sense = valid_sense(value)
-        else:
-            self.parent.sense = value
-
-    @property
-    def elementary(self):
-        if self.parent is None:
-            for t in self.terms:
-                if t.strip().lower() in ELEMENTARY:
-                    return True
-            return False
-        else:
-            return self.parent.elementary
-
-    @property
     def parent(self):
         return self._parent
 
@@ -145,9 +81,6 @@ class Compartment(SynonymSet):
     def parent(self, parent):
         if self._parent is not None:
             self._parent.deregister_subcompartment(self)
-        else:
-            if self.elementary and not parent.elementary:
-                raise FrozenElementary
         self._parent = parent
         if parent is not None:
             parent.register_subcompartment(self)
@@ -190,9 +123,6 @@ class Compartment(SynonymSet):
 
     def serialize(self):
         d = super(Compartment, self).serialize()
-        if self._parent is None:
-            if self.sense is not None:
-                d['sense'] = self.sense
-        else:
+        if self._parent is not None:
             d['parent'] = str(self.parent)
         return d

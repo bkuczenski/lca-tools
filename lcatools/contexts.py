@@ -23,6 +23,11 @@ from synonym_dict.example_compartments import Compartment, CompartmentManager
 
 ELEMENTARY = {'resources', 'emissions'}
 
+PROTECTED = ('air', 'water', 'ground')
+
+class ProtectedTerm(Exception):
+    pass
+
 
 class InvalidSense(Exception):
     pass
@@ -48,6 +53,13 @@ def valid_sense(sense):
     except KeyError:
         raise InvalidSense(sense)
     return v
+
+
+def _dir_mod(arg, sense):
+    mod = {'Source': 'from', 'Sink': 'to'}[sense]
+    if arg.lower() in PROTECTED:
+        arg = '%s %s' % (mod, arg)
+    return arg
 
 
 class Context(Compartment):
@@ -85,7 +97,7 @@ class Context(Compartment):
             self.parent.sense = value
 
     @property
-    def parent(self):
+    def parent(self):  # duplicating here to override setter
         return self._parent
 
     @parent.setter
@@ -184,9 +196,14 @@ class ContextManager(CompartmentManager):
         if comp.parent is not None:
             self._disregard(comp.parent)
 
-    def new_entry(self, *args, **kwargs):
+    def new_entry(self, *args, parent=None, **kwargs):
         args = tuple(filter(lambda arg: arg.lower() not in self._disregarded, args))
-        return super(ContextManager, self).new_entry(*args, **kwargs)
+        if parent is not None:
+            if not isinstance(parent, Compartment):
+                parent = self._d[parent]
+            if parent.sense is not None:
+                args = tuple(_dir_mod(arg, parent.sense) for arg in args)
+        return super(ContextManager, self).new_entry(*args, parent=parent, **kwargs)
 
     def _gen_matching_entries(self, cx):
         for t in cx.terms:
@@ -280,4 +297,6 @@ class ContextManager(CompartmentManager):
     def __getitem__(self, item):
         if str(item).lower() in self._disregarded:
             return None
+        if str(item).lower() in PROTECTED:
+            raise ProtectedTerm('Use "to %s" or "from %s"' % (item, item))
         return super(ContextManager, self).__getitem__(item)

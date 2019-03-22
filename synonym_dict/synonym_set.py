@@ -34,7 +34,8 @@ class SynonymSet(object):
 
     @property
     def terms(self):
-        seen = set()
+        seen = {self.name}
+        yield self.name
         for s in self.base_terms:
             yield s
             seen.add(s)

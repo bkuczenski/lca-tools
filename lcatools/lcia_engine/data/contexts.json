@@ -19,7 +19,6 @@
         "Other emissions to air",
         "Particles to air",
         "Radioactive emissions to air",
-        "air",
         "fossil"
       ],
       "parent": "Emissions"

@@ -14,8 +14,13 @@ class SynonymSetTest(unittest.TestCase):
         self.assertNotIn('', s)
 
     def test_terms(self):
+        """
+        first term is name, always shows first
+        remaining terms show in alphabetical order
+        :return:
+        """
         s = SynonymSet('hello', 'aloha', 'Ni hao')
-        self.assertListEqual(['Ni hao', 'aloha', 'hello'], [k for k in s.terms])
+        self.assertListEqual(['hello', 'Ni hao', 'aloha'], [k for k in s.terms])
 
     def test_name(self):
         s = SynonymSet('hello', 'aloha', 'Ni hao')
@@ -58,6 +63,11 @@ class SynonymSetTest(unittest.TestCase):
         s = SynonymSet('hello', 'aloha', 'Ni hao')
         self.assertTrue('aloha' in s)
         self.assertFalse('greetings' in s)
+
+    def test_strip(self):
+        s = SynonymSet(' [Resources] ')
+        self.assertEqual(s.name, '[Resources]')
+        self.assertIn(' [Resources] ', s)
 
     def test_contains_string(self):
         s = SynonymSet('hello', 'aloha', 'Ni hao')

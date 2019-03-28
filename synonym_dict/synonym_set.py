@@ -34,11 +34,14 @@ class SynonymSet(object):
 
     @property
     def terms(self):
+        if self.name is None:
+            return
         seen = {self.name}
         yield self.name
         for s in self.base_terms:
-            yield s
-            seen.add(s)
+            if s not in seen:
+                yield s
+                seen.add(s)
         for c in self._children:
             for t in c.terms:
                 if t not in seen:
@@ -79,7 +82,9 @@ class SynonymSet(object):
         if len(s.strip()) == 0:
             return
         if self._name is None:
-            self._name = s
+            s_s = s.strip()
+            self._name = s_s
+            self._terms.add(s_s)
         self._terms.add(s)
 
     def add_child(self, other, force=False):

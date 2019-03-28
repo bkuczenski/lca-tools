@@ -60,17 +60,19 @@ class CompartmentManager(SynonymDict):
             subs = []
 
     def _list_entries(self):
-        comps = []
-        for tc in self.top_level_compartments:
-            for c in tc.self_and_subcompartments:
-                comps.append(c)
-        return comps
+        return [c for c in self.objects]
 
     @property
     def top_level_compartments(self):
-        for v in self.objects:
+        for v in self._entries:
             if v.parent is None:
                 yield v
+
+    @property
+    def objects(self):
+        for tc in self.top_level_compartments:
+            for c in tc.self_and_subcompartments:
+                yield c
 
     def new_entry(self, *args, parent=None, **kwargs):
         """

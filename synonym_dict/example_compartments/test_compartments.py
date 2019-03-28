@@ -34,13 +34,13 @@ class CompartmentContainer(object):
 
     class CompartmentManagerTest(TestContainer.SynonymDictTest):
         """
-        What do we want context managers to do?
+        What do we want compartment managers to do?
 
-         - one, keep track of contexts that are encountered
+         - one, keep track of compartments that are encountered
           = add them (hierarchicaly)
           = add synonyms as appropriate
-         - two, retrieve a context from a string (the syndict already handles this)
-         - three, that's really it.  managing the set of canonical contexts is a separate task.
+         - two, retrieve a compartment from a string (the syndict already handles this)
+         - three, that's really it.  managing a set of canonical compartments is a separate task.
         """
         def _test_class(self, ignore_case=True):
             if ignore_case is False:
@@ -54,10 +54,10 @@ class CompartmentContainer(object):
 
         def setUp(self):
             self.cm = CompartmentManager()
-            self.cm.new_entry('Emissions')
-            self.cm.new_entry('Resources')
+            #
 
         def _add_water_dict(self):
+            self.cm.new_entry('Emissions')
             d = {'name': 'water emissions',
                  'synonyms': [
                      'emissions to water',
@@ -75,13 +75,18 @@ class CompartmentContainer(object):
             self.cm.add_compartments(['emissions', 'emissions to air', 'emissions to urban air'])
             self.assertIs(self.cm['emissions to air'], self.cm['emissions to urban air'].parent)
 
+        def test_strip_name(self):
+            c = self.cm.add_compartments(['NETL Elementary Flows', ' [Resources] '])
+            self.assertEqual(c.name, '[Resources]')
+
         def test_idempotent(self):
             """
             getting a context should return the context
             :return:
             """
+            ca = self.cm.new_entry('Resources')
             cx = self.cm['resources']
-            self.assertIs(self.cm[cx], cx)
+            self.assertIs(self.cm[cx], cx, ca)
 
         def test_null(self):
             cx = self.cm[None]
@@ -165,6 +170,7 @@ class CompartmentContainer(object):
             :return:
             """
             self._add_water_dict()
+            self.cm.new_entry('Resources')
             rw = self.cm.add_compartments(['resources', 'water'], conflict='rename')
             self.assertIs(rw.parent, self.cm['resources'])
             self.assertEqual(rw.name, 'Resources, water')

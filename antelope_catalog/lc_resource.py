@@ -68,6 +68,19 @@ class LcResource(object):
         return sorted([cls.from_dict(ref, d) for d in j[ref]], key=lambda x: x.priority)
 
     def _instantiate(self, catalog=None):
+        """
+        Instantiate the archive described by the current resource.  Several steps:
+         - download file if applicable
+         - rename relative path to absolute path
+         - instantiate the archive, using catalog's LciaEngine as term manager if non-static
+         - load any cached data into the archive
+         - override static spec to be consistent with archive's own spec
+         - load_all() if static
+         - apply_config()
+
+        :param catalog:
+        :return:
+        """
         if self.source is None:
             # download
             if catalog is None:
@@ -103,7 +116,8 @@ class LcResource(object):
         self._static = self._archive.static
         if self.static and self.ds_type.lower() != 'json':
             self._archive.load_all()  # static json archives are by convention saved in complete form
-        self.apply_config()
+
+        self.apply_config(catalog)
 
     @property
     def is_loaded(self):
@@ -139,10 +153,13 @@ class LcResource(object):
     def make_interface(self, iface):
         return self._archive.make_interface(iface)
 
-    def apply_config(self):
+    def apply_config(self, catalog=None):
         if len(self._config) > 0:
             print('Applying stored configuration')
             self._archive.make_interface('configure').apply_config(self._config)
+        if catalog is not None:
+            if 'context_hint' in self._config:
+                catalog.lcia_engine.apply_context_hints(self.reference, self._config['context hint'])
 
     def add_interface(self, iface):
         if iface in INTERFACE_TYPES:
@@ -325,8 +342,13 @@ class LcResource(object):
         if cf.check_config(config, args):
             if store:
                 self._add_config(config, *args)
-            cf.apply_config({config: {args}})
+            if config == 'context_hint':
+                print('Note: Context hints cannot be automatically applied after instantiation. Please save and')
+                print('reload, or apply manually.')
+            else:
+                cf.apply_config({config: {args}})
             return True
+        print('Configuration failed validation.')
         return False
 
     def _serialize_config(self):

@@ -237,7 +237,7 @@ class TermManager(object):
             s2 = set()
         else:
             fb = self._create_flowable(*s1, prune=True)
-            s2 = set(self._fm.synonyms(fb.name))  # known terms synonymous to new object
+            s2 = set(self._fm.synonyms(str(fb)))  # known terms synonymous to new object
         if not self._quiet:
             for k in sorted(set(s1).union(s2), key=lambda x: x in s2):
                 if k in s2:

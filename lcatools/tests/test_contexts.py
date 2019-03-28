@@ -135,6 +135,14 @@ class ContextManagerTest(CompartmentContainer.CompartmentManagerTest):
         self.assertIn('elementary flows', self.cm.disregarded_terms)
         self.assertListEqual(n.as_list(), ['Emissions', 'to air', 'urban air'])
 
+    def test_protected(self):
+        """
+        Protected terms are 'air', 'water', and 'ground'- if these are added as subcompartments to compartments with
+        non-None sense, they are modified to e.g. 'to air' or 'from air' appropriate to the sense.
+        :return:
+        """
+        pass
+
 
 class DefaultContextsTest(unittest.TestCase):
     def setUp(self):
@@ -151,6 +159,20 @@ class DefaultContextsTest(unittest.TestCase):
         self.assertEqual(cx.sense, 'Source')
         self.assertIs(cx.top(), self.cm['Resources'])
         self.assertListEqual(cx.as_list(), ['Resources', 'from water', 'CA', 'CA-QC'])
+
+    def test_context_hint(self):
+        self.cm.add_context_hint('dummy.test', 'air', 'to air')
+        tgt = self.cm['to air']
+        self.assertIs(self.cm['dummy.test:air'], tgt)
+
+    def test_matching_sublineage(self):
+        self.cm.add_context_hint('dummy.test', '[resources]', 'Resources')
+        tgt = self.cm['from ground']
+        foreign_cm = ContextManager()
+        fx = foreign_cm.add_compartments(('Elementary Flows', 'NETL Coal Elementary Flows', 'NETL Elementary Flows',
+                                          ' [Resources] ', 'ground'))
+        self.assertIs(self.cm.find_matching_context('dummy.test', fx), tgt)
+        self.assertIs(self.cm['dummy.test:ground'], tgt)
 
 
 if __name__ == '__main__':

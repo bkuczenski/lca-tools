@@ -7,6 +7,7 @@ from ..interfaces import ConfigureInterface, check_direction
 ValidConfig = namedtuple('ValidConfig', ('nargs', 'argtypes'))
 
 valid_configs = {
+    'context_hint': ValidConfig(2, ('context', 'str')),
     'set_reference': ValidConfig(3, ('process', 'flow', 'direction')),
     'unset_reference': ValidConfig(3, ('process', 'flow', 'direction')),
     'characterize_flow': ValidConfig(3, ('flow', 'quantity', 'float')),
@@ -65,11 +66,20 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
             if t == 'float':
                 if isinstance(c_args[i], float):
                     continue
+            elif t == 'str':
+                if isinstance(c_args[i], str):
+                    continue
             elif t == 'direction':
                 try:
                     check_direction(c_args[i])
                 except KeyError:
-                    raise ValueError('Argument %d should be a valid direction; not %s' % (i, c_args[i]))
+                    raise ValueError('Argument %d [%s] is not a valid direction' % (i, c_args[i]))
+                continue
+            elif t == 'context':
+                # check to ensure t is a recognized locally defined context
+                cx = self._archive.tm[c_args[i]]
+                if cx is None:
+                    raise ValueError('Argument %d [%s] is not a recognized local context' % (i, c_args[i]))
                 continue
             else:
                 if not isinstance(c_args[i], str):
@@ -89,17 +99,6 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
             raise KeyError('No unterminated exchanges found for flow %s' % fl)
         else:
             return exs[0].direction
-
-    def add_terms(self, term_type, *terms, **kwargs):
-        """
-
-        :param term_type:
-        :param terms:
-        :param kwargs:
-        :return:
-        """
-        if term_type == 'context':
-            self._archive.tm.add_terms(term_type, *terms)
 
     def set_reference(self, process_ref, flow_ref, direction=None, **kwargs):
         """

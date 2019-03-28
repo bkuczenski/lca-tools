@@ -25,16 +25,30 @@ class ConfigureInterface(AbstractQuery):
 
     def add_terms(self, term_type, *terms, **kwargs):
         """
+        This is currently de-implemented in favor of context_hint. until a clear [testable] use case is identified.
 
         :param term_type: 'flow', 'context', or 'quantity'
         :param terms: any number of terms that are synonyms for one another, to be added to the term manager
         :param kwargs:
-
-        Example: add_terms('context', 'emissions', 'NETL Coal Elementary Flows')
         :return:
         """
         return self._perform_query(_interface, 'add_terms', NotImplementedError,
                                    term_type, *terms, **kwargs)
+
+    def context_hint(self, local_term, canonical_context, **kwargs):
+        """
+        Used to map source-specific contexts to canonical contexts in an LCIA engine.  The source-specific context name
+        is constructed as '%s:%s' % (origin, local_term) and added as synonym to lcia_engine[canonical_context]
+
+        This is not implemented in the same manner as other configs- because the object of configuration is the catalog
+        and not the resource itself.
+        :param local_term:
+        :param canonical_context:
+        :param kwargs:
+        :return:
+        """
+        return self._perform_query(_interface, 'context_hint', NotImplementedError,
+                                   local_term, canonical_context, **kwargs)
 
     def set_reference(self, process_ref, flow_ref, direction=None, **kwargs):
         """

@@ -25,7 +25,11 @@ ELEMENTARY = {'resources', 'emissions'}
 
 PROTECTED = ('air', 'water', 'ground')
 
+
 class ProtectedTerm(Exception):
+    """
+    currently unused
+    """
     pass
 
 
@@ -181,6 +185,20 @@ class ContextManager(CompartmentManager):
         for t in sorted(self._disregarded):
             yield t
 
+    def add_context_hint(self, origin, term, canonical):
+        """
+        Method for linking foreign context names to canonical contexts
+        :param origin: origin of foreign context
+        :param term: foreign context name
+        :param canonical: recognized synonym for canonical context that should match the foreign one
+        :return:
+        """
+        c = self[canonical]
+        if c is None:
+            raise ValueError('Unrecognized canonical context %s' % c)
+        syn = '%s:%s' % (origin, term)
+        self.add_synonym(syn, c)
+
     def _disregard(self, comp):
         """
         The compartment's terms are added to the disregard list.  Its child compartments are "orphaned" (brutal!).
@@ -224,11 +242,12 @@ class ContextManager(CompartmentManager):
 
         super(CompartmentManager, self)._merge(existing_entry, ent)
 
-    def add_lineage(self, lineage, parent=None):
+    def add_lineage(self, lineage, parent=None, origin=None):
         """
         Create a set of local contexts, beginning with parent, that replicate those in lineage
         :param lineage:
         :param parent: [None] parent of lineage
+        :param origin: of the lineage
         :return: the last created context
         """
         if parent:
@@ -237,28 +256,27 @@ class ContextManager(CompartmentManager):
         new = None
         for lx in lineage:
             new = self.new_entry(*lx.terms, parent=parent)
+            if origin is not None:
+                auto_name = '%s:%s' % (origin, lx.name)
+                self.add_synonym(auto_name, new)
             parent = new
         return new
 
-    def find_matching_context(self, origin, cx):
-        """
-        The objective is to find the one context in the local hierarchy that best matches the foreign context. Then the
-        context's
-        best, most inclusive, most consistent way possible.  The approach is:
-         - starting from cx.top() and proceeding through the lineage, find any local match
-         - Once a match is found, follow subcompartments until a match is found for each successive entry.
-         -
-
-        :param origin: foreign context's native origin
-        :param cx: a context, possibly from a foreign context manager
-        :return: the existing context (or a newly created child context) in self
-        """
-        auto_name = '%s:%s' % (origin, self._tuple_to_name(cx))
-        if auto_name in self:
-            return self[auto_name]
-        lineage = cx.seq
+    def _find_root_and_missing(self, origin, lineage):
         current = None  # current = deepest local match
-        fail = []
+        missing = []
+
+        # first, look for stored auto_names or context_hints:
+        for cx in lineage[::-1]:
+            auto_name = '%s:%s' % (origin, cx.name)
+            if auto_name in self:
+                current = self[auto_name]
+                return current, missing
+            else:
+                missing = [cx] + missing  # prepend
+
+        # if we get here, then we haven't found anything, so start over and hunt from bottom up
+        missing = []
         while len(lineage) > 0:
             this = lineage.pop(0)  # this = active foreign match
             if current is None:
@@ -271,14 +289,31 @@ class ContextManager(CompartmentManager):
                     nxt = next(k for k in self._gen_matching_entries(this) if k.is_subcompartment(current))
                     current = nxt
                 except StopIteration:
-                    fail.append(this)
+                    missing.append(this)
+        return current, missing
+
+    def find_matching_context(self, origin, cx):
+        """
+        The objective is to find the one context in the local hierarchy that best matches the foreign context.
+        First, we do our best to find a common root with a missing sub-lineage using _find_root_and_missing()
+        If no common root is found, the entire lineage is added as-new to the local hierarchy
+
+        Otherwise, the missing sub-lineage is added to the common root
+
+        :param origin: foreign context's native origin
+        :param cx: a context, possibly from a foreign context manager
+        :return: the existing context (or a newly created child context) in self
+        """
+        auto_name = '%s:%s' % (origin, cx.name)
+
+        current, missing = self._find_root_and_missing(origin, cx.seq)
 
         if current is None:  # nothing found! add it from scratch
-            new = self.add_lineage(cx.seq)
+            new = self.add_lineage(cx.seq, origin=origin)
         else:
-            if fail:
-                if fail[-1] is cx:
-                    new = self.add_lineage(fail, parent=current)
+            if missing:
+                if missing[-1] is cx:
+                    new = self.add_lineage(missing, parent=current, origin=origin)
                 else:
                     new = current
             else:
@@ -297,6 +332,6 @@ class ContextManager(CompartmentManager):
     def __getitem__(self, item):
         if str(item).lower() in self._disregarded:
             return None
-        if str(item).lower() in PROTECTED:
-            raise ProtectedTerm('Use "to %s" or "from %s"' % (item, item))
+        # if str(item).lower() in PROTECTED:
+        #     raise ProtectedTerm('Use "to %s" or "from %s"' % (item, item))
         return super(ContextManager, self).__getitem__(item)

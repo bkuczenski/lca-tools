@@ -91,6 +91,10 @@ class LciaEngine(TermManager):
         # difficult problem, this
         self._quell_biogenic = quell_biogenic_co2
 
+    def apply_context_hints(self, origin, hints):
+        for term, canonical in hints:
+            self._cm.add_context_hint(origin, term, canonical)
+
     def _add_flow_terms(self, flow, merge_strategy=None):
         """
         Subclass handles two problems: tracking flowables by origin and biogenic CO2.

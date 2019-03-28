@@ -552,7 +552,8 @@ class LcProcess(LcEntity):
         :param dirn:
         :param reference:
         :param value:
-        :param termination:
+        :param termination: None for reference or cutoff flows; a context for elementary flows; a valid external_ref
+         for terminated intermediate flows.
         :param add_dups: (False) set to true to handle "duplicate exchange" errors by cumulating their values
         :return:
         """

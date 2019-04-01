@@ -57,6 +57,9 @@ class Exchange(object):
                 self._termination = termination
             elif isinstance(termination, Context):
                 self._termination = termination
+                if termination.origin is None:
+                    termination.add_origin(process.origin)
+
             elif hasattr(termination, 'external_ref'):
                 self._termination = termination.external_ref
             else:

@@ -74,6 +74,9 @@ class Characterization(object):
         self._locations = dict()
         self._origin = origin or query_quantity.origin
 
+        if context.origin is None:
+            context.add_origin(self._origin)
+
         if kwargs:
             self.add_value(**kwargs)
         # self._natural_dirn = None

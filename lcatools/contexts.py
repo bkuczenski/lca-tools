@@ -76,7 +76,23 @@ class Context(Compartment):
     an error.
     """
     _origins = set()
+    _first_origin = None
     entity_type = 'context'
+
+    @property
+    def origin(self):
+        return self._first_origin
+
+    @property
+    def fullname(self):
+        if self._first_origin is None:
+            return self.name
+        return '%s:%s' % (self.origin, self.name)
+
+    @property
+    def origins(self):
+        for o in self._origins:
+            yield o
 
     def __init__(self, *args, sense=None, **kwargs):
         super(Context, self).__init__(*args, **kwargs)
@@ -136,6 +152,8 @@ class Context(Compartment):
         return self.name
 
     def add_origin(self, origin):
+        if len(self._origins) == 0:
+            self._first_origin = origin
         self._origins.add(origin)
         if self.parent is not None:
             self.parent.add_origin(origin)
@@ -242,12 +260,11 @@ class ContextManager(CompartmentManager):
 
         super(CompartmentManager, self)._merge(existing_entry, ent)
 
-    def add_lineage(self, lineage, parent=None, origin=None):
+    def add_lineage(self, lineage, parent=None):
         """
         Create a set of local contexts, beginning with parent, that replicate those in lineage
         :param lineage:
         :param parent: [None] parent of lineage
-        :param origin: of the lineage
         :return: the last created context
         """
         if parent:
@@ -256,21 +273,19 @@ class ContextManager(CompartmentManager):
         new = None
         for lx in lineage:
             new = self.new_entry(*lx.terms, parent=parent)
-            if origin is not None:
-                auto_name = '%s:%s' % (origin, lx.name)
-                self.add_synonym(auto_name, new)
+            if lx.origin is not None:
+                self.add_synonym(lx.fullname, new)
             parent = new
         return new
 
-    def _find_root_and_missing(self, origin, lineage):
+    def _find_root_and_missing(self, lineage):
         current = None  # current = deepest local match
         missing = []
 
         # first, look for stored auto_names or context_hints:
         for cx in lineage[::-1]:
-            auto_name = '%s:%s' % (origin, cx.name)
-            if auto_name in self:
-                current = self[auto_name]
+            if cx.fullname in self:
+                current = self[cx.fullname]
                 return current, missing
             else:
                 missing = [cx] + missing  # prepend
@@ -292,7 +307,7 @@ class ContextManager(CompartmentManager):
                     missing.append(this)
         return current, missing
 
-    def find_matching_context(self, origin, cx):
+    def find_matching_context(self, cx):
         """
         The objective is to find the one context in the local hierarchy that best matches the foreign context.
         First, we do our best to find a common root with a missing sub-lineage using _find_root_and_missing()
@@ -300,25 +315,23 @@ class ContextManager(CompartmentManager):
 
         Otherwise, the missing sub-lineage is added to the common root
 
-        :param origin: foreign context's native origin
         :param cx: a context, possibly from a foreign context manager
         :return: the existing context (or a newly created child context) in self
         """
-        auto_name = '%s:%s' % (origin, cx.name)
 
-        current, missing = self._find_root_and_missing(origin, cx.seq)
+        current, missing = self._find_root_and_missing(cx.seq)
 
         if current is None:  # nothing found! add it from scratch
-            new = self.add_lineage(cx.seq, origin=origin)
+            new = self.add_lineage(cx.seq)
         else:
             if missing:
                 if missing[-1] is cx:
-                    new = self.add_lineage(missing, parent=current, origin=origin)
+                    new = self.add_lineage(missing, parent=current)
                 else:
                     new = current
             else:
                 new = current
-        self.add_synonym(auto_name, new)
+        self.add_synonym(cx.fullname, new)
         return new
 
     def _check_subcompartment_lineage(self, current, c):

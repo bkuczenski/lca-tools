@@ -16,7 +16,7 @@ class NoCatalog(Exception):
 class CatalogQuery(IndexInterface, BackgroundInterface, InventoryInterface, QuantityInterface):
     """
     A CatalogQuery is a class that performs any supported query against a supplied catalog.
-    Supported queries are defined in the antelope_core interfaces, which are all abstract.
+    Supported queries are defined in the lcatools.interfaces, which are all abstract.
     Implementations also subclass the abstract classes.
 
     This reduces code duplication (all the catalog needs to do is provide interfaces) and ensures consistent signatures.
@@ -41,10 +41,18 @@ class CatalogQuery(IndexInterface, BackgroundInterface, InventoryInterface, Quan
     def origin(self):
         return self._origin
 
+    @property
+    def _tm(self):
+        return self._catalog.lcia_engine
+
     def cascade(self, origin):
-        if origin == self.origin:
-            return self
-        return self._catalog.query(origin)
+        """
+        Generate a new query for the specified origin.
+        Enables the query to follow the origins of foreign objects found locally.
+        :param origin:
+        :return:
+        """
+        return self._grounded_query(origin)
 
     def _grounded_query(self, origin):
         if origin is None or origin == self._origin:
@@ -102,3 +110,18 @@ class CatalogQuery(IndexInterface, BackgroundInterface, InventoryInterface, Quan
                                          **kwargs)
             self._entity_cache[eid] = self.make_ref(entity)
         return self._entity_cache[eid]
+
+    '''
+    LCIA Support
+    get_canonical(quantity)
+    catch get_canonical calls to return the query from the local Qdb; fetch if absent and load its characterizations
+    (using super ==> _perform_query)
+    '''
+    def get_canonical(self, quantity, **kwargs):
+        try:
+            return self._tm.get_canonical(quantity)
+        except KeyError:
+            q_can = super(CatalogQuery, self).get_canonical(quantity, **kwargs)
+            self._tm.add_quantity(q_can)
+            self._tm.import_cfs(q_can)
+            return self._tm.get_canonical(q_can)

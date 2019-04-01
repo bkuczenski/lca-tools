@@ -139,7 +139,7 @@ class LciaEngine(TermManager):
             except KeyError:
                 fb = self._create_flowable(cf.flowable)
 
-            cx = self.add_context(cf.context)
+            cx = self._cm.find_matching_context(cf.context)
             self._qassign(qq, fb, cf, context=cx)
 
     def _find_exact_cf(self, qq, fb, cx, origin):

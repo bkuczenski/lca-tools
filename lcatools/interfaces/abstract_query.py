@@ -22,6 +22,11 @@ class EntityNotFound(Exception):
 class AbstractQuery(object):
     """
     Abstract base class for executing queries
+
+    Query implementation must provide:
+     - origin (property)
+     - _iface (generator: itype)
+     - _tm (property) a TermManager
     """
     _debug = False
     _validated = None
@@ -32,20 +37,37 @@ class AbstractQuery(object):
     def off_debug(self):
         self._debug = False
 
+    '''
+    Overridde these methods
+    '''
     @property
     def origin(self):
-        return None
+        return NotImplemented
 
-    def _iface(self, itype, strict=False):
+    def _iface(self, itype, **kwargs):
         """
         Pseudo-abstract method to generate interfaces of the specified type upon demand.  Must be reimplemented
-        by user-facing subclasses
         :param itype:
-        :param strict:
-        :return:
+        :param kwargs: for use by subclasses
+        :return: generate interfaces of the given type
         """
-        for i in []:
-            yield i
+        return NotImplemented
+
+    @property
+    def _tm(self):
+        return NotImplemented
+
+    '''
+    Internal workings
+    '''
+    def is_elementary(self, context):
+        """
+        Stopgap used to expose access to a catalog's Qdb; in the future, flows will no longer exist and is_elementary
+        will be a trivial function of an exchange asking whether its termination is a context or not.
+        :param context:
+        :return: bool
+        """
+        return self._tm[context.fullname].elementary
 
     def _perform_query(self, itype, attrname, exc, *args, strict=False, **kwargs):
         if self._debug:
@@ -63,27 +85,6 @@ class AbstractQuery(object):
 
         raise exc
 
-    def _grounded_query(self, origin):
-        """
-        Pseudo-abstract method used to construct entity references from a query that is anchored to an actual
-        resource.  must be overriden by user-facing subclasses if resources beyond self are required to answer
-        the queries (e.g. a catalog).
-        :param origin:
-        :return:
-        """
-        return self
-
-    '''
-    def is_elementary(self, f):
-        """
-        Stopgap used to expose access to a catalog's Qdb; in the future, flows will no longer exist and is_elementary
-        will be a trivial function of an exchange asking whether its termination is a context or not.
-        :param f:
-        :return:
-        """
-        return None
-    '''
-
     def make_ref(self, entity):
         if entity is None:
             return None
@@ -94,6 +95,19 @@ class AbstractQuery(object):
                 return entity.make_ref(self._grounded_query(None))  # falls back to self
         else:
             return entity  # already a ref
+
+    '''
+    Can be overridden
+    '''
+    def _grounded_query(self, origin):
+        """
+        Pseudo-abstract method used to construct entity references from a query that is anchored to a metaresource.
+        must be overriden by user-facing subclasses if resources beyond self are required to answer
+        the queries (e.g. a catalog).
+        :param origin:
+        :return:
+        """
+        return self
 
     def validate(self):
         if self._validated is None:
@@ -106,20 +120,13 @@ class AbstractQuery(object):
 
     def get(self, eid, **kwargs):
         """
-        Basic entity retrieval-- must be overridden by basic implementation
+        Basic entity retrieval-- should be supported by all implementations
         :param eid:
         :param kwargs:
         :return:
         """
         return self._perform_query(None, 'get', EntityNotFound('%s/%s' % (self.origin, eid)), eid,
                                    **kwargs)
-
-    def get_uuid(self, external_ref):
-        return self._perform_query(None, 'get_uuid', EntityNotFound('%s/%s' % (self.origin, external_ref)),
-                                   external_ref)
-
-'''# maybe we don't need these?!
-<<<<<<< HEAD
 
     def get_item(self, external_ref, item):
         """
@@ -131,8 +138,11 @@ class AbstractQuery(object):
         return self._perform_query(None, 'get_item', EntityNotFound('%s/%s' % (self.origin, external_ref)),
                                    external_ref, item)
 
-=======
->>>>>>> master
+    def get_uuid(self, external_ref):
+        return self._perform_query(None, 'get_uuid', EntityNotFound('%s/%s' % (self.origin, external_ref)),
+                                   external_ref)
+
+'''# maybe we don't need these?!
     def get_reference(self, external_ref):
         return self._perform_query(None, 'get_reference', EntityNotFound('%s/%s' % (self.origin, external_ref)),
                                    external_ref)

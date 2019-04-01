@@ -468,7 +468,8 @@ class IlcdArchive(LcArchive):
         p = self._create_process_entity(o, ns)
 
         for flow, f_dir, val, cmt in exch_list:
-            x = p.add_exchange(flow, f_dir, reference=None, value=val,
+            cx = self.tm[flow.context]
+            x = p.add_exchange(flow, f_dir, reference=None, value=val, termination=cx,  # no intermediate terms in ILCD
                                add_dups=True)  # add_dups: poor quality control on ELCD
             if len(cmt) > 0:
                 x.comment = cmt

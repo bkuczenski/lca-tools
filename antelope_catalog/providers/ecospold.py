@@ -232,8 +232,12 @@ class EcospoldV1Archive(LcArchive):
             rf, flowlist = self._extract_exchanges(o)
 
             for flow, f_dir, val, cmt in flowlist:
+                if flow in rf and f_dir == 'Output':
+                    term = None
+                else:
+                    term = self.tm[flow.context]
                 self._print('Exch %s [%s] (%g)' % (flow, f_dir, val))
-                x = p.add_exchange(flow, f_dir, reference=None, value=val, add_dups=True)
+                x = p.add_exchange(flow, f_dir, reference=None, value=val, termination=term, add_dups=True)
                 if cmt is not None:
                     x.comment = cmt
 

@@ -169,7 +169,24 @@ class OpenLcaJsonLdArchive(LcArchive):
             value /= fp.cf(flow).value  # TODO: account for locale?  ## is this even right?
             print('To %g %s' % (value, flow.unit()))
 
-        return p.add_exchange(flow, dirn, value=value, add_dups=True)
+        is_ref = ex.pop('quantitativeReference', False)
+        if is_ref:
+            term = None
+        elif 'defaultProvider' in ex:
+            term = ex['defaultProvider']['@id']
+        else:
+            term = self.tm[flow.context]
+
+        exch = p.add_exchange(flow, dirn, value=value, termination=term, add_dups=True)
+        if is_ref:
+            p.add_reference(flow, dirn)
+
+        if 'description' in ex:
+            exch.comment = ex['description']
+
+        return exch
+
+
 
     def _create_process(self, p_id):
         q = self[p_id]
@@ -194,13 +211,6 @@ class OpenLcaJsonLdArchive(LcArchive):
 
         for ex in exch:
             self._add_exchange(p, ex)
-
-        for ex in exch:
-            ref = ex.pop('quantitativeReference', False)
-            if ref:
-                flow = self.retrieve_or_fetch_entity(ex['flow']['@id'], typ='flows')
-                dirn = 'Input' if ex['input'] else 'Output'
-                p.add_reference(flow, dirn)
 
         return p
 

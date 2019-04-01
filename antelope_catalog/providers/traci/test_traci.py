@@ -31,7 +31,7 @@ class TraciTest(unittest.TestCase):
         tox = self._qi.get('Ecotoxicity, freshwater')
         self.assertEqual(tox.uuid, 'f2bd6435-f825-3e7e-ab40-45ea5d1dc1d5')
         fac = next(self._qi.factors(tox.external_ref, flowable='ethyl carbamate', context='agricultural'))
-        self.assertTrue(isclose(fac.value, 1.783221, rel_tol=1e-6))
+        self.assertAlmostEqual(fac.value, 1.783221, places=6)
 
     def test_compartments(self):
         cs = set(self._qi.compartments(flowable='ddd'))

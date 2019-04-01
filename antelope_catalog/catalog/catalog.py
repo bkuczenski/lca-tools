@@ -29,9 +29,8 @@ import hashlib
 from shutil import rmtree
 # from collections import defaultdict
 
-from lcatools.archives import BasicArchive
-from lcatools.lcia_engine import LciaEngine, DEFAULT_CONTEXTS, DEFAULT_FLOWABLES  #, REF_QTYS
-from lcatools.qdb import REF_QTYS
+from lcatools.archives import BasicArchive, REF_QTYS
+from lcatools.lcia_engine import LciaEngine, DEFAULT_CONTEXTS, DEFAULT_FLOWABLES
 
 
 from lcatools.interfaces import local_ref, EntityNotFound

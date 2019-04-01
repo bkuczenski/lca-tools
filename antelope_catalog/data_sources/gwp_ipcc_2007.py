@@ -1,6 +1,6 @@
 from .data_source import DataSource
 from antelope_utilities.lcia.ipcc_2007_traci import AUTHORIZED_REF
-from lcatools.qdb import IPCC_2007_GWP
+from lcatools.lcia_engine import IPCC_2007_GWP
 
 
 class GwpIpcc2007(DataSource):

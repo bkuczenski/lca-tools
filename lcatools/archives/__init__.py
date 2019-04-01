@@ -4,7 +4,25 @@ from .archive_index import index_archive, BasicIndex, LcIndex
 from .lc_archive import LcArchive, LC_ENTITY_TYPES
 from ..from_json import from_json
 
+import os
 import importlib
+
+REF_QTYS = os.path.join(os.path.dirname(__file__), 'data', 'elcd_reference_quantities.json')
+
+
+class Qdb(BasicArchive):
+    """
+    A simple archive that just contains the 26-odd reference (non-LCIA) quantities of the ELCD database circa v3.2
+    """
+    def __init__(self):
+        super(Qdb, self).__init__(REF_QTYS, ref='local.qdb')
+        self._load_all()
+
+    def _fetch(self, entity, **kwargs):
+        return self.__getitem__(entity)
+
+    def _load_all(self, **kwargs):
+        self.load_from_dict(from_json(self.source))
 
 
 def create_archive(source, ds_type, catalog=None, **kwargs):

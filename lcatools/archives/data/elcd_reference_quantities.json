@@ -1,0 +1,736 @@
+{
+  "@context": "https://bkuczenski.github.io/lca-tools-datafiles/context.jsonld",
+  "catalogNames": {
+    "local.qdb": [
+      "/data/GitHub/lca-tools/lcatools/qdb/data/elcd_reference_quantities.json"
+    ]
+  },
+  "dataSource": "/data/GitHub/lca-tools/lcatools/qdb/data/elcd_reference_quantities.json",
+  "dataSourceType": "Qdb",
+  "flows": [
+    {
+      "CasNumber": "",
+      "Comment": "EcoSpold02 Flow",
+      "Compartment": [
+        "Intermediate Flows"
+      ],
+      "Name": "electricity, high voltage",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "77ae64fa-7e74-4252-9c3b-889c1cd20bfc"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "93a60a56-a3c8-11da-a746-0800200c9a66",
+          "value": 3.6
+        }
+      ],
+      "entityId": "66c93e71-f32b-4591-901c-55395db5c132",
+      "entityType": "flow",
+      "externalId": "66c93e71-f32b-4591-901c-55395db5c132",
+      "origin": "local.ecoinvent.3.2.cutoff"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "Reference elementary flow of the International Reference Life Cycle Data System (ILCD).",
+      "Compartment": [
+        "Resources",
+        "Resources from ground",
+        "Non-renewable energy resources from ground"
+      ],
+      "Name": "peat;  8.4 MJ/kg",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "quantity": "93a60a56-a3c8-11da-a746-0800200b9a66",
+          "value": 0.11904761904761904
+        },
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "93a60a56-a3c8-11da-a746-0800200c9a66"
+        }
+      ],
+      "entityId": "e2fba107-6555-11dd-ad8b-0800200c9a66",
+      "entityType": "flow",
+      "externalId": "flows/e2fba107-6555-11dd-ad8b-0800200c9a66",
+      "origin": "local.elcd.3.2"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "synonyms were erroneous; removed Reference elementary flow of the International Reference Life Cycle Data System (ILCD).",
+      "Compartment": [
+        "Resources",
+        "Resources from ground",
+        "Non-renewable energy resources from ground"
+      ],
+      "Name": "crude oil; 42.3 MJ/kg",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "quantity": "93a60a56-a3c8-11da-a746-0800200b9a66",
+          "value": 0.023640661938534282
+        },
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "93a60a56-a3c8-11da-a746-0800200c9a66"
+        }
+      ],
+      "entityId": "fe0acd60-3ddc-11dd-a6f8-0050c2490048",
+      "entityType": "flow",
+      "externalId": "flows/fe0acd60-3ddc-11dd-a6f8-0050c2490048",
+      "origin": "local.elcd.3.2"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "Reference elementary flow of the International Reference Life Cycle Data System (ILCD).",
+      "Compartment": [
+        "Resources",
+        "Resources from ground",
+        "Non-renewable energy resources from ground"
+      ],
+      "Name": "brown coal;  11.9 MJ/kg",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "quantity": "93a60a56-a3c8-11da-a746-0800200b9a66",
+          "value": 0.08403361344537814
+        },
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "93a60a56-a3c8-11da-a746-0800200c9a66"
+        }
+      ],
+      "entityId": "fe0acd60-3ddc-11dd-a6f9-0050c2490048",
+      "entityType": "flow",
+      "externalId": "flows/fe0acd60-3ddc-11dd-a6f9-0050c2490048",
+      "origin": "local.elcd.3.2"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "synonyms were erroneous; removed Reference elementary flow of the International Reference Life Cycle Data System (ILCD).",
+      "Compartment": [
+        "Resources",
+        "Resources from ground",
+        "Non-renewable energy resources from ground"
+      ],
+      "Name": "natural gas;  44.1 MJ/kg",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "quantity": "93a60a56-a3c8-11da-a746-0800200b9a66",
+          "value": 0.022675736961451247
+        },
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "93a60a56-a3c8-11da-a746-0800200c9a66"
+        },
+        {
+          "entityType": "characterization",
+          "quantity": "93a60a56-a3c8-22da-a746-0800200c9a66",
+          "value": 0.02702702702702703
+        }
+      ],
+      "entityId": "fe0acd60-3ddc-11dd-a6fa-0050c2490048",
+      "entityType": "flow",
+      "externalId": "flows/fe0acd60-3ddc-11dd-a6fa-0050c2490048",
+      "origin": "local.elcd.3.2"
+    },
+    {
+      "CasNumber": "",
+      "Comment": "Reference elementary flow of the International Reference Life Cycle Data System (ILCD).",
+      "Compartment": [
+        "Resources",
+        "Resources from ground",
+        "Non-renewable energy resources from ground"
+      ],
+      "Name": "hard coal;  26.3 MJ/kg",
+      "characterizations": [
+        {
+          "entityType": "characterization",
+          "quantity": "93a60a56-a3c8-11da-a746-0800200b9a66",
+          "value": 0.03802281368821293
+        },
+        {
+          "entityType": "characterization",
+          "isReference": true,
+          "quantity": "93a60a56-a3c8-11da-a746-0800200c9a66"
+        }
+      ],
+      "entityId": "fe0acd60-3ddc-11dd-a6fc-0050c2490048",
+      "entityType": "flow",
+      "externalId": "flows/fe0acd60-3ddc-11dd-a6fc-0050c2490048",
+      "origin": "local.elcd.3.2"
+    }
+  ],
+  "initArgs": {
+    "dataReference": "local.qdb",
+    "ns_uuid": "77833297-6780-49bf-a61a-0cb707dce700"
+  },
+  "quantities": [
+    {
+      "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
+      "Name": "Number of items",
+      "UnitConversion": {
+        "Dozen(s)": 0.08333333333333333,
+        "Item(s)": 1.0
+      },
+      "entityId": "01846770-4cfe-4a25-8ad9-919d8d378345",
+      "entityType": "quantity",
+      "externalId": "flowproperties/01846770-4cfe-4a25-8ad9-919d8d378345",
+      "origin": "elcd.3.2",
+      "referenceUnit": "Item(s)"
+    },
+    {
+      "Comment": "This is NOT an ILCD reference flow property.",
+      "Name": "Vehicle transport",
+      "UnitConversion": {
+        "Items*km": 1.0,
+        "Items*mi": 0.621371192237334,
+        "Items*nmi": 0.5399568034557235
+      },
+      "entityId": "1cc347a0-3bd1-46db-a308-2707c68d2351",
+      "entityType": "quantity",
+      "externalId": "flowproperties/1cc347a0-3bd1-46db-a308-2707c68d2351",
+      "origin": "elcd.3.2",
+      "referenceUnit": "Items*km"
+    },
+    {
+      "Comment": "",
+      "Indicator": "Cumulative Energy Demand (MJ) (gross calorific value) (renewable and non renewable)",
+      "Name": "Energy renewable and non renewable (gross calorific value)",
+      "UnitConversion": {
+        "GJ": 0.001,
+        "J": 1000000.0,
+        "MJ": 1.0,
+        "MWh": 0.0002777777777777778,
+        "TCE": 3.412084237535657e-05,
+        "TOE": 2.3884589662749594e-05,
+        "btu": 947.8169879134379,
+        "kWh": 0.2777777777777778,
+        "kcal": 238.85160149998808
+      },
+      "entityId": "23911c86-d4d2-4e3e-a45e-8e392af1dc4e",
+      "entityType": "quantity",
+      "externalId": "flowproperties/23911c86-d4d2-4e3e-a45e-8e392af1dc4e",
+      "origin": "elcd.3.2",
+      "referenceUnit": "MJ"
+    },
+    {
+      "Comment": "This is NOT an ILCD reference flow property.",
+      "Name": "Person transport",
+      "UnitConversion": {
+        "Items*km": 1.0,
+        "Items*mi": 0.621371192237334,
+        "Items*nmi": 0.5399568034557235
+      },
+      "entityId": "4872c95a-5f78-4572-883b-e076187ad87c",
+      "entityType": "quantity",
+      "externalId": "flowproperties/4872c95a-5f78-4572-883b-e076187ad87c",
+      "origin": "elcd.3.2",
+      "referenceUnit": "Items*km"
+    },
+    {
+      "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
+      "Name": "Recycled content (mass)",
+      "UnitConversion": {
+        "Mg": 0.001,
+        "g": 1000.0,
+        "kg": 1.0,
+        "kt": 0.000001,
+        "lb av": 2.2046226218487757,
+        "long tn": 0.0009842065276110606,
+        "mg": 1000000.0,
+        "ng": 1000000000000.0,
+        "oz av": 35.27396194958041,
+        "oz t": 32.15074656862798,
+        "pg": 999999999999999.9,
+        "sh tn": 0.001102311310924388,
+        "t": 0.001,
+        "ug": 999999999.9999999
+      },
+      "entityId": "52dcf2ff-c0f6-417f-a957-788688d67b86",
+      "entityType": "quantity",
+      "externalId": "flowproperties/52dcf2ff-c0f6-417f-a957-788688d67b86",
+      "origin": "elcd.3.2",
+      "referenceUnit": "kg"
+    },
+    {
+      "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
+      "Name": "Carbon content (biogenic)",
+      "UnitConversion": {
+        "Mg": 0.001,
+        "g": 1000.0,
+        "kg": 1.0,
+        "kt": 0.000001,
+        "lb av": 2.2046226218487757,
+        "long tn": 0.0009842065276110606,
+        "mg": 1000000.0,
+        "ng": 1000000000000.0,
+        "oz av": 35.27396194958041,
+        "oz t": 32.15074656862798,
+        "pg": 999999999999999.9,
+        "sh tn": 0.001102311310924388,
+        "t": 0.001,
+        "ug": 999999999.9999999
+      },
+      "entityId": "62e503ce-544a-4599-b2ad-bcea15a7bf20",
+      "entityType": "quantity",
+      "externalId": "flowproperties/62e503ce-544a-4599-b2ad-bcea15a7bf20",
+      "origin": "elcd.3.2",
+      "referenceUnit": "kg"
+    },
+    {
+      "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
+      "Name": "Carbon content (fossil)",
+      "UnitConversion": {
+        "Mg": 0.001,
+        "g": 1000.0,
+        "kg": 1.0,
+        "kt": 0.000001,
+        "lb av": 2.2046226218487757,
+        "long tn": 0.0009842065276110606,
+        "mg": 1000000.0,
+        "ng": 1000000000000.0,
+        "oz av": 35.27396194958041,
+        "oz t": 32.15074656862798,
+        "pg": 999999999999999.9,
+        "sh tn": 0.001102311310924388,
+        "t": 0.001,
+        "ug": 999999999.9999999
+      },
+      "entityId": "64b8e725-b0ba-4837-abb9-62dc0e7b9f6f",
+      "entityType": "quantity",
+      "externalId": "flowproperties/64b8e725-b0ba-4837-abb9-62dc0e7b9f6f",
+      "origin": "elcd.3.2",
+      "referenceUnit": "kg"
+    },
+    {
+      "Comment": "EcoSpold02. This is not an ILCD reference quantity.",
+      "Name": "Electric energy",
+      "UnitConversion": {
+        "GWh": 0.000001,
+        "MWh": 0.001,
+        "MJ": 3.6
+      },
+      "Synonyms": [
+        "kWh",
+        "EcoSpold Quantity kWh",
+        "Electricity"
+      ],
+      "entityId": "77ae64fa-7e74-4252-9c3b-889c1cd20bfc",
+      "entityType": "quantity",
+      "externalId": "77ae64fa-7e74-4252-9c3b-889c1cd20bfc",
+      "origin": "local.ecoinvent.3.2.cutoff",
+      "referenceUnit": "kWh"
+    },
+    {
+      "Comment": "",
+      "Name": "Exergy",
+      "UnitConversion": {
+        "Btu": 0.0010550971744497668,
+        "GJ": 1000.0,
+        "GWh": 3599971.200230398,
+        "J": 1e-06,
+        "MJ": 1.0,
+        "MMBtu": 1055.0,
+        "MWh": 3599.971200230398,
+        "Nm": 1e-06,
+        "PJ": 999999999.9999999,
+        "PSh": 2.6478142293536686e-06,
+        "TJ": 1000000.0,
+        "TOE": 41867.28072011723,
+        "TWh": 3599971200.230398,
+        "cal": 4.186728072011723e-06,
+        "eV": 1.6022046335758002e-25,
+        "erg": 1e-13,
+        "kJ": 0.001,
+        "kWh": 3.5999712002303976,
+        "kpm": 9.806805923310778e-06
+      },
+      "entityId": "79920f3d-77b3-4f12-8a8f-47accf832eca",
+      "entityType": "quantity",
+      "externalId": "flowproperties/79920f3d-77b3-4f12-8a8f-47accf832eca",
+      "origin": "elcd.3.2",
+      "referenceUnit": "MJ"
+    },
+    {
+      "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
+      "Name": "Water content (mass)",
+      "UnitConversion": {
+        "Mg": 0.001,
+        "g": 1000.0,
+        "kg": 1.0,
+        "kt": 0.000001,
+        "lb av": 2.2046226218487757,
+        "long tn": 0.0009842065276110606,
+        "mg": 1000000.0,
+        "ng": 1000000000000.0,
+        "oz av": 35.27396194958041,
+        "oz t": 32.15074656862798,
+        "pg": 999999999999999.9,
+        "sh tn": 0.001102311310924388,
+        "t": 0.001,
+        "ug": 999999999.9999999
+      },
+      "entityId": "7ec8d70e-4ffc-4024-86b7-6141cc0a2bf5",
+      "entityType": "quantity",
+      "externalId": "flowproperties/7ec8d70e-4ffc-4024-86b7-6141cc0a2bf5",
+      "origin": "elcd.3.2",
+      "referenceUnit": "kg"
+    },
+    {
+      "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
+      "Name": "Goods transport (mass*distance)",
+      "Synonyms": [
+        "Freight",
+        "tkm",
+        "t*km"
+      ],
+      "UnitConversion": {
+        "kg*km": 1000.0,
+        "lb*mi": 1369.889285547942,
+        "lb*nmi": 1190.4010818365032,
+        "t*km": 1.0,
+        "t*mi": 0.621371192237334,
+        "t*nmi": 0.5399568034557235
+      },
+      "entityId": "838aaa20-0117-11db-92e3-0800200c9a66",
+      "entityType": "quantity",
+      "externalId": "flowproperties/838aaa20-0117-11db-92e3-0800200c9a66",
+      "origin": "elcd.3.2",
+      "referenceUnit": "t*km"
+    },
+    {
+      "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
+      "Name": "Length",
+      "UnitConversion": {
+        "cm": 100.0,
+        "ft": 3.280839895013123,
+        "in": 39.37007874015748,
+        "km": 0.001,
+        "m": 1.0,
+        "mi": 0.0006213700339330175,
+        "mm": 1000.0,
+        "nmi": 0.0005399568034557236,
+        "u": 1000000.0,
+        "yd": 1.0936132983377078
+      },
+      "entityId": "838aaa23-0117-11db-92e3-0800200c9a66",
+      "entityType": "quantity",
+      "externalId": "flowproperties/838aaa23-0117-11db-92e3-0800200c9a66",
+      "origin": "elcd.3.2",
+      "referenceUnit": "m"
+    },
+    {
+      "Comment": "",
+      "Indicator": "Cumulative energy demand (MJ) (net calorific value) (renewable)",
+      "Name": "Energy from renewable raw materials (net cal. value)",
+      "UnitConversion": {
+        "Btu": 0.0010550971744497668,
+        "GJ": 1000.0,
+        "GWh": 3599971.200230398,
+        "J": 1e-06,
+        "MJ": 1.0,
+        "MMBtu": 1055.0,
+        "MWh": 3599.971200230398,
+        "Nm": 1e-06,
+        "PJ": 999999999.9999999,
+        "PSh": 2.6478142293536686e-06,
+        "TJ": 1000000.0,
+        "TOE": 41867.28072011723,
+        "TWh": 3599971200.230398,
+        "cal": 4.186728072011723e-06,
+        "eV": 1.6022046335758002e-25,
+        "erg": 1e-13,
+        "kJ": 0.001,
+        "kWh": 3.5999712002303976,
+        "kpm": 9.806805923310778e-06
+      },
+      "entityId": "8695e049-7a18-4b83-b3bd-035747039652",
+      "entityType": "quantity",
+      "externalId": "flowproperties/8695e049-7a18-4b83-b3bd-035747039652",
+      "origin": "elcd.3.2",
+      "referenceUnit": "MJ"
+    },
+    {
+      "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
+      "Name": "Mass",
+      "UnitConversion": {
+        "Mg": 0.001,
+        "g": 1000.0,
+        "kg": 1.0,
+        "kt": 0.000001,
+        "lb av": 2.2046226218487757,
+        "long tn": 0.0009842065276110606,
+        "mg": 1000000.0,
+        "ng": 1000000000000.0,
+        "oz av": 35.27396194958041,
+        "oz t": 32.15074656862798,
+        "pg": 999999999999999.9,
+        "sh tn": 0.001102311310924388,
+        "t": 0.001,
+        "ug": 999999999.9999999
+      },
+      "entityId": "93a60a56-a3c8-11da-a746-0800200b9a66",
+      "entityType": "quantity",
+      "externalId": "flowproperties/93a60a56-a3c8-11da-a746-0800200b9a66",
+      "origin": "elcd.3.2",
+      "referenceUnit": "kg"
+    },
+    {
+      "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
+      "Name": "Net calorific value",
+      "UnitConversion": {
+        "GJ": 0.001,
+        "J": 1000000.0,
+        "MJ": 1.0,
+        "MWh": 0.0002777777777777778,
+        "TCE": 3.412084237535657e-05,
+        "TOE": 2.3884589662749594e-05,
+        "btu": 947.8169879134379,
+        "kWh": 0.2777777777777778,
+        "kcal": 238.85160149998808
+      },
+      "entityId": "93a60a56-a3c8-11da-a746-0800200c9a66",
+      "entityType": "quantity",
+      "externalId": "flowproperties/93a60a56-a3c8-11da-a746-0800200c9a66",
+      "origin": "elcd.3.2",
+      "referenceUnit": "MJ"
+    },
+    {
+      "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
+      "Name": "Normal Volume",
+      "UnitConversion": {
+        "US fl oz": 33814.022701842994,
+        "bbl": 6.289810770432105,
+        "bl (Imp)": 6.110256897196883,
+        "bl (US beer)": 8.521683850642152,
+        "bl (US dry)": 8.648409373989104,
+        "bl (US fl)": 8.38641436057614,
+        "bsh (Imp)": 27.496156037385973,
+        "bsh (US)": 28.377593255889252,
+        "cu ft": 35.31466672148859,
+        "fl oz (Imp)": 35195.07972785404,
+        "gal (Imp)": 219.96924829908778,
+        "gal (US dry)": 227.02074606721396,
+        "gal (US fl)": 264.1720523581484,
+        "gal (US liq)": 264.1720372841846,
+        "l": 1000.0,
+        "m3": 1.0,
+        "ml": 1000000.0,
+        "pt (Imp)": 1759.7539863927022,
+        "pt (US dry)": 1816.1659685377117,
+        "pt (US fl)": 2113.376418865187,
+        "ul": 999999999.9999999
+      },
+      "entityId": "93a60a56-a3c8-13da-a746-0800200c9a66",
+      "entityType": "quantity",
+      "externalId": "flowproperties/93a60a56-a3c8-13da-a746-0800200c9a66",
+      "origin": "elcd.3.2",
+      "referenceUnit": "m3"
+    },
+    {
+      "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
+      "Name": "Gross calorific value",
+      "UnitConversion": {
+        "GJ": 0.001,
+        "J": 1000000.0,
+        "MJ": 1.0,
+        "MWh": 0.0002777777777777778,
+        "TCE": 3.412084237535657e-05,
+        "TOE": 2.3884589662749594e-05,
+        "btu": 947.8169879134379,
+        "kWh": 0.2777777777777778,
+        "kcal": 238.85160149998808
+      },
+      "entityId": "93a60a56-a3c8-14da-a746-0800200c9a66",
+      "entityType": "quantity",
+      "externalId": "flowproperties/93a60a56-a3c8-14da-a746-0800200c9a66",
+      "origin": "elcd.3.2",
+      "referenceUnit": "MJ"
+    },
+    {
+      "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
+      "Name": "Area",
+      "UnitConversion": {
+        "a": 0.01,
+        "ac": 0.0002471054072593638,
+        "cm2": 10000.0,
+        "ft2": 10.763910416709722,
+        "ha": 0.0001,
+        "km2": 1e-06,
+        "m2": 1.0,
+        "mi2": 3.86102158592535e-07,
+        "nmi2": 2.9155334959812285e-07,
+        "yd2": 1.1959900463010802
+      },
+      "entityId": "93a60a56-a3c8-19da-a746-0800200c9a66",
+      "entityType": "quantity",
+      "externalId": "flowproperties/93a60a56-a3c8-19da-a746-0800200c9a66",
+      "origin": "elcd.3.2",
+      "referenceUnit": "m2"
+    },
+    {
+      "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
+      "Name": "Area*time",
+      "UnitConversion": {
+        "ft2*a": 10.763910416709722,
+        "ha*a": 0.0001,
+        "km2*a": 1e-06,
+        "m2*a": 1.0,
+        "m2*d": 365.00000365000005,
+        "mi2*a": 3.8610216008328377e-07
+      },
+      "entityId": "93a60a56-a3c8-21da-a746-0800200c9a66",
+      "entityType": "quantity",
+      "externalId": "flowproperties/93a60a56-a3c8-21da-a746-0800200c9a66",
+      "origin": "elcd.3.2",
+      "referenceUnit": "m2*a"
+    },
+    {
+      "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
+      "Name": "Volume",
+      "UnitConversion": {
+        "US fl oz": 33814.022701842994,
+        "bbl": 6.289810770432105,
+        "bl (Imp)": 6.110256897196883,
+        "bl (US beer)": 8.521683850642152,
+        "bl (US dry)": 8.648409373989104,
+        "bl (US fl)": 8.38641436057614,
+        "bsh (Imp)": 27.496156037385973,
+        "bsh (US)": 28.377593255889252,
+        "cu ft": 35.31466672148859,
+        "fl oz (Imp)": 35195.07972785404,
+        "gal (Imp)": 219.96924829908778,
+        "gal (US dry)": 227.02074606721396,
+        "gal (US fl)": 264.1720523581484,
+        "gal (US liq)": 264.1720372841846,
+        "l": 1000.0,
+        "m3": 1.0,
+        "ml": 1000000.0,
+        "pt (Imp)": 1759.7539863927022,
+        "pt (US dry)": 1816.1659685377117,
+        "pt (US fl)": 2113.376418865187,
+        "ul": 999999999.9999999
+      },
+      "entityId": "93a60a56-a3c8-22da-a746-0800200c9a66",
+      "entityType": "quantity",
+      "externalId": "flowproperties/93a60a56-a3c8-22da-a746-0800200c9a66",
+      "origin": "elcd.3.2",
+      "referenceUnit": "m3"
+    },
+    {
+      "Comment": "",
+      "Indicator": "Cumulative Energy Demand (MJ) (net calorific value) (renewable and non renewable)",
+      "Name": "Energy renewable and non renewable (net calorific value)",
+      "UnitConversion": {
+        "GJ": 0.001,
+        "J": 1000000.0,
+        "MJ": 1.0,
+        "MWh": 0.0002777777777777778,
+        "TCE": 3.412084237535657e-05,
+        "TOE": 2.3884589662749594e-05,
+        "btu": 947.8169879134379,
+        "kWh": 0.2777777777777778,
+        "kcal": 238.85160149998808
+      },
+      "entityId": "a182c00f-c0e5-4b7a-b2a1-a735fbee7f9a",
+      "entityType": "quantity",
+      "externalId": "flowproperties/a182c00f-c0e5-4b7a-b2a1-a735fbee7f9a",
+      "origin": "elcd.3.2",
+      "referenceUnit": "MJ"
+    },
+    {
+      "Comment": "",
+      "Name": "Price",
+      "UnitConversion": {
+        "$": 0.8640774034952655,
+        "DM": 0.5112918811962185,
+        "EUR": 1.0,
+        "Yen": 0.01,
+        "sFr": 0.6017888952663761
+      },
+      "entityId": "bcf81c0a-9fe9-4b88-a25b-99e0dd64ddaa",
+      "entityType": "quantity",
+      "externalId": "flowproperties/bcf81c0a-9fe9-4b88-a25b-99e0dd64ddaa",
+      "origin": "elcd.3.2",
+      "referenceUnit": "EUR"
+    },
+    {
+      "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
+      "Name": "Duration",
+      "UnitConversion": {
+        "a": 0.0027397260273972603,
+        "d": 1.0,
+        "h": 24.000003840000613,
+        "min": 1440.0000009216,
+        "s": 86400.00055296
+      },
+      "entityId": "c0447923-0e60-4b3c-97c2-a86dddd9eea5",
+      "entityType": "quantity",
+      "externalId": "flowproperties/c0447923-0e60-4b3c-97c2-a86dddd9eea5",
+      "origin": "elcd.3.2",
+      "referenceUnit": "a"
+    },
+    {
+      "Comment": "Reference Flow Property Data Set of the International Reference Life Cycle Data System (ILCD).",
+      "Name": "Hydrogen content (mass)",
+      "UnitConversion": {
+        "Mg": 0.001,
+        "g": 1000.0,
+        "kg": 1.0,
+        "kt": 0.000001,
+        "lb av": 2.2046226218487757,
+        "long tn": 0.0009842065276110606,
+        "mg": 1000000.0,
+        "ng": 1000000000000.0,
+        "oz av": 35.27396194958041,
+        "oz t": 32.15074656862798,
+        "pg": 999999999999999.9,
+        "sh tn": 0.001102311310924388,
+        "t": 0.001,
+        "ug": 999999999.9999999
+      },
+      "entityId": "f3e1017d-1aa3-4763-b563-9494858e1ec7",
+      "entityType": "quantity",
+      "externalId": "flowproperties/f3e1017d-1aa3-4763-b563-9494858e1ec7",
+      "origin": "elcd.3.2",
+      "referenceUnit": "kg"
+    },
+    {
+      "Comment": "Illustrative but fully operative flow property data set for monetary flow properties, provided by the European Platform on LCA.",
+      "Name": "Market value US 2000, bulk prices",
+      "UnitConversion": {
+        "AUD": 1.5873015873015872,
+        "CAD": 1.36986301369863,
+        "CHF": 1.5625,
+        "CZK": 35.714285714285715,
+        "DKK": 7.462686567164178,
+        "EEK": 15.625,
+        "EUR": 1.0,
+        "GBP": 0.6060606060606061,
+        "HUF": 263.1578947368421,
+        "ISK": 73.52941176470588,
+        "JPY": 100.0,
+        "KRW": 1052.6315789473683,
+        "LTL": 3.7037037037037033,
+        "LVL": 0.5617977528089888,
+        "NOK": 8.333333333333334,
+        "SEK": 8.333333333333334,
+        "USD": 0.9090909090909091,
+        "ZAR": 6.410256410256411
+      },
+      "entityId": "fdfecf14-ff8a-4e17-b2b2-f938c4b5cc27",
+      "entityType": "quantity",
+      "externalId": "flowproperties/fdfecf14-ff8a-4e17-b2b2-f938c4b5cc27",
+      "origin": "elcd.3.2",
+      "referenceUnit": "EUR"
+    }
+  ]
+}

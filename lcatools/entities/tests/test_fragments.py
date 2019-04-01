@@ -49,16 +49,14 @@ Not yet implemented:
 import unittest
 # from math import floor
 
-from ..fragment_editor import FragmentEditor
-from ..editor import FlowEditor
-from lcatools.qdb import Qdb
+from ..fragment_editor import create_fragment
+from ..flows import LcFlow
+from lcatools.lcia_engine import LciaEngine
 from lcatools.interfaces import CONTEXT_STATUS_
 
 origin = 'test.origin'
 
-qdb = Qdb()
-flow_ed = FlowEditor(qdb)
-frag_ed = FragmentEditor()
+qdb = LciaEngine()
 
 
 def new_flow(name, ref_quantity, context=None, **kwargs):
@@ -74,7 +72,7 @@ def new_flow(name, ref_quantity, context=None, **kwargs):
         if context is not None and 'compartment' not in kwargs:
             kwargs['compartment'] = str(context)
     ref_q = qdb.get_canonical(ref_quantity)
-    f = flow_ed.new_flow(name=name, quantity=ref_q, origin=origin, **kwargs)
+    f = LcFlow.new(name, ref_qty=ref_q, origin=origin, **kwargs)
     # self._archive.add_entity_and_children(f)
     return f
 
@@ -87,7 +85,7 @@ def new_fragment(*args, **kwargs):
       **kwargs passed to LcFragment
     :return:
     """
-    frag = frag_ed.create_fragment(*args, origin=origin, **kwargs)
+    frag = create_fragment(*args, origin=origin, **kwargs)
     # self._archive.add_entity_and_children(frag)
     return frag
 

@@ -5,7 +5,7 @@ import re
 from antelope_catalog.providers.ecospold2 import EcospoldV2Archive
 from antelope_catalog.providers.ilcd import grab_flow_name, IlcdLcia
 from antelope_catalog.providers.xml_widgets import find_tag, find_tags, find_common, find_ns
-from lcatools.flowdb.synlist import Flowables, InconsistentIndices, ConflictingCas
+from synonym_dict.example_flowables import FlowablesDict
 
 
 ECOSPOLD = os.path.join('/data', 'Dropbox', 'data', 'Ecoinvent', '3.2', 'current_Version_3.2_cutoff_lci_ecoSpold02.7z')
@@ -93,6 +93,7 @@ def synonyms_from_ilcd_flow(flow):
 cas_regex = re.compile('^[0-9]{,6}-[0-9]{2}-[0-9]$')
 
 
+"""
 def _add_set(synlist, name, syns, xid):
     try:
         index = synlist.add_set(syns, merge=True, name=name)
@@ -116,25 +117,25 @@ def _add_set(synlist, name, syns, xid):
             # print('Conflicting CAS on merge.. creating new group')
             index = synlist.new_set(syns, name=name)
     return index
-
+"""
 
 def create_new_synonym_list():
     """
     This just makes a SynList and populates it, first with ecoinvent, then with ILCD, and saves it to disk
     :return:
     """
-    synonyms = Flowables()
+    synonyms = FlowablesDict()
 
     # first, ecoinvent
     exchs = get_ecospold_exchanges()
     for exch in exchs:
         name, syns = synonyms_from_ecospold_exchange(exch)
-        _add_set(synonyms, name, syns, exch.get('id'))
+        synonyms.new_entry(name, *syns)
 
     # next, ILCD - but hold off for now
     for flow in ilcd_flow_generator():
         name, syns, uid = synonyms_from_ilcd_flow(flow)
-        _add_set(synonyms, name, syns, uid)
+        synonyms.new_entry(name, *syns)
 
     with open(SYNONYMS, 'w') as fp:
         json.dump(synonyms.serialize(), fp)
@@ -143,5 +144,4 @@ def create_new_synonym_list():
 
 
 def load_synonyms(file=SYNONYMS):
-    with open(file) as fp:
-        return Flowables.from_json(json.load(fp))
+    return FlowablesDict(source_file=file)

@@ -1,10 +1,10 @@
-from ...archives import archive_from_json
-from ...qdb import IPCC_2007_GWP, REF_QTYS
+from ...archives import BasicArchive, Qdb
+from ...lcia_engine import IPCC_2007_GWP
 from ...interfaces import EntityNotFound, NoFactorsFound, ConversionReferenceMismatch
 
 import unittest
 
-ar = archive_from_json(IPCC_2007_GWP)
+ar = BasicArchive.from_file(IPCC_2007_GWP)
 gwp = ar['Global Warming Air']
 mass = ar['Mass']
 
@@ -14,7 +14,7 @@ volu_uuid = '93a60a56-a3c8-22da-a746-0800200c9a66'
 class QuantityImplementation(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.I = archive_from_json(REF_QTYS)
+        cls.I = Qdb()
         cls.qq_traci = ar.make_interface('quantity')
         cls.gwp = cls.qq_traci['Global Warming Air'].make_ref(cls.qq_traci)
 

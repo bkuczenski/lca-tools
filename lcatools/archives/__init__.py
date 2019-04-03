@@ -1,4 +1,4 @@
-from .entity_store import EntityStore, SourceAlreadyKnown
+from .entity_store import EntityStore, SourceAlreadyKnown, EntityExists
 from .basic_archive import BasicArchive, BASIC_ENTITY_TYPES, InterfaceError, ArchiveError
 from .archive_index import index_archive, BasicIndex, LcIndex
 from .lc_archive import LcArchive, LC_ENTITY_TYPES

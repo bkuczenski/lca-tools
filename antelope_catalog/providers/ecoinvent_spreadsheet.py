@@ -233,7 +233,7 @@ class EcoinventSpreadsheet(LcArchive):
             if ref_flow is None:
                 ref_flow = p.find_exchange(reference, reference=True).flow
             rf = self._find_rf(p, ref_flow=ref_flow)
-            return self.lcia.retrieve_lcia_scores(process_id, rf.uuid, quantities=quantities)
+            return self.lcia.retrieve_lcia_scores(process_id, rf.external_ref, quantities=quantities)
 
     def _create_quantity(self, unitstring):
         """
@@ -243,29 +243,26 @@ class EcoinventSpreadsheet(LcArchive):
         :param unitstring:
         :return:
         """
-        u = self._key_to_nsuuid(unitstring)
-        try_q = self[u]
+        try_q = self[unitstring]
         if try_q is None:
             ref_unit, _ = self._create_unit(unitstring)
 
-            q = LcQuantity(u, Name='Ecoinvent Spreadsheet Quantity %s' % unitstring,
+            q = LcQuantity(unitstring, Name='Ecoinvent Spreadsheet Quantity %s' % unitstring,
                            ReferenceUnit=ref_unit, Comment=self.version)
-            q.set_external_ref(unitstring)
             self.add(q)
         else:
             q = try_q
 
         return q
 
-    def _create_flow(self, u, unit, ext_ref, Name=None, Compartment=None, **kwargs):
-        if u in self._entities:
-            f = self[u]
+    def _create_flow(self, unit, ext_ref, Name=None, Compartment=None, **kwargs):
+        if ext_ref in self._entities:
+            f = self[ext_ref]
         else:
             q = self._create_quantity(unit)
             if q is None:
                 raise ValueError
-            f = LcFlow(u, Name=Name, Compartment=Compartment, ReferenceQuantity=q, **kwargs)
-            f.set_external_ref(ext_ref)
+            f = LcFlow(ext_ref, Name=Name, Compartment=Compartment, ReferenceQuantity=q, **kwargs)
             self.add(f)
         f.update(kwargs)
 
@@ -290,8 +287,7 @@ class EcoinventSpreadsheet(LcArchive):
         print('Handling intermediate exchanges [public spreadsheet]')
         for index, row in _intermediate.iterrows():
             n = row['name']
-            u = self._key_to_nsuuid(n)
-            self._create_flow(u, row['unitName'], n, Name=n, CasNumber=row['CAS'],
+            self._create_flow(row['unitName'], n, Name=n, CasNumber=row['CAS'],
                               Compartment=['Intermediate flow'], Comment=row['comment'],
                               Synonyms=row['synonyms'])
 
@@ -302,9 +298,8 @@ class EcoinventSpreadsheet(LcArchive):
         print('Handling elementary exchanges [public spreadsheet]')
         for index, row in _elementary.iterrows():
             key = self._elementary_key(row)
-            u = self._key_to_nsuuid(key)
             cat = [row['compartment'], row['subcompartment']]
-            self._create_flow(u, row['unitName'], key, Name=row['name'], CasNumber=row['casNumber'],
+            self._create_flow(row['unitName'], key, Name=row['name'], CasNumber=row['casNumber'],
                               Compartment=cat, Comment='', Formula=row['formula'],
                               Synonyms=row['synonyms'])
 
@@ -318,8 +313,7 @@ class EcoinventSpreadsheet(LcArchive):
         # inter = _intermediate[_intermediate[:2]].drop_duplicates()
         for index, row in _intermediate.iterrows():
             n = row['name']
-            u = self._key_to_nsuuid(n)
-            self._create_flow(u, row['unit'], n, Name=n, Compartment=['Intermediate flow'],
+            self._create_flow(row['unit'], n, Name=n, Compartment=['Intermediate flow'],
                               CasNumber='', Comment='')
 
     def _internal_elementary(self, _elementary):
@@ -333,10 +327,9 @@ class EcoinventSpreadsheet(LcArchive):
 
         for index, row in _elementary.iterrows():
             key = self._elementary_key(row)
-            u = self._key_to_nsuuid(key)
             n = row['name']
             cat = [row['compartment'], row['subcompartment']]
-            self._create_flow(u, row['unit'], key, Name=n, Compartment=cat,
+            self._create_flow(row['unit'], key, Name=n, Compartment=cat,
                               CasNumber=row['CAS'], Comment='', Formula=row['formula'])
 
     def load_activities(self):
@@ -393,7 +386,7 @@ class EcoinventSpreadsheet(LcArchive):
                 exch_name = row['product name']
                 ref_check = 'group'
 
-            exch_flow = self[self._key_to_nsuuid(exch_name)]
+            exch_flow = self[self._ref_to_nsuuid(exch_name)]
 
             p.add_exchange(exch_flow, 'Output')
 

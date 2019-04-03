@@ -28,6 +28,10 @@ class SourceAlreadyKnown(Exception):
     pass
 
 
+class EntityExists(Exception):
+    pass
+
+
 class InvalidSemanticReference(Exception):
     pass
 
@@ -66,17 +70,15 @@ class EntityStore(object):
     '''
     _ns_uuid_required: specifies whether the archive must be supplied an ns_uuid (generally, archives that are
     expected to generate persistent, deterministic IDs must have an externally specified ns_uuid)
-     If False: random ns_uuid generated
-     If True: ns_uuid must be supplied as an argument
-     If None: ns_uuid forced to None
+     If False: random ns_uuid generated if none is supplied
+     If True: ns_uuid must be supplied as an argument, will raise exception if missing
+     If None: ns_uuid forced to None - store does not have ns_uuid capabilities
     '''
     _ns_uuid_required = False
 
-    def _key_to_id(self, key):
+    def _ref_to_uuid(self, key):
         """
-        This method always returns a valid key into _entities.
-
-        in the base class, the key is the uuid-- this can get overridden
+        This tries to find a UUID from a ref. Not sure what this is good for.
         by default, to_uuid just returns a string matching the regex, or failing that, tries to generate a string
         using uuid.UUID(key)
         :param key:
@@ -84,10 +86,10 @@ class EntityStore(object):
         """
         u = to_uuid(key)  # check if key is already a uuid
         if u is None:
-            return self._key_to_nsuuid(key)
+            return self._ref_to_nsuuid(key)
         return u
 
-    def _key_to_nsuuid(self, key):
+    def _ref_to_nsuuid(self, key):
         if self._ns_uuid is None:
             return None
         if isinstance(key, int):
@@ -97,13 +99,27 @@ class EntityStore(object):
         else:
             return str(uuid.uuid3(self._ns_uuid, key))
 
+    def _ref_to_key(self, key):
+        """
+        This method always returns a valid key into _entities, or None.  May be overridden.
+
+        :param key:
+        :return:
+        """
+        if key in self._entities:
+            return key
+        uu = self._ref_to_nsuuid(key)
+        if uu is not None:
+            if uu in self._entities:
+                return uu
+
     def get_uuid(self, key):
         """
         Deprecated.
         :param key:
         :return:
         """
-        return self._key_to_id(key)
+        return self._ref_to_uuid(key)
 
     def _set_ns_uuid(self, ns_uuid):
         if self._ns_uuid_required is None:
@@ -432,15 +448,12 @@ class EntityStore(object):
         :return: the LcEntity or None
         """
         if key in self._entities:
-            e = self._entities[key]
-            if e.origin is None:
-                e.origin = self.ref
-            return e
+            return self._entities[key]
         raise KeyError(key)
 
     def __getitem__(self, item):
         """
-        CLient-facing entity retrieval.  item is a key that can be converted to a valid UUID from self._key_to_id()--
+        CLient-facing entity retrieval.  item is a key that can be converted to a valid UUID from self._ref_to_key()--
          either a literal UUID, or a string containing something matching a naive UUID regex.
 
         First checks upstream, then local.
@@ -458,14 +471,16 @@ class EntityStore(object):
                 return e
         try:
             if isinstance(item, int) and self._ns_uuid is not None:
-                return self._get_entity(self._key_to_nsuuid(item))
-            return self._get_entity(self._key_to_id(item))
+                return self._get_entity(self._ref_to_nsuuid(item))
+            return self._get_entity(self._ref_to_key(item))
         except KeyError:
             return None
 
     def _add(self, entity, key, quiet=False):
+        if key is None:
+            raise ValueError('Key not allowed to be None')
         if key in self._entities:
-            raise KeyError('Entity already exists: %s' % key)
+            raise EntityExists('Entity already exists: %s' % key)
 
         if entity.entity_type not in self._entity_types:
             raise TypeError('Entity type %s not valid!' % entity.entity_type)
@@ -474,7 +489,7 @@ class EntityStore(object):
             if not (self._quiet or quiet):
                 print('Adding %s entity with %s: %s' % (entity.entity_type, key, entity['Name']))
             if entity.origin is None:
-                assert self._key_to_id(entity.external_ref) == key, 'New entity uuid must match origin repository key!'
+                # assert self._ref_to_key(entity.external_ref) == key, 'entity uuid must match origin repository key!'
                 entity.origin = self.ref
             self._entities[key] = entity
             self._counter[entity.entity_type] += 1
@@ -545,18 +560,20 @@ class EntityStore(object):
         count = 0
         for k, v in self._entities.items():
             valid = True
+            '''
             # 1: confirm key is a UUID
             if not isinstance(k, uuid.UUID):
                 print('Key %s is not a valid UUID.' % k)
                 valid = False
+            '''
             if v.origin is None:
                 print("%s: No origin!" % k)
                 valid = False
 
             if v.origin == self.source:
                 # 2: confirm entity's external key maps to its uuid
-                if self._key_to_id(v.get_external_ref()) != k:
-                    print("%s: Key doesn't match UUID in origin!" % v.get_external_ref())
+                if self._ref_to_uuid(v.external_ref) != v.uuid:
+                    print("%s: Key doesn't match UUID in origin!" % v.external_ref)
                     valid = False
 
             # confirm entity is dict-like with keys() and with a set of common keys

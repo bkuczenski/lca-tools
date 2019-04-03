@@ -156,8 +156,8 @@ class TermManager(object):
     def add_quantity(self, quantity):
         if quantity.entity_type != 'quantity':
             raise TypeError('Must be quantity type')
-        if quantity.uuid in self._qm:
-            ex = self._qm[quantity.uuid]
+        if quantity.link in self._qm:
+            ex = self._qm[quantity.link]
             if not ex is quantity:
                 raise QuantityConflict('Incoming %s does not match existing\n%s' % (ex, quantity))
         else:

@@ -314,5 +314,5 @@ class EntityRef(BaseRef):
 
     def serialize(self, **kwargs):
         j = super(EntityRef, self).serialize(**kwargs)
-        j['entityId'] = self.uuid
+        j['uuid'] = self.uuid
         return j

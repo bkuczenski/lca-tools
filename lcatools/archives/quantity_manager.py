@@ -13,7 +13,8 @@ def _quantity_terms(quantity):
     yield quantity['Name']
     yield str(quantity)
     yield quantity.external_ref  # do we definitely want this?  will squash versions together
-    yield quantity.uuid
+    if quantity.uuid is not None:
+        yield quantity.uuid
     yield quantity.link
     if quantity.has_property('Synonyms'):
         syns = quantity['Synonyms']

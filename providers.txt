@@ -37,12 +37,12 @@ Maybe we should transform the entire system to use links instead of uuids.  What
 The proposed plan is:
 
  * create a _uuid_map defaultdict that maps uuid to a set of links
- * _key_to_id returns a valid key to _entities
+ * _ref_to_key returns a valid key to _entities
    - in LcForeground, it accommodates links, uuids (nondeterministically), or fragment names
  * change _add signature to _add(entity, key)
    - update BasicArchive.add() to use entity.uuid as key
    - update LcForeground.add() to use entity.link as key
- * some minor plumbing to ensure that _key_to_id returns uuid expectation is not violated in client code
+ * some minor plumbing to ensure that _ref_to_key returns uuid expectation is not violated in client code
 
 and that's it!
 

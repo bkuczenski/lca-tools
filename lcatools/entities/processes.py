@@ -43,12 +43,12 @@ class RxRef(object):
     A placeholder object to store reference exchange info for process_refs.  It can be modified to interoperate in
     places where exchanges are expected, e.g by having equivalent equality tests, hashes, etc., as needed.
     """
-    def __init__(self, process_uuid, flow, direction, comment=None):
+    def __init__(self, process_ref, flow, direction, comment=None):
         self._process_ref = None
         self._flow_ref = flow
         self._direction = direction
         # self._hash_tuple = (process.uuid, flow.external_ref, direction, None)
-        self._hash = hash((process_uuid, flow.external_ref, direction, None))
+        self._hash = hash((process_ref, flow.external_ref, direction, None))
         self._comment = comment
         # self._is_alloc = process.is_allocated(self)
         self._cached_value = None
@@ -197,7 +197,8 @@ class LcProcess(LcEntity):
             self._d['Classifications'] = []
 
     def _make_ref_ref(self, query):
-        return [RxRef(self.uuid, x.flow.make_ref(query), x.direction, comment=x.comment) for x in self.references()]
+        return [RxRef(self.external_ref, x.flow.make_ref(query), x.direction, comment=x.comment)
+                for x in self.references()]
 
     def __str__(self):
         return '%s [%s]' % (self._d['Name'], self._d['SpatialScope'])
@@ -528,7 +529,8 @@ class LcProcess(LcEntity):
             return True
         if strict:
             for x in missing_allocations:
-                print('in process %s [%s]\nReference: %s' % (self['Name'], self.uuid, reference.flow.uuid))
+                print('in process %s [%s]\nReference: %s' % (self['Name'], self.external_ref,
+                                                             reference.flow.external_ref))
                 print('%s' % x)
                 raise MissingAllocation('Missing allocation factors for above exchanges')
 
@@ -557,7 +559,7 @@ class LcProcess(LcEntity):
         :param add_dups: (False) set to true to handle "duplicate exchange" errors by cumulating their values
         :return:
         """
-        _x = hash((self.uuid, flow.external_ref, dirn, termination))
+        _x = hash((self.external_ref, flow.external_ref, dirn, termination))
         if _x in self._exchanges:
             if value is None or value == 0:
                 return None
@@ -572,7 +574,7 @@ class LcProcess(LcEntity):
                         if add_dups:
                             e.add_to_value(value)
                         else:
-                            print('Duplicate exchange in process %s:\n%s' % (self.get_uuid(), e))
+                            print('Duplicate exchange in process %s:\n%s' % (self.external_ref, e))
                             raise
                 return e
 
@@ -583,7 +585,7 @@ class LcProcess(LcEntity):
                     if add_dups:
                         e.add_to_value(value, reference=reference)
                     else:
-                        print('Duplicate exchange in process %s:\n%s' % (self.get_uuid(), e))
+                        print('Duplicate exchange in process %s:\n%s' % (self.external_ref, e))
                         raise
                 except ValueError:
                     print('Error adding [%s] = %10.3g for exchange\n%s\nto process\n%s' % (

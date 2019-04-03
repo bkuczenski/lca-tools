@@ -162,7 +162,7 @@ class AntelopeV1Client(BasicArchive):
             self._endpoints[endpoint] = j
         return j
 
-    def _key_to_id(self, key):
+    def _ref_to_key(self, key):
         return key
 
     def add(self, entity):

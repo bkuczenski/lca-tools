@@ -187,7 +187,7 @@ class Characterization(object):
         return '; '.join([k for k in self.locations()])
 
     def __hash__(self):
-        return hash((self.flowable, self.ref_quantity.uuid, self.quantity.uuid, self.context))
+        return hash((self.flowable, self.ref_quantity.external_ref, self.quantity.external_ref, self.context))
 
     def __eq__(self, other):
         """
@@ -198,7 +198,7 @@ class Characterization(object):
         if other is None:
             return False
         if ((self.flowable == other.flowable) &
-                (self.quantity.uuid == other.quantity.uuid)):
+                (self.quantity == other.quantity)):
             if all(self[l] == other[l] for l in other.locations()):
                 return True
         return False
@@ -231,14 +231,14 @@ class Characterization(object):
 
     def serialize(self, values=False, concise=False):
         j = {
-            'ref_quantity': self.ref_quantity.uuid,
+            'ref_quantity': self.ref_quantity.external_ref,
         }
         if self.ref_quantity is self.quantity:
             j['isReference'] = True
         else:
             if not concise:
                 j['entityType'] = self.entity_type,
-                j['query_quantity'] = self.quantity.uuid,
+                j['query_quantity'] = self.quantity.external_ref,
                 j['context'] = str(self.context)
             if values:
                 if self.value is not None:

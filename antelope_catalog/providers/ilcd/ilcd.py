@@ -328,9 +328,9 @@ class IlcdArchive(LcArchive):
 
         refunit, unitconv = self._create_unit(ug_path)
 
-        q = LcQuantity(u, Name=n, ReferenceUnit=refunit, UnitConversion=unitconv, Comment=c)
+        ext_ref = '%s/%s' % (typeDirs['FlowProperty'], u)
 
-        q.set_external_ref('%s/%s' % (typeDirs['FlowProperty'], u))
+        q = LcQuantity(ext_ref, Name=n, ReferenceUnit=refunit, UnitConversion=unitconv, Comment=c, uuid=u)
 
         self.add(q)
 
@@ -385,12 +385,11 @@ class IlcdArchive(LcArchive):
                 val = float(find_tag(fp, 'meanValue', ns=ns))
                 chars.append((q, val))
 
+        ext_ref = '%s/%s' % (typeDirs['Flow'], u)
         if str(find_tag(o, 'typeOfDataSet', ns=ns)) == 'Elementary flow':
-            f = LcFlow(u, Name=n, CasNumber=cas, Comment=c, ReferenceQuantity=ref_qty, Compartment=cat)
+            f = LcFlow(ext_ref, Name=n, CasNumber=cas, Comment=c, ReferenceQuantity=ref_qty, Compartment=cat)
         else:
-            f = LcFlow(u, Name=n, CasNumber=cas, Comment=c, ReferenceQuantity=ref_qty, Class=cat)
-
-        f.set_external_ref('%s/%s' % (typeDirs['Flow'], u))
+            f = LcFlow(ext_ref, Name=n, CasNumber=cas, Comment=c, ReferenceQuantity=ref_qty, Class=cat)
 
         self.add(f)
 
@@ -426,12 +425,12 @@ class IlcdArchive(LcArchive):
 
         cls = [str(i) for i in find_tags(o, 'class', ns='common')]
 
-        p = LcProcess(u, Name=n, Comment=c, SpatialScope=g, TemporalScope=stt,
-                      Classifications=cls)
+        ext_ref = '%s/%s' % (typeDirs['Process'], u)
+
+        p = LcProcess(ext_ref, Name=n, Comment=c, SpatialScope=g, TemporalScope=stt,
+                      Classifications=cls, uuid=u)
 
         self.add(p)
-
-        p.set_external_ref('%s/%s' % (typeDirs['Process'], u))
 
         return p
 
@@ -473,7 +472,7 @@ class IlcdArchive(LcArchive):
                                add_dups=True)  # add_dups: poor quality control on ELCD
             if len(cmt) > 0:
                 x.comment = cmt
-            if rf == flow.get_uuid() and rf_dir == f_dir:
+            if rf == flow.uuid and rf_dir == f_dir:
                 p.add_reference(flow, f_dir)
 
         return p

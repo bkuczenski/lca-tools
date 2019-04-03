@@ -45,7 +45,7 @@ class CLookup(object):
     """
     def __init__(self):
         self._dict = defaultdict(set)
-        self._qid = None
+        self._q = None
 
     def __getitem__(self, item):
         """
@@ -60,11 +60,11 @@ class CLookup(object):
         return set()
 
     def _check_qty(self, cf):
-        if self._qid is None:
-            self._qid = cf.quantity.uuid
+        if self._q is None:
+            self._q = cf.quantity
         else:
-            if cf.quantity.uuid != self._qid:
-                raise QuantityMismatch('Inbound: %s\nCurrent: %s' % (cf.quantity, self._qid))
+            if cf.quantity != self._q:
+                raise QuantityMismatch('Inbound: %s\nCurrent: %s' % (cf.quantity, self._q))
 
     def add(self, value, key=None):
         if key is None:

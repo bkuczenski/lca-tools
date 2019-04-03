@@ -345,7 +345,9 @@ class GhostFragment(object):
 
     @property
     def uuid(self):
-        return self.flow.uuid
+        if self.flow.uuid is not None:
+            return self.flow.uuid
+        raise ValueError('should probably assign a random uuid but need a live case')
 
     @property
     def reference_entity(self):

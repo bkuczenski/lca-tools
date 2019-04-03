@@ -1,6 +1,6 @@
 import re
 from collections import defaultdict
-from .entity_store import EntityStore, SourceAlreadyKnown
+from .entity_store import EntityStore, SourceAlreadyKnown, EntityExists
 from .term_manager import TermManager
 from ..interfaces import to_uuid
 from ..implementations import BasicImplementation, IndexImplementation, QuantityImplementation
@@ -11,10 +11,6 @@ from lcatools import from_json, to_json
 
 
 class OldJson(Exception):
-    pass
-
-
-class EntityExists(Exception):
     pass
 
 
@@ -127,7 +123,7 @@ class BasicArchive(EntityStore):
         :param key:
         :return:
         """
-        u = self._key_to_nsuuid(key)
+        u = self._ref_to_nsuuid(key)
         try:
             e = self._get_entity(u)
         except KeyError:
@@ -158,20 +154,19 @@ class BasicArchive(EntityStore):
             raise InterfaceError('Unable to create interface %s' % iface)
 
     def add(self, entity):
-        if entity.entity_type not in self._entity_types:
-            raise ValueError('%s is not a valid entity type' % entity.entity_type)
-
-        elif entity.entity_type == 'quantity':
-            entity.set_qi(self.make_interface('quantity'))
-
         if entity.uuid is None:  # TODO: eliminate visible UUIDs in favor of NS UUIDs. this will get fleshed out later
-            entity.uuid = self._key_to_id(entity.external_ref)
+            uu = self._ref_to_uuid(entity.external_ref)
+            if uu is not None:
+                entity.uuid = uu
         if self.tm[entity.external_ref] is not None:
             raise ContextCollision('Entity external_ref %s is already known as a context identifier' %
                                    entity.external_ref)
-        self._add(entity, entity.uuid)
+        self._add(entity, entity.external_ref)
+        if entity.uuid is not None:  # BasicArchives: allow UUID to retrieve entity as well, if defined
+            self._entities[entity.uuid] = entity
         if entity.entity_type == 'quantity':
             self.tm.add_quantity(entity)
+            entity.set_qi(self.make_interface('quantity'))
         elif entity.entity_type == 'flow':
             # characterization infrastructure
             self.tm.add_flow(entity)
@@ -224,23 +219,21 @@ class BasicArchive(EntityStore):
         """
         return LcUnit(unitstring), None
 
-    def _quantity_from_json(self, entity_j, uid):
-        entity_j.pop('externalId')  # TODO
+    def _quantity_from_json(self, entity_j, ext_ref):
         # can't move this to entity because we need _create_unit- so we wouldn't gain anything
         unit, _ = self._create_unit(entity_j.pop('referenceUnit'))
         entity_j['referenceUnit'] = unit
-        quantity = LcQuantity(uid, **entity_j)
+        quantity = LcQuantity(ext_ref, **entity_j)
         return quantity
 
-    def _flow_from_json(self, entity_j, uid):
-        entity_j.pop('externalId')  # TODO
+    def _flow_from_json(self, entity_j, ext_ref):
         chars = entity_j.pop('characterizations', [])
         if 'referenceQuantity' in entity_j:
             rq = entity_j.pop('referenceQuantity')
         else:
             rq = next(c['quantity'] for c in chars if 'isReference' in c and c['isReference'] is True)
         ref_q = self[rq]
-        return LcFlow(uid, referenceQuantity=ref_q, **entity_j)
+        return LcFlow(ext_ref, referenceQuantity=ref_q, **entity_j)
 
     def _add_chars(self, flow, chars):
         for c in chars:
@@ -260,11 +253,11 @@ class BasicArchive(EntityStore):
                 v = c['value']
             self.tm.add_characterization(flow['Name'], flow.reference_entity, q, v, context=flow.context)
 
-    def _make_entity(self, e, etype, uid):
+    def _make_entity(self, e, etype, ext_ref):
         if etype == 'quantity':
-            entity = self._quantity_from_json(e, uid)
+            entity = self._quantity_from_json(e, ext_ref)
         elif etype == 'flow':
-            entity = self._flow_from_json(e, uid)
+            entity = self._flow_from_json(e, ext_ref)
         else:
             raise TypeError('Unknown entity type %s' % etype)
         return entity
@@ -279,12 +272,9 @@ class BasicArchive(EntityStore):
         """
         if 'tags' in e:
             raise OldJson('This file type is no longer supported.')
-        uid = e.pop('entityId', None)
-        ext_ref = e['externalId']  # TODO: need this still present
-        if uid is None:
-            uid = to_uuid(ext_ref)
-            if uid is None:
-                raise OldJson('This entity has no UUID and an invalid external ref')
+        ext_ref = e.pop('externalId', None)
+        if ext_ref is None:
+            ext_ref = e.pop('entityId')  # if this is missing too, throw an error
         etype = e.pop('entityType')
         if etype == 'flow':
             # need to delay adding characterizations until after entity is registered with term manager
@@ -296,17 +286,13 @@ class BasicArchive(EntityStore):
             chars = []
         e['origin'] = e.pop('origin', self.ref)
 
-        entity = self._make_entity(e, etype, uid)
+        entity = self._make_entity(e, etype, ext_ref)
 
         self.add(entity)
         if etype == 'flow':
             # characterization infrastructure
             self._add_chars(entity, chars)
 
-        if self[ext_ref] is entity:
-            entity.set_external_ref(ext_ref)
-        else:
-            print('## skipping bad external ref %s for uuid %s' % (ext_ref, uid))
         return entity
 
     def load_from_dict(self, j, _check=True, jsonfile=None):
@@ -342,7 +328,8 @@ class BasicArchive(EntityStore):
         if 'quantities' in j:
             for e in j['quantities']:
                 q = self.entity_from_json(e)
-                q_map[q.uuid] = q
+                if q.uuid is not None:
+                    q_map[q.uuid] = q
                 q_map[q.external_ref] = q
         if 'termManager' in j:
             self.tm.add_from_json(j['termManager'], q_map, self.ref)

@@ -481,8 +481,8 @@ class FlowTermination(object):
     def score_cache(self, quantity=None, ignore_uncached=False, refresh=False, **kwargs):
         if quantity is None:
             return self._score_cache
-        if quantity.uuid in self._score_cache and refresh is False:
-            return self._score_cache[quantity.uuid]
+        if quantity in self._score_cache and refresh is False:
+            return self._score_cache[quantity]
         else:
             try:
                 res = self.compute_unit_score(quantity, refresh=refresh, **kwargs)
@@ -491,7 +491,7 @@ class FlowTermination(object):
                     res = LciaResult(quantity)
                 else:
                     raise
-            self._score_cache[quantity.uuid] = res
+            self._score_cache[quantity] = res
             return res
 
     def score_cache_items(self):

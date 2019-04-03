@@ -67,7 +67,7 @@ class Traci21Factors(BasicArchive):
         return ', '.join([flowable, compartment])
 
     def _create_quantity(self, name, unitstring):
-        u = self._key_to_nsuuid(name)
+        u = self._ref_to_nsuuid(name)
         q = self[u]
         if q is None:
             q = LcQuantity(u, external_ref=name, Name=name, ReferenceUnit=self._create_unit(unitstring)[0])
@@ -89,7 +89,7 @@ class Traci21Factors(BasicArchive):
     def _create_flow(self, row):
         flowable = row['Substance Name'].lower()
         ext_ref = flowable  # self._flow_key(flowable, compartment)
-        u = self._key_to_nsuuid(ext_ref)
+        u = self._ref_to_nsuuid(ext_ref)
         f = self[u]
         if f is None:
             cas = transform_numeric_cas(row['Formatted CAS #'])

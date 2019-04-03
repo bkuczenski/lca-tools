@@ -63,14 +63,13 @@ class LcArchive(BasicArchive):
         if jsonfile is not None and jsonfile == self.source:
             self._loaded = True
 
-    def _process_from_json(self, entity_j, uid):
+    def _process_from_json(self, entity_j, ext_ref):
         # note-- we are officially abandoning referenceExchange notation
-        entity_j.pop('externalId')  # TODO - see basic archive
         if 'referenceExchange' in entity_j:
             entity_j.pop('referenceExchange')
         a_b_q = entity_j.pop('AllocatedByQuantity', None)
         exchs = entity_j.pop('exchanges', [])
-        process = LcProcess(uid, **entity_j)
+        process = LcProcess(ext_ref, **entity_j)
         refs, nonrefs = [], []
         ref_x = dict()
         for i, x in enumerate(exchs):
@@ -123,10 +122,10 @@ class LcArchive(BasicArchive):
 
         return process
 
-    def _make_entity(self, e, etype, uid):
+    def _make_entity(self, e, etype, ext_ref):
         if etype == 'process':
-            return self._process_from_json(e, uid)
-        return super(LcArchive, self)._make_entity(e, etype, uid)
+            return self._process_from_json(e, ext_ref)
+        return super(LcArchive, self)._make_entity(e, etype, ext_ref)
 
     def entities_by_type(self, entity_type):
         if entity_type not in self._entity_types:

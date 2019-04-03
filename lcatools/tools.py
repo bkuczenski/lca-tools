@@ -82,5 +82,5 @@ def count_tags(e_list, search=None):
                 continue
         for i in t:
             d[i] += 1
-            m[i].append(e.get_uuid())
+            m[i].append(e.external_ref)
     return d, m

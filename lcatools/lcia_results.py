@@ -121,12 +121,12 @@ class DetailedLciaResult(object):
         return self.value * self._dirn_adjust * self._qr.value
 
     def __hash__(self):
-        return hash((self._exchange.process.uuid, self._exchange.direction, self._qr.flowable, self._qr.context))
+        return hash((self._exchange.process.external_ref, self._exchange.direction, self._qr.flowable, self._qr.context))
 
     def __eq__(self, other):
         if not isinstance(other, DetailedLciaResult):
             return False
-        return (self.exchange.process.uuid == other.exchange.process.uuid and
+        return (self.exchange.process.external_ref == other.exchange.process.external_ref and
                 self.flowable == other.flowable and
                 self.direction[0] == other.direction[0] and
                 self.context == other.context)
@@ -205,11 +205,7 @@ class SummaryLciaResult(object):
                 yield x
 
     def __hash__(self):
-        try:
-            h = self.entity.uuid
-        except AttributeError:
-            h = self.entity
-        return hash(h)
+        return hash(self.entity)
 
     def __eq__(self, other):
         if not isinstance(other, SummaryLciaResult):
@@ -574,10 +570,10 @@ class LciaResult(object):
                     recurse.append(c.flatten())
             else:
                 for d in c.details():
-                    flat.add_component(d.flow.uuid, d.flow)
+                    flat.add_component(d.flow.external_ref, d.flow)
                     # create a new exchange that has already had scaling applied
                     exch = ExchangeValue(d.exchange.process, d.flow, d.exchange.direction, value=d.value * _apply_scale)
-                    flat.add_score(d.flow.uuid, exch, d.factor)
+                    flat.add_score(d.flow.external_ref, exch, d.factor)
 
         for r in recurse:
             for k in r.keys():
@@ -593,7 +589,7 @@ class LciaResult(object):
                         raise
                 else:
                     for d in c.details():
-                        flat.add_component(d.flow.uuid, d.flow)
+                        flat.add_component(d.flow.external_ref, d.flow)
                         exch = ExchangeValue(d.exchange.process, d.flow, d.exchange.direction,
                                              value=d.value * _apply_scale)
                         flat.add_score(k, exch, d.factor)
@@ -624,10 +620,10 @@ class LciaResult(object):
             self._LciaScores[key] = AggregateLciaScore(self, entity)
 
     def add_score(self, key, exchange, qrresult):
-        if qrresult.query.uuid != self.quantity.uuid:
+        if qrresult.query != self.quantity:
             raise InconsistentQuantity('%s\nqrresult.quantity: %s\nself.quantity: %s' % (qrresult,
-                                                                                         qrresult.query.uuid,
-                                                                                         self.quantity.uuid))
+                                                                                         qrresult.query,
+                                                                                         self.quantity))
         if key not in self._LciaScores.keys():
             self.add_component(key)
         self._LciaScores[key].add_detailed_result(exchange, qrresult)
@@ -836,7 +832,7 @@ class LciaResults(dict):
     A dict of LciaResult objects, with some useful attachments.  The dict gets added to in the normal way, but
     also keeps track of the keys added in sequence, so that they can be retrieved by numerical index.
 
-    The LciaResults object keys should be quantity UUIDs
+    The LciaResults object keys should be quantity links
 
 
     """
@@ -871,7 +867,7 @@ class LciaResults(dict):
     def add(self, value):
         # TODO: add should cumulate components if LciaResult is already present
         assert isinstance(value, LciaResult)
-        self.__setitem__(value.quantity.uuid, value)
+        self.__setitem__(value.quantity.link, value)
 
     def indices(self):
         for i in self._indices:
@@ -961,7 +957,7 @@ class LciaWeighting(object):
         return res.apply_weighting(self._w, self._q, **kwargs)
 
     def q(self):
-        return self._q.get_uuid()
+        return self._q.link
 
 
 def traversal_to_lcia(ffs):

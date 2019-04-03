@@ -60,11 +60,13 @@ class IlcdLcia(IlcdArchive):
             dur = str(find_tag(o, 'duration', ns=ns))
 
             rq = self._make_reference_unit(o, ns=ns)
+            ru = LcUnit('%s %s' % (rq.unit(), rq['Name']), unit_uuid=rq.uuid)
 
-            lcia = LcQuantity(u, Name=n, Comment=c, Method=m, Category=ic, Indicator=ii, ReferenceYear=ry,
+            ext_ref = '%s/%s' % (typeDirs['LCIAMethod'], u)
+
+            lcia = LcQuantity(ext_ref, referenceUnit=ru, Name=n, Comment=c, Method=m, Category=ic, Indicator=ii,
+                              ReferenceYear=ry,
                               Duration=dur, UnitConversion=rq['UnitConversion'])
-            lcia.set_external_ref('%s/%s' % (typeDirs['LCIAMethod'], u))
-            lcia.reference_entity = LcUnit('%s %s' % (rq.unit(), rq['Name']), unit_uuid=rq.uuid)
 
             self.add(lcia)
 

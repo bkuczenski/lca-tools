@@ -121,7 +121,7 @@ This is a bit misplaced... but the 'interfaces.py' file for ArchiveInterface nee
 
 
 ArchiveInterface:
-    _key_to_id <- get_uuid, __getitem__, _add, validate_entity_list
+    _ref_to_key <- get_uuid, __getitem__, _add, validate_entity_list
     	       <- Basic.entity_from_json
 	       <- Foreground.name_fragment
     get_uuid [deprecated]

@@ -39,10 +39,14 @@ class LcEntity(object):
     _ref_field = ''
     _post_fields = ['Comment']
 
-    def __init__(self, entity_type, entity_uuid=None, origin=None, external_ref=None, **kwargs):
+    def __init__(self, entity_type, external_ref, origin=None, entity_uuid=None, **kwargs):
 
-        if entity_uuid is None and external_ref is None:
-            raise EntityInitializationError('At least one of entity_uuid, external_ref must be provided')
+        if external_ref is None:
+            if entity_uuid is None:
+                raise EntityInitializationError('At least one of entity_uuid, external_ref must be provided')
+            external_ref = entity_uuid
+
+        self._external_ref = external_ref
 
         self._uuid = None
 
@@ -53,12 +57,12 @@ class LcEntity(object):
 
         self._entity_type = entity_type
         self._reference_entity = None
-        self._origin = origin
+
+        if origin is not None:
+            self._origin = origin
 
         self._d['Name'] = ''
         self._d['Comment'] = ''
-
-        self._external_ref = external_ref
 
         self._query_ref = None  # memoize this
 
@@ -130,48 +134,13 @@ class LcEntity(object):
 
     @property
     def external_ref(self):
-        if self._external_ref is None:
-            return self._uuid
         return self._external_ref
-
-    @external_ref.setter
-    def external_ref(self, ref):
-        """
-        Specify how the entity is referred to in the source dataset. If this is unset, the UUID is assumed
-        to be used externally.
-        :param ref:
-        :return:
-        """
-        if self._external_ref is None:
-            if ref != self.uuid:  # don't bother setting if it's the same as the UUID
-                self._external_ref = ref
-        else:
-            raise PropertyExists('External Ref already set to %s' % self._external_ref)
-
-    def set_external_ref(self, ref):
-        """
-        deprecated
-        """
-        self.external_ref = ref
-
-    def get_external_ref(self):
-        """
-        deprecated
-        """
-        return self.external_ref
 
     def get_signature(self):
         k = dict()
         for i in self.signature_fields():
             k[i] = self[i]
         return k
-
-    def get_uuid(self):
-        """
-        deprecated.  switch to .uuid property.
-        :return:
-        """
-        return self._uuid
 
     @property
     def uuid(self):
@@ -188,7 +157,7 @@ class LcEntity(object):
 
     @property
     def link(self):
-        return '%s/%s' % (self.origin, self.get_external_ref())
+        return '%s/%s' % (self.origin, self.external_ref)
 
     def _validate_reference(self, ref_entity):
         if ref_entity is None:
@@ -251,13 +220,12 @@ class LcEntity(object):
         if self.reference_entity is None:
             return None
         else:
-            return '%s' % self.reference_entity.get_external_ref()
+            return '%s' % self.reference_entity.external_ref
 
     def serialize(self, domesticate=False, drop_fields=()):
         j = {
-            'entityId': self.get_uuid(),
             'entityType': self.entity_type,
-            'externalId': self.get_external_ref(),
+            'externalId': self.external_ref,
             'origin': self.origin,
             self._ref_field: self._print_ref_field(),
         }
@@ -316,9 +284,9 @@ class LcEntity(object):
             raise EntityMergeError('Incoming is not an LcEntity: %s' % other)
         elif self.entity_type != other.entity_type:
             raise EntityMergeError('Incoming entity type %s mismatch with %s' % (other.entity_type, self.entity_type))
-        elif self.get_external_ref() != other.get_external_ref():
-            raise EntityMergeError('Incoming External ref %s conflicts with existing %s' % (other.get_external_ref(),
-                                                                                            self.get_external_ref()))
+        elif self.external_ref != other.external_ref:
+            raise EntityMergeError('Incoming External ref %s conflicts with existing %s' % (other.external_ref,
+                                                                                            self.external_ref))
         else:
             # if self.origin != other.origin:
             #     print('Merging entities with differing origin: \nnew: %s\nexisting: %s'% (other.origin, self.origin))
@@ -331,7 +299,7 @@ class LcEntity(object):
         return self._d.keys()
 
     def show(self):
-        print('%s Entity (ref %s)' % (self.entity_type.title(), self.get_external_ref()))
+        print('%s Entity (ref %s)' % (self.entity_type.title(), self.external_ref))
         print('origin: %s' % self.origin)
         if self.entity_type == 'process':
             for i in self.reference_entity:
@@ -354,11 +322,13 @@ class LcEntity(object):
         return str(self)
 
     def __hash__(self):
+        """
+        External ref is set by the end of __init__ and is immutable (except for fragments-- which use uuid for hash)
+        :return:
+        """
         if self._origin is None:
             raise AttributeError('Origin not set!')
-        if self._uuid is None:
-            raise AttributeError('UUID not set!')
-        return hash((self.origin, self.uuid))
+        return hash((self.origin, self.external_ref))
 
     def __eq__(self, other):
         """

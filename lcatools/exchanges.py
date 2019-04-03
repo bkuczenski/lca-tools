@@ -65,8 +65,7 @@ class Exchange(object):
             else:
                 raise ValueError('Unintelligible termination: %s' % termination)
         # self._hash_tuple =
-        self._hash = hash((process.uuid, flow.external_ref, direction, self._termination))  # have to use uuid because
-        # process's external_ref may not be set until after exchanges are populated!
+        self._hash = hash((process.external_ref, flow.external_ref, direction, self._termination))
         self._is_reference = False
 
     @property
@@ -251,12 +250,12 @@ class Exchange(object):
         return '%s of %s' % (self.direction, self.process)
 
     def get_external_ref(self):
-        return '%s: %s' % (self.direction, self.flow.uuid)
+        return '%s: %s' % (self.direction, self.flow.external_ref)
 
     def serialize(self, **kwargs):
         j = {
             'entityType': self.entity_type,
-            'flow': self.flow.uuid,
+            'flow': self.flow.external_ref,
             'direction': self.direction,
         }
         if self.termination is not None:
@@ -489,7 +488,7 @@ class ExchangeValue(Exchange):
     def _serialize_value_dict(self):
         j = dict()
         for k, v in self._value_dict.items():
-            j['%s:%s' % (k.direction, k.flow.uuid)] = v
+            j['%s:%s' % (k.direction, k.flow.external_ref)] = v
         return j
 
     def serialize(self, values=False):

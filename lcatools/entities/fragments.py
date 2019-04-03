@@ -6,7 +6,7 @@
 import uuid
 # from collections import defaultdict
 
-from lcatools.interfaces import comp_dir
+from lcatools.interfaces import comp_dir, PropertyExists
 
 from lcatools.fragment_flows import group_ios, FragmentFlow, frag_flow_lcia
 from lcatools.entities import LcEntity, LcFlow
@@ -137,6 +137,7 @@ class LcFragment(LcEntity):
                  background=False,
                  termination=None,
                  term_flow=None,
+                 external_ref=None,
                  **kwargs):
         """
         Required params:
@@ -150,8 +151,9 @@ class LcFragment(LcEntity):
         :param background: if true, fragment only returns LCIA results.
         :param kwargs:
         """
+        the_uuid = str(uuid.UUID(the_uuid))  # throws an error if invalid UUID
 
-        super(LcFragment, self).__init__('fragment', the_uuid, **kwargs)
+        super(LcFragment, self).__init__('fragment', external_ref, entity_uuid=the_uuid, **kwargs)
         self._child_flows = set()
 
         if parent is not None:
@@ -186,6 +188,29 @@ class LcFragment(LcEntity):
 
         self.cached_ev = exchange_value
         self.__dbg_threshold = -1  # higher number is more verbose
+
+    @property
+    def external_ref(self):
+        if self._external_ref is None:
+            return self._uuid
+        return self._external_ref
+
+    @external_ref.setter
+    def external_ref(self, ref):
+        """
+        Specify how the entity is referred to in the source dataset. If this is unset, the UUID is assumed
+        to be used externally.
+        :param ref:
+        :return:
+        """
+        if self._external_ref is None:
+            if ref != self.uuid:  # don't bother setting if it's the same as the UUID
+                self._external_ref = ref
+        else:
+            raise PropertyExists('External Ref already set to %s' % self._external_ref)
+
+    def __hash__(self):
+        return hash((self.origin, self.uuid))
 
     def set_debug_threshold(self, level):
         self.__dbg_threshold = level
@@ -304,7 +329,7 @@ class LcFragment(LcEntity):
         j = super(LcFragment, self).serialize(domesticate=True, **kwargs)  # once you save a fragment, it's yours
 
         j.update({
-            'flow': self.flow.uuid,  # TODO: should be external ref-- phaseout uuids generally
+            'flow': self.flow.external_ref,
             'direction': self.direction,
             'isPrivate': self._private,
             'isBackground': self._background,

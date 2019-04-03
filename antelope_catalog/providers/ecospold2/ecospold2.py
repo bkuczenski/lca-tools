@@ -91,7 +91,7 @@ class EcospoldV2Archive(LcArchive):
             return EcoSpold2IndexImplementation(self)
         return super(EcospoldV2Archive, self).make_interface(iface)
 
-    # no need for _key_to_id - keys in ecospold are uuids
+    # no need for _ref_to_key - keys in ecospold are uuids
     def _fetch_filename(self, filename):
         st = self._archive.readfile(filename)
         if st is None:
@@ -442,11 +442,11 @@ class EcospoldV2Archive(LcArchive):
                     if exch.termination is not None:
                         if self._linked:
                             print('Squashing bad termination in linked reference exchange, %s\nFlow %s Term %s' % (
-                                p.get_uuid(), exch.flow.get_uuid(), exch.termination))
+                                p.external_ref, exch.flow.external_ref, exch.termination))
                             term = None
                         else:
                             print('Removing reference status from linked reference exchange, %s\nFlow %s Term %s' % (
-                                p.get_uuid(), exch.flow.get_uuid(), exch.termination))
+                                p.external_ref, exch.flow.external_ref, exch.termination))
                             is_ref = False
 
                 x = p.add_exchange(exch.flow, exch.direction, reference=rx, value=exch.value,
@@ -543,8 +543,8 @@ class EcospoldV2Archive(LcArchive):
                     q = tags[my_tag]
                     result = LciaResult(q)
                     cf = QRResult(rf['Name'], rf.reference_entity, q, rf.context, p['SpatialScope'], self.ref, v)
-                    result.add_score(p.get_uuid(), exch, cf)
-                    results[q.get_uuid()] = result
+                    result.add_score(p.external_ref, exch, cf)
+                    results[q.link] = result
 
         self._print('%30.30s -- %5f' % ('Impact scores collected', time.time() - start_time))
 

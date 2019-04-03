@@ -10,7 +10,6 @@ web paper, to a collection of process data, to wit:
 
 from __future__ import print_function, unicode_literals
 
-import eight
 import uuid
 import re
 
@@ -120,11 +119,9 @@ class EcospoldV1Archive(LcArchive):
             q = self._q_dict[unitstring]
         else:
             ref_unit, _ = self._create_unit(unitstring)
-            uid = self._key_to_nsuuid(unitstring)
 
-            q = LcQuantity(uid, Name='EcoSpold Quantity %s' % unitstring,
+            q = LcQuantity(unitstring, Name='EcoSpold Quantity %s' % unitstring,
                            ReferenceUnit=ref_unit, Comment=self.spold_version)
-            q.set_external_ref(unitstring)
             self.add(q)
 
             self._q_dict[unitstring] = q
@@ -138,8 +135,7 @@ class EcospoldV1Archive(LcArchive):
         :return:
         """
         number = int(exch.get('number'))
-        uid = self._key_to_nsuuid(number)
-        try_f = self[uid]
+        try_f = self[number]
         if try_f is not None:
             f = try_f
             assert f.entity_type == 'flow', "Expected flow, found %s" % f.entity_type
@@ -152,8 +148,7 @@ class EcospoldV1Archive(LcArchive):
             cas = not_none(exch.get("CASNumber"))
             cat = [k for k in filter(None, (exch.get('category'), exch.get('subCategory')))]
 
-            f = LcFlow(uid, Name=n, CasNumber=cas, Comment=c, Compartment=cat, ReferenceQuantity=q)
-            f.set_external_ref(number)
+            f = LcFlow(number, Name=n, CasNumber=cas, Comment=c, Compartment=cat, ReferenceQuantity=q)
             self.add(f)
 
         if exch.get("unit") != f.unit():
@@ -210,9 +205,7 @@ class EcospoldV1Archive(LcArchive):
         p_meta = o.dataset.metaInformation.processInformation
         n = p_meta.referenceFunction.get('name')
 
-        u = self._key_to_nsuuid(n)
-
-        try_p = self[u]
+        try_p = self[n]
         if try_p is not None:
             p = try_p
             assert p.entity_type == 'process', "Expected process, found %s" % p.entity_type
@@ -225,9 +218,8 @@ class EcospoldV1Archive(LcArchive):
             c = p_meta.referenceFunction.get('generalComment')
 
             cls = [p_meta.referenceFunction.get('category'), p_meta.referenceFunction.get('subCategory')]
-            p = LcProcess(u, Name=n, Comment=c, SpatialScope=g, TemporalScope=stt,
+            p = LcProcess(n, Name=n, Comment=c, SpatialScope=g, TemporalScope=stt,
                           Classifications=cls)
-            p.set_external_ref(n)
 
             rf, flowlist = self._extract_exchanges(o)
 

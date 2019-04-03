@@ -46,33 +46,19 @@ class LcFlow(LcEntity, FlowInterface):
     @LcEntity.origin.setter
     def origin(self, value):  # pycharm lint is documented bug: https://youtrack.jetbrains.com/issue/PY-12803
         LcEntity.origin.fset(self, value)
-        if self.external_ref is not None:
-            self._flowable.add_term(self.link)
+        self._flowable.add_term(self.link)
 
-    @LcEntity.external_ref.setter
-    def external_ref(self, value):
-        LcEntity.external_ref.fset(self, value)
-        if self.origin is not None:
-            self._flowable.add_term(self.link)
-
-    def __init__(self, entity_uuid=None, local_unit=None, **kwargs):
-        super(LcFlow, self).__init__('flow', entity_uuid, **kwargs)
-
-        self._local_unit = None
+    def __init__(self, external_ref, **kwargs):
+        super(LcFlow, self).__init__('flow', external_ref, **kwargs)
 
         for k in self._new_fields:
             if k not in self._d:
                 self._d[k] = ''
 
-        if local_unit is not None:
-            self.set_local_unit(local_unit)
-
     def unit(self):
-        if self._local_unit is not None:
-            print('NOT YET SUPPORTED')
-            return self._local_unit
         return super(LcFlow, self).unit()
 
+    '''
     def set_local_unit(self, local_unit):
         """
         Controls the display of numeric data regarding the flow.
@@ -124,6 +110,7 @@ class LcFlow(LcEntity, FlowInterface):
 
     def unset_local_unit(self):
         self._local_unit = None
+    '''
 
     def __str__(self):
         cas = self.get('CasNumber')

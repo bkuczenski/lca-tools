@@ -153,7 +153,7 @@ class OpenLcaJsonLdArchive(LcArchive):
         try:
             v_unit = ex['unit']['name']
         except KeyError:
-            print('%s: %d No unit! using default %s' % (p.uuid, ex['internalId'], fp.unit()))
+            print('%s: %d No unit! using default %s' % (p.external_ref, ex['internalId'], fp.unit()))
             v_unit = fp.unit()
 
         if v_unit != fp.unit():
@@ -162,9 +162,10 @@ class OpenLcaJsonLdArchive(LcArchive):
             self._print('%s: Unit Conversion exch: %g %s to native: %g %s' % (p.uuid, oldval, v_unit, value, fp.unit()))
 
         if fp != flow.reference_entity:
-            print('%s:\n%s flow reference quantity does not match\n%s exchange f.p. Conversion Required' % p.uuid,
-                  flow.reference_entity.uuid,
-                  fp.uuid)
+            print('%s:\n%s flow reference quantity does not match\n%s exchange f.p. Conversion Required' %
+                  (p.external_ref,
+                   flow.reference_entity.external_ref,
+                   fp.external_ref))
             print('From %g %s' % (value, fp.unit()))
             value /= fp.cf(flow).value  # TODO: account for locale?  ## is this even right?
             print('To %g %s' % (value, flow.unit()))

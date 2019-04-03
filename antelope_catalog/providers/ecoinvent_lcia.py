@@ -110,14 +110,12 @@ class EcoinventLcia(BasicArchive):
         :return:
         """
         key = self._quantity_key(row)
-        u = self._key_to_nsuuid(key)
-        try_q = self[u]
+        try_q = self[key]
         if try_q is None:
             unit, _ = self._create_unit(row['unit'])
 
-            q = LcQuantity(u, Name=key, referenceUnit=unit, Comment='Ecoinvent LCIA implementation',
+            q = LcQuantity(key, Name=key, referenceUnit=unit, Comment='Ecoinvent LCIA implementation',
                            Method=row['method'], Category=row['category'], Indicator=row['indicator'])
-            q.set_external_ref(key)
             self.add(q)
         else:
             q = try_q

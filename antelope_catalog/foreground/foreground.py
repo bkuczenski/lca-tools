@@ -10,7 +10,7 @@ from collections import defaultdict
 from ..implementations import ForegroundImplementation
 
 from lcatools.interfaces import to_uuid
-from lcatools.archives import BasicArchive, BASIC_ENTITY_TYPES
+from lcatools.archives import BasicArchive, EntityExists, BASIC_ENTITY_TYPES
 from lcatools.entities.fragments import LcFragment
 from lcatools.entity_refs import CatalogRef
 
@@ -54,26 +54,23 @@ class LcForeground(BasicArchive):
         with open(filename, 'r') as fp:
             self.load_from_dict(json.load(fp), jsonfile=filename)
 
-    def _key_to_id(self, key):
+    def _ref_to_key(self, key):
         """
-        Fragments should be permitted to have any desired external_ref -- which means key_to_id needs to store a
-        mapping of non-standard external refs to uuids.  This is only because (at the moment) every entity is stored
-        in the archive using a uuid as its internal key.
-
-        Open question: should this be a general feature?  currently only NsUuidArchives allow arbitrary external_refs.
-        Answer: no. uuids are still king (for now)
+        Fragments MUST have UUIDs.  Fragments should also be permitted to have any desired external_ref -- which means
+        the foreground needs to store a mapping of non-standard external refs to uuids.  This is only because fragments
+        are the only entity type that is intended to be mutable (especially, nameable) after creation.
 
         This function is a little different from other EntityStore subclasses because it (uniquely) needs to handle
         entities from a variety of origins. Therefore we use the link and not the uuid as an identifer.  However, we
         still need to support retrieval by UUID.  **WE WANT TO DO THIS WITHOUT HAVING TO OVERRIDE __getitem__**.
         So the operation is as follows:
 
-         * _key_to_id transmits the user's heterogeneous input into a valid key to self._entities, or None
+         * _ref_to_key transmits the user's heterogeneous input into a valid key to self._entities, or None
            - if the key is already a known link, it's easy
            - if the key is a custom name, it's almost as easy
            - if the key CONTAINS a uuid known to the db, then a link for an entity with that UUID is
               NONDETERMINISTICALLY returned
-         * __getitem__ uses _key_to_id to translate the users input into a key
+         * __getitem__ uses _ref_to_key to translate the users input into a key
 
         For the thorns around renaming fragments, see self.name_fragment() below
 
@@ -150,26 +147,24 @@ class LcForeground(BasicArchive):
             ref = CatalogRef(origin, external_ref, entity_type=entity_type)
         return ref
 
-    def _flow_ref_from_json(self, e, uid):
+    def _flow_ref_from_json(self, e, external_ref):
         origin = e.pop('origin')
-        external_ref = e.pop('externalId')
         c = e.pop('characterizations')
         ref_qty_uu = next(cf['quantity'] for cf in c if 'isReference' in cf and cf['isReference'] is True)
-        return CatalogRef.from_query(external_ref, self._catalog.query(origin), 'flow', self[ref_qty_uu], uuid=uid, **e)
+        return CatalogRef.from_query(external_ref, self._catalog.query(origin), 'flow', self[ref_qty_uu], **e)
 
-    def _qty_ref_from_json(self, e, uid):
+    def _qty_ref_from_json(self, e, external_ref):
         origin = e.pop('origin')
-        external_ref = e.pop('externalId')
         unitstring = e.pop('referenceUnit')
-        return CatalogRef.from_query(external_ref, self._catalog.query(origin), 'quantity', unitstring, uuid=uid, **e)
+        return CatalogRef.from_query(external_ref, self._catalog.query(origin), 'quantity', unitstring, **e)
 
-    def _make_entity(self, e, etype, uid):
+    def _make_entity(self, e, etype, ext_ref):
         if e['origin'] != self.ref:
             if etype == 'flow':
-                return self._flow_ref_from_json(e, uid)
+                return self._flow_ref_from_json(e, ext_ref)
             elif etype == 'quantity':
-                return self._qty_ref_from_json(e, uid)
-        return super(LcForeground, self)._make_entity(e, etype, uid)
+                return self._qty_ref_from_json(e, ext_ref)
+        return super(LcForeground, self)._make_entity(e, etype, ext_ref)
 
     def add(self, entity):
         """
@@ -177,12 +172,10 @@ class LcForeground(BasicArchive):
         :param entity:
         :return:
         """
-        if entity.entity_type not in self._entity_types:
-            raise ValueError('%s is not a valid entity type' % entity.entity_type)
         if entity.origin is None:
-            entity.origin = self.ref
+            entity.origin = self.ref  # have to do this now in order to have the link properly defined
         elif entity.is_entity and entity.origin != self.ref:
-            entity = entity.make_ref(self._catalog.query(entity.origin))
+            entity = entity.make_ref(self._catalog.query(entity.origin))  # only store foreign entities as refs
             '''
             entity.show()
             print('my ref: %s' % self.ref)
@@ -190,9 +183,9 @@ class LcForeground(BasicArchive):
             '''
         try:
             self._add(entity, entity.link)
-        except KeyError:
+        except EntityExists:
             # merge incoming entity's properties with existing entity
-            current = self[entity.uuid]
+            current = self[entity.link]
             current.merge(entity)
         self._uuid_map[entity.uuid].add(entity.link)
 
@@ -226,7 +219,7 @@ class LcForeground(BasicArchive):
         """
         if self[frag.link] is not frag:
             raise FragmentNotFound(frag)
-        if self._key_to_id(name) is not None:
+        if self._ref_to_key(name) is not None:
             raise ValueError('Name is already taken: "%s"' % name)
         oldname = frag.link
         frag.external_ref = name  # will raise PropertyExists if already set

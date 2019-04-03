@@ -179,7 +179,7 @@ class LcArchiveTest(unittest.TestCase):
         fl_uuid = '9cc0ccce-8e33-35ca-a3c0-c7bb6c397e95'
         q_uuid = '8703965a-7a6b-3e3e-a1cf-d9adf7bf1d9f'
         fl = self._ar[fl_uuid]
-        self.assertEqual(self._ar._key_to_nsuuid(fl.external_ref), fl_uuid)
+        self.assertEqual(self._ar._ref_to_nsuuid(fl.external_ref), fl_uuid)
         self.assertIs(self._ar[q_uuid], fl.reference_entity)
 
     def test_name(self):

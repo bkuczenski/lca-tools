@@ -1,7 +1,9 @@
 import unittest
+from lcatools import from_json
 from lcatools.entities import LcQuantity
 
 from ..quantity_manager import QuantitySynonyms, QuantityManager, QuantityUnitMismatch, QuantityAlreadySet
+from .. import REF_QTYS
 
 
 dummy_q = LcQuantity.new('A dummy quantity', 'dummy', Synonyms=['dumdum quantity', 'Qty Dummy'])
@@ -73,6 +75,13 @@ class QuantityManagerTest(unittest.TestCase):
 
     def test_add_from_dict(self):
         pass
+
+    def test_add_ref_qty(self):
+        j = from_json(REF_QTYS)
+        qj = next(_q for _q in j['quantities']
+                  if _q['externalId'] == 'flowproperties/93a60a56-a3c8-11da-a746-0800200c9a66')
+        qmgr = QuantityManager()
+        qmgr.add_quantity()
 
 
 if __name__ == '__main__':

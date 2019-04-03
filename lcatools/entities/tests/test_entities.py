@@ -14,10 +14,10 @@ class LcEntityTest(unittest.TestCase):
 
     def test_contains(self):
         e = LcEntity('the biggest goober', uuid4(), Annotation='a subtle yet profound statement', domain='society')
-        self.assertFalse('annotation' in e.keys())
+        self.assertTrue('annotation' in e.keys())
         self.assertTrue(e.has_property('annotation'))
         self.assertTrue('Annotation' in e.keys())
-        self.assertFalse('dOmAiN' in e.keys())
+        self.assertTrue('dOmAiN' in e.keys())
         self.assertTrue(e.has_property('dOmAiN'))
         self.assertFalse('SoCiEtY' in e.keys())
         self.assertFalse('annotat' in e.keys())

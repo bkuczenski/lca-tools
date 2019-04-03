@@ -51,12 +51,12 @@ import unittest
 
 from ..fragment_editor import create_fragment
 from ..flows import LcFlow
-from lcatools.lcia_engine import LciaEngine
+from lcatools.archives import Qdb
 from lcatools.interfaces import CONTEXT_STATUS_
 
 origin = 'test.origin'
 
-qdb = LciaEngine()
+qdb = Qdb()
 
 
 def new_flow(name, ref_quantity, context=None, **kwargs):
@@ -71,7 +71,7 @@ def new_flow(name, ref_quantity, context=None, **kwargs):
     if CONTEXT_STATUS_ == 'compat':
         if context is not None and 'compartment' not in kwargs:
             kwargs['compartment'] = str(context)
-    ref_q = qdb.get_canonical(ref_quantity)
+    ref_q = qdb.tm.get_canonical(ref_quantity)
     f = LcFlow.new(name, ref_qty=ref_q, origin=origin, **kwargs)
     # self._archive.add_entity_and_children(f)
     return f
@@ -102,11 +102,11 @@ f2 = new_flow('My second flow', 'volume')
 f3 = new_flow('My third flow', 'net calorific value')
 f3w = new_flow('A waste energy flow', 'net calorific value')
 f4 = new_flow('Another mass flow', 'mass')
-f4.add_characterization(qdb.get_canonical('net calorific value'), value=f4_mj_kg)
+qdb.tm.add_characterization(f4.name, f4.reference_entity, qdb.tm.get_canonical('net calorific value'), value=f4_mj_kg)
 f5 = new_flow('yet another mass flow', 'mass')
 f6 = new_flow('An energetic conservation flow', 'net calorific value')
 f7 = new_flow('An ancillary flow', 'number of items')
-f7.add_characterization(mass, value=f7_mass)
+qdb.tm.add_characterization(f7.name, f7.reference_entity, mass, value=f7_mass)
 f8 = new_flow('A freight flow', 'freight')
 fp = new_flow('A private flow', 'price')
 

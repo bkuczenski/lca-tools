@@ -151,7 +151,7 @@ class LcArchive(BasicArchive):
         j['processes'] = sorted([p.serialize(exchanges=exchanges, values=values,
                                              domesticate=domesticate, drop_fields=self._drop_fields['process'])
                                  for p in self.entities_by_type('process')],
-                                key=lambda x: x['entityId'])
+                                key=lambda x: x['externalId'])
         if self._descendant:
             j['dataSourceType'] = 'LcArchive'  # re-instantiate as base class
         return j

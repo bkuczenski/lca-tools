@@ -151,10 +151,17 @@ class LcFragment(LcEntity):
         :param background: if true, fragment only returns LCIA results.
         :param kwargs:
         """
-        the_uuid = str(uuid.UUID(the_uuid))  # throws an error if invalid UUID
+
+        self.__dbg_threshold = -1  # higher number is more verbose
+        self._exchange_values = _new_evs()
+        self._conserved_quantity = None
+        self._private = private
+        self._background = background
+        self._is_balance = False
+        self._child_flows = set()
+        self._terminations = dict()
 
         super(LcFragment, self).__init__('fragment', external_ref, entity_uuid=the_uuid, **kwargs)
-        self._child_flows = set()
 
         if parent is not None:
             self.set_parent(parent)
@@ -163,17 +170,12 @@ class LcFragment(LcEntity):
         self.flow = flow
         self.direction = direction  # w.r.t. parent
 
-        self._private = private
-        self._background = background
-        self._is_balance = False
         if balance_flow:
             self.set_balance_flow()
+        else:
+            if exchange_value is not None:
+                self.cached_ev = exchange_value
 
-        self._conserved_quantity = None
-
-        self._exchange_values = _new_evs()
-
-        self._terminations = dict()
         if termination is None:
             self._terminations[None] = FlowTermination.null(self)
             if 'StageName' not in self._d:
@@ -185,9 +187,6 @@ class LcFragment(LcEntity):
                     self._d['StageName'] = termination['Name']
                 except NoCatalog:
                     self._d['StageName'] = ''
-
-        self.cached_ev = exchange_value
-        self.__dbg_threshold = -1  # higher number is more verbose
 
     @property
     def external_ref(self):
@@ -666,6 +665,8 @@ class LcFragment(LcEntity):
         :param value:
         :return:
         """
+        if value is None:
+            return
         if not self._check_observability(scenario=scenario):
             raise DependentFragment('Fragment exchange value set during traversal')
         if isinstance(scenario, tuple) or isinstance(scenario, set):

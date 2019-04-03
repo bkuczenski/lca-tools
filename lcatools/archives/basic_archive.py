@@ -272,9 +272,12 @@ class BasicArchive(EntityStore):
         """
         if 'tags' in e:
             raise OldJson('This file type is no longer supported.')
+        e['entity_uuid'] = e.pop('entityId', None)
         ext_ref = e.pop('externalId', None)
         if ext_ref is None:
-            ext_ref = e.pop('entityId')  # if this is missing too, throw an error
+            if e['entity_uuid'] is None:
+                raise OldJson('Missing both externalId and entityId')
+            ext_ref = e['entity_uuid']
         etype = e.pop('entityType')
         if etype == 'flow':
             # need to delay adding characterizations until after entity is registered with term manager
@@ -404,12 +407,12 @@ class BasicArchive(EntityStore):
         j = super(BasicArchive, self).serialize()
         j['flows'] = sorted([f.serialize(domesticate=domesticate, drop_fields=self._drop_fields['flow'])
                              for f in self.entities_by_type('flow')],
-                            key=lambda x: x['entityId'])
+                            key=lambda x: x['externalId'])
         if characterizations:
             j['termManager'], _, _ = self.tm.serialize(self.ref, values=values)
         j['quantities'] = sorted([q.serialize(domesticate=domesticate, drop_fields=self._drop_fields['quantity'])
                                   for q in self.entities_by_type('quantity')],
-                                 key=lambda x: x['entityId'])
+                                 key=lambda x: x['externalId'])
         return j
 
     def export_quantity(self, filename, quantity, domesticate=False, values=True, gzip=False):

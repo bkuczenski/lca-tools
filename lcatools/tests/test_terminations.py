@@ -56,7 +56,7 @@ class FlowTerminationTestCase(BasicEntityTest):
         frag.terminate(self.petro)
         lead = next(x for x in self.petro.inventory(frag.flow) if x.flow['Name'].startswith('Lead'))
         c = create_fragment(flow=lead.flow, direction=lead.direction, parent=frag, value=lead.value)
-        c.to_foreground()
+        c.terminate(self.A.tm[lead.flow.context])
         return frag
 
     def test_unobserved_with_child(self):

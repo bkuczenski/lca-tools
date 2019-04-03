@@ -23,8 +23,8 @@ class LcQuantity(LcEntity):
         """
         return cls(uuid.uuid4(), Name=name, ReferenceUnit=LcUnit(ref_unit), **kwargs)
 
-    def __init__(self, entity_uuid, **kwargs):
-        super(LcQuantity, self).__init__('quantity', entity_uuid, **kwargs)
+    def __init__(self, external_ref, **kwargs):
+        super(LcQuantity, self).__init__('quantity', external_ref, **kwargs)
         self._qi = None
 
     def set_qi(self, qi):

@@ -1,6 +1,6 @@
 from ..term_manager import TermManager
-from lcatools.entity_refs import FlowInterface
-from ..clookup import Context
+from lcatools.entity_refs.flow_interface import DummyFlow
+from lcatools.contexts import Context
 import unittest
 
 
@@ -48,7 +48,7 @@ class TermManagerTest(unittest.TestCase):
          * extrac
         :return:
         """
-        flow = FlowInterface()
+        flow = DummyFlow()
         for k in ('phosphene', 'phxphn', '1234567'):
             flow._flowable.add_term(k)
         flow.origin = 'test.origin'

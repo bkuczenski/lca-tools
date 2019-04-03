@@ -109,3 +109,27 @@ class FlowInterface(object):
             return other in self._flowable
         return any([t in self._flowable for t in other.synonyms])
 
+
+class DummyFlow(FlowInterface):
+
+    class DummyQuantity(object):
+        entity_type = 'quantity'
+        link = 'local.dummy.quantity/dummy'
+        external_ref = 'dummy'
+        uuid = None
+
+        def __getitem__(self, key):
+            return 'Dummy Property'
+
+        def has_property(self, key):
+            return False
+
+        @staticmethod
+        def unit():
+            return 'd'
+
+    _reference_entity = DummyQuantity()
+
+    @property
+    def reference_entity(self):
+        return self._reference_entity

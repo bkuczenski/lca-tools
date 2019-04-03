@@ -40,8 +40,9 @@ def create_fragment(flow, direction, uuid=None, parent=None, name=None, comment=
         # traverse -- may not need to do this anymore if we switch to live traversals for everything
         parent.traverse(None)  # in fact, let's skip it
 
-    if flow.context.elementary:
-        frag.terminate(flow.context)
+    # this cannot be done internally-- really we need create_fragment_from_exchange to do this
+    # if flow.context.elementary:
+    #     frag.terminate(flow.context)
 
     return frag
 

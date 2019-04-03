@@ -149,15 +149,16 @@ class LcArchiveTest(unittest.TestCase):
 
     def test_get_by_uuid(self):
         """
-        the standard getitem: put in an entity key, get back the entity. Also ensure that spurious external IDs were
-        not propagated.
+        the standard getitem: put in an entity key, get back the entity.
         :return:
         """
         uuid = '21d34f33-c0af-3d82-9bef-3cf03e0db9dc'
+        nsuuid = self._ar._ref_to_nsuuid('l')
         ent = self._ar[uuid]
         self.assertEqual(ent.entity_type, 'quantity')
-        self.assertNotEqual(ent.external_ref, 'l')
-        self.assertEqual(ent.external_ref, uuid)
+        self.assertEqual(ent.external_ref, 'l')
+        self.assertNotEqual(ent.uuid, nsuuid)
+        self.assertEqual(self._ar[nsuuid].uuid, uuid)
 
     def test_get_by_nsuuid(self):
         uuid = 'cec3a58d-44c3-31f6-9c75-90e6352f0934'
@@ -197,9 +198,12 @@ class LcArchiveTest(unittest.TestCase):
         self.assertEqual(ar.ref, 'local.my.file')
         self.assertSequenceEqual([k for k in ar.get_sources(test_json['dataReference'])], [None])
         uuid = 'cec3a58d-44c3-31f6-9c75-90e6352f0934'
+        nsuuid = ar._ref_to_nsuuid('ha')
+        self.assertNotEqual(uuid, nsuuid)
         ent = ar['ha']
-        self.assertIs(ent, None)
-        self.assertEqual(ar[uuid].external_ref, uuid)
+        ent1 = ar[nsuuid]
+        self.assertIs(ent, ent1)
+        self.assertEqual(ar[nsuuid].uuid, uuid)
 
     def test_assign_name(self):
         ar = LcArchive(test_json['dataSource'], ref='test.basic', ns_uuid=test_json['initArgs']['ns_uuid'])

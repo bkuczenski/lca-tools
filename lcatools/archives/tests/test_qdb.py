@@ -20,7 +20,7 @@ class QdbTestCase(BasicEntityTest):
         self.qi = self._qdb.make_interface('quantity')
 
     def test_qdb(self):
-        self.assertEqual(self._qdb.count_by_type('quantity'), 26)
+        self.assertEqual(self._qdb.count_by_type('quantity'), 25)
 
     def test_mass(self):
         self.assertEqual(self.qi.get_canonical('mass').uuid, mass_uuid)

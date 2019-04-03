@@ -492,6 +492,8 @@ class EntityStore(object):
                 # assert self._ref_to_key(entity.external_ref) == key, 'entity uuid must match origin repository key!'
                 entity.origin = self.ref
             self._entities[key] = entity
+            if self._ns_uuid is not None:  # ensure UUID3s work even if custom UUIDs are specified
+                self._entities[self._ref_to_nsuuid(entity.external_ref)] = entity
             self._counter[entity.entity_type] += 1
             self._ents_by_type[entity.entity_type].add(key)  # it's not ok to change an entity's type
 

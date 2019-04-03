@@ -183,7 +183,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
 
         cfs = [cf for cf in self._archive.tm.factors_for_flowable(flowable, quantity=qq, context=context, **kwargs)]
         if len(cfs) == 0:
-            raise NoFactorsFound('%s [%s] %s', (flowable, context, self))
+            raise NoFactorsFound('%s [%s] %s' % (flowable, context, self))
 
         qr_results = []
         qr_mismatch = []

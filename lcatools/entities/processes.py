@@ -161,7 +161,7 @@ class LcProcess(LcEntity):
         """
         return cls(uuid.uuid4(), Name=name, **kwargs)
 
-    def __init__(self, entity_uuid, **kwargs):
+    def __init__(self, external_ref, **kwargs):
         """
         THe process's data is a set of exchanges.
 
@@ -182,7 +182,7 @@ class LcProcess(LcEntity):
         self._exchanges = dict()  # maps exchange key to exchange
         self._exch_map = defaultdict(set)  # maps flow external_ref to exchanges having that flow
 
-        super(LcProcess, self).__init__('process', entity_uuid, **kwargs)
+        super(LcProcess, self).__init__('process', external_ref, **kwargs)
         if self.reference_entity is not None:
             raise AttributeError('How could the reference entity not be None?')
         self._reference_entity = set()  # it is not possible to specify a valid reference_entity on init

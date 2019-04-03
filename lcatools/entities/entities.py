@@ -44,7 +44,7 @@ class LcEntity(object):
         if external_ref is None:
             if entity_uuid is None:
                 raise EntityInitializationError('At least one of entity_uuid, external_ref must be provided')
-            external_ref = entity_uuid
+            external_ref = str(entity_uuid)
 
         self._external_ref = external_ref
 

@@ -92,6 +92,9 @@ class FlowRef(EntityRef, FlowInterface):
     def originate(self, direction=None, **kwargs):
         return self._query.originate(self.external_ref, direction, **kwargs)
 
+    def profile(self, **kwargs):
+        return self._query.profile(self.external_ref, **kwargs)
+
     def characterize(self, quantity, value, context=None, **kwargs):
         if context is None:
             context = self.context

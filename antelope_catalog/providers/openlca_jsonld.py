@@ -167,7 +167,7 @@ class OpenLcaJsonLdArchive(LcArchive):
                    flow.reference_entity.external_ref,
                    fp.external_ref))
             print('From %g %s' % (value, fp.unit()))
-            value /= fp.cf(flow).value  # TODO: account for locale?  ## is this even right?
+            value /= fp.cf(flow)  # TODO: account for locale?  ## is this even right?
             print('To %g %s' % (value, flow.unit()))
 
         is_ref = ex.pop('quantitativeReference', False)

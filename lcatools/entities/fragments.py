@@ -1165,7 +1165,7 @@ class LcFragment(LcEntity):
             stock = term.inbound_exchange_value  # balance measurement w.r.t. term node's unit magnitude
         bal_f = None
         if self._conserved_quantity is not None:
-            stock *= self._conserved_quantity.cf(self.flow).value
+            stock *= self._conserved_quantity.cf(self.flow)
             if self.direction == 'Input':  # convention: inputs to self are positive
                 stock *= -1
             self.dbg_print('%g inbound-balance' % stock, level=2)
@@ -1347,7 +1347,7 @@ class LcFragment(LcEntity):
         elif self.is_balance:
             # traversing balance flow after FoundBalanceFlow exception
             conserved = True
-        elif self.balance_flow is not None and self._conserved_quantity.cf(self.flow).value != 0.0:
+        elif self.balance_flow is not None and self._conserved_quantity.cf(self.flow) != 0.0:
             # parent whose flow is balanced by child flow
             conserved = True
         else:

@@ -1,4 +1,47 @@
 ==========
+Thu Apr 04 10:52:40 -0700 2019
+
+We are almost done! But I want to fix the interface.
+
+ - add_characterization requires an explicit origin or else it defaults to the origin of the query quantity
+   proposed solution: use the characterize() method of the interface
+   The problem is that most of these use cases don't already have interface instances.  So I think we just audit them and switch where appropriate.
+   add_characterization() 14 uses
+    - quantity implementation characterize() - here we actually want to use it
+    - configure implementation - should probably use it here too
+    x antelope v1 quantity impl
+    - term_manager - keep
+    - archive _add_chars() - go ahead and use it
+    - providers: traci, ilcd_lcia, ilcd, olca, ecospold - they quantity is already local
+    - ecoinvent_lcia - added origin
+
+   For testing, though, we should go ahead and use the quantity interface
+
+ - QRResult = QuantityRelation Result. quantity_relation() should return a QuantityRelation Result!
+
+ - cf - characterization factor. cf() should return a factor (pure number)! so these are switched
+
+ - audit positional argument sequences:
+  Flow-specific:
+    def profile(self, flow, **kwargs):
+
+  Quantity-specific
+    def get_canonical(self, quantity, **kwargs):
+    def factors(self, quantity, flowable=None, context=None, **kwargs):
+    def do_lcia(self, quantity, inventory, locale='GLO', **kwargs):
+
+  Characterization:
+    def      characterize(self, flowable, ref_quantity, query_quantity, value, context=None, location='GLO', **kwargs):
+    def                cf(self, flow, quantity, ref_quantity=None, context=None, locale='GLO', strategy=None, **kwargs):
+    def quantity_relation(self, flowable, ref_quantity, query_quantity, context, locale='GLO', **kwargs):
+
+    looks like it's in order. The only defect is with cf() because it expects a flow instead of a flowable, so ref_quantity is a kwarg and not an arg.
+
+done. Thu 2019-04-04 11:51:36 -0700
+
+
+
+==========
 Wed Mar 13 17:07:12 -0700 2019
 
 We are doing terribly. But we are close!

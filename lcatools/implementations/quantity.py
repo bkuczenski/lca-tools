@@ -27,6 +27,11 @@ class QuantityConversion(object):
                        QRResult('methane', 'mol', 'kg', None, 'GLO', 'local.qdb', 0.016))
     giving the resulting value of 0.4.
     """
+    @classmethod
+    def null(cls, flowable, rq, qq, context, locale, origin):
+        qrr = QRResult(flowable, rq, qq, context, locale, origin, 0.0)
+        return cls(qrr)
+
     def __init__(self, *args):
         self._results = []
         for arg in args:
@@ -59,6 +64,17 @@ class QuantityConversion(object):
     def context(self):
         return self._results[0].context
 
+    @property
+    def results(self):
+        for res in self._results:
+            yield res
+
+    def seen(self, q):
+        for res in self._results:
+            if q == res.ref:
+                return True
+        return False
+
     @staticmethod
     def _invert_qrr(qrr):
         """
@@ -80,6 +96,15 @@ class QuantityConversion(object):
 
     def __getitem__(self, item):
         return self._results[item]
+
+    def __str__(self):
+        conv = ' x '.join(['%g %s/%s' % (res.value, res.query.unit(), res.ref.unit()) for res in self._results])
+        return '%s [context %s]: 1 %s x %s [%s] (%s)' % (self.flowable, self.context,
+                                                         self.ref.unit(), conv, self._results[-1].locale,
+                                                         self._results[-1].origin)
+
+    def __repr__(self):
+        return '%s(%s)' % (self.__class__.__name__, self.__str__())
 
     # TODO: add serialization, other outputs
 
@@ -105,7 +130,8 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         for cf in self._archive.tm.factors_for_quantity(q, flowable=flowable, context=context, dist=dist):
             yield cf
 
-    def characterize(self, flowable, ref_quantity, query_quantity, value, context=None, location='GLO', **kwargs):
+    def characterize(self, flowable, ref_quantity, query_quantity, value, context=None, location='GLO', origin=None,
+                     **kwargs):
         """
         We gotta be able to do this
         :param flowable: string
@@ -114,16 +140,20 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         :param value: float
         :param context: string
         :param location: string
-        :param kwargs: overwrite=False, origin=self.origin
+        :param origin: [self.origin]
+        :param kwargs: overwrite=False
         :return:
         """
         rq = self.get_canonical(ref_quantity)
         qq = self.get_canonical(query_quantity)
-        return self._archive.tm.add_characterization(flowable, rq, qq, value, context=context, location=location, **kwargs)
+        if origin is None:
+            origin = self.origin
+        return self._archive.tm.add_characterization(flowable, rq, qq, value, context=context, location=location,
+                                                     origin=origin, **kwargs)
 
     def _ref_qty_conversion(self, ref_quantity, flowable, compartment, res, locale):
         """
-        Transforms a CF into a quantity conversion with the proper ref quantity
+        Transforms a CF into a quantity conversion with the proper ref quantity. Does it recursively! watch with terror.
         :param ref_quantity:
         :param flowable:
         :param compartment:
@@ -133,18 +163,34 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         """
         if ref_quantity is None:
             raise ConversionReferenceMismatch('Cannot convert to None')
-        if res[0].ref != ref_quantity:
-            try:
-                res.add_result(self.quantity_relation(ref_quantity, flowable, compartment, res[0].ref, locale=locale,
-                                                      dist=3))
-            except NoFactorsFound:
+        if res.ref != ref_quantity:
+            # first look for forward matches
+            cfs_fwd = [cf for cf in self._archive.tm.factors_for_flowable(flowable, quantity=res[0].ref,
+                                                                          context=compartment, dist=3)
+                       if not res.seen(cf.ref_quantity)]
+            for cf in cfs_fwd:
+                new_res = QuantityConversion(*res.results)
+                new_res.add_result(cf.query(locale))
                 try:
-                    res.add_inverted_result(self.quantity_relation(ref_quantity, flowable, compartment, res[0].ref,
-                                                                   locale=locale, dist=3))
-                except NoFactorsFound:
-                    raise ConversionReferenceMismatch('Flow %s\nfrom %s\nto %s' % (flowable,
-                                                                                   res.query,
-                                                                                   ref_quantity))
+                    return self._ref_qty_conversion(ref_quantity, flowable, compartment, new_res, locale)
+                except ConversionReferenceMismatch:
+                    continue
+
+            # then look for reverse matches
+            cfs_rev = [cf for cf in self._archive.tm.factors_for_flowable(flowable, quantity=ref_quantity,
+                                                                          context=compartment, dist=3)
+                       if not res.seen(cf.query)]
+            for cf in cfs_rev:
+                new_res = QuantityConversion(*res.results)
+                new_res.add_inverted_result(cf.query(locale))
+                try:
+                    return self._ref_qty_conversion(ref_quantity, flowable, compartment, new_res, locale)
+                except ConversionReferenceMismatch:
+                    continue
+
+            raise ConversionReferenceMismatch('Flow %s\nfrom %s\nto %s' % (flowable,
+                                                                           res.query,
+                                                                           ref_quantity))
         return res
 
     def _quantity_conversions(self, flowable, rq, qq, context, locale='GLO',
@@ -238,7 +284,8 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
 
     def quantity_conversions(self, flow, query_quantity, ref_quantity=None, context=None, locale='GLO', **kwargs):
         """
-        Return a comprehensive set of conversion results for the provided inputs.
+        Return a comprehensive set of conversion results for the provided inputs.  This method catches errors and
+        returns a null result if no factors are found.
         :param flow: a string that is synonymous with a flowable characterized by the query quantity
         :param query_quantity: convert to this quantty
         :param ref_quantity: [None] convert for 1 unit of this quantity
@@ -252,24 +299,31 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
          [mismatched ref unit conversions]
         """
         flowable, rq, cx = self._get_flowable_info(flow, ref_quantity, context)
-        qq = self.get_canonical(query_quantity)
+        if query_quantity is None:
+            qq = None
+        else:
+            qq = self.get_canonical(query_quantity)
 
         if qq == rq:  # is?
             return [QRResult(flowable, rq, qq, context, locale, qq.origin, 1.0)], [], []
 
-        return self._quantity_conversions(flowable, rq, qq, context, locale=locale, **kwargs)
+        try:
+            return self._quantity_conversions(flowable, rq, qq, context, locale=locale, **kwargs)
+        except NoFactorsFound:
+            return [QuantityConversion.null(flowable, rq, qq, context, locale, self.origin)], [], []
 
-    def cf(self, flow, quantity, ref_quantity=None, context=None, locale='GLO', strategy=None, allow_proxy=True, **kwargs):
+    def quantity_relation(self, flowable, ref_quantity, query_quantity, context, locale='GLO',
+                          strategy=None, allow_proxy=True, **kwargs):
         """
         Reports the first / best result of a quantity conversion.  Returns a single QRResult interface
         (QuantityConversion result) that converts unit of the reference quantity into the query quantity for the given
         flowable, context, and locale (default 'GLO').
         If the locale is not found, this would be a great place to run a spatial best-match algorithm.
 
-        :param flow:
-        :param quantity:
-        :param ref_quantity:
-        :param context:
+        :param flowable: [flow also allowed]
+        :param ref_quantity: None allowed if flowable is entity or locally known external_ref
+        :param query_quantity:
+        :param context: None allowed if flowable is entity or locally known external_ref
         :param locale:
         :param strategy: approach for resolving multiple-CF in dist>0.  ('highest' | 'lowest' | 'average' | ...? )
           None = return first result
@@ -278,7 +332,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         :param kwargs:
         :return: a QRResult object or interface
         """
-        qr_results, qr_geog, qr_mismatch = self.quantity_conversions(flow, quantity,
+        qr_results, qr_geog, qr_mismatch = self.quantity_conversions(flowable, query_quantity,
                                                                      ref_quantity=ref_quantity, context=context,
                                                                      locale=locale, **kwargs)
 
@@ -287,7 +341,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
 
         if len(qr_results) > 1:
             # this is obviously punting
-            if strategy is None:
+            if strategy is None or strategy == 'first':
                 return qr_results[0].value
             elif strategy == 'highest':
                 return max(v.value for v in qr_results)
@@ -300,20 +354,29 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         elif len(qr_results) == 1:
             return qr_results[0]
         else:
-            if len(qr_geog) > 0:
-                return qr_geog[0]
-            elif len(qr_mismatch) > 0:
+            # if len(qr_geog) > 0:
+            #     return qr_geog[0]  # only arrive here if allow_proxy is False. Do we still allow it?
+            if len(qr_mismatch) > 0:
                 for k in qr_mismatch:
                     print('Flowable: %s\nfrom: %s\nto: %s' % (k.flowable, k.ref, ref_quantity))
                 raise ConversionReferenceMismatch
             else:
-                raise NoFactorsFound
+                raise NoFactorsFound('allow_proxy to show values with no geographic match')
 
-    def quantity_relation(self, flowable, ref_quantity, query_quantity, context, locale='GLO', **kwargs):
-        cf = self.cf(flowable, query_quantity, ref_quantity=ref_quantity, context=context, locale=locale, **kwargs)
-        return cf.value
+    def cf(self, flow, quantity, ref_quantity=None, context=None, locale='GLO', **kwargs):
+        """
+        :param flow:
+        :param quantity:
+        :param ref_quantity: [None] taken from flow.reference_entity if flow is entity or locally known external_ref
+        :param context: [None] taken from flow.reference_entity if flow is entity or locally known external_ref
+        :param locale:
+        :param kwargs: allow_proxy [False], strategy ['first'] -> passed to quantity_relation
+        :return: the value of the QRResult found by the quantity_relation
+        """
+        qr = self.quantity_relation(flow, ref_quantity, quantity, context=context, locale=locale, **kwargs)
+        return qr.value
 
-    def flat_cf(self, flow, quantity, ref_quantity=None, context=None, locale='GLO', **kwargs):
+    def flat_qr(self, flow, quantity, ref_quantity=None, context=None, locale='GLO', **kwargs):
         flowable, rq, cx = self._get_flowable_info(flow, ref_quantity, context)
         val = self.quantity_relation(flowable, rq, quantity, cx, locale=locale, **kwargs)
         return QRResult(flowable, rq, quantity, cx, locale, self.origin, val)
@@ -326,7 +389,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         context.  In that case, if no ref quantity is given then the CFs are returned as-reported; if a ref quantity is
         given then a ref quantity conversion is attempted and the resulting QRResult objects are returned.
 
-        This desperately needs tested.
+        This whole interface desperately needs testing.
 
         :param flow:
         :param ref_quantity: [None]
@@ -335,8 +398,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         :param kwargs:
         :return:
         """
-        flowable, rq, cx = self._get_flowable_info(flow, ref_quantity, context)
-        qrr, qrg, qrm = self._quantity_conversions(flowable, None, ref_quantity=rq, context=cx, **kwargs)
+        qrr, qrg, qrm = self.quantity_conversions(flow, None, ref_quantity, context, **kwargs)
 
         for r in qrr:
             yield r
@@ -374,6 +436,5 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
                 res.add_cutoff(x)
             except ConversionReferenceMismatch:
                 res.add_error(x)
-            # TODO: lcia_result remodel
             # should we characterize the flows? to save on lookups? no, leave that to the client
         return res

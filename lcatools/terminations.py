@@ -371,9 +371,9 @@ class FlowTermination(object):
         return self._parent.flow.cf(tgt_qty)
         '''
         try:
-            return self.term_flow.reference_entity.cf(self._parent.flow).value
+            return self.term_flow.reference_entity.cf(self._parent.flow)
         except NoFactorsFound:
-            return 1.0 / self._parent.flow.reference_entity.cf(self.term_flow).value
+            return 1.0 / self._parent.flow.reference_entity.cf(self.term_flow)
 
     @property
     def id(self):

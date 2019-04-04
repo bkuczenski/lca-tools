@@ -46,7 +46,7 @@ class LcEntity(object):
                 raise EntityInitializationError('At least one of entity_uuid, external_ref must be provided')
             external_ref = str(entity_uuid)
 
-        self._external_ref = external_ref
+        self._external_ref = str(external_ref)
 
         self._uuid = None
 

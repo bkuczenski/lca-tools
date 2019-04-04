@@ -18,11 +18,14 @@ future world), as a characterization factor or QuantityConversion object, as an 
 
 The proposed model for the quantity interface is as follows:
 
- quantity_relation (flowable, ref quantity, query quantity, context, locale='GLO', strategy='first')
-     => number.  quantity_relation(*) = cf(*).value
-        amount of the query quantity that corresponds to a unit of the ref quantity
+ QRResult interface: has properties 'flowable', 'ref', 'query', 'context', 'value', 'locale', 'origin'
+ QuantityConversion includes sequential QRResults and masks locale and origin
+
  cf (flow[able], query quantity, ref quantity=None, context=None, locale='GLO', strategy='first')
-     =>  single result, chosen by named strategy.  cf(*) = quantity_conversions(*)[0][0]
+     => number.  quantity_relation(*).value = cf(:) (except the args are not in the same order)
+        amount of the query quantity that corresponds to a unit of the ref quantity
+ quantity_relation (flowable, ref quantity, query quantity, context, locale='GLO', strategy='first')
+     =>  single QRresult, chosen by named strategy.
  quantity_conversions (flow[able], query quantity, ref quantity=None, context=None, locale='GLO') "comprehensive"
      => [list of valid results (flowable / context proxies),
          list of geographic proxies,

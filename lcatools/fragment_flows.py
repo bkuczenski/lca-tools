@@ -75,7 +75,7 @@ class FragmentFlow(object):
             try:
                 flow.characterize(mag_qty, value=val, compartment=None)
             except DuplicateCharacterizationError:
-                if not isclose(mag_qty.cf(flow).value, val):
+                if not isclose(mag_qty.cf(flow), val):
                     raise ValueError('Characterizations do not match: %g vs %g' % (mag_qty.cf(flow), val))
 
         dirn = j['direction']

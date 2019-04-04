@@ -82,7 +82,8 @@ if __name__ == '__main__':
 
     A.add(q)
     for k, v in cool.items():
-        A[k].add_characterization(q, value=v)
+        rq = A[k].reference_entity
+        A.tm.add_characterization(k, rq, q, v)
 
     A.check_counter()
     # assert len([e for e in A.entities()]) + (2 * max_count) == 54

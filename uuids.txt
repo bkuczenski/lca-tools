@@ -1,0 +1,32 @@
+==========
+Tue Apr 02 15:03:18 -0700 2019
+
+We are taking the plunge.  We are ABOLISHING UUIDs.
+
+Well, we'd like to. But there are lots of problems.
+
+1- don't we NEED uuids?
+
+no, we need unique references. We don't even need unique references- we need distinct references. Those references are defined as %s/%s' % (origin, external_ref)
+there's nothing stopping client code from generating and using UUIDs as external refs.  but it's certainly not required.
+
+The new requirement is: by the end of __init__, every entity must have an external_ref.  By the time the entity is added to an archive, it must have an origin.
+
+2- but aren't we using UUIDs as the main entity key in the EntityStore?
+
+We are going to start using external refs, except in LcForeground, where we are already using links.
+
+3- but aren't we using (origin, uuid) as the entity hash?
+
+the rule of thumb here is: for every use of uuid, substitute external_ref.  The reason we didn't use external ref before was because we MISTAKENLY elevated UUID to a level of primacy that exceeded the external_ref. But the external_ref is the primary key.  That is what comes from the provider, that is what we shall use.
+
+4- but aren't we using uuids (rather, the leading characters) to ID and retrieve fragments?
+
+Fragments will get auto-generated UUIDs when they are created, and they will still (uniquely) have the capacity to have their external reference set to a human readable name.  This is because fragments are the only entity type that is meant to be mutable-- all other entities are static.  The only thing practitioners build is foregrounds.
+
+This is fine because fragment de/serialization is already separate from the other entities- so nothing needs to change there.  The only things that need to change are the static entity creation and deserialization.
+
+
+Tue 2019-04-02 16:24:12 -0700
+
+I think we got most of the way there.......................

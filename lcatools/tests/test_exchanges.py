@@ -93,7 +93,7 @@ class ExchangesTest(unittest.TestCase):
         total_output = self.petro.alloc_total  # 1.0014 kg
         opt_per_kg = total_req/total_output  # 4.403 t*km / kg
 
-        kg_per_unit_ref = self.petro.alloc_qty.cf(self.petro_d.flow).value  # 1 unit diesel = 850 kg
+        kg_per_unit_ref = self.petro.alloc_qty.cf(self.petro_d.flow)  # 1 unit diesel = 850 kg
 
         self.assertAlmostEqual(exch[ref], opt_per_kg * kg_per_unit_ref, places=10)
 
@@ -105,8 +105,8 @@ class ExchangesTest(unittest.TestCase):
             self.assertAlmostEqual(total, k.value, places=10)
 
     def test_alloc_equality(self):
-        d_cf = self.petro.alloc_qty.cf(self.petro_d.flow).value
-        r_cf = self.petro.alloc_qty.cf(self.petro_r.flow).value
+        d_cf = self.petro.alloc_qty.cf(self.petro_d.flow)
+        r_cf = self.petro.alloc_qty.cf(self.petro_r.flow)
         # d_cf = self.petro_d.flow.cf(self.petro.alloc_qty)
         # r_cf = self.petro_r.flow.cf(self.petro.alloc_qty)
         for k in self.petro.inventory():

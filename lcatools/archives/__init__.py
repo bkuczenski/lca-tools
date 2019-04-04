@@ -14,8 +14,12 @@ class Qdb(BasicArchive):
     """
     A simple archive that just contains the 26-odd reference (non-LCIA) quantities of the ELCD database circa v3.2
     """
-    def __init__(self):
-        super(Qdb, self).__init__(REF_QTYS, ref='local.qdb')
+    def __init__(self, ref='local.qdb'):
+        """
+        Create a Quantity database containing the ILCD reference quantities.  Specify a ref if desired.
+        :param ref: ['local.qdb']
+        """
+        super(Qdb, self).__init__(REF_QTYS, ref=ref)
         self._load_all()
 
     def _fetch(self, entity, **kwargs):

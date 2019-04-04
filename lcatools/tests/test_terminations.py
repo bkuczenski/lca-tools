@@ -92,7 +92,7 @@ class FlowTerminationTestCase(BasicEntityTest):
         z = next(frag.child_flows)
         q = self._get_coolness()
         res = z.term.compute_unit_score(q)
-        self.assertEqual(res.total(), q.cf(z.flow).value)
+        self.assertEqual(res.total(), q.cf(z.flow))
 
     def test_traversal(self):
         c = self._frag_with_child()

@@ -411,7 +411,7 @@ class ExchangeValue(Exchange):
                 return 0.0
             elif self.process.alloc_qty is not None:
                 exch_norm = self.value / self.process.alloc_total  # exchange value per total output quantity
-                ref_norm = self.process.alloc_qty.cf(item.flow).value  # quantity for a unit output of ref
+                ref_norm = self.process.alloc_qty.cf(item.flow)  # quantity for a unit output of ref
                 return exch_norm * ref_norm
             elif len(self._value_dict) > 0:
                 try:

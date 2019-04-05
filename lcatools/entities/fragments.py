@@ -1336,7 +1336,7 @@ class LcFragment(LcEntity):
                 raise FoundBalanceFlow  # to be caught
             cf = conserved_qty.cf(self.flow)
             self.dbg_print('consrv cf %g for qty %s' % (cf, conserved_qty), level=3)
-            conserved_val = ev * cf.value
+            conserved_val = ev * cf
             if conserved_val == 0:
                 conserved = False
             else:

@@ -5,11 +5,29 @@ from .fragments import LcFragment, DependentFragment
 
 
 def create_fragment(flow, direction, uuid=None, parent=None, name=None, comment=None, value=None, balance=False,
-                    **kwargs):
+                    units=None, **kwargs):
+    """
+
+    :param flow:
+    :param direction:
+    :param uuid:
+    :param parent:
+    :param name:
+    :param comment:
+    :param value:
+    :param balance:
+    :param units: [None] if both value and unit are non-None, interpret value as given in units and convert
+    :param kwargs:
+    :return:
+    """
     direction = check_direction(direction)
     if name is None:
         name = flow['Name']
     name = kwargs.pop('Name', name)
+
+    if value is not None and units is not None:
+        value *= flow.reference_entity.convert(units)
+
     if comment is None:
         comment = ''
     comment = kwargs.pop('Comment', comment)

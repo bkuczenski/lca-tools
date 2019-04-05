@@ -182,8 +182,8 @@ class FragmentTests(unittest.TestCase):
         a3w.set_exchange_value('efficiency', a2_eff_waste_heat)
         a3w.to_foreground()
 
-        a6 = new_fragment(f6, 'Input', parent=cls.a2, balance=True)
-        a6.terminate(cls.af, term_flow=f4)
+        cls.a6 = new_fragment(f6, 'Input', parent=cls.a2, balance=True)
+        cls.a6.terminate(cls.af, term_flow=f4)
         a2p = new_fragment(fp, 'Input', parent=cls.a2, value=a2_private)
         a2p.set_exchange_value('efficiency', a2_eff_private)
         new_fragment(f7, 'Input', parent=a2p, value=a2_item)
@@ -274,6 +274,12 @@ class FragmentTests(unittest.TestCase):
         self.assertEqual(self.a2.exchange_value(), a2_mj)
 
     def test_unit_conversion_on_flow_termination(self):
+        """
+        This is testing the traversal across the termination of a6, which should perform a ref quantity conversion
+        from MJ (a6.flow.unit()) to kg (af.flow.unit()) and have a value of [the balance net] divided by [f4_mj_kg]
+        :return:
+        """
+        self.assertEqual(self.a6.term.flow_conversion, 1.0 / f4_mj_kg)
         proper_kg = (a2_mj + a2_waste_heat) / f4_mj_kg
         ff = self.a2.traverse(None)
         mag = next(f.magnitude for f in ff if f.fragment.flow == f4)
@@ -286,7 +292,7 @@ class FragmentTests(unittest.TestCase):
         :return:
         """
         a2_ancillary = a2_item * a2_private
-        a1_ancillary = a2_ancillary * a1_mj_in / self.a2.exchange_value()
+        a1_ancillary = a1_mj_in / self.a2.exchange_value() * a2_ancillary
         self._check_fragmentflows(self.a2.traverse(None), f7, 'Input', a2_ancillary)
         self._check_fragmentflows(self.a1.traverse(None), f7, 'Input', a1_ancillary)
 
@@ -463,7 +469,7 @@ class FragmentTests(unittest.TestCase):
         :return:
         """
         ff_o_e = self.a1.traverse({'optimistic', 'efficiency'})
-        expected_item = a1_mj_optimistic / self.a2.exchange_value() * a2_eff_private * a2_item
+        expected_item = (a1_mj_optimistic / self.a2.exchange_value()) * (a2_eff_private * a2_item)
         self._check_fragmentflows(ff_o_e, f7, 'Input', expected_item)
         self._check_fragmentflows(ff_o_e, f5, 'Input', 1-a1_addl)
 
@@ -478,7 +484,7 @@ class FragmentTests(unittest.TestCase):
                                   a1_surplus_addl, 1 - a1_surplus_addl, 1 - a1_surplus_addl, expected_another)
 
     def test_tuple_scenarios(self):
-        expected_item = a1_mj_optimistic / self.a2.exchange_value() * a2_eff_private * a2_item
+        expected_item = a1_mj_optimistic / self.a2.exchange_value() * (a2_eff_private * a2_item)
         ff_o_s_e = self.a1.traverse(('optimistic', 'surplus', 'efficiency'))
         self._check_fragmentflows(ff_o_s_e, f7, 'Input', expected_item)
         self._check_fragmentflows(ff_o_s_e, f5, 'Input', 1 - a1_surplus_addl)

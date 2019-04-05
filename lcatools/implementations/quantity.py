@@ -39,6 +39,8 @@ class QuantityConversion(object):
 
     def add_result(self, qrr):
         if isinstance(qrr, QRResult):
+            if qrr.query is None or qrr.ref is None:
+                raise ValueError('Both ref and query quantity must be defined')
             if len(self._results) > 0:
                 if self.flowable != qrr.flowable:
                     raise FlowableMismatch('%s != %s' % (self.flowable, qrr.flowable))
@@ -287,7 +289,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         Return a comprehensive set of conversion results for the provided inputs.  This method catches errors and
         returns a null result if no factors are found.
         :param flow: a string that is synonymous with a flowable characterized by the query quantity
-        :param query_quantity: convert to this quantty
+        :param query_quantity: convert to this quantity
         :param ref_quantity: [None] convert for 1 unit of this quantity
         :param context: [None] a string synonym for a context / "archetype"? (<== locale-specific?)
         :param locale: handled by CF; default 'GLO'
@@ -310,7 +312,10 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         try:
             return self._quantity_conversions(flowable, rq, qq, context, locale=locale, **kwargs)
         except NoFactorsFound:
-            return [QuantityConversion.null(flowable, rq, qq, context, locale, self.origin)], [], []
+            if qq is None:
+                return [], [], []
+            else:
+                return [QuantityConversion.null(flowable, rq, qq, context, locale, self.origin)], [], []
 
     def quantity_relation(self, flowable, ref_quantity, query_quantity, context, locale='GLO',
                           strategy=None, allow_proxy=True, **kwargs):

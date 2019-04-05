@@ -370,10 +370,15 @@ class FlowTermination(object):
                 return 1.0 / self.term_flow.cf(parent_qty)
         return self._parent.flow.cf(tgt_qty)
         '''
-        try:
-            return self.term_flow.reference_entity.cf(self._parent.flow)
-        except NoFactorsFound:
-            return 1.0 / self._parent.flow.reference_entity.cf(self.term_flow)
+        fwd_cf = self.term_flow.reference_entity.cf(self._parent.flow)
+        if fwd_cf == 0.0:
+            rev_cf = self._parent.flow.reference_entity.cf(self.term_flow)
+            if rev_cf == 0.0:
+                raise FlowConversionError('Zero CF found relating %s to %s' % (self.term_flow, self._parent.flow))
+            else:
+                return 1.0 / rev_cf
+        else:
+            return fwd_cf
 
     @property
     def id(self):

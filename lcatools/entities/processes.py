@@ -196,6 +196,10 @@ class LcProcess(LcEntity):
         if 'Classifications' not in self._d:
             self._d['Classifications'] = []
 
+    @property
+    def name(self):
+        return self['Name']
+
     def _make_ref_ref(self, query):
         return [RxRef(self.external_ref, x.flow.make_ref(query), x.direction, comment=x.comment)
                 for x in self.references()]

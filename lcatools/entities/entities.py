@@ -39,6 +39,8 @@ class LcEntity(object):
     _ref_field = ''
     _post_fields = ['Comment']
 
+    _origin = None
+
     def __init__(self, entity_type, external_ref, origin=None, entity_uuid=None, **kwargs):
 
         if external_ref is None:

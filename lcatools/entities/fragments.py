@@ -850,12 +850,14 @@ class LcFragment(LcEntity):
             if self['StageName'] == '' and not termination.is_null:
                 if termination.is_frag:
                     self['StageName'] = termination.term_node['StageName']
+                elif termination.is_context:
+                    self['StageName'] = termination.term_node.name
                 else:
                     try:
                         self['StageName'] = termination.term_node['Classifications'][-1]
                     except (KeyError, TypeError, IndexError):
                         print('%.5s StageName failed %s' % (self.uuid, termination.term_node))
-                        self['StageName'] = termination.term_node['Name']
+                        self['StageName'] = termination.term_node.name
         return termination
 
     def clear_termination(self, scenario=None):

@@ -155,7 +155,7 @@ class DefaultContextsTest(unittest.TestCase):
     def test_matching_compartment(self):
         foreign_cm = ContextManager()
         fx = foreign_cm.add_compartments(('resources', 'water', 'CA', 'CA-QC'))
-        cx = self.cm.find_matching_context('test.foreign', fx)
+        cx = self.cm.find_matching_context(fx)
         self.assertEqual(cx.sense, 'Source')
         self.assertIs(cx.top(), self.cm['Resources'])
         self.assertListEqual(cx.as_list(), ['Resources', 'from water', 'CA', 'CA-QC'])
@@ -171,7 +171,7 @@ class DefaultContextsTest(unittest.TestCase):
         foreign_cm = ContextManager()
         fx = foreign_cm.add_compartments(('Elementary Flows', 'NETL Coal Elementary Flows', 'NETL Elementary Flows',
                                           ' [Resources] ', 'ground'))
-        self.assertIs(self.cm.find_matching_context('dummy.test', fx), tgt)
+        self.assertIs(self.cm.find_matching_context(fx), tgt)
         self.assertIs(self.cm['dummy.test:ground'], tgt)
 
 

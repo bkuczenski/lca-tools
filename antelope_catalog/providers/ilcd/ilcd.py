@@ -20,9 +20,7 @@ except ImportError:  # python2
 from ..file_store import FileStore
 from ..xml_widgets import *
 
-from lcatools.interfaces import uuid_regex
-
-from lcatools.archives import LcArchive
+from lcatools.archives import LcArchive, uuid_regex
 from lcatools.entities import LcFlow, LcProcess, LcQuantity, LcUnit
 from lcatools.characterizations import DuplicateCharacterizationError
 

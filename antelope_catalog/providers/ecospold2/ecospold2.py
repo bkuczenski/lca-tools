@@ -10,14 +10,13 @@ from time import time
 from lxml import objectify
 from lxml.etree import XMLSyntaxError
 
-from lcatools.interfaces import uuid_regex
 from lcatools.characterizations import QRResult
 from lcatools.entities import LcQuantity, LcFlow, LcProcess
 from lcatools.exchanges import ExchangeValue, DirectionlessExchangeError
 from lcatools.lcia_results import LciaResult, LciaResults
 from ..ecospold import tail
 from ..file_store import FileStore
-from lcatools.archives import LcArchive
+from lcatools.archives import LcArchive, uuid_regex
 from ..xml_widgets import *
 
 from .ecospold2_index import EcoSpold2IndexImplementation

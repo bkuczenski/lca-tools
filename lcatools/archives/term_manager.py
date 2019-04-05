@@ -356,7 +356,8 @@ class TermManager(object):
         :param merge_strategy: overrule default merge strategy
         :return: the Flowable object to which the flow's terms have been added
         """
-        self.add_quantity(flow.reference_entity)  # ensure exists
+        if flow.reference_entity is not None:
+            self.add_quantity(flow.reference_entity)  # ensure exists
         self._check_context(flow)
         self._add_flow_terms(flow, merge_strategy=merge_strategy)
 

@@ -1,7 +1,7 @@
 import unittest
 
-from lcatools import BasicQuery
 from lcatools.archives import BasicArchive, Qdb
+
 
 from lcatools.lcia_engine import IPCC_2007_GWP
 
@@ -28,8 +28,15 @@ class QuantitiesTest(unittest.TestCase):
         self.assertAlmostEqual(mass.convert('lb av'), 0.453592, 6)
         self.assertAlmostEqual(mass.convert(to='lb av'), 2.20462262, 6)
 
+    def test_convert_missing_refunit(self):
+        q = self.I.make_interface('quantity').get_canonical('electric energy')
+        self.assertTrue(q.has_property('UnitConversion'))
+        self.assertNotIn(q.unit(), q['UnitConversion'])
+        self.assertEqual(q.convert(), 1.0)
+        self.assertEqual(q.convert(to='MJ'), 3.6)
+
     def test_valid_make_ref(self):
-        gr = self.gwp.make_ref(BasicQuery(self.Q))
+        gr = self.gwp.make_ref(self.Q.query)
         self.assertIsInstance(gr._name, str)
 
 

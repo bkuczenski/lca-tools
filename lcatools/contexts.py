@@ -152,7 +152,7 @@ class Context(Compartment):
         return self.name
 
     def add_origin(self, origin):
-        if len(self._origins) == 0:
+        if self._first_origin is None:
             self._first_origin = origin
         self._origins.add(origin)
         if self.parent is not None:

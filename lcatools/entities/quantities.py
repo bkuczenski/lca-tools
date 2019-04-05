@@ -45,6 +45,14 @@ class LcQuantity(LcEntity):
     quantity refs, which have access to the catalog.
     """
     def cf(self, flow, locale='GLO', **kwargs):
+        """
+        The semantics here may be confusing, but cf is flow-centered. It converts reports the amount in self that
+        corresponds to a unit of the flow's reference quantity.
+        :param flow:
+        :param locale:
+        :param kwargs:
+        :return:
+        """
         return self._qi.cf(flow, self, locale=locale, **kwargs)
 
     def factors(self, flowable=None, context=None, **kwargs):
@@ -77,7 +85,7 @@ class LcQuantity(LcEntity):
 
         This function requires that the quantity have a 'UnitConversion' property that works as a dict, with
         the unit names being keys. The requirement is that the values for every key all correspond to the same
-        quantity.  For instance, if the quantity was mass, then the following would be equivalent:
+        amount.  For instance, if the quantity was mass, then the following would be equivalent:
 
         quantity['UnitConversion'] = { 'kg': 1, 'lb': 2.204622, 'ton': 0.0011023, 't': 0.001 }
         quantity['UnitConversion'] = { 'kg': 907.2, 'lb': 2000.0, 'ton': 1, 't': 0.9072 }
@@ -97,16 +105,23 @@ class LcQuantity(LcEntity):
             raise NoUnitConversionTable
 
         if from_unit is None:
-            from_unit = self.reference_entity.unitstring
-
-        inbound = uc_table[from_unit]
+            if self.reference_entity.unitstring in uc_table:
+                inbound = uc_table[self.reference_entity.unitstring]
+            else:
+                inbound = 1.0
+        else:
+            inbound = uc_table[from_unit]
 
         if to is None:
-            to = self.reference_entity.unitstring
+            if self.reference_entity.unitstring in uc_table:
+                outbound = uc_table[self.reference_entity.unitstring]
+            else:
+                outbound = 1.0
 
-        outbound = uc_table[to]
+        else:
+            outbound = uc_table[to]
 
-        return outbound / inbound
+        return round(outbound / inbound, 12)  # round off to curtail numerical / serialization issues
 
     def _print_ref_field(self):
         return self.reference_entity.unitstring

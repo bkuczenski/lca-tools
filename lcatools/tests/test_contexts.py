@@ -171,6 +171,8 @@ class DefaultContextsTest(unittest.TestCase):
         foreign_cm = ContextManager()
         fx = foreign_cm.add_compartments(('Elementary Flows', 'NETL Coal Elementary Flows', 'NETL Elementary Flows',
                                           ' [Resources] ', 'ground'))
+        # context gets its origin added when used in a Characterization or an Exchange- for now we do it manually
+        fx.add_origin('dummy.test')
         self.assertIs(self.cm.find_matching_context(fx), tgt)
         self.assertIs(self.cm['dummy.test:ground'], tgt)
 

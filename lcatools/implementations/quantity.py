@@ -198,7 +198,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
     def _quantity_conversions(self, flowable, rq, qq, context, locale='GLO',
                              **kwargs):
         """
-        This is the main "comprehensive" engine for performing characterizations
+        This is the main "comprehensive" engine for performing characterizations.
 
         :param flowable: a string that is synonymous with a known flowable.
         :param rq: a canonical ref_quantity or None
@@ -218,16 +218,19 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         if qq is not None and rq is not None:
             if qq.has_property('UnitConversion'):
                 try:
-                    fac = qq.convert(to=rq.unit())
+                    fac = qq.convert(from_unit=rq.unit())
                     qr_results = [QRResult(flowable, rq, qq, context, locale, qq.origin, fac) ]
                     return qr_results, [], []
                 except KeyError:
-                    try:
-                        fac = rq.convert(from_unit=qq.unit())
-                        qr_results = [QRResult(flowable, rq, qq, context, locale, rq.origin, fac) ]
-                        return qr_results, [], []
-                    except KeyError:
-                        pass
+                    pass
+
+            if rq.has_property('UnitConversion'):
+                try:
+                    fac = rq.convert(to=qq.unit())
+                    qr_results = [QRResult(flowable, rq, qq, context, locale, rq.origin, fac) ]
+                    return qr_results, [], []
+                except KeyError:
+                    pass
 
         cfs = [cf for cf in self._archive.tm.factors_for_flowable(flowable, quantity=qq, context=context, **kwargs)]
         if len(cfs) == 0:

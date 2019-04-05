@@ -450,7 +450,7 @@ class LcProcess(LcEntity):
                 raise ValueError('An allocation quantity is required to compute normalized allocation factors')
             quantity = self._alloc_by_quantity
 
-        return {rf: self._exchanges[rf.key].value * quantity.cf(rf.flow).value
+        return {rf: self._exchanges[rf.key].value * quantity.cf(rf.flow)
                 for rf in self.reference_entity
                 if self._exchanges[rf.key].value is not None}
 
@@ -508,7 +508,7 @@ class LcProcess(LcEntity):
             print('Not a reference exchange.')
             return False
         if self.alloc_qty is not None:
-            if self.alloc_qty.cf(reference.flow).value == 0:
+            if self.alloc_qty.cf(reference.flow) == 0:
                 return False
             return True
         missing_allocations = []

@@ -1,5 +1,4 @@
 from antelope_catalog.lc_resource import LcResource
-from lcatools.basic_query import LcQuery
 
 
 class AntelopeV2Server(object):

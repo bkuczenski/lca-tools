@@ -9,7 +9,6 @@ from collections import defaultdict
 
 from ..implementations import ForegroundImplementation
 
-from lcatools.interfaces import to_uuid
 from lcatools.archives import BasicArchive, EntityExists, BASIC_ENTITY_TYPES
 from lcatools.entities.fragments import LcFragment
 from lcatools.entity_refs import CatalogRef
@@ -82,7 +81,7 @@ class LcForeground(BasicArchive):
         elif key in self._ext_ref_mapping:
             return self._ext_ref_mapping[key]
         else:
-            uid = to_uuid(key)
+            uid = self._ref_to_uuid(key)
             if uid in self._uuid_map:
                 return next(k for k in self._uuid_map[uid])
         return None

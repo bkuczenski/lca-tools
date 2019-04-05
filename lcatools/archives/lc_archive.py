@@ -11,6 +11,7 @@ from ..entities import LcProcess
 from ..from_json import from_json
 from ..implementations import InventoryImplementation, BackgroundImplementation, ConfigureImplementation
 from .basic_archive import BasicArchive, BASIC_ENTITY_TYPES
+from lcatools.interfaces import LcQuery
 
 
 LC_ENTITY_TYPES = BASIC_ENTITY_TYPES + ('process', )
@@ -24,6 +25,10 @@ class LcArchive(BasicArchive):
     To support processes, adds inventory, background, and configure interfaces.
     """
     _entity_types = set(LC_ENTITY_TYPES)
+
+    @property
+    def query(self):
+        return LcQuery(self)
 
     def make_interface(self, iface):
         if iface == 'inventory':

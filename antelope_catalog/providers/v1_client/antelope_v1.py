@@ -4,7 +4,6 @@ from collections import defaultdict
 from lcatools.archives import BasicArchive, LC_ENTITY_TYPES
 from lcatools.entity_refs import CatalogRef
 from lcatools.fragment_flows import FragmentFlow
-from lcatools import BasicQuery
 
 from antelope_catalog.foreground import FOREGROUND_ENTITY_TYPES
 
@@ -73,8 +72,6 @@ class AntelopeV1Client(BasicArchive):
 
         super(AntelopeV1Client, self).__init__(source, ref=ref, **kwargs)
 
-        self._query = BasicQuery(self)
-
         self._s = requests.Session()
 
         # a set of dicts where the key is a string-formatted integer and the value is an entity_ref
@@ -103,7 +100,7 @@ class AntelopeV1Client(BasicArchive):
             return super(AntelopeV1Client, self).make_interface(iface)
 
     def _make_ref(self, external_ref, entity_type, reference_entity, **kwargs):
-        return CatalogRef.from_query(external_ref, self._query, entity_type, reference_entity, **kwargs)
+        return CatalogRef.from_query(external_ref, self.query, entity_type, reference_entity, **kwargs)
 
     def entities_by_type(self, entity_type):
         if entity_type == 'process':
@@ -200,7 +197,7 @@ class AntelopeV1Client(BasicArchive):
         :param ff:
         :return:
         """
-        return FragmentFlow.from_antelope_v1(ff, self._query)
+        return FragmentFlow.from_antelope_v1(ff, self.query)
 
     '''
     Entity handling

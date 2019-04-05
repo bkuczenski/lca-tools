@@ -15,41 +15,50 @@ from .iquantity import QuantityInterface, QuantityRequired, NoFactorsFound, Conv
 
 from .iforeground import ForegroundInterface, ForegroundRequired
 
-import re
-import uuid
 from os.path import splitext
 
 from collections import namedtuple
-
-
-uuid_regex = re.compile('([0-9a-f]{8}-?([0-9a-f]{4}-?){3}[0-9a-f]{12})', flags=re.IGNORECASE)
 
 
 class PropertyExists(Exception):
     pass
 
 
-def to_uuid(_in):
-    if _in is None:
-        return _in
-    if isinstance(_in, int):
-        return None
-    try:
-        g = uuid_regex.search(_in)  # using the regexp test is 50% faster than asking the UUID library
-    except TypeError:
-        if isinstance(_in, uuid.UUID):
-            return str(_in)
-        g = None
-    if g is not None:
-        return g.groups()[0]
-    # no regex match- let's see if uuid.UUID can handle the input
-    try:
-        _out = uuid.UUID(_in)
-    except ValueError:
-        return None
-    return str(_out)
+'''
+Query classes
+'''
+
+class BasicQuery(IndexInterface, InventoryInterface, QuantityInterface):
+    def __init__(self, archive, debug=False):
+        self._archive = archive
+        self._debug = debug
+
+    def _iface(self, itype, **kwargs):
+        if itype is None:
+            itype = 'basic'
+        yield self._archive.make_interface(itype)
+
+    @property
+    def origin(self):
+        return self._archive.ref
+
+    @property
+    def _tm(self):
+        return self._archive.tm
+
+    '''
+    I think that's all I need to do!
+    '''
 
 
+class LcQuery(BasicQuery, BackgroundInterface, ConfigureInterface):
+    pass
+
+
+'''
+Utilities
+
+'''
 def local_ref(source):
     """
     Create a semantic ref for a local filename.  Just uses basename.  what kind of monster would access multiple

@@ -15,7 +15,6 @@ from .av2_types import FlowSchema, QuantitySchema, ProcessSchema
 from itertools import islice
 
 from antelope_catalog import LcResource
-from lcatools import LcQuery
 
 
 list_fields = ('id', 'origin', 'name')
@@ -29,7 +28,7 @@ def _get_query():
     a = LcResource.from_json('/data/LCI/cat-food/resources/local.uslci.olca')[0]
     a.check(None)
     a.archive.load_all()
-    return LcQuery(a.archive)
+    return a.archive.query
 
 
 app = Flask(__name__)

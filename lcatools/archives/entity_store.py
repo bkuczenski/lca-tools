@@ -12,7 +12,7 @@ from datetime import datetime
 
 from collections import defaultdict
 
-from ..interfaces import to_uuid, local_ref
+from ..interfaces import local_ref
 from ..from_json import to_json
 
 LD_CONTEXT = 'https://bkuczenski.github.io/lca-tools-datafiles/context.jsonld'
@@ -22,6 +22,30 @@ LD_CONTEXT = 'https://bkuczenski.github.io/lca-tools-datafiles/context.jsonld'
 
 
 ref_regex = re.compile('[a-z0-9_]+(\.[a-z0-9_]+)*', flags=re.IGNORECASE)
+
+
+uuid_regex = re.compile('([0-9a-f]{8}-?([0-9a-f]{4}-?){3}[0-9a-f]{12})', flags=re.IGNORECASE)
+
+
+def to_uuid(_in):
+    if _in is None:
+        return _in
+    if isinstance(_in, int):
+        return None
+    try:
+        g = uuid_regex.search(_in)  # using the regexp test is 50% faster than asking the UUID library
+    except TypeError:
+        if isinstance(_in, uuid.UUID):
+            return str(_in)
+        g = None
+    if g is not None:
+        return g.groups()[0]
+    # no regex match- let's see if uuid.UUID can handle the input
+    try:
+        _out = uuid.UUID(_in)
+    except ValueError:
+        return None
+    return str(_out)
 
 
 class SourceAlreadyKnown(Exception):

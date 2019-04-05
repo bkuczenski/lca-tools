@@ -2,8 +2,9 @@ import re
 from collections import defaultdict
 from .entity_store import EntityStore, SourceAlreadyKnown, EntityExists
 from .term_manager import TermManager
-from ..interfaces import to_uuid
+
 from ..implementations import BasicImplementation, IndexImplementation, QuantityImplementation
+from lcatools.interfaces import BasicQuery
 from lcatools.entities import LcQuantity, LcUnit, LcFlow
 
 from lcatools import from_json, to_json
@@ -112,6 +113,10 @@ class BasicArchive(EntityStore):
     def __init__(self, *args, contexts=None, flowables=None, term_manager=None, **kwargs):
         super(BasicArchive, self).__init__(*args, **kwargs)
         self._tm = term_manager or TermManager(contexts=contexts, flowables=flowables)
+
+    @property
+    def query(self):
+        return BasicQuery(self)
 
     @property
     def tm(self):

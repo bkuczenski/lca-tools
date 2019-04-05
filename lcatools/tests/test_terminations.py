@@ -4,7 +4,6 @@ from lcatools.interfaces import comp_dir
 from lcatools.entities.tests import BasicEntityTest
 from lcatools.entities.fragment_editor import create_fragment
 from lcatools.terminations import FlowTermination
-from lcatools import BasicQuery
 
 
 class FlowTerminationTestCase(BasicEntityTest):
@@ -66,7 +65,7 @@ class FlowTerminationTestCase(BasicEntityTest):
 
     def _get_coolness(self):
         q = next(self.A.search('quantity', Name='coolness'))
-        return q.make_ref(BasicQuery(self.A))
+        return q.make_ref(self.A.query)
 
     def test_lcia(self):
         term = self._petro_term()

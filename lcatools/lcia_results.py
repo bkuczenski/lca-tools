@@ -4,7 +4,6 @@ This object replaces the LciaResult types spelled out in Antelope-- instead, it 
 """
 from lcatools.interfaces import comp_dir
 from lcatools.exchanges import ExchangeValue, DissipationExchange
-from lcatools.characterizations import Characterization
 from lcatools.autorange import AutoRange
 from numbers import Number
 from math import isclose
@@ -78,7 +77,9 @@ class DetailedLciaResult(object):
 
     @property
     def _dirn_adjust(self):
-        if comp_dir(self._qr.context.sense) == self._exchange.direction:
+        if self._qr.context.sense is None:
+            return 1.0
+        elif comp_dir(self._qr.context.sense) == self._exchange.direction:
             return 1.0
         return -1.0
 
@@ -136,12 +137,13 @@ class DetailedLciaResult(object):
             dirn_mod = '*'
         else:
             dirn_mod = ' '
-        return '%s%s x %-s  = %-s [%s] %s' % (dirn_mod,
-                                              number(self.value),
-                                              number(self._qr.value * self._lc.autorange),
-                                              number(self.result * self._lc.autorange),
-                                              self._qr.location,
-                                              self.flowable)
+        return '%s%s = %-s  x %-s [%s] %s, %s' % (dirn_mod,
+                                                  number(self.result * self._lc.autorange),
+                                                  number(self._qr.value * self._lc.autorange),
+                                                  number(self.value),
+                                                  self._qr.locale,
+                                                  self.flowable,
+                                                  self.context)
 
 
 class SummaryLciaResult(object):
@@ -733,7 +735,10 @@ class LciaResult(object):
                 for e in sorted(self._LciaScores.keys(),
                                 key=lambda x: self._LciaScores[x].cumulative_result,
                                 reverse=True):
-                    print('\n%s:' % self._LciaScores[e].entity)
+                    try:
+                        print('\n%s:' % self._LciaScores[e].entity)
+                    except TypeError:
+                        print('\n%s:' % str(self._LciaScores[e].entity))
                     self._LciaScores[e].show_detailed_result(**kwargs)
             else:
                 self._LciaScores[key].show_detailed_result(**kwargs)

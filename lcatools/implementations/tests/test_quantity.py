@@ -36,9 +36,9 @@ class QuantityImplementation(unittest.TestCase):
         self.assertEqual(len(cf), 91)
 
     def test_q_relation(self):
-        self.assertEqual(self.gwp.cf(mass, 'carbon dioxide', 'air'), 1.0)
-        self.assertEqual(self.gwp.cf(mass, 'nitrous oxide', 'air'), 298.0)
-        self.assertEqual(self.gwp.cf(mass, '10024-97-2', 'air'), 298.0)
+        self.assertEqual(self.gwp.cf('carbon dioxide', ref_quantity=mass, context='air'), 1.0)
+        self.assertEqual(self.gwp.cf('nitrous oxide', ref_quantity=mass, context='air'), 298.0)
+        self.assertEqual(self.gwp.cf('10024-97-2', ref_quantity=mass, context='air'), 298.0)
         with self.assertRaises(NoFactorsFound):
             self.gwp.quantity_relation(mass, 'carbon dioxide', 'water')
         ilcd_vol = self.I[volu_uuid]

@@ -50,10 +50,10 @@ class QuantityRef(EntityRef):
         return self._query.characterize(flowable, ref_quantity, self, value, **kwargs)
 
     def do_lcia(self, inventory, **kwargs):
-        return self._query.do_lcia(inventory, self, **kwargs)
+        return self._query.do_lcia(self, inventory, **kwargs)
 
-    def quantity_relation(self, ref_quantity, flowable, compartment, locale='GLO', **kwargs):
-        return self._query.quantity_relation(ref_quantity, flowable, compartment, self, locale=locale, **kwargs)
+    def quantity_relation(self, ref_quantity, flowable, context, locale='GLO', **kwargs):
+        return self._query.quantity_relation(flowable, ref_quantity, self, context, locale=locale, **kwargs)
     '''
 =======
     def convert(self, from_unit=None, to=None):

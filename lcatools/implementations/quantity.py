@@ -67,6 +67,14 @@ class QuantityConversion(object):
         return self._results[0].context
 
     @property
+    def locale(self):
+        locs = []
+        for res in self._results:
+            if res.locale not in locs:
+                locs.append(res.locale)
+        return '/'.join(locs)
+
+    @property
     def results(self):
         for res in self._results:
             yield res
@@ -415,20 +423,24 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
             for r in qrg + qrm:
                 yield r
 
-    def do_lcia(self, quantity, inventory, locale='GLO', **kwargs):
+    def do_lcia(self, quantity, inventory, locale='GLO', group=None, **kwargs):
         """
         Successively implement the quantity relation over an iterable of exchanges.
 
         man, WHAT is the qdb DOING with all those LOC? (ans: seemingly a lot)
 
         :param quantity:
-        :param inventory:
+        :param inventory: An iterable of exchange-like entries, having flow, direction, value, termination.  Currently
+          also uses process.external_ref for hashing purposes, but that could conceivably be abandoned.
         :param locale: ['GLO']
+        :param group: How to group scores.  Should be a lambda that operates on inventory items. Default x -> x.process
         :param kwargs:
         :return:
         """
         q = self.get_canonical(quantity)
         res = LciaResult(q)
+        if group is None:
+            group = lambda _x: _x.process
         for x in inventory:
             if x.type == 'cutoff':
                 res.add_cutoff(x)
@@ -437,12 +449,13 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
                 continue
             ref_q = self.get_canonical(x.flow.reference_entity)
             try:
-                cf = self.cf(ref_q, x.flow.flowable, x.termination, locale=locale,
-                             **kwargs)
-                res.add_score(x.process, x, cf)
+                cf = self.quantity_relation(x.flow.name, ref_q, q, x.termination, locale=locale,
+                                            **kwargs)
+                res.add_score(group(x), x, cf)
             except NoFactorsFound:
                 res.add_cutoff(x)
             except ConversionReferenceMismatch:
                 res.add_error(x)
+                res.show_details()
             # should we characterize the flows? to save on lookups? no, leave that to the client
         return res

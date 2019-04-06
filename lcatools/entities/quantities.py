@@ -21,7 +21,8 @@ class LcQuantity(LcEntity):
         :param ref_unit: the string representation of the reference unit for the quantity
         :return:
         """
-        return cls(uuid.uuid4(), Name=name, ReferenceUnit=LcUnit(ref_unit), **kwargs)
+        u = uuid.uuid4()
+        return cls(str(u), entity_uuid=u, Name=name, ReferenceUnit=LcUnit(ref_unit), **kwargs)
 
     def __init__(self, external_ref, **kwargs):
         super(LcQuantity, self).__init__('quantity', external_ref, **kwargs)

@@ -36,7 +36,8 @@ class LcFlow(LcEntity, FlowInterface):
         :param ref_qty: the reference quantity
         :return:
         """
-        return cls(uuid.uuid4(), Name=name, ReferenceQuantity=ref_qty, **kwargs)
+        u = uuid.uuid4()
+        return cls(str(u), Name=name, entity_uuid=u, ReferenceQuantity=ref_qty, **kwargs)
 
     def __setitem__(self, key, value):
         self._catch_context(key, value)

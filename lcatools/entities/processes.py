@@ -159,7 +159,8 @@ class LcProcess(LcEntity):
         :param name: the name of the process
         :return:
         """
-        return cls(uuid.uuid4(), Name=name, **kwargs)
+        u = uuid.uuid4()
+        return cls(str(u), entity_uuid=u, Name=name, **kwargs)
 
     def __init__(self, external_ref, **kwargs):
         """

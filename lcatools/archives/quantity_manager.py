@@ -15,7 +15,8 @@ def _quantity_terms(quantity):
     yield quantity.external_ref  # do we definitely want this?  will squash versions together
     if quantity.uuid is not None:
         yield quantity.uuid
-    yield quantity.link
+    if quantity.origin is not None:
+        yield quantity.link
     if quantity.has_property('Synonyms'):
         syns = quantity['Synonyms']
         if isinstance(syns, str):
@@ -112,6 +113,11 @@ class QuantityManager(SynonymDict):
         self.new_entry(name, *syns, unit=unit, merge=False)
 
     def add_quantity(self, quantity):
+        """
+        Prunes terms on quantity unit mismatch
+        :param quantity:
+        :return:
+        """
         new_q = QuantitySynonyms.new(quantity)
         try:
             self.add_or_update_entry(new_q, merge=True, create_child=True)

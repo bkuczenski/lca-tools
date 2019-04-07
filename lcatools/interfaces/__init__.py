@@ -5,7 +5,7 @@ The abstract classes in this sub-package define what information is made availab
 resource of some kind.  The interfaces must be instantiated in order to be used.  In the core package
 """
 
-from .abstract_query import UnknownOrigin, PrivateArchive, EntityNotFound
+from .abstract_query import UnknownOrigin, PrivateArchive, EntityNotFound, NoUuid
 
 from .iconfigure import ConfigureInterface
 from .iinventory import InventoryInterface, InventoryRequired

@@ -1,3 +1,14 @@
+"""
+Archive testing is divided up loosely into pre-entity (e.g. test_entity_store and test_base) and post-entity testing
+(e.g. this file).  Of course test_base has entities but they are more for the purpose of validating name setting.
+
+This class imports a minimal archive file created in antelope_utilities to contain a multioutput, nontrivial process
+(USLCI petroleum refining) and an intermediate process (a grid mix).  These don't do anything special but the refinery
+process can test both exchange generation / allocation and lcia.
+
+Subclass this to access that archive.  Current uses:
+"""
+
 import unittest
 import os
 

@@ -592,16 +592,15 @@ class TermManager(object):
 
     def flowables(self, search=None, origin=None):
         """
-        WARNING: does not search on all synonyms, only on canonical terms
-        :param origin: not used
+        :param origin: used in subclass
         :param search:
         :return:
         """
-        for fb in self._fm.objects:
-            if search is None:
+        if search is None:
+            for fb in self._fm.objects:
                 yield str(fb)
-            else:
-                if bool(re.search(search, str(fb), flags=re.IGNORECASE)):
+        else:
+            for fb in self._fm.objects_with_string(search):
                     yield str(fb)
 
     def unmatched_flowables(self, flowables):
@@ -628,7 +627,11 @@ class TermManager(object):
                 c = self._fm[term]
                 return self._fm.synonyms(str(c))
             except KeyError:
-                raise KeyError('Unknown term %s' % term)
+                try:
+                    c = self._qm[term]
+                    return self._qm.synonyms(str(c))
+                except KeyError:
+                    return ()
 
     def contexts(self, search=None, origin=None):
         for cx in self._cm.objects:
@@ -640,6 +643,17 @@ class TermManager(object):
             else:
                 if cx.contains_string(search):
                     yield cx
+
+    def quantities(self, search=None, origin=None):
+        for q in self._qm.objects:
+            if origin is not None:
+                if not q.origin.startswith(origin):
+                    continue
+            if search is None:
+                yield q
+            else:
+                if q.contains_string(search):
+                    yield q
 
     '''
     De/Serialization

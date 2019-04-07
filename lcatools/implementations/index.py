@@ -93,6 +93,15 @@ class IndexImplementation(BasicImplementation, IndexInterface):
                     if cdir == x[0]:
                         yield x[1]
 
+    def flowables(self, **kwargs):
+        return self._archive.tm.flowables(**kwargs)
+
+    def contexts(self, **kwargs):
+        return self._archive.tm.contexts(**kwargs)
+
+    def synonyms(self, item, **kwargs):
+        return self._archive.tm.synonyms(item)
+
     '''
     def mix(self, flow_ref, direction):
         if not isinstance(flow_ref, str):

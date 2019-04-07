@@ -1,3 +1,10 @@
+"""
+This file tests BasicArchive operations that do not involve creating or adding entities-- only basic construction
+of the archive and definition of catalog names.
+
+For testing of actual entity-containing archives, look to test_base
+"""
+
 import unittest
 import os
 from uuid import uuid4

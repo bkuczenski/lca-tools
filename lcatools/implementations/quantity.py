@@ -4,7 +4,7 @@ can also be upgraded to an LciaEngine, which extends the synonymization strategy
 """
 from .basic import BasicImplementation
 from ..characterizations import QRResult
-from ..interfaces import QuantityInterface, NoFactorsFound, ConversionReferenceMismatch, FlowableMismatch
+from ..interfaces import QuantityInterface, NoFactorsFound, ConversionReferenceMismatch, FlowableMismatch, EntityNotFound
 from ..lcia_results import LciaResult
 
 
@@ -133,7 +133,10 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         :param quantity: external_id of quantity
         :return: quantity entity
         """
-        return self._archive.tm.get_canonical(quantity)
+        c_q = self._archive.tm.get_canonical(quantity)
+        if c_q is None:
+            raise EntityNotFound(quantity)
+        return c_q
 
     def factors(self, quantity, flowable=None, context=None, dist=0):
         q = self.get_canonical(quantity)

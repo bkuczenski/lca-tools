@@ -187,11 +187,6 @@ class LciaEngine(TermManager):
     def save_contetxts(self, filename=None):
         self._cm.save(filename)
 
-    @property
-    def quantities(self):
-        for k in self._qm.objects:
-            yield k
-
     def flowables(self, search=None, origin=None, new=False):
         """
         Adds ability to filter by origin
@@ -201,21 +196,18 @@ class LciaEngine(TermManager):
         :return:
         """
         if origin is None:
-            for k in super(LciaEngine, self).flowables(search=search):
-                if new:
-                    if k in self._fb_by_origin[None]:
-                        continue
-                yield k
+            _iter = super(LciaEngine, self).flowables(search=search)
         else:
-             for k in self._fb_by_origin[origin]:
-                 if new:
-                     if k in self._fb_by_origin[None]:
-                         continue
-                 if search is None:
-                     yield k
-                 else:
-                     if bool(re.search(search, k, flags=re.IGNORECASE)):
-                         yield k
+            if search is None:
+                _iter = self._fb_by_origin[origin]
+            else:
+                _iter = (x for x in self._fm.objects_with_string(search) if x in self._fb_by_origin[origin])
+
+        for k in _iter:
+            if new:
+                if k in self._fb_by_origin[None]:
+                    continue
+            yield k
 
     @staticmethod
     def is_biogenic(term):

@@ -135,6 +135,7 @@ class BasicArchive(EntityStore):
             return u
         raise EntityExists(str(e))
 
+    '''
     def new_quantity(self, name, ref_unit, **kwargs):
         u = self._check_key_unused(name)
         q = LcQuantity(u, ref_unit=LcUnit(ref_unit), Name=name, origin=self.ref, external_ref=name, **kwargs)
@@ -147,6 +148,7 @@ class BasicArchive(EntityStore):
                    **kwargs)
         self.add_entity_and_children(f)
         return f
+    '''
 
     def make_interface(self, iface):
         if iface == 'basic':
@@ -171,7 +173,8 @@ class BasicArchive(EntityStore):
             self._entities[entity.uuid] = entity
         if entity.entity_type == 'quantity':
             self.tm.add_quantity(entity)
-            entity.set_qi(self.make_interface('quantity'))
+            if entity.is_entity:  # not ref
+                entity.set_qi(self.make_interface('quantity'))
         elif entity.entity_type == 'flow':
             # characterization infrastructure
             self.tm.add_flow(entity)

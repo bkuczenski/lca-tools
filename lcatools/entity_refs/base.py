@@ -208,8 +208,8 @@ class EntityRef(BaseRef):
     An EntityRef is a CatalogRef that has been provided a valid catalog query.  the EntityRef is still semi-abstract
     since there is no meaningful reference to an entity that is not typed.
 
-    Must provide a uuid kwarg to avoid a query lookup, though the uuid need not be valid (unless the ref is going
-    to be added to an archive that requires it).
+    UUID is looked up when queried, but not all entities have uuids and I don't want to import the interface just for
+    exception checking
     """
     def make_ref(self, *args):
         return self
@@ -233,8 +233,13 @@ class EntityRef(BaseRef):
         self._reference_entity = reference_entity
 
         self._query = query
+
+    @property
+    def uuid(self):
         if self._uuid is None:
             self._uuid = self._query.get_uuid(self.external_ref)
+        return self._uuid
+
 
     def get_reference(self):
         return self._reference_entity
@@ -314,5 +319,6 @@ class EntityRef(BaseRef):
 
     def serialize(self, **kwargs):
         j = super(EntityRef, self).serialize(**kwargs)
-        j['uuid'] = self.uuid
+        if self.uuid is not None:
+            j['uuid'] = self.uuid
         return j

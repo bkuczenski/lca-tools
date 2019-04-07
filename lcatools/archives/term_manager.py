@@ -44,7 +44,6 @@ class OriginStrangeness(Exception):
 
 
 from collections import defaultdict
-import re
 
 
 class TermManager(object):

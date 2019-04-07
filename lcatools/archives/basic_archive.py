@@ -6,6 +6,7 @@ from .term_manager import TermManager
 from ..implementations import BasicImplementation, IndexImplementation, QuantityImplementation
 from lcatools.interfaces import BasicQuery
 from lcatools.entities import LcQuantity, LcUnit, LcFlow
+from lcatools.entity_refs import FlowInterface
 
 from lcatools import from_json, to_json
 
@@ -175,7 +176,7 @@ class BasicArchive(EntityStore):
             self.tm.add_quantity(entity)
             if entity.is_entity:  # not ref
                 entity.set_qi(self.make_interface('quantity'))
-        elif entity.entity_type == 'flow':
+        elif isinstance(entity, FlowInterface):
             # characterization infrastructure
             self.tm.add_flow(entity)
 

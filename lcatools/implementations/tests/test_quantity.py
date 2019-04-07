@@ -1,6 +1,6 @@
 from ...archives import BasicArchive, Qdb
 from ...lcia_engine import IPCC_2007_GWP
-from ...interfaces import EntityNotFound, NoFactorsFound, ConversionReferenceMismatch
+from ...interfaces import EntityNotFound, ConversionReferenceMismatch  # , NoFactorsFound
 
 import unittest
 
@@ -23,8 +23,8 @@ class QuantityImplementation(unittest.TestCase):
             self.qq_traci.cf('hfc-134', self.gwp)
 
     def test_gwp_factor(self):
-        self.assertEqual(self.qq_traci.cf('hfc-134, air', self.gwp), 1100.0)
-        self.assertEqual(self.qq_traci.cf('hfc-143, air', self.gwp), 353.0)
+        self.assertEqual(self.qq_traci.cf('hfc-134', self.gwp, ref_quantity=mass, context='air'), 1100.0)
+        self.assertEqual(self.qq_traci.cf('hfc-143', self.gwp, ref_quantity=mass, context='air'), 353.0)
 
     def test_quantity_cf_flowable(self):
         cf = list(self.gwp.factors(flowable='hfc-134'))
@@ -39,9 +39,10 @@ class QuantityImplementation(unittest.TestCase):
         self.assertEqual(self.gwp.cf('carbon dioxide', ref_quantity=mass, context='air'), 1.0)
         self.assertEqual(self.gwp.cf('nitrous oxide', ref_quantity=mass, context='air'), 298.0)
         self.assertEqual(self.gwp.cf('10024-97-2', ref_quantity=mass, context='air'), 298.0)
-        with self.assertRaises(NoFactorsFound):
-            self.gwp.quantity_relation(mass, 'carbon dioxide', 'water')
+        self.assertEqual(self.gwp.quantity_relation(mass, 'carbon dioxide', 'water').value, 0.0)
+        # this will only work with an LciaEngine
         ilcd_vol = self.I[volu_uuid]
+        ar.add(ilcd_vol)
         with self.assertRaises(ConversionReferenceMismatch):
             self.gwp.quantity_relation(ilcd_vol, 'carbon tetrachloride', 'air')
 

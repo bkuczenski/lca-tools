@@ -113,16 +113,21 @@ class FlowInterface(object):
 class DummyFlow(FlowInterface):
 
     class DummyQuantity(object):
+        origin = 'local.dummy.quantity'
         entity_type = 'quantity'
-        link = 'local.dummy.quantity/dummy'
         external_ref = 'dummy'
         uuid = None
+        is_entity = False
 
         def __getitem__(self, key):
             return 'Dummy Property'
 
         def has_property(self, key):
             return False
+
+        @property
+        def link(self):
+            return '%s/%s' % (self.origin, self.external_ref)
 
         @staticmethod
         def unit():

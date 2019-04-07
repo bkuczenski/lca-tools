@@ -22,7 +22,7 @@ flow_json = {
     'entityType': 'flow',
     'origin': test_ref,
     'CasNumber': '',
-    'Compartment': ['Intermediate Flows']
+    'referenceQuantity': 'kg'
 }
 
 frag_json = [{

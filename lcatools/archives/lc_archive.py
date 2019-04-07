@@ -96,7 +96,6 @@ class LcArchive(BasicArchive):
         # then add ordinary [allocated] exchanges
         for i in nonrefs:
             x = exchs[i]
-            t = None
             # is_ref = False
             f = self._get_entity(x['flow'])
             d = x['direction']
@@ -105,6 +104,8 @@ class LcArchive(BasicArchive):
                 cx = self.tm[t]
                 if cx is not None:
                     t = cx
+            else:
+                t = self.tm[f.context]
             if 'value' in x:
                 process.add_exchange(f, d, value=x['value'], termination=t)
 

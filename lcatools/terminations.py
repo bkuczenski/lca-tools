@@ -334,42 +334,10 @@ class FlowTermination(object):
     def flow_conversion(self):
         """
         express the parent's flow in terms of the quantity of the term flow
-        if the flows are equal, skip-- paranoid would bypass this step
-         if the quantities are equal, skip
-         else, ask the flow for a cf
-         else, ask the quantity for a conversion
-         what if the quantity is not a ref? how do we find our local catalog and qdb?
-          - unless qdb is upstream of entities themselves
-          - perhaps for quantities that makes sense
-          - qty query will always fallback to qdb
-
         how to deal with scenario cfs? tbd
         problem is, the term doesn't know its own scenario
-        :return:
+        :return: float = amount in term_flow ref qty that corresponds to a unit of fragment flow's ref qty
         """
-        '''
-        if self._parent.flow == self.term_flow:
-            return 1.0
-        parent_qty = self._parent.flow.reference_entity
-        tgt_qty = self.term_flow.reference_entity
-        if parent_qty == tgt_qty:
-            return 1.0
-        if self._parent.flow.cf(tgt_qty) == 0:
-            if self.term_flow.cf(parent_qty) == 0:
-                'x'x'x
-                print('term flow')
-                self.term_flow.show()
-                self.term_flow.profile()
-                'x'x'x
-                print('\nfragment flow %s' % self._parent)
-                self._parent.flow.show()
-                self._parent.flow.profile()
-                raise FlowConversionError('Missing cf\nfrom: %s %s\n  to: %s %s' % (parent_qty.uuid, parent_qty,
-                                                                                    tgt_qty.uuid, tgt_qty))
-            else:
-                return 1.0 / self.term_flow.cf(parent_qty)
-        return self._parent.flow.cf(tgt_qty)
-        '''
         fwd_cf = self.term_flow.reference_entity.cf(self._parent.flow)
         if fwd_cf == 0.0:
             rev_cf = self._parent.flow.reference_entity.cf(self.term_flow)
@@ -468,7 +436,10 @@ class FlowTermination(object):
                 return LciaResult(quantity_ref)
 
         try:
-            locale = self.term_node['SpatialScope']
+            if self.is_context:
+                locale = self._parent['SpatialScope']
+            else:
+                locale = self.term_node['SpatialScope']
         except KeyError:
             locale = 'GLO'
         try:

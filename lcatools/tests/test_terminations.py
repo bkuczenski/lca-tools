@@ -82,7 +82,8 @@ class FlowTerminationTestCase(BasicEntityTest):
     def test_fg(self):
         frag = self._frag_with_child()
         z = next(frag.child_flows)
-        self.assertTrue(z.term.is_fg)
+        self.assertFalse(z.term.is_fg)
+        self.assertTrue(z.term.is_context)
         self.assertIs(z.flow, z.term.term_flow)
         self.assertEqual(z.direction, comp_dir(z.term.direction))
 

@@ -1362,8 +1362,8 @@ class LcFragment(LcEntity):
         '''
         now looking forward: is our termination a cutoff, background, foreground or subfragment?
         '''
-        if term.is_null or self.is_background or magnitude == 0:
-            # cutoff and background both end traversal
+        if term.is_null or term.is_context or self.is_background or magnitude == 0:
+            # cutoff /context and background end traversal
             self.dbg_print('cutoff or bg')
             return [ff], conserved_val
 

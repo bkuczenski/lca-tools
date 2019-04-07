@@ -583,6 +583,10 @@ class EntityStore(object):
         return self.retrieve_or_fetch_entity(key)
 
     def validate_entity_list(self):
+        """
+        This whole thing is crufty and untested and never used and should be abandoned
+        :return:
+        """
         count = 0
         for k, v in self._entities.items():
             valid = True

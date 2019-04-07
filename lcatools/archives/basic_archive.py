@@ -161,7 +161,7 @@ class BasicArchive(EntityStore):
         else:
             raise InterfaceError('Unable to create interface %s' % iface)
 
-    def add(self, entity):
+    def _ensure_valid_refs(self, entity):
         if entity.uuid is None:  # TODO: eliminate visible UUIDs in favor of NS UUIDs. this will get fleshed out later
             uu = self._ref_to_uuid(entity.external_ref)
             if uu is not None:
@@ -169,6 +169,9 @@ class BasicArchive(EntityStore):
         if self.tm[entity.external_ref] is not None:
             raise ContextCollision('Entity external_ref %s is already known as a context identifier' %
                                    entity.external_ref)
+
+    def add(self, entity):
+        self._ensure_valid_refs(entity)
         self._add(entity, entity.external_ref)
         if entity.uuid is not None:  # BasicArchives: allow UUID to retrieve entity as well, if defined
             self._entities[entity.uuid] = entity

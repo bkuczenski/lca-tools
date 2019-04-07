@@ -76,6 +76,10 @@ class LcForegroundTestCase(unittest.TestCase):
         cls.fg = LcForeground(WORKING_DIR, ref=test_ref)
         cls.fg.entity_from_json(flow_json)
 
+    def test_0_retrieve_flow_by_uuid(self):
+        myflow = self.fg[flow_uuid]
+        self.assertIsNotNone(myflow)
+
     def test_1_make_fragment(self):
         myflow = self.fg[flow_uuid]
         frag = create_fragment(myflow, 'Output', uuid=frag_uuid, comment='Test Fragment')

@@ -180,13 +180,15 @@ class LcForeground(BasicArchive):
             print('my ref: %s' % self.ref)
             raise NonLocalEntity(entity)
             '''
+        self._ensure_valid_refs(entity)
         try:
             self._add(entity, entity.link)
         except EntityExists:
             # merge incoming entity's properties with existing entity
             current = self[entity.link]
             current.merge(entity)
-        self._uuid_map[entity.uuid].add(entity.link)
+        if entity.uuid is not None:
+            self._uuid_map[entity.uuid].add(entity.link)
 
     def _add_children(self, entity):
         if entity.entity_type == 'fragment':

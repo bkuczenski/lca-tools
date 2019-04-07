@@ -162,6 +162,8 @@ class LcFragment(LcEntity):
         self._terminations = dict()
 
         super(LcFragment, self).__init__('fragment', external_ref, entity_uuid=the_uuid, **kwargs)
+        if self._external_ref == self._uuid:
+            self._external_ref = None  # reset this
 
         if parent is not None:
             self.set_parent(parent)
@@ -328,6 +330,7 @@ class LcFragment(LcEntity):
         j = super(LcFragment, self).serialize(domesticate=True, **kwargs)  # once you save a fragment, it's yours
 
         j.update({
+            'entityId': self.uuid,
             'flow': self.flow.external_ref,
             'direction': self.direction,
             'isPrivate': self._private,

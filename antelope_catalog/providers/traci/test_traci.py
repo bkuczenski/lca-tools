@@ -33,6 +33,12 @@ class TraciTest(unittest.TestCase):
         fac = next(self._qi.factors(tox.external_ref, flowable='ethyl carbamate', context='agricultural'))
         self.assertAlmostEqual(fac.value, 1.783221, places=6)
 
+    def test_ipcc_gwp(self):
+        T = Traci21Factors(TRACI_2_1)
+        gwp = T['Global Warming Air']
+        T.add_method_and_compartment(gwp)
+        self.assertEqual(len([f for f in T.query.factors(gwp)]), 91)
+
     def test_compartments(self):
         cs = set(self._qi.compartments(flowable='ddd'))
         self.assertSetEqual(cs, {'agricultural', 'fresh water', 'rural air', 'sea water', 'soil', 'urban air'})

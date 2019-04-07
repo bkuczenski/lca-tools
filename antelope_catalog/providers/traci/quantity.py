@@ -30,16 +30,6 @@ class Traci21QuantityImplementation(QuantityImplementation):
                 return qi
         return super(Traci21QuantityImplementation, self).get_canonical(name, **kwargs)
 
-    def flowables(self, quantity=None, compartment=None, **kwargs):
-        if quantity is not None:
-            quantity = self.get_canonical(quantity)
-        for i, row in self._archive.iterrows():
-            try:
-                next(self._archive.cf_for_method_and_compartment(row, method=quantity, compartment=compartment))
-            except StopIteration:
-                continue
-            yield transform_numeric_cas(row['CAS #']), row['Substance Name'].lower()
-
     def compartments(self, quantity=None, flowable=None, **kwargs):
         if quantity is not None:
             quantity = self.get_canonical(quantity)
@@ -60,14 +50,7 @@ class Traci21QuantityImplementation(QuantityImplementation):
         for c in comps:
             yield c
 
-    def factors(self, quantity, flowable=None, compartment=None, **kwargs):
+    def factors(self, quantity, flowable=None, context=None, **kwargs):
         q = self.get_canonical(quantity)
-        if q is not None:
-            if flowable is not None:
-                for row in self._archive.row_for_key(flowable):
-                    for cf in self._archive.cf_for_method_and_compartment(row, method=q, compartment=compartment):
-                        yield cf
-            else:
-                for i, row in self._archive.iterrows():
-                    for cf in self._archive.cf_for_method_and_compartment(row, method=q, compartment=compartment):
-                        yield cf
+        self._archive.add_method_and_compartment(method=q, compartment=context)
+        return super(Traci21QuantityImplementation, self).factors(quantity, flowable=flowable, context=context)

@@ -42,6 +42,8 @@ class Traci21Factors(BasicArchive):
         self._rows = XlDict.from_sheetname(self._xl, sheet_name)
 
         self._methods = dict()  # store column-to-method mapping
+        self._l_f = set()  # track which flows are loaded
+        self._l_c = set()  # keep track of which methods are loaded
         for col, val in q_info.items():
             q = self._create_lcia_method(val)
             self._methods[col] = q
@@ -86,17 +88,20 @@ class Traci21Factors(BasicArchive):
         return None
 
     def _create_flow(self, row):
-        flowable = row['Substance Name'].lower()
-        ext_ref = flowable  # self._flow_key(flowable, compartment)
+        ext_ref = row['Substance Name'].lower()  # self._flow_key(flowable, compartment)
         f = self[ext_ref]
         if f is None:
             cas = transform_numeric_cas(row['Formatted CAS #'])
-            f = LcFlow(ext_ref, Name=flowable, ReferenceQuantity=self._mass,
+            f = LcFlow(ext_ref, Name=ext_ref, ReferenceQuantity=self._mass,
                        CasNumber=cas or '')
             self.add(f)
         return f
 
     def _add_flowable(self, row):
+        flow = self._create_flow(row)
+        if flow.name in self._l_f:
+            return
+
         for col, i in q_info.items():
             q = self.check_methods(col)
             try:
@@ -105,12 +110,27 @@ class Traci21Factors(BasicArchive):
                 continue
             if cf == 0.0:
                 continue
-            f = self._create_flow(row)
-            cx = self.tm.add_context(i.Compartment)
-            try:
-                self.tm.add_characterization(f['Name'], f.reference_entity, q, cf, context=cx)
-            except DuplicateCharacterizationError:
-                continue
+            self._char_from_flow_compartment_method(flow, i.Compartment, q, cf)
+        self._l_f.add(flow.name)
+        return flow
+
+    def _add_column(self, col):
+        if col in self._l_c:
+            return
+        if col in q_info:
+            method = self._methods[col]
+            comp = q_info[col].Compartment
+            for i, row in self.iterrows():
+                cf = row[col]
+                try:
+                    cf = float(cf)
+                except ValueError:
+                    continue
+                if cf == 0.0:
+                    continue
+                flow = self._create_flow(row)
+                self._char_from_flow_compartment_method(flow, comp, method, cf)
+        self._l_c.add(col)
 
     def _fetch(self, entity, **kwargs):
         raise AttributeError('Cannot fetch -- this error should never occur')
@@ -129,25 +149,20 @@ class Traci21Factors(BasicArchive):
     hours of dev time. Pays off only if I load TRACI factors >3600 times.
     """
 
-    def _char_from_row_compartment_method(self, row, cm, q, cf):
-        flow = self._create_flow(row)
+    def _char_from_flow_compartment_method(self, flow, cm, q, cf):
         cx = self.tm.add_context(cm)
-        return self.tm.add_characterization(flow.name, flow.reference_entity, q, cf, context=cx)
+        try:
+            self.tm.add_characterization(flow.name, flow.reference_entity, q, cf, context=cx)
+        except DuplicateCharacterizationError:
+            pass
 
-    def cf_for_method_and_compartment(self, row, method=None, compartment=None):
-        for col, val in row.items():
-            if col not in q_info:
-                continue
+    def add_method_and_compartment(self, method=None, compartment=None):
+        for col, val in q_info.items():
             q = self.check_methods(col)
             if method is None or q is method:
-                cm = q_info[col].Compartment
+                cm = val.Compartment
                 if compartment is None or cm == compartment:
-                    try:
-                        cf = float(val)
-                    except ValueError:
-                        continue
-                    if cf != 0.0:
-                        yield self._char_from_row_compartment_method(row, cm, q, cf)
+                    self._add_column(col)
 
     def row_for_key(self, key):
         if CAS_regexp.match(key):

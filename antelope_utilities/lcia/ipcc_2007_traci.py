@@ -39,7 +39,7 @@ def generate_ipcc_2007_traci21(source, target):
     q['Comment'] = COMMENT
     q['Source'] = SOURCE
 
-    T.load_all()
+    T.add_method_and_compartment(method=q)
 
     print(str(q))
 

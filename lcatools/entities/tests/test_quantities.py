@@ -12,7 +12,7 @@ class QuantitiesTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         super(QuantitiesTest, cls).setUpClass()
-        cls.I = Qdb()
+        cls.I = Qdb.new()
         cls.Q = BasicArchive.from_file(IPCC_2007_GWP)
         cls.gwp = cls.Q['Global Warming Air']
 

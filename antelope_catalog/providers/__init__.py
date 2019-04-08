@@ -17,6 +17,7 @@ from .traci import Traci21Factors
 from .v1_client import AntelopeV1Client
 
 
+''' # this has all been folded into archive.__init__
 class ArchiveError(Exception):
     pass
 
@@ -84,7 +85,6 @@ def _provider_factory(ds_type):
         return mod.init_fcn
 
 
-'''
 def archive_from_json(fname, static=True, catalog=None, **archive_kwargs):
     """
     :param fname: JSON filename

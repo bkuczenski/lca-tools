@@ -105,7 +105,7 @@ class QuantityInterface(AbstractQuery):
         :param kwargs: overwrite=False, origin=query_quantity.origin, others?
         :return:
         """
-        return self._perform_query(_interface, 'characterize', QuantityRequired,
+        return self._perform_query(_interface, 'characterize', QuantityRequired('Quantity interface required'),
                                    flowable, ref_quantity, query_quantity, value,
                                    context=context, location=location, **kwargs)
 

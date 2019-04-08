@@ -57,7 +57,7 @@ class LcCatalogFixture(unittest.TestCase):
         rmtree(TEST_ROOT)
 
     def test_resolver_index(self):
-        self.assertSetEqual({r for r in self._cat.references}, {'local.qdb', 'test.uslci', 'test.uslci.allocated',
+        self.assertSetEqual({r for r in self._cat.references}, {'local.lciadb', 'test.uslci', 'test.uslci.allocated',
                                                                 'test.basic'})
 
     def test_priority(self):

@@ -15,7 +15,7 @@ class QdbTestCase(BasicEntityTest):
     @classmethod
     def setUpClass(cls):
         super(QdbTestCase, cls).setUpClass()
-        cls._qdb = Qdb()
+        cls._qdb = Qdb.new()
 
     def test_qdb(self):
         self.assertEqual(self._qdb.count_by_type('quantity'), 25)

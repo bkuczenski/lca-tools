@@ -12,15 +12,15 @@ REF_QTYS = os.path.join(os.path.dirname(__file__), 'data', 'elcd_reference_quant
 
 class Qdb(BasicArchive):
     """
-    A simple archive that just contains the 26-odd reference (non-LCIA) quantities of the ELCD database circa v3.2
+    A simple archive that just contains the 25-odd reference (non-LCIA) quantities of the ELCD database circa v3.2
     """
-    def __init__(self, ref='local.qdb'):
+    @classmethod
+    def new(cls, ref='local.qdb'):
         """
         Create a Quantity database containing the ILCD reference quantities.  Specify a ref if desired.
         :param ref: ['local.qdb']
         """
-        super(Qdb, self).__init__(REF_QTYS, ref=ref)
-        self._load_all()
+        return cls.from_file(REF_QTYS, ref=ref)
 
     def _fetch(self, entity, **kwargs):
         return self.__getitem__(entity)

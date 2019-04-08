@@ -82,7 +82,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         if CONTEXT_STATUS_ == 'compat':
             if context is not None and 'compartment' not in kwargs:
                 kwargs['compartment'] = str(context)
-        ref_q = self._archive.qdb.get_canonical(ref_quantity)
+        ref_q = self._archive.query.get_canonical(ref_quantity)
         f = new_flow(name, ref_q, **kwargs)
         self._archive.add_entity_and_children(f)
         return f

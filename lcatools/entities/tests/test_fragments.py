@@ -56,7 +56,7 @@ from lcatools.interfaces import CONTEXT_STATUS_
 
 origin = 'test.origin'
 
-qdb = Qdb()
+qdb = Qdb.new()
 qi = qdb.make_interface('quantity')
 
 

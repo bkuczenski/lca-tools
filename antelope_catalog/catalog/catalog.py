@@ -30,7 +30,7 @@ from shutil import rmtree
 # from collections import defaultdict
 
 from lcatools.archives import BasicArchive, REF_QTYS
-from lcatools.lcia_engine import LciaEngine, DEFAULT_CONTEXTS, DEFAULT_FLOWABLES
+from lcatools.lcia_engine import LciaDb, DEFAULT_CONTEXTS, DEFAULT_FLOWABLES
 
 
 from lcatools.interfaces import local_ref, EntityNotFound
@@ -239,8 +239,8 @@ class LcCatalog(object):
         '''
         LCIA: 
         '''
-        self._lcia_engine = LciaEngine(contexts=self._contexts, flowables=self._flowables, **kwargs)
-        qdb = BasicArchive.from_file(self._reference_qtys, term_manager=self._lcia_engine)
+        qdb = LciaDb.new(source=self._reference_qtys, contexts=self._contexts, flowables=self._flowables, **kwargs)
+        self._lcia_engine = qdb.tm
         self.add_existing_archive(qdb, interfaces=('index', 'quantity'), store=False)
 
     @property

@@ -94,10 +94,6 @@ class LcForeground(BasicArchive):
     def _fragment_dir(self):
         return os.path.join(self.source, 'fragments')
 
-    @property
-    def qdb(self):
-        return self._catalog.qdb
-
     def __init__(self, fg_path, catalog=None, **kwargs):
         """
 

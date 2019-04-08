@@ -14,7 +14,7 @@ volu_uuid = '93a60a56-a3c8-22da-a746-0800200c9a66'
 class QuantityImplementation(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.I = Qdb()
+        cls.I = Qdb.new()
         cls.qq_traci = ar.make_interface('quantity')
         cls.gwp = cls.qq_traci['Global Warming Air'].make_ref(cls.qq_traci)
 

@@ -210,6 +210,18 @@ class Characterization(object):
                                              self.quantity.unit(), self.ref_quantity.unit(), self.flowable, self.context,
                                              self.quantity['Name'])
 
+    def __repr__(self):
+        if self.is_null:
+            return '%s(%s, %s, %s, %s: null)' % (self.__class__.__name__, self.flowable,
+                                                 self.ref_quantity.unit(), self.quantity.unit(), self.context)
+        if len(self._locations) > 1:
+            val = '%6.3g (+%d)' % (self.value, len(self._locations) - 1)
+        else:
+            val = '%6.3g' % self.value
+        return '%s(%s, %s, %s, %s: %s)' % (self.__class__.__name__, self.flowable,
+                                           self.ref_quantity.unit(), self.quantity.unit(),
+                                           self.context, val)
+
     def q_view(self):
         if self.quantity is self.ref_quantity:
             ref = '(*)'

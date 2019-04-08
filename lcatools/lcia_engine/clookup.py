@@ -24,7 +24,7 @@ The dream would be to design a graph database that held all of these parameters 
 that applied to a given query-- that graph database would replace the current Term Manager and everything else under
 its hood. But first we will learn to walk...
 """
-from lcatools.contexts import Context
+from lcatools.contexts import Context, NullContext
 from collections import defaultdict
 
 
@@ -47,12 +47,17 @@ class CLookup(object):
         self._dict = defaultdict(set)
         self._q = None
 
+    def __repr__(self):
+        return '%s(%s: %d contexts)' % (self.__class__.__name__, self._q, len(self._dict))
+
     def __getitem__(self, item):
         """
         Returns
         :param item:
         :return:
         """
+        if item is None:
+            item = NullContext
         if not isinstance(item, Context):
             raise TypeError('Supplied CLookup key is not a Context: %s (%s)' % (item, type(item)))
         if item in self._dict:

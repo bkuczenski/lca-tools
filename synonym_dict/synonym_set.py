@@ -172,6 +172,10 @@ class SynonymSet(object):
     def __str__(self):
         return self._name
 
+    def __repr__(self):
+        return '%s(%s, %d terms, %d children)' % (self.__class__.__name__, self._name, len(self._terms),
+                                                  len(self._children))
+
     def __len__(self):
         return len([t for t in self.terms])
 

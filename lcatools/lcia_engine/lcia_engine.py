@@ -44,7 +44,7 @@ class LciaEngine(TermManager):
         When overriding this function, place the super() call between pre-load and post-load activities.
         :return:
         """
-        self._fm.new_entry('carbon dioxide', '124-38-9')
+        fb = self._fm.new_entry('carbon dioxide', '124-38-9')
         # we store the child object and use it to signify biogenic CO2 to optionally quell
         # this strategy depends on the ability to set a query flow's name-- i.e. FlowInterface
         self._bio_co2 = self._fm.new_entry('carbon dioxide (biotic)', '124-38-9', create_child=True)
@@ -56,6 +56,7 @@ class LciaEngine(TermManager):
         for k in self._fm.synonyms('124-38-9'):
             if bool(biogenic.search(k)):
                 self._bio_co2.add_term(k)
+        self._fq_map = {fb: set() for fb in self._fm.objects}
 
     def __init__(self, contexts=None, flowables=None, quantities=None,
                  quell_biogenic_co2=False,
@@ -119,6 +120,18 @@ class LciaEngine(TermManager):
             flow.name = bio  # ensure that flow's name shows up with that term
             self._fb_by_origin[flow.origin].add(bio)
         return fb
+
+    def add_quantity(self, quantity):
+        """
+        Here we are not picky about having duplicate quantities
+        :param quantity:
+        :return:
+        """
+        if quantity.entity_type != 'quantity':
+            raise TypeError('Must be quantity type')
+        if quantity.link not in self._qm:
+            self._qm.add_quantity(quantity)
+        return self._canonical_q(quantity)
 
     def import_cfs(self, quantity):
         """

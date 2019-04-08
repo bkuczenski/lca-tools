@@ -1,5 +1,6 @@
-from ..term_manager import TermManager
+from ..term_manager import TermManager, QuantityConflict
 from lcatools.entity_refs.flow_interface import DummyFlow
+from lcatools.entities import LcQuantity
 from lcatools.contexts import Context
 import unittest
 
@@ -62,7 +63,16 @@ class TermManagerTest(unittest.TestCase):
         pass
 
     def test_add_characterization(self):
-        pass
+        rq = LcQuantity.new('mass', 'kg', origin='test')
+        qq = LcQuantity.new('volume', 'm3', origin='test')
+        cf = self.tm.add_characterization('water', rq, qq, 0.001)
+        self.assertEqual(cf.value, .001)
+
+    def test_dup_mass(self):
+        dummy = 'dummy_external_ref'
+        dup_mass = LcQuantity(dummy, referenceUnit='kg', Name='Mass', origin='dummy.origin')
+        with self.assertRaises(QuantityConflict):
+            self.tm.add_quantity(dup_mass)
 
 
 if __name__ == '__main__':

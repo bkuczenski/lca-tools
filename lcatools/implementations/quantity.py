@@ -32,10 +32,17 @@ class QuantityConversion(object):
         qrr = QRResult(flowable, rq, qq, context, locale, origin, 0.0)
         return cls(qrr)
 
-    def __init__(self, *args):
+    def __init__(self, *args, query=None):
+        self._query = query
         self._results = []
         for arg in args:
             self.add_result(arg)
+
+    def invert(self):
+        inv_qrr = type(self)(query=self.ref)
+        for res in self._results[::-1]:
+            inv_qrr.add_inverted_result(res)
+        return inv_qrr
 
     def add_result(self, qrr):
         if isinstance(qrr, QRResult):
@@ -45,17 +52,21 @@ class QuantityConversion(object):
                 if self.flowable != qrr.flowable:
                     raise FlowableMismatch('%s != %s' % (self.flowable, qrr.flowable))
                 if self.ref != qrr.query:
-                    raise ConversionReferenceMismatch('%s != %s' % (self._results[-1].ref, qrr.query))
+                    raise ConversionReferenceMismatch('%s != %s' % (self.ref, qrr.query))
             self._results.append(qrr)
         else:
             raise TypeError('Must supply a QRResult')
 
     @property
     def query(self):
+        if len(self._results) == 0:
+            return self._query
         return self._results[0].query
 
     @property
     def ref(self):
+        if len(self._results) == 0:
+            return self._query
         return self._results[-1].ref
 
     @property
@@ -243,23 +254,31 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
                 except KeyError:
                     pass
 
-        cfs = [cf for cf in self._archive.tm.factors_for_flowable(flowable, quantity=qq, context=context, **kwargs)]
-        if len(cfs) == 0:
-            raise NoFactorsFound('%s [%s] %s' % (flowable, context, self))
-
         qr_results = []
         qr_mismatch = []
         qr_geog = []
-        for cf in cfs:
+
+        for cf in self._archive.tm.factors_for_flowable(flowable, quantity=qq, context=context, **kwargs):
             res = QuantityConversion(cf.query(locale))
             try:
                 qr_results.append(self._ref_qty_conversion(rq, flowable, context, res, locale))
             except ConversionReferenceMismatch:
                 qr_mismatch.append(res)
 
+        for cf in self._archive.tm.factors_for_flowable(flowable, quantity=rq, context=context, **kwargs):
+            res = QuantityConversion(cf.query(locale))
+            try:
+                qr_results.append(self._ref_qty_conversion(qq, flowable, context, res, locale).invert())
+            except ConversionReferenceMismatch:
+                qr_mismatch.append(res.invert())
+
+
         if len(qr_results) > 1:
             qr_geog = [k for k in filter(lambda x: x[0].locale != locale, qr_results)]
             qr_results = [k for k in filter(lambda x: x[0].locale == locale, qr_results)]
+
+        if len(qr_results + qr_geog + qr_mismatch) == 0:
+            raise NoFactorsFound
 
         return qr_results, qr_geog, qr_mismatch
 
@@ -319,6 +338,8 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
             qq = None
         else:
             qq = self.get_canonical(query_quantity)
+            if qq is None:
+                raise EntityNotFound(qq)
 
         if qq == rq:  # is?
             return [QRResult(flowable, rq, qq, context, locale, qq.origin, 1.0)], [], []
@@ -380,7 +401,10 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
                     print('Flowable: %s\nfrom: %s\nto: %s' % (k.flowable, k.ref, ref_quantity))
                 raise ConversionReferenceMismatch
             else:
-                raise NoFactorsFound('allow_proxy to show values with no geographic match')
+                if len(qr_geog) > 0:
+                    raise NoFactorsFound('allow_proxy to show values with no geographic match')
+                else:
+                    raise AssertionError('Something went wrong')
 
     def cf(self, flow, quantity, ref_quantity=None, context=None, locale='GLO', **kwargs):
         """

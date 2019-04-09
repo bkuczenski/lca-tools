@@ -1,4 +1,10 @@
 ==========
+Tue Apr 09 10:05:06 -0700 2019
+
+Forward with testing.. getting a missing exchange error in configure.set_reference() why? because non-reference flows have their context as termination.  What should we do?
+I think the most expedient thing to do is also the best: simply squash the termination.  This means we need to remove and replace the exchange, since termination is part of its hash.
+
+==========
 Thu Apr 04 10:52:40 -0700 2019
 
 We are almost done! But I want to fix the interface.

@@ -180,7 +180,7 @@ class OpenLcaJsonLdArchive(LcArchive):
 
         exch = p.add_exchange(flow, dirn, value=value, termination=term, add_dups=True)
         if is_ref:
-            p.add_reference(flow, dirn)
+            p.set_reference(flow, dirn)
 
         if 'description' in ex:
             exch.comment = ex['description']

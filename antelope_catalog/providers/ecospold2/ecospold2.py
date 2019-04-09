@@ -413,7 +413,7 @@ class EcospoldV2Archive(LcArchive):
         if self._linked:
             rf = self._grab_reference_flow(o, ref_uuid)
             p.add_exchange(rf, 'Output')  # this should get overwritten with an ExchangeValue later
-            rx = p.add_reference(rf, 'Output')
+            rx = p.set_reference(rf, 'Output')
             self._print('# Identified reference exchange\n %s' % rx)
         else:
             rx = None
@@ -456,7 +456,7 @@ class EcospoldV2Archive(LcArchive):
                 if not self._linked:
                     if is_ref:
                         self._print('## ## Exch is reference %s %s' % (exch.flow, exch.direction))
-                        p.add_reference(exch.flow, exch.direction)
+                        p.set_reference(exch.flow, exch.direction)
         return p
 
     def find_tag(self, process_uuid, rf_uuid, tag):

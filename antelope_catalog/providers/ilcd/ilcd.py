@@ -471,7 +471,7 @@ class IlcdArchive(LcArchive):
             if len(cmt) > 0:
                 x.comment = cmt
             if rf == flow.uuid and rf_dir == f_dir:
-                p.add_reference(flow, f_dir)
+                p.set_reference(flow, f_dir)
 
         return p
 

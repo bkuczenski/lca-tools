@@ -116,7 +116,7 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
         if direction is None:
             direction = self._check_direction(pr, fl)
 
-        pr.add_reference(fl, direction)
+        pr.set_reference(fl, direction)
 
     def unset_reference(self, process_ref, flow_ref, direction=None, **kwargs):
         """
@@ -168,11 +168,7 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
         """
         flow = self._archive.retrieve_or_fetch_entity(flow_ref)
         qty = self._archive.retrieve_or_fetch_entity(quantity_ref)
-        if flow.context.elementary:
-            context = flow.context
-        else:
-            context = None
-        self._archive.tm.add_characterization(flow['Name'], flow.reference_entity, qty, value, context=context,
+        self._archive.tm.add_characterization(flow['Name'], flow.reference_entity, qty, value, context=flow.context,
                                               location=location,
                                               origin=self.origin, overwrite=overwrite)
         '''

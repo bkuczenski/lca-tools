@@ -405,7 +405,33 @@ class LcProcess(LcEntity):
         else:
             return candidates[0]
 
-    def add_reference(self, flow, dirn):
+    def _strip_term(self, flow, dirn):
+        """
+        Removes an existing terminated exchange and replaces it with an unterminated one
+        """
+        exs = [k for k in self._gen_exchanges(flow, dirn)]
+        if len(exs) > 1:
+            raise DuplicateExchangeError('%d exchanges found for %s: %s' % (len(exs), dirn, flow))
+        elif len(exs) == 0:
+            raise NoExchangeFound
+        ex = exs[0]
+        if ex.termination is None:
+            return
+
+        old = self._exchanges.pop(ex.key)
+        new = old.reterminate(None)
+        self._exchanges[new.key] = new
+        self._exch_map[new.flow.external_ref].remove(old)
+        self._exch_map[new.flow.external_ref].add(new)
+
+    def set_reference(self, flow, dirn):
+        """
+        Exchange must already exist. If the exchange is currently terminated, the termination is removed.
+        :param flow:
+        :param dirn:
+        :return:
+        """
+        self._strip_term(flow, dirn)
         rx = Exchange(self, flow, dirn)
         self._set_reference(rx)
         return self._exchanges[rx.key]
@@ -614,7 +640,7 @@ class LcProcess(LcEntity):
             else:
                 raise TypeError('Unhandled value type %s' % type(value))
 
-            # This is the only point an exchange is added to the process
+            # This is the only point an exchange (must be ExchangeValue) is added to the process (see also _strip_term)
             self._exchanges[e.key] = e
             self._exch_map[e.flow.external_ref].add(e)
             return e

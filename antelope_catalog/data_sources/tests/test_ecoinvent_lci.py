@@ -118,7 +118,7 @@ def _extract_and_reduce_lci(node):
 
     p_slim = LcProcess(p_ref.uuid, Name=p_ref['Name'])
     p_slim.add_exchange(p_rx.flow, p_rx.direction, value=p_ref.reference_value(p_rx.flow))
-    p_slim.add_reference(p_rx.flow, p_rx.direction)
+    p_slim.set_reference(p_rx.flow, p_rx.direction)
 
     for x in exchs:
         p_slim.add_exchange(x.flow, x.direction, value=x.value, termination=x.termination)

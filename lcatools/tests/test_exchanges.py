@@ -1,7 +1,7 @@
 import unittest
 
 from lcatools.archives import LcArchive
-from lcatools.exchanges import Exchange
+from lcatools.exchanges import Exchange, ExchangeValue
 from lcatools.exchanges import AmbiguousReferenceError, DuplicateExchangeError, ExchangeError
 from lcatools.entities.tests import refinery_archive
 
@@ -50,13 +50,20 @@ class ExchangesTest(unittest.TestCase):
         cls.petro_r = cls.petro.reference(cls.A[resid_id])
         cls.grid_ng = next(cls.grid.exchange_values(cls.A[ng_id]))  # electricity from natural gas
 
-    def test_hashing(self):
+    def test_equality(self):
         ea = Exchange(self.petro, self.diesel, direction='Output')
         eb = Exchange(self.petro, self.diesel, direction='Output', termination='1234567')
         self.assertNotEqual(ea, eb)
 
+    def test_hashing(self):
+        ea = Exchange(self.grid, self.diesel, 'Input')
+        ev = ExchangeValue(self.grid, self.diesel, 'Input', value=17)
+        self.assertEqual(ea, ev)
+        k = {ev}
+        self.assertIn(ea, k)
+
     def test_exchange_value(self):
-        self.assertAlmostEqual(self.grid.reference().value, 3.6, places=6)
+        self.assertAlmostEqual(self.grid.reference().value, 3.6, places=12)
 
     def test_same_process(self):
         with self.assertRaises(ExchangeError):

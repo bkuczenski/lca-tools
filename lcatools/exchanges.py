@@ -307,6 +307,13 @@ class ExchangeValue(Exchange):
         return cls(allocated.process, allocated.flow, allocated.direction, value=value,
                    termination=allocated.termination)
 
+    def reterminate(self, term=None):
+        new = type(self)(self.process, self.flow, self.direction, termination=term, value=self.value,
+                         value_dict=self._value_dict)
+        if self.comment is not None:
+            new.comment = self.comment
+        return new
+
     def add_to_value(self, value, reference=None):
         if reference is None:
             self._value += value

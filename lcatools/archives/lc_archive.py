@@ -92,7 +92,7 @@ class LcArchive(BasicArchive):
             if 'value' in x:
                 v = x['value']
             ref_x[x['flow']] = process.add_exchange(f, d, value=v)
-            process.add_reference(f, d)
+            process.set_reference(f, d)
         # then add ordinary [allocated] exchanges
         for i in nonrefs:
             x = exchs[i]

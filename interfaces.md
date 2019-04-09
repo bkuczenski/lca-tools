@@ -487,7 +487,7 @@ LcProcess:
  - exchanges(reference) generate allocated exchanges
  + has_exchange(flow, dir)
  - find_reference(ref) flexible input
- - add_reference(flow, dir) *both required*
+ - set_reference(flow, dir) *both required*
  - remove_reference(ref_exch)
  + references: generator
  - reference(flow): return one; error if ambiguous

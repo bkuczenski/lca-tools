@@ -235,7 +235,7 @@ class EcospoldV1Archive(LcArchive):
                     x.comment = cmt
 
             for ref in rf:
-                p.add_reference(ref, 'Output')
+                p.set_reference(ref, 'Output')
 
             self.add(p)
 

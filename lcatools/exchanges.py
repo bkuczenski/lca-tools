@@ -1,5 +1,5 @@
 from .interfaces import comp_dir
-from .contexts import Context
+from .contexts import Context, NullContext
 
 
 class ExchangeError(Exception):
@@ -56,9 +56,12 @@ class Exchange(object):
             if isinstance(termination, str):
                 self._termination = termination
             elif isinstance(termination, Context):
-                self._termination = termination
-                if termination.origin is None:
-                    termination.add_origin(process.origin)
+                if termination is NullContext:
+                    pass
+                else:
+                    self._termination = termination
+                    if termination.origin is None:
+                        termination.add_origin(process.origin)
 
             elif hasattr(termination, 'external_ref'):
                 self._termination = termination.external_ref

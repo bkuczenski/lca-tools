@@ -8,7 +8,7 @@ class FlowInterface(object):
      - a flowable (a list of synonyms for the flowable substnce being described)
      - a context (a hierarchical list of strings designating the flows 'compartment' or category)
     """
-    _context = ('cutoff', )
+    _context = ()
     _context_set_level = 0
 
     def _catch_context(self, key, value):

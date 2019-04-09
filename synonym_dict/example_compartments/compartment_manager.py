@@ -163,7 +163,7 @@ class CompartmentManager(SynonymDict):
 
         :return: the last (most specific) Compartment created
         """
-        if len(comps) == 0:
+        if len(comps) == 0 or comps is None:
             return self._null_entry
         current = None
         auto_name = self._tuple_to_name(comps)

@@ -44,6 +44,11 @@ class QuantityConversion(object):
             inv_qrr.add_inverted_result(res)
         return inv_qrr
 
+    def flatten(self, origin=None):
+        if origin is None:
+            origin = self._results[0].origin
+        return QRResult(self.flowable, self.ref, self.query, self.context, self.locale, origin)
+
     def add_result(self, qrr):
         if isinstance(qrr, QRResult):
             if qrr.query is None or qrr.ref is None:
@@ -270,7 +275,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
             try:
                 qr_results.append(self._ref_qty_conversion(qq, flowable, context, res, locale).invert())
             except ConversionReferenceMismatch:
-                qr_mismatch.append(res.invert())
+                pass  # qr_mismatch.append(res.invert())  We shouldn't be surprised that there is no reverse conversion
 
 
         if len(qr_results) > 1:
@@ -397,8 +402,9 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
             # if len(qr_geog) > 0:
             #     return qr_geog[0]  # only arrive here if allow_proxy is False. Do we still allow it?
             if len(qr_mismatch) > 0:
+                fb, rq, _ = self._get_flowable_info(flowable, ref_quantity, context)
                 for k in qr_mismatch:
-                    print('Flowable: %s\nfrom: %s\nto: %s' % (k.flowable, k.ref, ref_quantity))
+                    print('Flowable: %s\nfrom: %s\nto: %s' % (fb, k.ref, rq))
                 raise ConversionReferenceMismatch
             else:
                 if len(qr_geog) > 0:
@@ -420,9 +426,8 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         return qr.value
 
     def flat_qr(self, flow, quantity, ref_quantity=None, context=None, locale='GLO', **kwargs):
-        flowable, rq, cx = self._get_flowable_info(flow, ref_quantity, context)
-        val = self.quantity_relation(flowable, rq, quantity, cx, locale=locale, **kwargs)
-        return QRResult(flowable, rq, quantity, cx, locale, self.origin, val)
+        val = self.quantity_relation(flow, ref_quantity, quantity, context, locale=locale, **kwargs)
+        return val.flatten(origin=self.origin)
 
     def profile(self, flow, ref_quantity=None, context=None, complete=False, **kwargs):
         """

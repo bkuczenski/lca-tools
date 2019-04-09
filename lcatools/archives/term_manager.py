@@ -391,6 +391,11 @@ class TermManager(object):
             fb = self._create_flowable(flowable)
 
         try:
+            rq = self._canonical_q(ref_quantity)
+        except KeyError:
+            rq = self.add_quantity(ref_quantity)
+
+        try:
             qq = self._canonical_q(query_quantity)
         except KeyError:
             qq = self.add_quantity(query_quantity)
@@ -399,7 +404,7 @@ class TermManager(object):
 
         if cf is None:
             # create our new Characterization with the supplied info
-            new_cf = Characterization(fb, ref_quantity, qq, context=cx, origin=origin)
+            new_cf = Characterization(fb, rq, qq, context=cx, origin=origin)
             if isinstance(value, dict):
                 new_cf.update_values(**value)
             else:

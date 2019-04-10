@@ -36,7 +36,7 @@ class FlowInterface(object):
             value = (value, )
         if level > self._context_set_level:
             self._context_set_level = min([level, 3])  # always allow context spec to override
-            self._context = tuple(value)
+            self._context = tuple(filter(None, value))
 
     def _catch_flowable(self, key, value):
         if key == 'name':

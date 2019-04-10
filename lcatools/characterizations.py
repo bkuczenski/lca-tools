@@ -159,8 +159,10 @@ class Characterization(object):
 
     def __setitem__(self, key, value):
         if key in self._locations:
-            raise DuplicateCharacterizationError('Characterization value already present! %s = %g' %
-                                                 (key, self._locations[key]))
+            if self._locations[key] == value:
+                return  # just skip if they are the same
+            raise DuplicateCharacterizationError('Characterization value already present! %s = %g (incoming %g)' %
+                                                 (key, self._locations[key], value))
         self._locations[key] = value
 
     def update_values(self, **kwargs):

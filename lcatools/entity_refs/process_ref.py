@@ -56,16 +56,13 @@ class ProcessRef(EntityRef):
         :param flow:
         :return:
         """
-        '''
-        try:
-            return next(x for x in self.references(flow=flow))
-        except StopIteration:
-            return next(x for x in self.exchange_values(flow=flow))
-        '''
         if hasattr(flow, 'entity_type'):
             if flow.entity_type == 'exchange':
                 flow = flow.flow
-        return next(x for x in self.references(flow=flow))
+        try:
+            return next(x for x in self.references(flow=flow))
+        except StopIteration:
+            raise KeyError(flow)
 
     def references(self, flow=None):
         for x in self.reference_entity:

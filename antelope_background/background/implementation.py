@@ -171,7 +171,7 @@ class TarjanBackgroundImplementation(BackgroundImplementation):
     def emissions(self, process, ref_flow=None, **kwargs):
         process, ref_flow = self._check_ref(process, ref_flow)
         node = self[process]
-        for x in self._direct_exchanges(node, self._flat.emissions(process, ref_flow)):
+        for x in self._direct_exchanges(node, self._flat.emissions(process, ref_flow), context=True):
             yield x
 
     def ad(self, process, ref_flow=None, **kwargs):
@@ -183,11 +183,11 @@ class TarjanBackgroundImplementation(BackgroundImplementation):
     def bf(self, process, ref_flow=None, **kwargs):
         process, ref_flow = self._check_ref(process, ref_flow)
         node = self[process]
-        for x in self._direct_exchanges(node, self._flat.bf(process, ref_flow)):
+        for x in self._direct_exchanges(node, self._flat.bf(process, ref_flow), context=True):
             yield x
 
     def lci(self, process, ref_flow=None, **kwargs):
         process, ref_flow = self._check_ref(process, ref_flow)
         node = self[process]
-        for x in self._direct_exchanges(node, self._flat.lci(process, ref_flow, **kwargs)):
+        for x in self._direct_exchanges(node, self._flat.lci(process, ref_flow, **kwargs), context=True):
             yield x

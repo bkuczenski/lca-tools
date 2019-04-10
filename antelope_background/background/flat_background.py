@@ -34,7 +34,7 @@ class TermRef(object):
         :param term_ref:
         :param scc_id: None or 0 for singleton /emission; external_ref of a contained process for SCC
         """
-        self._f = flow_ref
+        self._f = str(flow_ref)  # some flows were serialized with integer refs...
         self._d = {'Input': 0, 'Output': 1, 0: 0, 1: 1}[direction]
         self._t = term_ref
         self._s = 0
@@ -198,7 +198,7 @@ class FlatBackground(object):
             return pf.flow.external_ref, pf.direction, pf.process.external_ref, _scc_id
 
         def _make_term_ext(em):
-            return em.flow.external_ref, comp_dir(em.direction), em.compartment[-1], 0
+            return em.flow.external_ref, comp_dir(em.direction), em.context, 0
 
         return cls([_make_term_ref(x) for x in be.foreground_flows(outputs=False)],
                    [_make_term_ref(x) for x in be.background_flows()],

@@ -256,13 +256,13 @@ class BackgroundEngine(object):
         self._add_product_flow(pf)
         return pf
 
-    def _add_emission(self, flow, direction):
-        key = (flow.external_ref, direction)
+    def _add_emission(self, flow, direction, context):
+        key = (flow.external_ref, direction, context)
         if key in self._emissions:
             return self._ef_index[self._emissions[key]]
         else:
             index = len(self._ef_index)
-            ef = Emission(index, flow, direction)
+            ef = Emission(index, flow, direction, context)
             self._emissions[ef.key] = index
             self._ef_index.append(ef)
             return ef
@@ -275,10 +275,10 @@ class BackgroundEngine(object):
         :param strategy:
         :return:
         """
-        if exch.termination is not None:
+        if isinstance(exch.termination, str):
             return self.fg.get(exch.termination)
         else:
-            if (exch.flow.external_ref, exch.direction) in self._emissions:
+            if (exch.flow.external_ref, exch.direction, exch.termination) in self._emissions:
                 return None
             terms = [t for t in self.fg.terminate(exch.flow, direction=exch.direction)]
             if len(terms) == 0:
@@ -664,7 +664,7 @@ class BackgroundEngine(object):
             term = self.terminate(exch, multi_term)
             if term is None:
                 # cutoff -- add the exchange value to the exterior matrix
-                emission = self._add_emission(exch.flow, exch.direction)  # check, create, and add all at once
+                emission = self._add_emission(exch.flow, exch.direction, exch.termination)  # check, create, and add all at once
                 self.add_cutoff(parent, emission, val)
                 continue
 

@@ -5,7 +5,7 @@ class Emission(object):
     Class for storing exchange information about a single row in the exterior (cutoff) matrix.
 
     """
-    def __init__(self, index, flow, direction):
+    def __init__(self, index, flow, direction, context):
         """
         Initialize a row+column in the technology matrix.  Each row corresponds to a reference exchange in the database,
         and thus represents a particular process generating / consuming a particular flow.  A ProductFlow entry is
@@ -17,8 +17,9 @@ class Emission(object):
         self._index = index
         self._flow = flow
         self._direction = direction
+        self._context = context
 
-        self._hash = (flow.external_ref, direction)
+        self._hash = (flow.external_ref, direction, self._context)
 
     def __eq__(self, other):
         """
@@ -55,15 +56,17 @@ class Emission(object):
         return self._flow
 
     @property
-    def compartment(self):
-        return self._flow['Compartment']
+    def context(self):
+        if self._context is None:
+            return None
+        return self._context.name
 
     @property
     def direction(self):
         return self._direction
 
     def __str__(self):
-        return '%s: %s [%s]' % (self._direction, self._flow['Name'], ', '.join(filter(None, self.compartment)))
+        return '%s: %s [%s]' % (self._direction, self._flow['Name'], self.context)
 
     def table_label(self, concise=False):
         """

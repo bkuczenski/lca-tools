@@ -64,7 +64,7 @@ class CompartmentManager(SynonymDict):
 
     @property
     def top_level_compartments(self):
-        for v in self._entries:
+        for v in self.entries:
             if v.parent is None:
                 yield v
 
@@ -115,7 +115,7 @@ class CompartmentManager(SynonymDict):
 
     @staticmethod
     def _tuple_to_name(comps):
-        return '; '.join(comps)
+        return '; '.join(filter(None, comps))
 
     def _check_subcompartment_lineage(self, current, c):
         """

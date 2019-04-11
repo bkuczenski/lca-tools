@@ -344,7 +344,7 @@ class ContextManager(CompartmentManager):
 
     def __getitem__(self, item):
         if str(item).lower() in self._disregarded:
-            return None
+            return self._null_entry
         # if str(item).lower() in PROTECTED:
         #     raise ProtectedTerm('Use "to %s" or "from %s"' % (item, item))
         return super(ContextManager, self).__getitem__(item)

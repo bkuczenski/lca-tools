@@ -2,6 +2,7 @@ from collections import defaultdict
 
 from .basic import BasicImplementation
 from ..interfaces import IndexInterface, comp_dir, CONTEXT_STATUS_
+from lcatools.contexts import NullContext
 
 
 class IndexImplementation(BasicImplementation, IndexInterface):
@@ -98,6 +99,12 @@ class IndexImplementation(BasicImplementation, IndexInterface):
 
     def contexts(self, **kwargs):
         return self._archive.tm.contexts(**kwargs)
+
+    def get_context(self, term, **kwargs):
+        cx = self._archive.tm[term]
+        if cx is None:
+            return NullContext
+        return cx
 
     def synonyms(self, item, **kwargs):
         return self._archive.tm.synonyms(item)

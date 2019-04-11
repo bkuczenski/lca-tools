@@ -4,6 +4,50 @@ Tue Apr 09 10:05:06 -0700 2019
 Forward with testing.. getting a missing exchange error in configure.set_reference() why? because non-reference flows have their context as termination.  What should we do?
 I think the most expedient thing to do is also the best: simply squash the termination.  This means we need to remove and replace the exchange, since termination is part of its hash.
 
+Wed 2019-04-10 10:17:52 -0700
+
+LCIA is not working for complex reasons, and there are at least two major points of incoherence in the code:
+
+ (1) get_canonical is not used/behaving as expected
+ (2) context lookup is not well defined w/r/t the NullContext singleton. Alternative ideas are:
+     x NullContext applies to every failed lookup (deprecated)
+     - NullContext matches every context
+     x NullContext matches no context (facially wrong: unit conversions are intended to be stored with NullContext)
+     x NullContext signifies an error
+
+Related observation: it is an error for any interface method to return None.  It should return something or raise an exception.  I'm looking at you, get_context()
+
+OK, so here's the deal.  EntityStore.__getitem__ returns None if no entity is found (i.e. catches KeyError), but SynonymDict.__getitem__ raises KeyError
+CompartmentManager returns NullEntry for nonspecific items
+ContextManager also returns NullEntry for disregarded items
+they all still raise KeyError if nothing is found.  This is still consistent with SynonymDict (since in the two exception cases the object *was* found) but inconsistent with archive
+And that's fine.  In fact the structure of AbstractQuery is premised on that- which is why None leads to the fallback exception (should maybe be EntityNotFound for those cases)
+
+The question is for the TermManager- whether we should raise a KeyError or return None.  The code seems to assume we return None- which makes sense because the context is meant to be "entity-like".
+So let's preserve it, and use NullContext strictly for affirmative identifications of cases where no context (or all contexts) applies, and tentatively assume NullContext matches any context that has not encountered another match (assuming dist>=3)
+Then get_context returns NullContext if tm[cx] is None, and client code can handle that.  Exchanges already drop NullContext on __init__ (resulting in a true cutoff)
+
+NOW... on to get_canonical
+THIS method should do the following:
+ - given a quantity or reference to a quantity,
+   = return the corresponding canonical quantity already known
+   = if no corresponding canonical quantity is found, raise a KeyError
+   - the CatalogQuery is a special case: if the quantity is not known,
+     = create a new canonical quantity from the information given
+     = must provide a way to merge quantities
+       * the challenge here is to make the merge persistent- i.e. to automatically store merged entries as synonyms that will get reintroduced
+       	 The preferred solution to that is to use the entity_store- i.e. to add synonyms to the canonical quantity entities that get serialized
+	 But we have not tackled serialization at all yet, which carries challenges with qty refs--
+	 except we don't need to. We can: on merge, update the canonical qty's synonyms property. but we haven't added any non-local qtys to the qdb entity store. Then when the qdb gets saved, only local qtys will get written, including synonyms from the merge.
+
+OK, so that needs to be done:
+ x write code to store synonyms on merge of QuantitySynonyms objects
+ x write tests for that
+ .. write tests for qdb serialization
+ x write a client-facing method to merge catalog quantities
+ 0 is that an interface method?
+ Let's take a break and percolate on this, then implement it later.
+
 ==========
 Thu Apr 04 10:52:40 -0700 2019
 
@@ -354,6 +398,67 @@ FYI, quantity NEEDS context manager because, when we add_characterization, we th
 
 
 
+DEPRECATED
+==========----------------------------------------
+Mon Jul 30 14:19:41 -0700 2018
+
+Context Manager methods:
+
+ - add_context(string)
+   = return string if successful
+
+ - _create_flowable(string)
+   = return string if successful
+
+ - add flow-context linkage(flow with 'Compartment' or flowable, context, uuid)
+
+ - add_synonym(existing_term, *new_terms)
+   = raise if existing_term doesn't exist, or if any of new_terms do exist
+
+ - getitem(term)
+   = return None if not present
+   = return uuid for entity if present
+
+ - list contexts
+
+ - list flowables
+
+ - list contexts for flowable
+
+
+Expectations:
+ - BasicArchive stores contexts, flow(able)s, and quantities by uuid or otherwise valid entity key
+
+ - context manager interceps requests for non-entities incl:
+   * string names and synonyms for contexts
+   * string names and synonyms for flowables
+   * uuids that correspond to flowable-context pairs
+   = and returns the uuids for the appropriate entities (context, flowable)
+
+ - given a flowable, context manager should know all contexts in which it has been observed/reported
+   * this is generally limited to elementary flows and only for classical archives that use the old flow definition;;;;;;;;;
+   * terminated intermediate flows and exchanges defined with elementary terminations to flowables will not be known to context manager
+   * however, archives that contain characterization data will be known
+
+ - quantitative characterization information is unknown to context manager unless it is dependent on a flow-context pairing, in which case the existence of the characterization will be implicit but the value will not be known
+
+
+==========----------------------------------------
+
+Characterizations:
+
+Now a characterization requires a flowable, a quantity, and an optional context.  It is still otherwise identical, except the natural direction is taken from the context instead of stored locally.
+
+
+==========----------------------------------------
+
+Qdb extension:
+ - inherits from basic archive
+
+ - pre-populates context manager with comprehensive list of flows and contexts
+   * since this is expected to be moderately costly, it should only be done once per catalog (i.e. in the Qdb and not in the archive-generic context manager)
+
+ - also adds a synonym list for quantities
 ----------
 ==========
 ----------

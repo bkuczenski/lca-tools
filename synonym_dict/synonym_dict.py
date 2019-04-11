@@ -50,7 +50,7 @@ class SynonymDict(object):
         self.load_dict(fbs)
 
     def _list_entries(self):
-        return [f for f in self._entries]
+        return [f for f in self.entries]
 
     def serialize(self, entries=None):
         if entries is None:
@@ -135,7 +135,7 @@ class SynonymDict(object):
             self._l.pop(ent)
 
     @property
-    def _entries(self):
+    def entries(self):
         for k in sorted(self._l.keys(), key=str):
             yield k
 
@@ -145,11 +145,11 @@ class SynonymDict(object):
         Yield all distinct objects in the dict
         :return:
         """
-        for k in self._entries:
+        for k in self.entries:
             yield k.object
 
     def objects_with_string(self, pattern):
-        for ent in self._entries:
+        for ent in self.entries:
             if ent.contains_string(pattern, ignore_case=self._ignore_case):
                 yield ent.object
 
@@ -286,7 +286,7 @@ class SynonymDict(object):
         :return:
         """
         try:
-            parent = next(v for v in self._entries if v.has_child(ent))
+            parent = next(v for v in self.entries if v.has_child(ent))
         except StopIteration:
             raise ChildNotFound('No set found containing child %s' % ent)
         parent.remove_child(ent)

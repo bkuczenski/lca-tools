@@ -133,6 +133,25 @@ class LciaEngine(TermManager):
             self._qm.add_quantity(quantity)
         return self._canonical_q(quantity)
 
+    def get_canonical(self, quantity):
+        try:
+            return self._canonical_q(quantity)
+        except KeyError:
+            return self.add_quantity(quantity)
+
+    def merge_quantities(self, first, second):
+        """
+        Absorb second into child of first.  Currently does not support remapping entries, so import_cfs(second)
+        needs to be run again. Old factors will be left in so _fq_map still works.
+        :param first:
+        :param second:
+        :return:
+        """
+        dom = self.get_canonical(first)
+        add = self.get_canonical(second)
+        self._qm.merge(dom, add)
+        self.import_cfs(second)
+
     def import_cfs(self, quantity):
         """
         Given a quantity, import its CFs into the local database.  Unfortunately this is still going to be slow because

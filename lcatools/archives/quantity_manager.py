@@ -74,13 +74,24 @@ class QuantitySynonyms(SynonymSet):
         else:
             raise QuantityAlreadySet
 
+    def _save_synonyms(self, other):
+        """
+        adds to other's synonym set-
+        :param other:
+        :return:
+        """
+        for k in other.terms:
+            self._quantity.add_synonym(k)
+
     def add_child(self, other, force=False):
         if not isinstance(other, QuantitySynonyms):
             raise TypeError('Child set is not a Quantity synonym set (%s)' % type(other))
-        if self._quantity is None:
-            self.quantity = other.quantity
         if other.unit != self.unit:
             raise QuantityUnitMismatch('incoming %s (canonical %s)' % (other.unit, self._quantity.unit()))
+        if self._quantity is None:
+            self.quantity = other.quantity
+        elif self._quantity.is_entity:
+            self._save_synonyms(other)
         super(QuantitySynonyms, self).add_child(other, force=force)
 
     @property

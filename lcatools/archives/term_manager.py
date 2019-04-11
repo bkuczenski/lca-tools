@@ -18,7 +18,8 @@ Someday, it might make sense to expose it as a massive, central graph db.
 """
 from synonym_dict import SynonymDict
 
-from lcatools.contexts import ContextManager, Context
+from lcatools.interfaces import EntityNotFound
+from lcatools.contexts import ContextManager, Context, NullContext
 from .quantity_manager import QuantityManager
 
 from lcatools.characterizations import Characterization
@@ -252,7 +253,7 @@ class TermManager(object):
          _fq_map (nonconflicting)
          _flow_map (nonconflicting)
         Before we can do either, we need to check for collisions
-        This is just too thorny to take on right now.
+        This just brute forces it which must be ungodly slow, and btw it also hasn't been tested
         :param dominant:
         :param syns:
         :return:
@@ -448,7 +449,7 @@ class TermManager(object):
         try:
             return self._canonical_q(quantity)
         except KeyError:
-            return None
+            raise EntityNotFound(quantity)
 
     def _canonical_q(self, quantity):
         """
@@ -541,7 +542,7 @@ class TermManager(object):
             cl = self._qlookup(qq, fb)
         except NoFQEntry:
             return
-        if cx is None:
+        if cx is NullContext:
             for v in cl.values():
                 yield v
         else:
@@ -551,17 +552,14 @@ class TermManager(object):
     def factors_for_flowable(self, flowable, quantity=None, context=None, **kwargs):
         """
         This is the method that actually performs the lookup.  Other methods are wrappers for this
-        :param flowable:
+        :param flowable: a string
         :param quantity: a quantity known to the quantity manager
         :param context: [None] default provide all contexts; must explicitly provide 'none' to filter by null context
         :return:
         """
         try:
             fb = self._fm[flowable]
-            if context is None:
-                cx = None
-            else:
-                cx = self._cm[context]
+            cx = self._cm[context]
         except KeyError:
             return
         if quantity is None:
@@ -624,16 +622,13 @@ class TermManager(object):
 
     def synonyms(self, term):
         try:
-            c = self._cm[term]
-            return self._cm.synonyms(str(c))
+            return self._cm.synonyms(term)
         except KeyError:
             try:
-                c = self._fm[term]
-                return self._fm.synonyms(str(c))
+                return self._fm.synonyms(term)
             except KeyError:
                 try:
-                    c = self._qm[term]
-                    return self._qm.synonyms(str(c))
+                    return self._qm.synonyms(term)
                 except KeyError:
                     return ()
 
@@ -744,8 +739,8 @@ class TermManager(object):
                         raise
 
         # add flowables and contexts
-        j.update(self._fm.serialize(obj for obj in self._fm.objects if str(obj) in fbs))
-        j.update(self._cm.serialize(obj for obj in self._cm.objects if str(obj) in cxs))
+        j.update(self._fm.serialize(obj for obj in self._fm.entries if str(obj) in fbs))
+        j.update(self._cm.serialize(obj for obj in self._cm.entries if str(obj) in cxs))
 
         return j, qqs, rqs
 

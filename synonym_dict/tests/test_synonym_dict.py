@@ -106,6 +106,12 @@ class TestContainer(object):
             g.add_synonym('', 'hello')
             self.assertNotIn('', g)
 
+        def test_serialize(self):
+            g = self._test_class()
+            g.new_entry('hello', 'bonjour')
+            g.new_entry('adios', 'adieu')
+            g.serialize()
+
         def test_cast_to_str(self):
             g = self._test_class(ignore_case=False)
             a = g.new_entry('the answer', 42)

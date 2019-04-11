@@ -145,14 +145,11 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
 
     def get_canonical(self, quantity, **kwargs):
         """
-        Retrieve a canonical quantity from a qdb
+        Retrieve a canonical quantity from a qdb; else raises EntityNotFound
         :param quantity: external_id of quantity
         :return: quantity entity
         """
-        c_q = self._archive.tm.get_canonical(quantity)
-        if c_q is None:
-            raise EntityNotFound(quantity)
-        return c_q
+        return self._archive.tm.get_canonical(quantity)
 
     def factors(self, quantity, flowable=None, context=None, dist=0):
         q = self.get_canonical(quantity)
@@ -350,12 +347,12 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
             return [QRResult(flowable, rq, qq, context, locale, qq.origin, 1.0)], [], []
 
         try:
-            return self._quantity_conversions(flowable, rq, qq, context, locale=locale, **kwargs)
+            return self._quantity_conversions(flowable, rq, qq, cx, locale=locale, **kwargs)
         except NoFactorsFound:
             if qq is None:
                 return [], [], []
             else:
-                return [QuantityConversion.null(flowable, rq, qq, context, locale, self.origin)], [], []
+                return [QuantityConversion.null(flowable, rq, qq, cx, locale, self.origin)], [], []
 
     def quantity_relation(self, flowable, ref_quantity, query_quantity, context, locale='GLO',
                           strategy=None, allow_proxy=True, **kwargs):
@@ -474,12 +471,19 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         if group is None:
             group = lambda _x: _x.process
         for x in inventory:
+            if x.type == 'reference':
+                raise ValueError('Reference exchange passed to do_lcia\n%s' % x)
             if x.type == 'cutoff':
                 res.add_cutoff(x)
                 continue
             if x.type in ('node', 'self'):
                 continue
             ref_q = self.get_canonical(x.flow.reference_entity)
+            if ref_q is None:
+                raise AttributeError('Exchanged Flow missing reference entity\n%s' % x.flow)
+            if x.termination is None:
+                raise ZeroDivisionError('none termination found on non-cutoff exchange\n%s' % x)
+
             try:
                 cf = self.quantity_relation(x.flow.name, ref_q, q, x.termination, locale=locale,
                                             **kwargs)

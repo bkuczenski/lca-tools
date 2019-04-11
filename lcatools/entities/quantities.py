@@ -28,6 +28,11 @@ class LcQuantity(LcEntity):
         super(LcQuantity, self).__init__('quantity', external_ref, **kwargs)
         self._qi = None
 
+    def _set_reference(self, ref_entity):
+        if isinstance(ref_entity, str):
+            ref_entity = LcUnit(ref_entity)
+        super(LcQuantity, self)._set_reference(ref_entity)
+
     def set_qi(self, qi):
         self._qi = qi
 
@@ -39,6 +44,18 @@ class LcQuantity(LcEntity):
 
     def is_lcia_method(self):
         return 'Indicator' in self.keys()
+
+    def add_synonym(self, k):
+        if self.has_property('Synonyms'):
+            if isinstance(self['Synonyms'], str):
+                syns = {self['Synonyms']}
+            else:
+                syns = set(self['Synonyms'])
+        else:
+            syns = set()
+        syns.add(k)
+        self['Synonyms'] = syns
+
 
     """
     Quantity Interface Methods

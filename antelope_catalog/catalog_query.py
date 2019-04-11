@@ -3,7 +3,7 @@ Query Interface -- used to operate catalog refs
 """
 
 from lcatools.interfaces import (IndexInterface, BackgroundInterface, InventoryInterface, QuantityInterface,
-                                 EntityNotFound, IndexRequired)
+                                 EntityNotFound, IndexRequired, PropertyExists)
 
 INTERFACE_TYPES = {'basic', 'index', 'inventory', 'background', 'quantity', 'foreground'}
 READONLY_INTERFACE_TYPES = {'basic', 'index', 'inventory', 'background', 'quantity'}
@@ -30,6 +30,7 @@ class CatalogQuery(IndexInterface, BackgroundInterface, InventoryInterface, Quan
     both exact resources and resources with greater semantic specificity (such as 'local.ecoinvent.3.2.apos').
     All queries accept the "strict=" keyword: set to True to only accept exact matches.
     """
+    _recursing = False
     def __init__(self, origin, catalog=None, debug=False):
         self._origin = origin
         self._catalog = catalog
@@ -119,9 +120,21 @@ class CatalogQuery(IndexInterface, BackgroundInterface, InventoryInterface, Quan
     '''
     def get_canonical(self, quantity, **kwargs):
         try:
-            return self._tm.get_canonical(quantity)
-        except KeyError:
-            q_can = super(CatalogQuery, self).get_canonical(quantity, **kwargs)
-            self._tm.add_quantity(q_can)
-            self._tm.import_cfs(q_can)
-            return self._tm.get_canonical(q_can)
+            q_can = self._tm.get_canonical(quantity)
+        except EntityNotFound:
+            if self._recursing is True:
+                raise ZeroDivisionError('ggggg')
+            print('Missing canonical quantity-- retrieving from original source')
+            self._recursing = True
+            q_ext = self._perform_query('quantity', 'get_canonical', PropertyExists('mmnnh'), quantity, **kwargs)
+            print('Adding locally: %s' % q_ext)
+            self._tm.add_quantity(q_ext)
+            self._tm.import_cfs(q_ext)
+            q_can = self._tm.get_canonical(q_ext)
+            print('Retrieving canonical %s' % q_can)
+        return q_can
+
+    def make_ref(self, entity):
+        if entity.entity_type == 'quantity':
+            entity = self.get_canonical(entity)
+        return super(CatalogQuery, self).make_ref(entity)

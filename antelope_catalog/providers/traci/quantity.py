@@ -24,7 +24,9 @@ class Traci21QuantityImplementation(QuantityImplementation):
     def get_canonical(self, name, **kwargs):
         if hasattr(name, 'entity_type'):
             if name.entity_type == 'quantity':
-                return self[name]
+                qi = self[name]
+                if qi is not None:
+                    return qi
         for qi in self._archive.lcia_method_iter():
             if qi['Category'] == name:
                 return qi

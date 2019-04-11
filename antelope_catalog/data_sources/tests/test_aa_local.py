@@ -100,6 +100,7 @@ class LocalCatalog(unittest.TestCase):
             for ref in s.references:
                 for iface in s.interfaces(ref):
                     res = self._cat.get_resource(ref, iface, strict=True)
+                    print(res)
                     res.check(self._cat)
 
 

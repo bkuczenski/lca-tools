@@ -214,7 +214,7 @@ class AntelopeV1Client(BasicArchive):
         ent = None
 
         if key in self._entities:
-            ent = self._entities[key]
+            return self._entities[key]
 
         parts = key.split('/')
         if len(parts) != 2:

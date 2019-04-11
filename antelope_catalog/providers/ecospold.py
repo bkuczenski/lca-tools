@@ -12,6 +12,7 @@ from __future__ import print_function, unicode_literals
 
 import uuid
 import re
+import os
 
 from lxml import objectify
 # from lxml.etree import tostring
@@ -134,7 +135,7 @@ class EcospoldV1Archive(LcArchive):
         :param exch:
         :return:
         """
-        number = int(exch.get('number'))
+        number = str(exch.get('number'))
         try_f = self[number]
         if try_f is not None:
             f = try_f
@@ -153,7 +154,7 @@ class EcospoldV1Archive(LcArchive):
 
         if exch.get("unit") != f.unit():
             local_q = self._create_quantity(exch.get("unit"))
-            if len([z for z in self.tm.factors_for_flowable(f, quantity=local_q)]) == 0:
+            if local_q.cf(f) == 0.0:
                 if (f.unit(), local_q.unit()) in conversion_dict:
                     val = conversion_dict[(f.unit(), local_q.unit())]
                 elif (local_q.unit(), f.unit()) in conversion_dict:
@@ -190,54 +191,53 @@ class EcospoldV1Archive(LcArchive):
             local_q = self._create_quantity(exch.get("unit"))
             v = float(exch.get('meanValue'))  # returns none if missing
             if local_q is not f.reference_entity:
-                v = v / local_q.cf(f).value
+                v = v / local_q.cf(f)
             c = exch.get('generalComment')
             flowlist.append((f, d, v, c))
         return rf, flowlist
 
-    def _create_process(self, filename):
+    def _create_process(self, ext_ref):
         """
         Extract dataset object from XML file
-        :param filename:
+        :param ext_ref:
         :return:
         """
-        o = self._get_objectified_entity(filename)
+        try_p = self[ext_ref]
+        if try_p is not None:
+            p = try_p
+            assert p.entity_type == 'process', "Expected process, found %s" % p.entity_type
+            return p
+        o = self._get_objectified_entity(ext_ref + '.xml')
 
         p_meta = o.dataset.metaInformation.processInformation
         n = p_meta.referenceFunction.get('name')
 
-        try_p = self[n]
-        if try_p is not None:
-            p = try_p
-            assert p.entity_type == 'process', "Expected process, found %s" % p.entity_type
+        # create new process
+        g = p_meta.geography.get('location')
+        stt = {'begin': str(find_tag(p_meta, 'startDate')), 'end': str(find_tag(p_meta, 'endDate'))}
 
-        else:
-            # create new process
-            g = p_meta.geography.get('location')
-            stt = {'begin': str(find_tag(p_meta, 'startDate')), 'end': str(find_tag(p_meta, 'endDate'))}
+        c = p_meta.referenceFunction.get('generalComment')
 
-            c = p_meta.referenceFunction.get('generalComment')
+        cls = [p_meta.referenceFunction.get('category'), p_meta.referenceFunction.get('subCategory')]
+        p = LcProcess(ext_ref, Name=n, Comment=c, SpatialScope=g, TemporalScope=stt,
+                      Classifications=cls)
 
-            cls = [p_meta.referenceFunction.get('category'), p_meta.referenceFunction.get('subCategory')]
-            p = LcProcess(n, Name=n, Comment=c, SpatialScope=g, TemporalScope=stt,
-                          Classifications=cls)
+        rf, flowlist = self._extract_exchanges(o)
 
-            rf, flowlist = self._extract_exchanges(o)
+        for flow, f_dir, val, cmt in flowlist:
+            if flow in rf and f_dir == 'Output':
+                term = None
+            else:
+                term = self.tm[flow.context]
+            self._print('Exch %s [%s] (%g)' % (flow, f_dir, val))
+            x = p.add_exchange(flow, f_dir, reference=None, value=val, termination=term, add_dups=True)
+            if cmt is not None:
+                x.comment = cmt
 
-            for flow, f_dir, val, cmt in flowlist:
-                if flow in rf and f_dir == 'Output':
-                    term = None
-                else:
-                    term = self.tm[flow.context]
-                self._print('Exch %s [%s] (%g)' % (flow, f_dir, val))
-                x = p.add_exchange(flow, f_dir, reference=None, value=val, termination=term, add_dups=True)
-                if cmt is not None:
-                    x.comment = cmt
+        for ref in rf:
+            p.set_reference(ref, 'Output')
 
-            for ref in rf:
-                p.set_reference(ref, 'Output')
-
-            self.add(p)
+        self.add(p)
 
         return p
 
@@ -249,7 +249,7 @@ class EcospoldV1Archive(LcArchive):
         :return:
         """
         try:
-            self._create_process(key + '.xml')
+            self._create_process(key)
             return self[key]
         except KeyError:
             raise KeyError('No way to fetch key "%s". try load_all()' % key)
@@ -265,7 +265,7 @@ class EcospoldV1Archive(LcArchive):
             if bool(re.search('Natural gas, combusted in industrial equipment', x)):
                 self.retrieve_or_fetch_entity('Natural gas, combusted in industrial equipment')
         for k in self.list_datasets():
-            self._create_process(k)
+            self._create_process(os.path.splitext(k)[0])
         self.check_counter('quantity')
         self.check_counter('flow')
         self.check_counter('process')

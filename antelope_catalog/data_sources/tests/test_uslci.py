@@ -37,6 +37,7 @@ class UsLciTestContainer(object):
         _atype = None
         _initial_count = (0, 0, 0)
         _bg_len = None
+        _ex_len = None
         _test_case_lcia = 0.0
 
         @property
@@ -90,6 +91,7 @@ class UsLciTestContainer(object):
 
         def test_31_bg_length(self):
             self.assertEqual(len([k for k in self.query.background_flows()]), self._bg_len)
+            self.assertEqual(len([k for k in self.query.exterior_flows()]), self._ex_len)
 
         def test_32_lci_fg(self):
             lci = self._get_fg_test_case_lci()
@@ -109,6 +111,7 @@ class UsLciEcospoldTest(UsLciTestContainer.UsLciTestBase):
     _atype = 'ecospold'
     _initial_count = (5, 97, 5)
     _bg_len = 38
+    _ex_len = 3286
     _test_case_lcia = 0.0415466  # more robust bc of ocean freight??
 
     def test_get_by_id(self):

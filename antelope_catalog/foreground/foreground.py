@@ -86,6 +86,19 @@ class LcForeground(BasicArchive):
                 return next(k for k in self._uuid_map[uid])
         return None
 
+    def __getitem__(self, item):
+        """
+        Note: this user-friendliness check adds 20% to the execution time of getitem-- so avoid it if possible
+        (use _get_entity directly -- especially now that upstream is now deprecated)
+        (note that _get_entity does not get contexts)
+
+        :param item:
+        :return:
+        """
+        if hasattr(item, 'link'):
+            item = item.link
+        return super(BasicArchive, self).__getitem__(item)
+
     @property
     def _archive_file(self):
         return os.path.join(self.source, 'entities.json')
@@ -164,6 +177,7 @@ class LcForeground(BasicArchive):
     def add(self, entity):
         """
         Reimplement base add to (1) allow fragments, (2) merge instead of raising a key error.
+        This is totally missing tm tie-ins so that may be an error
         :param entity:
         :return:
         """
@@ -179,6 +193,7 @@ class LcForeground(BasicArchive):
         self._ensure_valid_refs(entity)
         try:
             self._add(entity, entity.link)
+        #TODO: do we need to consult the tm?
         except EntityExists:
             # merge incoming entity's properties with existing entity
             current = self[entity.link]

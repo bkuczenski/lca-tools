@@ -1,4 +1,49 @@
 ==========
+Thu Apr 11 09:21:59 -0700 2019
+
+OK we are so close, rolling on up to Promontory Point, but we are still a bit off.
+
+After quite some rumination I think I have the following model in mind:
+
+ - When using the catalog, we only want to deal with quantities that are local to the qdb.  This means we want to give back either:
+   * quantities whose _qi is a local.qdb implementation
+   * quantity refs whose _query is to local.qdb
+   that will ensure that the LCIA Engine gets all the requests for information.
+
+ - At the same time, the quantity refs from non-qdb sources (including non-local sources) are self contained because bejezzuz if I didn't pull that off then what has all this effort been for anyway?
+   * the locally-stored refs have the capacity *themselves* to retrieve their own factors; do quantity relation; etc, but the user will never see them unless they access the resource directly
+   * instead, the catalog query will masquerade them
+   * we want to store those quantity refs IN the local qdb archive, so that basic operations work to find them.
+
+ - THE WAY IT ALL WORKS
+   * anytime we get a non-canonical quantity, we want to make a canonical version
+     - CatalogQuery intercepts get_canonical to ask _tm first
+       + first we try to tm.get canonical
+       	 = if it's found (and for paranoia we can check to see if its query is local), we're good- send it off
+	 = if it's not found, we need to add it
+	   --> add authentic ref to qdb entity store
+	       + if its external_ref is already known, then we are kinda screwed
+	       + no, we'll use links as entity keys, as in foreground. this is getting complicated and buggy.
+	   --> create a new "masquerade" CatalogRef.from_query(local.qdb) and install IT as the canonical quantity; make sure that the link and external ref lookup to the masqueraded 
+
+     - CatalogQuery intercepts make_ref AFTER THE FACT and runs get_canonical on the ref
+       	 = so again: the authentic quantity_ref is stored in the entity_store
+	 = the masqueraded quantity_ref is the canonical quantity
+	 = the masqueraded quantity_ref has a query that is linked to the lcia engine, not the authentic source
+	 = get_canonical(authentic quantity_ref) => masqueraded quantity_ref
+	   --> this implies a mod to LciaDb.add() because that is the point where the qty is added to the tm
+       + add/merge it to lcia engine (and import cfs)
+   * we want to ask local.qdb first, not last, in gen_interfaces
+
+
+Thu 2019-04-11 11:16:56 -0700
+
+Shit. Another 90 minutes spent and we are... maybe incremntally closer? Now we are in context hell so I need another 6 hours to think + fix...
+off to other things.
+
+
+
+==========
 Tue Apr 09 10:05:06 -0700 2019
 
 Forward with testing.. getting a missing exchange error in configure.set_reference() why? because non-reference flows have their context as termination.  What should we do?

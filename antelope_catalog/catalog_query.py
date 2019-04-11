@@ -120,21 +120,21 @@ class CatalogQuery(IndexInterface, BackgroundInterface, InventoryInterface, Quan
     '''
     def get_canonical(self, quantity, **kwargs):
         try:
+            print('Gone canonical')
             q_can = self._tm.get_canonical(quantity)
         except EntityNotFound:
-            if self._recursing is True:
-                raise ZeroDivisionError('ggggg')
-            print('Missing canonical quantity-- retrieving from original source')
-            self._recursing = True
-            q_ext = self._perform_query('quantity', 'get_canonical', PropertyExists('mmnnh'), quantity, **kwargs)
-            print('Adding locally: %s' % q_ext)
-            self._tm.add_quantity(q_ext)
-            self._tm.import_cfs(q_ext)
-            q_can = self._tm.get_canonical(q_ext)
-            print('Retrieving canonical %s' % q_can)
+            if hasattr(quantity, 'entity_type') and quantity.entity_type == 'quantity' and not quantity.is_entity:
+                print('Missing canonical quantity-- adding to LciaDb')
+                self._catalog.register_quantity_ref(quantity)
+                q_can = self._tm.get_canonical(quantity)
+                print('Retrieving canonical %s' % q_can)
+            else:
+                raise
         return q_can
 
     def make_ref(self, entity):
+        e_ref = super(CatalogQuery, self).make_ref(entity)
         if entity.entity_type == 'quantity':
-            entity = self.get_canonical(entity)
-        return super(CatalogQuery, self).make_ref(entity)
+            print('Going canonical')
+            return self.get_canonical(e_ref)
+        return e_ref

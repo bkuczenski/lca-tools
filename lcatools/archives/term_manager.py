@@ -580,11 +580,11 @@ class TermManager(object):
         :param context:
         :return:
         """
-        qq = self._canonical_q(quantity)
         if flowable is not None:
-            for k in self.factors_for_flowable(flowable, quantity=qq, context=context, **kwargs):
+            for k in self.factors_for_flowable(flowable, quantity=quantity, context=context, **kwargs):
                 yield k
         else:
+            qq = self._canonical_q(quantity)
             for f in self._qaccess(qq).keys():
                 for k in self.factors_for_flowable(f, quantity=qq, context=context, **kwargs):
                     yield k

@@ -240,12 +240,16 @@ class LcCatalog(object):
         LCIA: 
         '''
         qdb = LciaDb.new(source=self._reference_qtys, contexts=self._contexts, flowables=self._flowables, **kwargs)
-        self._lcia_engine = qdb.tm
+        self._qdb = qdb
         self.add_existing_archive(qdb, interfaces=('index', 'quantity'), store=False)
 
     @property
     def lcia_engine(self):
-        return self._lcia_engine
+        return self._qdb.tm
+
+    def register_quantity_ref(self, q_ref):
+        print('registering %s' % q_ref.link)
+        self._qdb.add(q_ref)
 
     @property
     def sources(self):
@@ -566,6 +570,9 @@ class LcCatalog(object):
         """
         if itype is None:
             itype = 'basic'  # fetch, get properties, uuid, reference
+
+        if itype == 'quantity':
+            yield self._qdb.make_interface(itype)
 
         for res in self._sorted_resources(origin, itype, strict):
             res.check(self)

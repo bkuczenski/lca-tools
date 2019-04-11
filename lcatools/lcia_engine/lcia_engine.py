@@ -133,12 +133,6 @@ class LciaEngine(TermManager):
             self._qm.add_quantity(quantity)
         return self._canonical_q(quantity)
 
-    def get_canonical(self, quantity):
-        try:
-            return self._canonical_q(quantity)
-        except KeyError:
-            return self.add_quantity(quantity)
-
     def merge_quantities(self, first, second):
         """
         Absorb second into child of first.  Currently does not support remapping entries, so import_cfs(second)
@@ -166,6 +160,7 @@ class LciaEngine(TermManager):
             qq = self.add_quantity(quantity)
 
         for cf in quantity.factors():
+            print(cf)
             try:
                 fb = self._fm[cf.flowable]
             except KeyError:

@@ -12,7 +12,7 @@ from antelope_catalog.providers import Traci21Factors
 
 from argparse import ArgumentParser
 
-TARGET = '/data/GitHub/lca-tools/lcatools/qdb/data/ipcc_2007_gwp.json'
+TARGET = '/data/GitHub/lca-tools/lcatools/lcia_engine/data/ipcc_2007_gwp.json'
 TRACI_source = '/data/LCI/TRACI/traci_2_1_2014_dec_10_0.xlsx'
 
 AUTHORIZED_REF = 'lcia.ipcc.2007.traci21'

@@ -99,6 +99,7 @@ class EntityStore(object):
      If None: ns_uuid forced to None - store does not have ns_uuid capabilities
     '''
     _ns_uuid_required = False
+    _origin = None  # can be set when a catalog is assigning a ref
 
     def _ref_to_uuid(self, key):
         """
@@ -287,7 +288,7 @@ class EntityStore(object):
                     self._catalog_names[k].remove(source)
                     print('%s: <source removed>' % k)
                 else:
-                    raise SourceAlreadyKnown('Source %s already registered to name %s' % (source, k))
+                    raise SourceAlreadyKnown('Source %s already registered to name %s (vs: %s)' % (source, k, ref))
         print('%s: %s' % (ref, source))
         self._catalog_names[ref].add(source)
         if ref == self.ref and self.source is None and rewrite:
@@ -307,8 +308,13 @@ class EntityStore(object):
         self._add_name(new_ref, new_source)
         self._descendant = True
 
+    def set_origin(self, origin):
+        self._origin = origin
+
     @property
     def ref(self):
+        if self._origin is not None:
+            return self._origin
         try:
             return next(k for k, s in self._catalog_names.items() if self.source in s)
         except StopIteration:

@@ -3,7 +3,7 @@ from .lcia_engine import LciaEngine, DEFAULT_CONTEXTS, DEFAULT_FLOWABLES
 
 import os
 
-IPCC_2007_GWP = os.path.join(os.path.dirname(__file__), 'data', 'ipcc_2007_traci.json.gz')
+IPCC_2007_GWP = os.path.join(os.path.dirname(__file__), 'data', 'ipcc_2007_gwp.json')
 
 
 class LciaDb(Qdb):

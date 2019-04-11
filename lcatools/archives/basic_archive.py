@@ -60,21 +60,21 @@ class BasicArchive(EntityStore):
     _drop_fields = defaultdict(list)  # dict mapping entity type to fields that should be omitted from serialization
 
     @classmethod
-    def from_file(cls, filename, **init_args):
+    def from_file(cls, filename, ref=None, **init_args):
         """
         BasicArchive factory from minimal dictionary.  Must include at least one of 'dataSource' or 'dataReference'
         fields and 0 or more flows or quantities; but note that any flow present must have its reference
         quantities included. The method is inherited by LcArchives which permit processes as well; any process must
         have its exchanged flows (and their respective quantities) included.
         :param filename: The name of the file to be loaded
+        :param ref: fallback reference to use if none is specified in source file
         :return:
         """
         j = from_json(filename)
-        try:
-            ref = j['dataReference']
-        except KeyError:
-            ref = None
         init_args.update(j.pop('initArgs', {}))
+
+        old_ref = j.pop('dataReference', ref)
+        ref = init_args.pop('dataReference', old_ref)
         ns_uuid = j.pop('nsUuid', None)  # this is for opening legacy files
         if ns_uuid is None:
             ns_uuid = init_args.pop('ns_uuid', None)
@@ -89,26 +89,25 @@ class BasicArchive(EntityStore):
         is the only place it's used)
         :param j:
         :param filename:
-        :param ref:
+        :param ref: incoming ref from catalog
         :param kwargs:
         :return:
         """
-        if ref is None:
-            try:
-                ref = j['dataReference']
-            except KeyError:
-                if filename is None:
-                    print('At least one of source filename or ref kwarg or dataReference must be specified')
-                    return None
-                else:
-                    ref = None
         init_args = j.pop('initArgs', {})
         ns_uuid = j.pop('nsUuid', None)  # this is for opening legacy files
         if ns_uuid is None:
             ns_uuid = init_args.pop('ns_uuid', None)
         kwargs.update(init_args)
-        ar = cls(filename, ref=ref, ns_uuid=ns_uuid, static=True, **kwargs)
+
+        old_ref = j.pop('dataReference', ref)
+        existing_ref = kwargs.pop('dataReference', old_ref)  # this will be the latest of init[dataRef], [dataRef], ref
+
+        source = j.pop('dataSource')
+        ar = cls(source, ref=existing_ref, ns_uuid=ns_uuid, static=True, **kwargs)
         ar.load_from_dict(j, jsonfile=filename)
+
+        if ref != ar.ref:
+            ar.set_origin(ref)
         return ar
 
     def __init__(self, *args, contexts=None, flowables=None, term_manager=None, **kwargs):
@@ -162,7 +161,7 @@ class BasicArchive(EntityStore):
             raise InterfaceError('Unable to create interface %s' % iface)
 
     def _ensure_valid_refs(self, entity):
-        if entity.uuid is None:  # TODO: eliminate visible UUIDs in favor of NS UUIDs. this will get fleshed out later
+        if entity.uuid is None:
             uu = self._ref_to_uuid(entity.external_ref)
             if uu is not None:
                 entity.uuid = uu
@@ -194,7 +193,7 @@ class BasicArchive(EntityStore):
         """
         # cx = self.tm.__getitem__(item)
         # if cx is None:
-        if hasattr(item, 'external_ref'):  # TODO: should this be uuid?
+        if hasattr(item, 'external_ref'):
             item = item.external_ref
         return super(BasicArchive, self).__getitem__(item)
         # return cx
@@ -291,6 +290,9 @@ class BasicArchive(EntityStore):
             if e['entity_uuid'] is None:
                 raise OldJson('Missing both externalId and entityId')
             ext_ref = e['entity_uuid']
+        ext_ref = str(ext_ref)
+        if ext_ref in self._entities:
+            return self[ext_ref]
         etype = e.pop('entityType')
         if etype == 'flow':
             # need to delay adding characterizations until after entity is registered with term manager
@@ -430,6 +432,8 @@ class BasicArchive(EntityStore):
 
     def export_quantity(self, filename, quantity, domesticate=False, values=True, gzip=False):
         j = super(BasicArchive, self).serialize()
+        j['dataSourceType'] = 'BasicArchive'
+        j['dataSource'] = filename
         j['termManager'], qq, rq = self.tm.serialize(self.ref, quantity, values=values)
         qs = [self[u] for u in rq]
         for ref in qq:
@@ -439,7 +443,7 @@ class BasicArchive(EntityStore):
 
         j['quantities'] = sorted([q.serialize(domesticate=domesticate)
                                   for q in qs],
-                                 key=lambda x: x['entityId'])
+                                 key=lambda x: x['externalId'])
         to_json(j, filename, gzip=gzip)
 
     def _serialize_all(self, **kwargs):

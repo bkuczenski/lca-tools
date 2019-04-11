@@ -1,0 +1,1388 @@
+{
+  "@context": "https://bkuczenski.github.io/lca-tools-datafiles/context.jsonld",
+  "catalogNames": {
+    "local.traci.2.1.spreadsheet": [
+      "/data/LCI/TRACI/traci_2_1_2014_dec_10_0.xlsx"
+    ]
+  },
+  "dataSource": "/data/GitHub/lca-tools/lcatools/lcia_engine/data/ipcc_2007_gwp.json",
+  "dataSourceType": "BasicArchive",
+  "initArgs": {
+    "dataReference": "local.traci.2.1.spreadsheet",
+    "ns_uuid": "150e35c3-ac4a-485b-826b-a41807ddf43a",
+    "sheet_name": "Substances"
+  },
+  "quantities": [
+    {
+      "Category": "Global Warming Air",
+      "Comment": "IPCC GWP factors, as implemented in TRACI 2.1 [traci_2_1_2014_dec_10_0.xlsx]\n\nshould probably auto-generate some provenance data here or something...",
+      "Indicator": "kg CO2 eq",
+      "Method": "TRACI 2.1",
+      "Name": "Global Warming Air",
+      "Source": "IPCC Fourth Assessment Report, Working Group I: Technical Summary, table TS-2",
+      "entityType": "quantity",
+      "externalId": "Global Warming Air",
+      "referenceUnit": "kg CO2 eq"
+    },
+    {
+      "Comment": "",
+      "Name": "Mass",
+      "entityType": "quantity",
+      "externalId": "Mass",
+      "referenceUnit": "kg"
+    }
+  ],
+  "termManager": {
+    "Characterizations": {
+      "Global Warming Air": {
+        "1,1,1-trichloroethane": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 146.0
+            }
+          }
+        },
+        "carbon dioxide": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 1.0
+            }
+          }
+        },
+        "carbon tetrachloride": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 1400.0
+            }
+          }
+        },
+        "carbon tetrafluoride": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 7390.0
+            }
+          }
+        },
+        "cfc-11": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 4750.0
+            }
+          }
+        },
+        "cfc-113": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 6130.0
+            }
+          }
+        },
+        "cfc-114": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 10000.0
+            }
+          }
+        },
+        "cfc-115": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 7370.0
+            }
+          }
+        },
+        "cfc-12": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 10900.0
+            }
+          }
+        },
+        "cfc-13": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 14400.0
+            }
+          }
+        },
+        "chloroform": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 31.0
+            }
+          }
+        },
+        "dimethylether": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 1.0
+            }
+          }
+        },
+        "halon 1201": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 404.0
+            }
+          }
+        },
+        "halon 1211": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 1890.0
+            }
+          }
+        },
+        "halon 1301": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 7140.0
+            }
+          }
+        },
+        "halon 2402": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 1640.0
+            }
+          }
+        },
+        "hcfc-123": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 77.0
+            }
+          }
+        },
+        "hcfc-124": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 609.0
+            }
+          }
+        },
+        "hcfc-141b": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 725.0
+            }
+          }
+        },
+        "hcfc-142b": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 2310.0
+            }
+          }
+        },
+        "hcfc-21": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 151.0
+            }
+          }
+        },
+        "hcfc-22": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 1810.0
+            }
+          }
+        },
+        "hcfc-225ca": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 122.0
+            }
+          }
+        },
+        "hcfc-225cb": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 595.0
+            }
+          }
+        },
+        "hcfe-235da2": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 350.0
+            }
+          }
+        },
+        "hfc-125": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 3500.0
+            }
+          }
+        },
+        "hfc-134": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 1100.0
+            }
+          }
+        },
+        "hfc-134a": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 1430.0
+            }
+          }
+        },
+        "hfc-143": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 353.0
+            }
+          }
+        },
+        "hfc-143a": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 4470.0
+            }
+          }
+        },
+        "hfc-152": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 53.0
+            }
+          }
+        },
+        "hfc-152a": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 124.0
+            }
+          }
+        },
+        "hfc-161": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 12.0
+            }
+          }
+        },
+        "hfc-227ea": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 3220.0
+            }
+          }
+        },
+        "hfc-23": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 14800.0
+            }
+          }
+        },
+        "hfc-236cb": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 1340.0
+            }
+          }
+        },
+        "hfc-236ea": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 1370.0
+            }
+          }
+        },
+        "hfc-236fa": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 9810.0
+            }
+          }
+        },
+        "hfc-245ca": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 693.0
+            }
+          }
+        },
+        "hfc-245fa": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 1030.0
+            }
+          }
+        },
+        "hfc-32": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 675.0
+            }
+          }
+        },
+        "hfc-365mfc": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 794.0
+            }
+          }
+        },
+        "hfc-41": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 92.0
+            }
+          }
+        },
+        "hfc-43-10mee": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 1640.0
+            }
+          }
+        },
+        "hfe-125": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 14900.0
+            }
+          }
+        },
+        "hfe-134": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 6320.0
+            }
+          }
+        },
+        "hfe-143a": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 756.0
+            }
+          }
+        },
+        "hfe-227ea": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 1540.0
+            }
+          }
+        },
+        "hfe-236ca12": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 2800.0
+            }
+          }
+        },
+        "hfe-236ea2": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 989.0
+            }
+          }
+        },
+        "hfe-236fa": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 487.0
+            }
+          }
+        },
+        "hfe-245cb2": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 708.0
+            }
+          }
+        },
+        "hfe-245fa1": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 286.0
+            }
+          }
+        },
+        "hfe-245fa2": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 659.0
+            }
+          }
+        },
+        "hfe-254cb2": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 359.0
+            }
+          }
+        },
+        "hfe-263fb2": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 11.0
+            }
+          }
+        },
+        "hfe-329mcc2": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 919.0
+            }
+          }
+        },
+        "hfe-338mcf2": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 552.0
+            }
+          }
+        },
+        "hfe-338pcc13": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 1500.0
+            }
+          }
+        },
+        "hfe-347mcc3": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 575.0
+            }
+          }
+        },
+        "hfe-347mcf2": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 374.0
+            }
+          }
+        },
+        "hfe-347pcf2": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 580.0
+            }
+          }
+        },
+        "hfe-356mec3": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 101.0
+            }
+          }
+        },
+        "hfe-356pcc3": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 110.0
+            }
+          }
+        },
+        "hfe-356pcf2": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 265.0
+            }
+          }
+        },
+        "hfe-356pcf3": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 502.0
+            }
+          }
+        },
+        "hfe-365mcf3": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 11.0
+            }
+          }
+        },
+        "hfe-374pc2": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 557.0
+            }
+          }
+        },
+        "hfe-43-10pccc124": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 1870.0
+            }
+          }
+        },
+        "hfe-569sf2": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 59.0
+            }
+          }
+        },
+        "hfe-7100": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 297.0
+            }
+          }
+        },
+        "hfe-7200": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 59.0
+            }
+          }
+        },
+        "methane": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 25.0
+            }
+          }
+        },
+        "methane, dibromo-": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 1.54
+            }
+          }
+        },
+        "methane, iodotrifluoro-": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 0.4
+            }
+          }
+        },
+        "methyl bromide": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 5.0
+            }
+          }
+        },
+        "methyl chloride": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 13.0
+            }
+          }
+        },
+        "methylenechloride": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 8.7
+            }
+          }
+        },
+        "nitrogen trifluoride": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 17200.0
+            }
+          }
+        },
+        "nitrous oxide": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 298.0
+            }
+          }
+        },
+        "perfluorocyclobutane": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 10300.0
+            }
+          }
+        },
+        "pfc-116": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 12200.0
+            }
+          }
+        },
+        "pfc-218": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 8830.0
+            }
+          }
+        },
+        "pfc-3-1-10": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 8860.0
+            }
+          }
+        },
+        "pfc-4-1-12": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 9160.0
+            }
+          }
+        },
+        "pfc-5-1-14": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 9300.0
+            }
+          }
+        },
+        "pfc-9-1-18": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 7500.0
+            }
+          }
+        },
+        "pfpmie": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 10300.0
+            }
+          }
+        },
+        "propane, perfluorocyclo-": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 17340.0
+            }
+          }
+        },
+        "sulfur hexafluoride": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 22800.0
+            }
+          }
+        },
+        "trifluoromethyl sulfur pentafluoride": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 17700.0
+            }
+          }
+        }
+      }
+    },
+    "Compartments": [
+      {
+        "name": "air"
+      }
+    ],
+    "SynonymSets": [
+      {
+        "name": "1,1,1-trichloroethane",
+        "synonyms": [
+          "71-55-6",
+          "local.traci.2.1.spreadsheet/1,1,1-trichloroethane"
+        ]
+      },
+      {
+        "name": "carbon dioxide",
+        "synonyms": [
+          "124-38-9",
+          "local.traci.2.1.spreadsheet/carbon dioxide"
+        ]
+      },
+      {
+        "name": "carbon tetrachloride",
+        "synonyms": [
+          "56-23-5",
+          "local.traci.2.1.spreadsheet/carbon tetrachloride"
+        ]
+      },
+      {
+        "name": "carbon tetrafluoride",
+        "synonyms": [
+          "75-73-0",
+          "local.traci.2.1.spreadsheet/carbon tetrafluoride"
+        ]
+      },
+      {
+        "name": "cfc-11",
+        "synonyms": [
+          "75-69-4",
+          "local.traci.2.1.spreadsheet/cfc-11"
+        ]
+      },
+      {
+        "name": "cfc-113",
+        "synonyms": [
+          "76-13-1",
+          "local.traci.2.1.spreadsheet/cfc-113"
+        ]
+      },
+      {
+        "name": "cfc-114",
+        "synonyms": [
+          "76-14-2",
+          "local.traci.2.1.spreadsheet/cfc-114"
+        ]
+      },
+      {
+        "name": "cfc-115",
+        "synonyms": [
+          "76-15-3",
+          "local.traci.2.1.spreadsheet/cfc-115"
+        ]
+      },
+      {
+        "name": "cfc-12",
+        "synonyms": [
+          "75-71-8",
+          "local.traci.2.1.spreadsheet/cfc-12"
+        ]
+      },
+      {
+        "name": "cfc-13",
+        "synonyms": [
+          "75-72-9",
+          "local.traci.2.1.spreadsheet/cfc-13"
+        ]
+      },
+      {
+        "name": "chloroform",
+        "synonyms": [
+          "67-66-3",
+          "local.traci.2.1.spreadsheet/chloroform"
+        ]
+      },
+      {
+        "name": "dimethylether",
+        "synonyms": [
+          "115-10-6",
+          "local.traci.2.1.spreadsheet/dimethylether"
+        ]
+      },
+      {
+        "name": "halon 1201",
+        "synonyms": [
+          "1511-62-2",
+          "local.traci.2.1.spreadsheet/halon 1201"
+        ]
+      },
+      {
+        "name": "halon 1211",
+        "synonyms": [
+          "353-59-3",
+          "local.traci.2.1.spreadsheet/halon 1211"
+        ]
+      },
+      {
+        "name": "halon 1301",
+        "synonyms": [
+          "75-63-8",
+          "local.traci.2.1.spreadsheet/halon 1301"
+        ]
+      },
+      {
+        "name": "halon 2402",
+        "synonyms": [
+          "124-73-2",
+          "local.traci.2.1.spreadsheet/halon 2402"
+        ]
+      },
+      {
+        "name": "hcfc-123",
+        "synonyms": [
+          "306-83-2",
+          "local.traci.2.1.spreadsheet/hcfc-123"
+        ]
+      },
+      {
+        "name": "hcfc-124",
+        "synonyms": [
+          "2837-89-0",
+          "local.traci.2.1.spreadsheet/hcfc-124"
+        ]
+      },
+      {
+        "name": "hcfc-141b",
+        "synonyms": [
+          "1717-00-6",
+          "local.traci.2.1.spreadsheet/hcfc-141b"
+        ]
+      },
+      {
+        "name": "hcfc-142b",
+        "synonyms": [
+          "75-68-3",
+          "local.traci.2.1.spreadsheet/hcfc-142b"
+        ]
+      },
+      {
+        "name": "hcfc-21",
+        "synonyms": [
+          "75-43-4",
+          "local.traci.2.1.spreadsheet/hcfc-21"
+        ]
+      },
+      {
+        "name": "hcfc-22",
+        "synonyms": [
+          "75-45-6",
+          "local.traci.2.1.spreadsheet/hcfc-22"
+        ]
+      },
+      {
+        "name": "hcfc-225ca",
+        "synonyms": [
+          "422-56-0",
+          "local.traci.2.1.spreadsheet/hcfc-225ca"
+        ]
+      },
+      {
+        "name": "hcfc-225cb",
+        "synonyms": [
+          "507-55-1",
+          "local.traci.2.1.spreadsheet/hcfc-225cb"
+        ]
+      },
+      {
+        "name": "hcfe-235da2",
+        "synonyms": [
+          "local.traci.2.1.spreadsheet/hcfe-235da2"
+        ]
+      },
+      {
+        "name": "hfc-125",
+        "synonyms": [
+          "354-33-6",
+          "local.traci.2.1.spreadsheet/hfc-125"
+        ]
+      },
+      {
+        "name": "hfc-134",
+        "synonyms": [
+          "359-35-3",
+          "local.traci.2.1.spreadsheet/hfc-134"
+        ]
+      },
+      {
+        "name": "hfc-134a",
+        "synonyms": [
+          "811-97-2",
+          "local.traci.2.1.spreadsheet/hfc-134a"
+        ]
+      },
+      {
+        "name": "hfc-143",
+        "synonyms": [
+          "430-66-0",
+          "local.traci.2.1.spreadsheet/hfc-143"
+        ]
+      },
+      {
+        "name": "hfc-143a",
+        "synonyms": [
+          "420-46-2",
+          "local.traci.2.1.spreadsheet/hfc-143a"
+        ]
+      },
+      {
+        "name": "hfc-152",
+        "synonyms": [
+          "624-72-6",
+          "local.traci.2.1.spreadsheet/hfc-152"
+        ]
+      },
+      {
+        "name": "hfc-152a",
+        "synonyms": [
+          "75-37-6",
+          "local.traci.2.1.spreadsheet/hfc-152a"
+        ]
+      },
+      {
+        "name": "hfc-161",
+        "synonyms": [
+          "353-36-6",
+          "local.traci.2.1.spreadsheet/hfc-161"
+        ]
+      },
+      {
+        "name": "hfc-227ea",
+        "synonyms": [
+          "431-89-0",
+          "local.traci.2.1.spreadsheet/hfc-227ea"
+        ]
+      },
+      {
+        "name": "hfc-23",
+        "synonyms": [
+          "75-46-7",
+          "local.traci.2.1.spreadsheet/hfc-23"
+        ]
+      },
+      {
+        "name": "hfc-236cb",
+        "synonyms": [
+          "677-56-5",
+          "local.traci.2.1.spreadsheet/hfc-236cb"
+        ]
+      },
+      {
+        "name": "hfc-236ea",
+        "synonyms": [
+          "431-63-0",
+          "local.traci.2.1.spreadsheet/hfc-236ea"
+        ]
+      },
+      {
+        "name": "hfc-236fa",
+        "synonyms": [
+          "690-39-1",
+          "local.traci.2.1.spreadsheet/hfc-236fa"
+        ]
+      },
+      {
+        "name": "hfc-245ca",
+        "synonyms": [
+          "679-86-7",
+          "local.traci.2.1.spreadsheet/hfc-245ca"
+        ]
+      },
+      {
+        "name": "hfc-245fa",
+        "synonyms": [
+          "460-73-1",
+          "local.traci.2.1.spreadsheet/hfc-245fa"
+        ]
+      },
+      {
+        "name": "hfc-32",
+        "synonyms": [
+          "75-10-5",
+          "local.traci.2.1.spreadsheet/hfc-32"
+        ]
+      },
+      {
+        "name": "hfc-365mfc",
+        "synonyms": [
+          "406-58-6",
+          "local.traci.2.1.spreadsheet/hfc-365mfc"
+        ]
+      },
+      {
+        "name": "hfc-41",
+        "synonyms": [
+          "593-53-3",
+          "local.traci.2.1.spreadsheet/hfc-41"
+        ]
+      },
+      {
+        "name": "hfc-43-10mee",
+        "synonyms": [
+          "138495-42-8",
+          "local.traci.2.1.spreadsheet/hfc-43-10mee"
+        ]
+      },
+      {
+        "name": "hfe-125",
+        "synonyms": [
+          "3822-68-2",
+          "local.traci.2.1.spreadsheet/hfe-125"
+        ]
+      },
+      {
+        "name": "hfe-134",
+        "synonyms": [
+          "1691-17-4",
+          "local.traci.2.1.spreadsheet/hfe-134"
+        ]
+      },
+      {
+        "name": "hfe-143a",
+        "synonyms": [
+          "421-14-7",
+          "local.traci.2.1.spreadsheet/hfe-143a"
+        ]
+      },
+      {
+        "name": "hfe-227ea",
+        "synonyms": [
+          "local.traci.2.1.spreadsheet/hfe-227ea"
+        ]
+      },
+      {
+        "name": "hfe-236ca12",
+        "synonyms": [
+          "local.traci.2.1.spreadsheet/hfe-236ca12"
+        ]
+      },
+      {
+        "name": "hfe-236ea2",
+        "synonyms": [
+          "local.traci.2.1.spreadsheet/hfe-236ea2"
+        ]
+      },
+      {
+        "name": "hfe-236fa",
+        "synonyms": [
+          "local.traci.2.1.spreadsheet/hfe-236fa"
+        ]
+      },
+      {
+        "name": "hfe-245cb2",
+        "synonyms": [
+          "local.traci.2.1.spreadsheet/hfe-245cb2"
+        ]
+      },
+      {
+        "name": "hfe-245fa1",
+        "synonyms": [
+          "1885-48-9",
+          "local.traci.2.1.spreadsheet/hfe-245fa1"
+        ]
+      },
+      {
+        "name": "hfe-245fa2",
+        "synonyms": [
+          "local.traci.2.1.spreadsheet/hfe-245fa2"
+        ]
+      },
+      {
+        "name": "hfe-254cb2",
+        "synonyms": [
+          "local.traci.2.1.spreadsheet/hfe-254cb2"
+        ]
+      },
+      {
+        "name": "hfe-263fb2",
+        "synonyms": [
+          "local.traci.2.1.spreadsheet/hfe-263fb2"
+        ]
+      },
+      {
+        "name": "hfe-329mcc2",
+        "synonyms": [
+          "local.traci.2.1.spreadsheet/hfe-329mcc2"
+        ]
+      },
+      {
+        "name": "hfe-338mcf2",
+        "synonyms": [
+          "local.traci.2.1.spreadsheet/hfe-338mcf2"
+        ]
+      },
+      {
+        "name": "hfe-338pcc13",
+        "synonyms": [
+          "local.traci.2.1.spreadsheet/hfe-338pcc13"
+        ]
+      },
+      {
+        "name": "hfe-347mcc3",
+        "synonyms": [
+          "local.traci.2.1.spreadsheet/hfe-347mcc3"
+        ]
+      },
+      {
+        "name": "hfe-347mcf2",
+        "synonyms": [
+          "406-78-0",
+          "local.traci.2.1.spreadsheet/hfe-347mcf2"
+        ]
+      },
+      {
+        "name": "hfe-347pcf2",
+        "synonyms": [
+          "local.traci.2.1.spreadsheet/hfe-347pcf2"
+        ]
+      },
+      {
+        "name": "hfe-356mec3",
+        "synonyms": [
+          "local.traci.2.1.spreadsheet/hfe-356mec3"
+        ]
+      },
+      {
+        "name": "hfe-356pcc3",
+        "synonyms": [
+          "local.traci.2.1.spreadsheet/hfe-356pcc3"
+        ]
+      },
+      {
+        "name": "hfe-356pcf2",
+        "synonyms": [
+          "local.traci.2.1.spreadsheet/hfe-356pcf2"
+        ]
+      },
+      {
+        "name": "hfe-356pcf3",
+        "synonyms": [
+          "local.traci.2.1.spreadsheet/hfe-356pcf3"
+        ]
+      },
+      {
+        "name": "hfe-365mcf3",
+        "synonyms": [
+          "378-16-5",
+          "local.traci.2.1.spreadsheet/hfe-365mcf3"
+        ]
+      },
+      {
+        "name": "hfe-374pc2",
+        "synonyms": [
+          "local.traci.2.1.spreadsheet/hfe-374pc2"
+        ]
+      },
+      {
+        "name": "hfe-43-10pccc124",
+        "synonyms": [
+          "local.traci.2.1.spreadsheet/hfe-43-10pccc124"
+        ]
+      },
+      {
+        "name": "hfe-569sf2",
+        "synonyms": [
+          "local.traci.2.1.spreadsheet/hfe-569sf2"
+        ]
+      },
+      {
+        "name": "hfe-7100",
+        "synonyms": [
+          "local.traci.2.1.spreadsheet/hfe-7100"
+        ]
+      },
+      {
+        "name": "hfe-7200",
+        "synonyms": [
+          "local.traci.2.1.spreadsheet/hfe-7200"
+        ]
+      },
+      {
+        "name": "methane",
+        "synonyms": [
+          "74-82-8",
+          "local.traci.2.1.spreadsheet/methane"
+        ]
+      },
+      {
+        "name": "methane, dibromo-",
+        "synonyms": [
+          "74-95-3",
+          "local.traci.2.1.spreadsheet/methane, dibromo-"
+        ]
+      },
+      {
+        "name": "methane, iodotrifluoro-",
+        "synonyms": [
+          "2314-97-8",
+          "local.traci.2.1.spreadsheet/methane, iodotrifluoro-"
+        ]
+      },
+      {
+        "name": "methyl bromide",
+        "synonyms": [
+          "74-83-9",
+          "local.traci.2.1.spreadsheet/methyl bromide"
+        ]
+      },
+      {
+        "name": "methyl chloride",
+        "synonyms": [
+          "74-87-3",
+          "local.traci.2.1.spreadsheet/methyl chloride"
+        ]
+      },
+      {
+        "name": "methylenechloride",
+        "synonyms": [
+          "75-09-2",
+          "local.traci.2.1.spreadsheet/methylenechloride ",
+          "methylenechloride "
+        ]
+      },
+      {
+        "name": "nitrogen trifluoride",
+        "synonyms": [
+          "7783-54-2",
+          "local.traci.2.1.spreadsheet/nitrogen trifluoride"
+        ]
+      },
+      {
+        "name": "nitrous oxide",
+        "synonyms": [
+          "10024-97-2",
+          "local.traci.2.1.spreadsheet/nitrous oxide"
+        ]
+      },
+      {
+        "name": "perfluorocyclobutane",
+        "synonyms": [
+          "115-25-3",
+          "local.traci.2.1.spreadsheet/perfluorocyclobutane"
+        ]
+      },
+      {
+        "name": "pfc-116",
+        "synonyms": [
+          "76-16-4",
+          "local.traci.2.1.spreadsheet/pfc-116"
+        ]
+      },
+      {
+        "name": "pfc-218",
+        "synonyms": [
+          "76-19-7",
+          "local.traci.2.1.spreadsheet/pfc-218"
+        ]
+      },
+      {
+        "name": "pfc-3-1-10",
+        "synonyms": [
+          "355-25-9",
+          "local.traci.2.1.spreadsheet/pfc-3-1-10"
+        ]
+      },
+      {
+        "name": "pfc-4-1-12",
+        "synonyms": [
+          "678-26-2",
+          "local.traci.2.1.spreadsheet/pfc-4-1-12"
+        ]
+      },
+      {
+        "name": "pfc-5-1-14",
+        "synonyms": [
+          "355-42-0",
+          "local.traci.2.1.spreadsheet/pfc-5-1-14"
+        ]
+      },
+      {
+        "name": "pfc-9-1-18",
+        "synonyms": [
+          "306-94-5",
+          "local.traci.2.1.spreadsheet/pfc-9-1-18"
+        ]
+      },
+      {
+        "name": "pfpmie",
+        "synonyms": [
+          "local.traci.2.1.spreadsheet/pfpmie"
+        ]
+      },
+      {
+        "name": "propane, perfluorocyclo-",
+        "synonyms": [
+          "local.traci.2.1.spreadsheet/propane, perfluorocyclo-"
+        ]
+      },
+      {
+        "name": "sulfur hexafluoride",
+        "synonyms": [
+          "2551-62-4",
+          "local.traci.2.1.spreadsheet/sulfur hexafluoride"
+        ]
+      },
+      {
+        "name": "trifluoromethyl sulfur pentafluoride",
+        "synonyms": [
+          "local.traci.2.1.spreadsheet/trifluoromethyl sulfur pentafluoride"
+        ]
+      }
+    ]
+  }
+}

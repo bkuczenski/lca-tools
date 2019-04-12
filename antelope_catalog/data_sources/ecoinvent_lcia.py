@@ -38,4 +38,4 @@ class EcoinventLciaConfig(DataSource):
         if self._sourcefile is None:
             raise AttributeError('This exception should never occur')  # because self.references screens self._info
         source = os.path.join(self._root, self._sourcefile)
-        yield self._make_resource(ref, source=source, interfaces=self._ifaces, version=self._version)
+        yield self._make_resource(ref, source=source, interfaces=self._ifaces, version=self._version, static=True)

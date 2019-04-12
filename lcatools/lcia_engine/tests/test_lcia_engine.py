@@ -13,6 +13,7 @@ class LciaEngineTest(unittest.TestCase):
         self.assertEqual(len([x for x in self.lcia.query.contexts()]), 36)
         self.assertEqual(len([x for x in self.lcia.query.flowables()]), 4004)
         self.assertEqual(len([x for x in self.lcia.query.quantities()]), 25)
+        self.assertEqual(len(self.lcia.tm._q_dict), 3)
 
     def test_1_add_characterization(self):
         rq = self.lcia.query.get_canonical('mass')

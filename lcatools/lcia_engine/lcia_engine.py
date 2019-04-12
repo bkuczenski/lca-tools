@@ -2,7 +2,8 @@ from collections import defaultdict
 import re
 import os
 
-from lcatools.archives.term_manager import TermManager, NoFQEntry  # , Context
+from lcatools.archives.term_manager import TermManager, NoFQEntry
+from lcatools.contexts import NullContext
 from .quelled_cf import QuelledCF
 from .clookup import CLookup, SCLookup
 
@@ -93,6 +94,13 @@ class LciaEngine(TermManager):
         self._quell_biogenic = quell_biogenic_co2
 
     def apply_context_hints(self, origin, hints):
+        """
+        Hints should be
+        :param origin:
+        :param hints: an iterable of term, canonical pairs, where term is the context as known in the origin, and
+        canonical is the corresponding canonical context.
+        :return:
+        """
         for term, canonical in hints:
             self._cm.add_context_hint(origin, term, canonical)
 
@@ -271,7 +279,7 @@ class LciaEngine(TermManager):
             cl = self._qlookup(qq, fb)
         except NoFQEntry:
             return
-        if cx is None:
+        if cx is NullContext:
             for v in cl.cfs():
                 yield v
         else:

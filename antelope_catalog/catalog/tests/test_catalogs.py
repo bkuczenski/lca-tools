@@ -108,17 +108,25 @@ class LcCatalogFixture(unittest.TestCase):
         self.assertFalse(self._cat.has_resource(uslci_fg_bad))
 
     def test_local_resource(self):
+        """
+        Tests the procedure of generating and deleting internal resources
+        :return:
+        """
         inx = self._cat.index_ref(test_resource.reference)
-        self.assertIn(inx, self._cat.references)
+        self.assertIn(inx, self._cat.references)  # index ref is known
         res = self._cat.get_resource(inx)
-        self.assertTrue(self._cat.has_resource(res))
-        self.assertTrue(res.source.startswith('$CAT_ROOT'))
+        self.assertTrue(self._cat.has_resource(res))  # index resource is present
+        self.assertTrue(res.source.startswith('$CAT_ROOT'))  # index resource has relative source path
         abs_path = self._cat.abs_path(res.source)
-        self.assertEqual(self._cat._localize_source(abs_path), res.source)
-        self.assertEqual(self._cat._index_file(test_resource.source), abs_path)
-        self.assertTrue(os.path.exists(abs_path))
+        self.assertTrue(os.path.isabs(abs_path))
+        self.assertEqual(self._cat._localize_source(abs_path), res.source)  # abs_path and localize_source are inverse
+        self.assertEqual(self._cat._index_file(test_resource.source), abs_path)  # abs_path is true index path
+        self.assertTrue(os.path.exists(abs_path))  # abs_path exists
         self._cat.delete_resource(res, delete_source=True)
-        self.assertFalse(os.path.exists(abs_path))
+        self.assertFalse(os.path.exists(abs_path))  # abs_path removed
+
+    # def test_lcia_db(self):
+
 
 
 if __name__ == '__main__':

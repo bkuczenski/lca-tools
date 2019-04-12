@@ -12,9 +12,9 @@ class LciaDb(Qdb):
     Augments the Qdb with an LciaEngine instead of a TermManager
     """
     @classmethod
-    def new(cls, source=REF_QTYS, ref='local.lciadb', **kwargs):
+    def new(cls, source=REF_QTYS, **kwargs):
         lcia = LciaEngine(**kwargs)
-        qdb = cls.from_file(source, ref=ref, term_manager=lcia, quiet=True)
+        qdb = cls.from_file(source, term_manager=lcia, quiet=True)
         return qdb
 
     def _ref_to_key(self, key):

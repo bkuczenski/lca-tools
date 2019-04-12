@@ -41,6 +41,30 @@ Thu 2019-04-11 11:16:56 -0700
 Shit. Another 90 minutes spent and we are... maybe incremntally closer? Now we are in context hell so I need another 6 hours to think + fix...
 off to other things.
 
+Thu 2019-04-11 17:08:31 -0700
+
+OK, here's where we're at.
+We've successfully tested through a lot of the issues. We are now at the point where foreign quantities are automatically loaded into the LciaDb.  The problem that remains is PROTECTED contexts (i.e. 'air', 'water', 'soil' which are ambiguous with regard to direction).
+
+Essentially because we agree with Edelen et al, we decided that contexts MUST be directional, and therefore we cannot brook ambiguous directional senses in context terms.  We are TOLERATING this for subcompartments like "urban air" because resource extraction from urban air doesn't make sense.. but we are also doing this with water, even though the ambiguity is real there as well.  We've written enough infrstructure that WHEN we do something like add a foreign context ['resources', 'water', 'ground-'] where 'ground-' is already recognized as an EMISSION, then the incoming context is named 'from water, ground-' where the direction is detected via 'resources'.
+
+What we HAVEN'T done is deal with ['water', 'ground-'] or even ['water'] where the direction is not specified.
+
+The NORMATIVE solution is to use the 'context_hint' configure interface (though that is half baked because BasicArchives don't currently support the configure interface) but that is also irritating because it means every resource needs to be configured with these hints.  Now maybe that is just the cost of doing business but right now (a) it is not well supported and (b) it seems like a lot of work going on into the future.
+
+The problem is that I can't think of any other way to solve the problem that ALSO preserves the protected status of the ambiguous compartments.  The other problem is that it is messy to apply because, once the CFs are loaded, the synonyms are wrongly learned and the contexts are all wrongly sorted.
+
+Why are we even DOING it this way? whyy don't we just have a giant graph db of all the CFs and build an E matrix dynamically?
+
+that would lead to many many many problems that are distinct from the problems we are dealing with. Andd wouldn't solve THIS particular problem either.
+
+So stop it with that.  PROBABLY the best thing to do is to get the configuration process working....
+
+OF COURSE THERE IS STILL THE FACT that when we load nonstatic resources that use the lcia_engine as term manager, we don't go through import_cfs so we don't find_matching_context and so we don't use context hints and so we are totally fucked.  How do we even add those contexts? just in add_characterization I suppose-- so they may not even have their origins SET YET- they may just have been created.
+
+So This is a big fucking mess, in other words.
+
+
 
 
 ==========

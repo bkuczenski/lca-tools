@@ -243,7 +243,7 @@ class BasicArchive(EntityStore):
             rq = entity_j.pop('referenceQuantity')
         else:
             rq = next(c['quantity'] for c in chars if 'isReference' in c and c['isReference'] is True)
-        ref_q = self[rq]
+        ref_q = self.tm.get_canonical(rq)
         return LcFlow(ext_ref, referenceQuantity=ref_q, **entity_j)
 
     def _add_chars(self, flow, chars):
@@ -252,7 +252,7 @@ class BasicArchive(EntityStore):
                 if c['isReference'] is True:
                     continue
             v = None
-            q = self[c['quantity']]  # this is required because of foreground; _process_from_json unaffected
+            q = self.tm.get_canonical(c['quantity'])  # this is required because of foreground; _process_from_json unaffected
             if q is None:
                 continue
                 # import json

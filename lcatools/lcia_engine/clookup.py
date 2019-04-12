@@ -25,7 +25,6 @@ that applied to a given query-- that graph database would replace the current Te
 its hood. But first we will learn to walk...
 """
 from lcatools.contexts import Context, NullContext
-from collections import defaultdict
 
 
 class QuantityMismatch(Exception):
@@ -44,7 +43,7 @@ class CLookup(object):
     characterization factor (float) depending on which method is used.
     """
     def __init__(self):
-        self._dict = defaultdict(set)
+        self._dict = dict()
         self._q = None
 
     def __repr__(self):
@@ -76,6 +75,8 @@ class CLookup(object):
             key = value.context
         if isinstance(key, Context):
             self._check_qty(value)
+            if key not in self._dict:
+                self._dict[key] = set()
             if any(k.origin == value.origin for k in self._dict[key]):
                 raise DuplicateOrigin(value.origin)
             self._dict[key].add(value)
@@ -179,8 +180,10 @@ class SCLookup(CLookup):
     is added.
     """
     def add(self, value, key=None):
-        if len(self._dict[value.context]) > 0:
-            if list(self._dict[value.context])[0] == value:
+        if key is None:
+            key = value.context
+        if key in self._dict and len(self._dict[key]) > 0:
+            if list(self._dict[key])[0] == value:
                 return
             raise FactorCollision('This context already has a CF defined!')
         super(SCLookup, self).add(value, key)

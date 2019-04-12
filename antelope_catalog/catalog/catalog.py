@@ -571,8 +571,8 @@ class LcCatalog(object):
         if itype is None:
             itype = 'basic'  # fetch, get properties, uuid, reference
 
-        if itype == 'quantity':
-            yield self._qdb.make_interface(itype)
+        # if itype == 'quantity':
+        #    yield self._qdb.make_interface(itype)
 
         for res in self._sorted_resources(origin, itype, strict):
             res.check(self)

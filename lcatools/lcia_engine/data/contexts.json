@@ -18,8 +18,7 @@
         "Organic emissions to air (group VOC)",
         "Other emissions to air",
         "Particles to air",
-        "Radioactive emissions to air",
-        "fossil"
+        "Radioactive emissions to air"
       ],
       "parent": "Emissions"
     },

@@ -37,7 +37,7 @@ class QuantitiesTest(unittest.TestCase):
 
     def test_valid_make_ref(self):
         gr = self.gwp.make_ref(self.Q.query)
-        self.assertIsInstance(gr._name, str)
+        self.assertIsInstance(gr.name, str)
 
 
 if __name__ == '__main__':

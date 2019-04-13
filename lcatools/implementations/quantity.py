@@ -135,6 +135,37 @@ class QuantityConversion(object):
     # TODO: add serialization, other outputs
 
 
+class QuantityConversionError(object):
+    def __init__(self, qrresult, ref_quantity):
+        self._qrr = qrresult
+        self._ref = ref_quantity
+
+    @property
+    def ref(self):
+        return self._ref
+
+    @property
+    def query(self):
+        return self._qrr.query
+
+    @property
+    def fail(self):
+        return self._qrr.ref
+
+    @property
+    def flowable(self):
+        return self._qrr.flowable
+
+    @property
+    def context(self):
+        return self._qrr.context
+
+    def __repr__(self):
+        return '%s(%s/%s [%s] %g %s/%s || %s)' % (self.__class__.__name__, self.flowable, self.context,
+                                                  self._qrr.origin,
+                                                  self._qrr.value, self.query.unit(), self._qrr.ref.unit(), self.ref.link)
+
+
 class QuantityImplementation(BasicImplementation, QuantityInterface):
     """
     Uses the archive's term manager to index cfs, by way of the canonical quantities
@@ -189,9 +220,10 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         """
         if ref_quantity is None:
             raise ConversionReferenceMismatch('Cannot convert to None')
-        if res.ref != ref_quantity:
+        found_ref = self.get_canonical(res.ref)
+        if found_ref != ref_quantity:
             # first look for forward matches
-            cfs_fwd = [cf for cf in self._archive.tm.factors_for_flowable(flowable, quantity=res[0].ref,
+            cfs_fwd = [cf for cf in self._archive.tm.factors_for_flowable(flowable, quantity=found_ref,
                                                                           context=compartment, dist=3)
                        if not res.seen(cf.ref_quantity)]
             for cf in cfs_fwd:
@@ -205,8 +237,10 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
             # then look for reverse matches
             cfs_rev = [cf for cf in self._archive.tm.factors_for_flowable(flowable, quantity=ref_quantity,
                                                                           context=compartment, dist=3)
-                       if not res.seen(cf.query)]
+                       if not res.seen(cf.quantity)]
             for cf in cfs_rev:
+                if self.get_canonical(cf.ref_quantity) != found_ref:
+                    continue
                 new_res = QuantityConversion(*res.results)
                 new_res.add_inverted_result(cf.query(locale))
                 try:
@@ -265,7 +299,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
             try:
                 qr_results.append(self._ref_qty_conversion(rq, flowable, context, res, locale))
             except ConversionReferenceMismatch:
-                qr_mismatch.append(res)
+                qr_mismatch.append(QuantityConversionError(res, rq))
 
         for cf in self._archive.tm.factors_for_flowable(flowable, quantity=rq, context=context, **kwargs):
             res = QuantityConversion(cf.query(locale))
@@ -354,7 +388,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
             else:
                 return [QuantityConversion.null(flowable, rq, qq, cx, locale, self.origin)], [], []
 
-    def quantity_relation(self, flowable, ref_quantity, query_quantity, context, locale='GLO',
+    def _quantity_relation(self, flowable, ref_quantity, query_quantity, context, locale='GLO',
                           strategy=None, allow_proxy=True, **kwargs):
         """
         Reports the first / best result of a quantity conversion.  Returns a single QRResult interface
@@ -378,36 +412,51 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
                                                                      ref_quantity=ref_quantity, context=context,
                                                                      locale=locale, **kwargs)
 
-        if len(qr_results) == 0 and len(qr_geog) > 0 and allow_proxy:
-            qr_results += qr_geog
+        if len(qr_results) == 0 and len(qr_geog) > 0:
+            if allow_proxy:
+                qr_results += qr_geog
+            else:
+                locs = ', '.join([qr.locale for qr in qr_geog])
+                print('allow_proxy to show values with locales: %s' % locs)
 
         if len(qr_results) > 1:
             # this is obviously punting
             if strategy is None or strategy == 'first':
-                return qr_results[0].value
+                best = qr_results[0]
             elif strategy == 'highest':
-                return max(v.value for v in qr_results)
+                val = max(v.value for v in qr_results)
+                best = next(v for v in qr_results if v.value == val)
             elif strategy == 'lowest':
-                return min(v.value for v in qr_results)
-            elif strategy == 'average':
-                return sum(v.value for v in qr_results) / len(qr_results)
+                val = min(v.value for v in qr_results)
+                best = next(v for v in qr_results if v.value == val)
+            # elif strategy == 'average':
+            #     return sum(v.value for v in qr_results) / len(qr_results)
             else:
                 raise ValueError('Unknown strategy %s' % strategy)
         elif len(qr_results) == 1:
-            return qr_results[0]
+            best = qr_results[0]
         else:
-            # if len(qr_geog) > 0:
-            #     return qr_geog[0]  # only arrive here if allow_proxy is False. Do we still allow it?
-            if len(qr_mismatch) > 0:
+            if len(qr_mismatch) == 0:
+                raise NoFactorsFound
+
+            best = None
+        return best, qr_mismatch
+
+    def quantity_relation(self, flowable, ref_quantity, query_quantity, context, locale='GLO',
+                          strategy=None, allow_proxy=True, **kwargs):
+
+        result, mismatch = self._quantity_relation(flowable, ref_quantity, query_quantity, context, locale=locale,
+                                                   strategy=strategy, allow_proxy=allow_proxy, **kwargs)
+        if result is None:
+            if len(mismatch) > 0:
                 fb, rq, _ = self._get_flowable_info(flowable, ref_quantity, context)
-                for k in qr_mismatch:
-                    print('Flowable: %s\nfrom: %s\nto: %s' % (fb, k.ref, rq))
+                for k in mismatch:
+                    print('Conversion failure: Flowable: %s\nfrom: %s %s\nto: %s %s' % (fb, k.fail, k.fail.link,
+                                                                                        rq, rq.link))
                 raise ConversionReferenceMismatch
             else:
-                if len(qr_geog) > 0:
-                    raise NoFactorsFound('allow_proxy to show values with no geographic match')
-                else:
-                    raise AssertionError('Something went wrong')
+                raise AssertionError('Something went wrong')
+        return result
 
     def cf(self, flow, quantity, ref_quantity=None, context=None, locale='GLO', **kwargs):
         """
@@ -471,27 +520,24 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         if group is None:
             group = lambda _x: _x.process
         for x in inventory:
-            if x.type == 'reference':
-                raise ValueError('Reference exchange passed to do_lcia\n%s' % x)
-            if x.type == 'cutoff':
+            if x.type in ('cutoff', 'reference'):
                 res.add_cutoff(x)
                 continue
-            if x.type in ('node', 'self'):
+            elif x.type in ('node', 'self'):
                 continue
-            ref_q = self.get_canonical(x.flow.reference_entity)
-            if ref_q is None:
-                raise AttributeError('Exchanged Flow missing reference entity\n%s' % x.flow)
-            if x.termination is None:
-                raise ZeroDivisionError('none termination found on non-cutoff exchange\n%s' % x)
-
             try:
-                cf = self.quantity_relation(x.flow.name, ref_q, q, x.termination, locale=locale,
-                                            **kwargs)
-                res.add_score(group(x), x, cf)
+                ref_q = self.get_canonical(x.flow.reference_entity)
+            except EntityNotFound:
+                ref_q = self._archive.tm.add_quantity(x.flow.reference_entity)
+            try:
+                qr, mis = self._quantity_relation(x.flow.name, ref_q, q, x.termination, locale=locale,
+                                                  **kwargs)
+                if qr is None and len(mis) > 0:
+                    res.add_error(x, mis)
+                elif qr.value == 0:
+                    res.add_zero(x, qr)
+                else:
+                    res.add_score(group(x), x, qr)
             except NoFactorsFound:
                 res.add_cutoff(x)
-            except ConversionReferenceMismatch:
-                res.add_error(x)
-                res.show_details()
-            # should we characterize the flows? to save on lookups? no, leave that to the client
         return res

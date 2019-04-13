@@ -108,9 +108,9 @@ class BaseRef(object):
         self._d[key] = value
 
     @property
-    def _name(self):
+    def name(self):
         """
-        This should be the same as _name for entities; whereas str(ref) prepends origin
+        This should be the same as .name for entities; whereas str(ref) prepends origin
         :return:
         """
         if self.has_property('Name'):
@@ -135,7 +135,7 @@ class BaseRef(object):
             return False
 
     def __str__(self):
-        return '[%s] %s' % (self.origin, self._name)
+        return '[%s] %s' % (self.origin, self.name)
 
     def __hash__(self):
         return hash(self.link)

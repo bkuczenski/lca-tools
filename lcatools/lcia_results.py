@@ -62,7 +62,9 @@ class DetailedLciaResult(object):
         :param qrresult: meets the QRResult spec: has properties 'flowable', 'ref', 'query', 'context', 'locale',
         'origin', 'value'
         """
-        assert exchange.flow.reference_entity == qrresult.ref
+        if exchange.flow.unit() != qrresult.ref.unit():
+            print('Inconsistent qty\nexch: %s\nqrr:  %s' % (exchange.flow.reference_entity, qrresult))
+            #  raise InconsistentQuantity('%s\n%s' % (exchange.flow.reference_entity, qrresult))
         self._exchange = exchange
         self._qr = qrresult
         self._lc = lc_result
@@ -439,6 +441,8 @@ class LciaResult(object):
         self._LciaScores = dict()
         self._cutoffs = []
         self._errors = []
+        self._zeros = []
+
         self._private = private
         self._autorange = None
         self._failed = []
@@ -674,8 +678,8 @@ class LciaResult(object):
         for x in self._cutoffs:
             yield x
 
-    def add_error(self, exchange):
-        self._errors.append(exchange)
+    def add_error(self, x, qr):
+        self._errors.append(DetailedLciaResult(self, x, qr))
 
     def errors(self):
         """
@@ -684,6 +688,13 @@ class LciaResult(object):
         :return:
         """
         for x in self._errors:
+            yield x
+
+    def add_zero(self, x, qr):
+        self._zeros.append(DetailedLciaResult(self, x, qr))
+
+    def zeros(self):
+        for x in self._zeros:
             yield x
 
     def keys(self):

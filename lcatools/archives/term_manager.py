@@ -551,7 +551,9 @@ class TermManager(object):
 
     def factors_for_flowable(self, flowable, quantity=None, context=None, **kwargs):
         """
-        This is the method that actually performs the lookup.  Other methods are wrappers for this
+        This is the method that actually performs the lookup.  Other methods are wrappers for this.
+
+        Core to this is getting a canonical context, which is done by __getitem__
         :param flowable: a string
         :param quantity: a quantity known to the quantity manager
         :param context: [None] default provide all contexts; must explicitly provide 'none' to filter by null context
@@ -621,16 +623,29 @@ class TermManager(object):
         return unknown
 
     def synonyms(self, term):
+        """
+        Search for synonyms, first in contexts, then flowables, then quantities.
+        The somewhat awkward structure here is because of the dynamics of returning generators-- using
+        try: return self._cm.synonyms(term) except KeyError: ... the KeyError was not getting caught because the
+        generator was already returned before iterating.
+        :param term:
+        :return:
+        """
         try:
-            return self._cm.synonyms(term)
+            obj = self._cm[term]
+            it = self._cm.synonyms(obj)
         except KeyError:
             try:
-                return self._fm.synonyms(term)
+                obj = self._fm[term]
+                it = self._fm.synonyms(obj)
             except KeyError:
                 try:
-                    return self._qm.synonyms(term)
+                    obj = self._qm[term]
+                    it = self._qm.synonyms(obj)
                 except KeyError:
-                    return ()
+                    it = ()
+        for k in it:
+            yield k
 
     def contexts(self, search=None, origin=None):
         for cx in self._cm.objects:

@@ -141,6 +141,22 @@ class LciaEngine(TermManager):
             self._qm.add_quantity(quantity)
         return self._canonical_q(quantity)
 
+    '''
+    def get_canonical(self, quantity):
+        """
+        Override TermManager default to automatically add unknown quantities
+        :param quantity:
+        :return:
+        """
+        try:
+            return self._canonical_q(quantity)
+        except KeyError:
+            if hasattr(quantity, 'entity_type') and quantity.entity_type == 'quantity' and not quantity.is_entity:
+                print('Missing canonical quantity-- adding to LciaDb')
+                self._catalog.register_quantity_ref(quantity)
+                q_can = self._tm.get_canonical(quantity)
+    '''
+
     def merge_quantities(self, first, second):
         """
         Absorb second into child of first.  Currently does not support remapping entries, so import_cfs(second)
@@ -173,6 +189,7 @@ class LciaEngine(TermManager):
                 fb = self._fm[cf.flowable]
             except KeyError:
                 fb = self._create_flowable(cf.flowable)
+            self.add_quantity(cf.ref_quantity)
 
             cx = self._cm.find_matching_context(cf.context)
             self._qassign(qq, fb, cf, context=cx)

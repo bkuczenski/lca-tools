@@ -67,14 +67,10 @@ class LciaDb(Qdb):
                 entity.set_qi(self.make_interface('quantity'))
             else:
                 print('Adding qty ref %s' % entity)
-                kws = {}
-                if entity.has_property('Name'):
-                    kws['Name'] = entity['Name']
-                if entity.has_property('Synonyms'):
-                    kws['Synonyms'] = entity['Synonyms']
-                q_masq = QuantityRef(entity.external_ref, self.query, entity.reference_entity, **kws)
+                q_masq = QuantityRef(entity.external_ref, self.query, entity.reference_entity, Name=entity['Name'])
                 print('Adding masquerade %s' % q_masq)
                 self.tm.add_quantity(q_masq)
+                self.tm.add_quantity(entity)  # should turn up as a child
                 print('Importing factors')
                 self.tm.import_cfs(entity)
                 assert self.tm.get_canonical(entity) is q_masq

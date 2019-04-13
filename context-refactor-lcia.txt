@@ -1,4 +1,71 @@
 ==========
+Fri Apr 12 14:12:12 -0700 2019
+
+Big Fucking Mess, part 3
+
+We now have three big fucking messes, with nominal paths to resolution for == basically all of them, but with costs.
+
+First is the context-matching problem I articulated at cob yesterday.  During the evening I rationalized the view that I am *expecting too much* of the resource infrastructure- and in fact my design is consistent with this view.  A resource is supposed to arrive at the catalog *already configured*. Obvious problems with configuring a resource after loading it into the catalog can be averted by designing a *configurator*, which possesses its own captive LciaDb, to validate an archive, install term mappings and other config, and then *ouptut* a resource JSON object for delivery to a file, a catalog, or a resource server.  This is good because the configurator, not the catalog, is the right tool to assess new archives and clean them up. Required tasks:
+ * write the configurator- enable it to proof-check an archive against the LciaDb in 3 dimensions of quantity, flowable, context
+ * add a config interface to basic archives
+ * generalize context_hints to deal with quantities and probably flowables as well
+
+Second is the problem I encountered last night when I started digging in, which was that quantities were *still* not synchronizing correctly, and this is mainly a problem with reference quantities.  We load CFs from a foreign archive and, to save time, we insert them whole into the _q_dict. But that means they bring their native ref_quantities with them.  The obvious first solution is to duplicate the characterizations in local.qdb, except that raises the problem of synchronicity- if you then add CF values to the foreign one, they won't show up in local.qdb, whereas if the entities are multiply referenced, they will.
+
+This is operationally a problem because the CF is used to generate the QRResult (with Characterization.query()) and so it installs the foreign ref_qty, which then confounds ref quantity conversions and (more crucially) LCIA results, both of which test for equality.. what we really want is to test for canonical equality, but (a) we don't have access to get_canonical everywhere and (b) that would be really expensive.
+
+(It's fair to say that THIS problem would be solved if we were using a giant graphdb instead of a bundle of entities to store CFs)
+
+So what do we do?
+ 1. We could add a param to Characterization.query() that substitutes a canonical qty for the native one- this turns out to be irritating to implement but maybe best
+ 2. we could replace Characterization's ref_quantity with a canonical one, but that is problem because it's used for reference-checking and also in the hash
+ 2a. alternatively, we could masquerade the CF's ref quantity internally to the CF, but that seems heavyweight
+ 3. you know what? I am going to reduce the exactitude of the test, and test for equality of unit string in LciaDetail, and then just throw in a canonical lookup in the quantity_conversions machinery, and see if that does it.
+
+then, the contexts specifically- e.g. (a) the fact that we don't want to be creating contexts all willy-nilly in the master Lcia engine, (b) even not broken, the do_lcia routine requires dist=2 to find matches between uslci and traci, (c) find_matching_context should not modify local contexts- should just find them.
+
+
+
+A lesser problem is in the way we are catching ConversionReferenceMismatch-- since it's a thrown exception, we lose the opportunity to return what was learned during the conversion, crucially exactly WHICH quantities were unable to be reconciled.  This is solved by introducing a wrapper, where we use the interior if we want to capture and return mismatches (i.e. in do_lcia) and we use the wrapper to implement the interface (raising the exception if no match is found)
+
+
+Sat 2019-04-13 07:49:35 -0700
+
+Let's summarize where we are with contexts, which is the LAST PIECE OF THIS PUZZLE. Reiterate: when we solve the contexts problem, LCIA should *work*.
+
+The main thing for the canonical set of contexts is to be the domain of CLookups, which are the gateways to QR.  CLookups get interacted with in four places:
+ - in _factors_for_flowable and _find_exact_cf (more on that later), to retrieve CFs (via _qlookup)
+ - in add_characterization and import_cfs, to create or assign CFs (via _qassign)
+
+SO, in order for the LCIA engine to work, we simply need to ensure that the contexts used in these interactions are canonical.
+
+HERE the problem is that add_characterization creates contexts via add_compartments, whereas import_cfs obtains a context from find_matching_context.
+
+SO: what we should do :
+ 0- rewrite find_matching_context to be a "best-fit" engine that does not modify the context manager, other than to apply shortcut hints when it does find affirmative matches
+ 1- abandon the multiply-used LciaEngine. Only Qdb uses LciaEngine, because we don't want the canonical set of contexts to be messed with
+ 2- override add_context to use find_matching_context in the lcia engine, substituting NullContext for any non-matching context.  This is an interim / proposed solution but I think it should work.  The only thing it compromises is the (as-yet-unachieved and not even well-motivated) use case of supporting robustly multi-context characterizations of intermediate flows.
+ 3- establish the configuration framework above
+ 3a- manually assign origins to contexts created.. somewhere
+ 3b- yield context.fullname (if it is defined) first
+
+Then, for LCIA- we will ensure consistency in context lookup because:
+ - import_cfs will apply a valid canonical context (or at worst NullContext) via find_matching_context, taking advantage of context hints in config
+ - do_lcia will search for a valid canonical context by using find_matching_context as well, "" "" "" "" "" "" ""
+
+What is not supported but could be in the future:
+- reclassifying CFs stored under NullContext to be stored under a more suitable context, which could be done by an exhaustive search of _q_dict[qq][*][NullContext][*]
+            ^               ^
+	    fb              list of contexts (or just one if SCLookup)
+- reassigning context hints.
+
+This would allow poorly-configured LCIA resources to be rescued, and since find_matching_context is used dynamically, 
+
+
+       	    
+
+
+==========
 Thu Apr 11 09:21:59 -0700 2019
 
 OK we are so close, rolling on up to Promontory Point, but we are still a bit off.

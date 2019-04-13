@@ -11,7 +11,8 @@ class QuantityAlreadySet(Exception):
 
 def _quantity_terms(quantity):
     yield quantity['Name']
-    yield str(quantity)
+    yield quantity.name
+    yield str(quantity)  # this is the same as above for entities, but includes origin for refs
     yield quantity.external_ref  # do we definitely want this?  will squash versions together
     if quantity.uuid is not None:
         yield quantity.uuid

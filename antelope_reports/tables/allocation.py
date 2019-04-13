@@ -49,7 +49,7 @@ class AllocationGrid(BaseTableOutput):
         if term is None:
             return '%s %s' % (item.unit, item.flow)
         else:
-            return '%s %s' % (item.unit, term._name)
+            return '%s %s' % (item.unit, term.name)
 
     def _extract_data_from_item(self, objects):
         """

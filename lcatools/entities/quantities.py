@@ -147,11 +147,15 @@ class LcQuantity(LcEntity):
     def reset_unitstring(self, ustring):
         self.reference_entity.reset_unitstring(ustring)
 
-    def __str__(self):
-        name = '%s [%s]' % (self._d['Name'], self.reference_entity.unitstring)
+    @property
+    def name(self):
+        n = '%s [%s]' % (self._d['Name'], self.reference_entity.unitstring)
         if self.is_lcia_method():
-            return '%s [LCIA]' % name
-        return name
+            return '%s [LCIA]' % n
+        return n
+
+    def __str__(self):
+        return self.name
 
 
 class LcUnit(object):

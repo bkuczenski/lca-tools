@@ -104,10 +104,11 @@ class BasicArchive(EntityStore):
 
         source = j.pop('dataSource')
         ar = cls(source, ref=existing_ref, ns_uuid=ns_uuid, static=True, **kwargs)
-        ar.load_from_dict(j, jsonfile=filename)
-
         if ref != ar.ref:
             ar.set_origin(ref)
+
+        ar.load_from_dict(j, jsonfile=filename)
+
         return ar
 
     def __init__(self, *args, contexts=None, flowables=None, term_manager=None, **kwargs):

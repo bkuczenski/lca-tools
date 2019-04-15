@@ -1,6 +1,10 @@
-from .data_source import DataSource
+from .data_source import DataSource, ResourceInfo
 from antelope_utilities.lcia.ipcc_2007_traci import AUTHORIZED_REF
 from lcatools.lcia_engine import IPCC_2007_GWP
+
+
+gwp_ipcc_2007 = ResourceInfo(IPCC_2007_GWP, 'json', None, None,
+                             {'context_hint': [['air', 'to air'], ['water', 'to water']]}, {})
 
 
 class GwpIpcc2007(DataSource):
@@ -25,4 +29,4 @@ class GwpIpcc2007(DataSource):
 
     def make_resources(self, ref=AUTHORIZED_REF):
         if ref in self.references:
-            yield self._make_resource(ref, source=IPCC_2007_GWP, interfaces=self.interfaces(), static=True)
+            yield self._make_resource(ref, info=gwp_ipcc_2007, interfaces=self.interfaces(), static=True)

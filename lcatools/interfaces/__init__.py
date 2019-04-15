@@ -59,7 +59,7 @@ class LcQuery(BasicQuery, BackgroundInterface, ConfigureInterface):
 Utilities
 
 '''
-def local_ref(source):
+def local_ref(source, prefix=None):
     """
     Create a semantic ref for a local filename.  Just uses basename.  what kind of monster would access multiple
     different files with the same basename without specifying ref?
@@ -70,8 +70,11 @@ def local_ref(source):
 
     Anyway, to be clear, local semantic references are not supposed to be distributed.
     :param source:
+    :param prefix: [None] default 'local'
     :return:
     """
+    if prefix is None:
+        prefix = 'local'
     xf = source.translate(str.maketrans('/\\', '..', ':~'))
     while splitext(xf)[1] in {'.gz', '.json', '.zip', '.txt', '.spold', '.7z'}:
         xf = splitext(xf)[0]
@@ -79,7 +82,7 @@ def local_ref(source):
         xf = xf[1:]
     while xf[-1] == '.':
         xf = xf[:-1]
-    return '.'.join(['local', xf])
+    return '.'.join([prefix, xf])
 
 
 

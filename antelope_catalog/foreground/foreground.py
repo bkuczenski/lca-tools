@@ -116,6 +116,8 @@ class LcForeground(BasicArchive):
         :param ns_uuid: Foreground archives may not use ns_uuids, so any namespace uuid provided will be ignored.
         :param kwargs:
         """
+        if catalog is not None:
+            kwargs['term_manager'] = kwargs.pop('term_manager', catalog.lcia_engine)
         super(LcForeground, self).__init__(fg_path, **kwargs)
         self._uuid_map = defaultdict(set)
         self._catalog = catalog

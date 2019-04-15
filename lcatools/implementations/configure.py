@@ -17,6 +17,11 @@ valid_configs = {
 
 class ConfigureImplementation(BasicImplementation, ConfigureInterface):
 
+    def _apply_config(self, config, option, **kwargs):
+        if option in config:
+            for k in config[option]:
+                getattr(self, option)(*k, **kwargs)
+
     def apply_config(self, config, overwrite=False):
         """
         Apply a collection of configuration objects to the archive.
@@ -29,25 +34,17 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
         :return:
         """
         print('Applying configuration to %s' % self._archive)
-        _config = defaultdict(set, config)  # do this to avoid KeyErrors
         # re_index = False
+        '''
+        # self._apply_config(config, 'add_terms')
         for k in _config['add_terms']:
             print('adding %s synonyms (%s|%d)' % (k[0], k[1], len(k) - 1))
             self.add_terms(*k)
-        for k in _config['set_reference']:
-            print('Setting reference %s [%s] for %s' % (k[1], k[2], k[0]))
-            self.set_reference(*k)
-            # re_index = True
-        for k in _config['unset_reference']:
-            print('UnSetting reference %s [%s] for %s' % (k[1], k[2], k[0]))
-            self.unset_reference(*k)
-            # re_index = True
-        for k in _config['characterize_flow']:
-            print('Characterizing flow %s by %s: %g' % k)
-            self.characterize_flow(*k, overwrite=overwrite)
-        for k in _config['allocate_by_quantity']:
-            print('Allocating %s by %s' % k)
-            self.allocate_by_quantity(*k, overwrite=overwrite)
+        '''
+        self._apply_config(config, 'set_reference')
+        self._apply_config(config, 'unset_reference')
+        self._apply_config(config, 'characterize_flow', overwrite=overwrite)
+        self._apply_config(config, 'allocate_by_quantity')
         if hasattr(self._archive, 'ti'):
             self._archive.make_interface('index').re_index()
 
@@ -111,6 +108,7 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
         :param kwargs:
         :return:
         """
+        print('Setting reference %s [%s] for %s' % (flow_ref, direction, process_ref))
         pr = self._archive.retrieve_or_fetch_entity(process_ref)
         fl = self._archive.retrieve_or_fetch_entity(flow_ref)
         if direction is None:
@@ -131,6 +129,7 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
         :param kwargs:
         :return:
         """
+        print('UnSetting reference %s [%s] for %s' % (flow_ref, direction, process_ref))
         if process_ref is None:
             fl = self._archive.retrieve_or_fetch_entity(flow_ref)
             for p in self._archive.entities_by_type('process'):
@@ -166,6 +165,7 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
         :param kwargs:
         :return:
         """
+        print('Characterizing flow %s by %s: %g' % (flow_ref, quantity_ref, value))
         flow = self._archive.retrieve_or_fetch_entity(flow_ref)
         qty = self._archive.retrieve_or_fetch_entity(quantity_ref)
         self._archive.tm.add_characterization(flow['Name'], flow.reference_entity, qty, value, context=flow.context,
@@ -195,6 +195,7 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
         :param kwargs:
         :return:
         """
+        print('Allocating %s by %s' % (process_ref, quantity_ref))
         p = self._archive.retrieve_or_fetch_entity(process_ref)
         qty = self._archive.retrieve_or_fetch_entity(quantity_ref)
         is_alloc = False

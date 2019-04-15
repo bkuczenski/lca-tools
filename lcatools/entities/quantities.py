@@ -3,6 +3,7 @@ import uuid
 
 
 from lcatools.entities.entities import LcEntity
+from lcatools.entity_refs.quantity_ref import QuantityRef
 
 
 class NoUnitConversionTable(Exception):
@@ -27,6 +28,11 @@ class LcQuantity(LcEntity):
     def __init__(self, external_ref, **kwargs):
         super(LcQuantity, self).__init__('quantity', external_ref, **kwargs)
         self._qi = None
+
+    def __setitem__(self, key, value):
+        if key.lower == 'indicator':
+            self._new_fields.append('Indicator')
+        super(LcQuantity, self).__setitem__(key, value)
 
     def _set_reference(self, ref_entity):
         if isinstance(ref_entity, str):
@@ -148,14 +154,31 @@ class LcQuantity(LcEntity):
         self.reference_entity.reset_unitstring(ustring)
 
     @property
-    def name(self):
+    def _name(self):
         n = '%s [%s]' % (self._d['Name'], self.reference_entity.unitstring)
         if self.is_lcia_method():
             return '%s [LCIA]' % n
         return n
 
+    @property
+    def name(self):
+        return self._name
+
     def __str__(self):
-        return self.name
+        return self._name
+
+    def __eq__(self, other):
+        if isinstance(other, QuantityRef):
+            return other.is_canonical(self)
+        return super(LcQuantity, self).__eq__(other)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        if self._origin is None:
+            raise AttributeError('Origin not set!')
+        return hash((self.origin, self.external_ref))
 
 
 class LcUnit(object):

@@ -18,6 +18,10 @@ class QuantityRef(EntityRef):
             return '%s] [LCIA' % self.unit()
         return self.unit()
 
+    @property
+    def name(self):
+        return self._name
+
     def serialize(self, **kwargs):
         j = super(QuantityRef, self).serialize(**kwargs)
         j['referenceUnit'] = self.unit()
@@ -34,9 +38,18 @@ class QuantityRef(EntityRef):
             return False
         return True
 
+    def __eq__(self, other):
+        return self.is_canonical(other)
+
+    def __hash__(self):
+        return hash(self.link)
+
     """
     Interface methods
     """
+    def is_canonical(self, other):
+        return self._query.get_canonical(other) is self
+
     def flowables(self, **kwargs):
         return self._query.flowables(quantity=self.external_ref, **kwargs)
 

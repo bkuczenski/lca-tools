@@ -108,7 +108,7 @@ class BaseRef(object):
         self._d[key] = value
 
     @property
-    def name(self):
+    def _name(self):
         """
         This should be the same as .name for entities; whereas str(ref) prepends origin
         :return:
@@ -252,13 +252,6 @@ class EntityRef(BaseRef):
     @property
     def reference_entity(self):
         return self._reference_entity
-
-    @property
-    def name(self):
-        try:
-            return self['Name']
-        except KeyError:
-            return self.external_ref
 
     @property
     def resolved(self):

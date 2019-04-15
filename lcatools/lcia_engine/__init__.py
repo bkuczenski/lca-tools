@@ -68,6 +68,8 @@ class LciaDb(Qdb):
             else:
                 print('Adding qty ref %s' % entity)
                 q_masq = QuantityRef(entity.external_ref, self.query, entity.reference_entity, Name=entity['Name'])
+                if entity.has_property('Indicator'):
+                    q_masq['Indicator'] = entity['Indicator']
                 print('Adding masquerade %s' % q_masq)
                 self.tm.add_quantity(q_masq)
                 self.tm.add_quantity(entity)  # should turn up as a child

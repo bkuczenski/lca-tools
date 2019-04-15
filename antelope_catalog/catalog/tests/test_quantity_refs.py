@@ -35,3 +35,8 @@ class QuantityRefTest(unittest.TestCase):
         self.assertEqual(len([k for k in self.gwp_ref.factors()]), 91)
         self.assertEqual(len([k for k in self.gwp_true.factors()]), 91)
 
+    def test_properties(self):
+        self.assertTrue(self.gwp.has_property('indicator'))
+        self.assertTrue(self.gwp_ref.has_property('indicator'))
+        self.assertTrue(self.gwp_true.has_property('indicator'))
+

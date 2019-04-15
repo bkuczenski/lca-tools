@@ -101,6 +101,13 @@ class Context(Compartment):
             self.sense = sense
 
     @property
+    def terms(self):
+        if self._first_origin is not None:
+            yield self.fullname
+        for t in super(Context, self).terms:
+            yield t
+
+    @property
     def sense(self):
         if self.parent is None:
             return self._sense
@@ -260,6 +267,7 @@ class ContextManager(CompartmentManager):
 
         super(CompartmentManager, self)._merge(existing_entry, ent)
 
+    '''
     def add_lineage(self, lineage, parent=None):
         """
         Create a set of local contexts, beginning with parent, that replicate those in lineage
@@ -277,62 +285,39 @@ class ContextManager(CompartmentManager):
                 self.add_synonym(lx.fullname, new)
             parent = new
         return new
+    '''
 
-    def _find_root_and_missing(self, lineage):
+    def find_matching_context(self, context):
+        if context.name == context.fullname:
+            raise AttributeError('Context origin must be specified')
         current = None  # current = deepest local match
-        missing = []
 
-        # first, look for stored auto_names or context_hints:
-        for cx in lineage[::-1]:
+        # first, look for stored auto_names or context_hints to find an anchor point:
+        missing = []
+        for cx in context.seq[::-1]:
             if cx.fullname in self:
                 current = self[cx.fullname]
-                return current, missing
+                break
             else:
                 missing = [cx] + missing  # prepend
 
-        # if we get here, then we haven't found anything, so start over and hunt from bottom up
-        missing = []
-        while len(lineage) > 0:
-            this = lineage.pop(0)  # this = active foreign match
+        # if current is None when we get here, then we haven't found anything, so start over and hunt from bottom up
+        while len(missing) > 0:
+            this = missing.pop(0)  # this = active foreign match
             if current is None:
                 try:
                     current = next(self._gen_matching_entries(this))
                 except StopIteration:
                     continue
+                self.add_synonym(this.fullname, current)
             else:
                 try:
                     nxt = next(k for k in self._gen_matching_entries(this) if k.is_subcompartment(current))
+                    self.add_synonym(this.fullname, nxt)
                     current = nxt
                 except StopIteration:
-                    missing.append(this)
-        return current, missing
-
-    def find_matching_context(self, cx):
-        """
-        The objective is to find the one context in the local hierarchy that best matches the foreign context.
-        First, we do our best to find a common root with a missing sub-lineage using _find_root_and_missing()
-        If no common root is found, the entire lineage is added as-new to the local hierarchy
-
-        Otherwise, the missing sub-lineage is added to the common root
-
-        :param cx: a context, possibly from a foreign context manager
-        :return: the existing context (or a newly created child context) in self
-        """
-
-        current, missing = self._find_root_and_missing(cx.seq)
-
-        if current is None:  # nothing found! add it from scratch
-            new = self.add_lineage(cx.seq)
-        else:
-            if missing:
-                if missing[-1] is cx:
-                    new = self.add_lineage(missing, parent=current)
-                else:
-                    new = current
-            else:
-                new = current
-        self.add_synonym(cx.fullname, new)
-        return new
+                    continue
+        return current
 
     def _check_subcompartment_lineage(self, current, c):
         try:

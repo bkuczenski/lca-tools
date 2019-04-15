@@ -24,19 +24,18 @@ From the catalog_ref file, the catalog should meet the following spec:
 import os
 import re
 from shutil import copy2
-import requests
 import hashlib
 from shutil import rmtree
 # from collections import defaultdict
 
-from lcatools.archives import BasicArchive, REF_QTYS
+from lcatools.archives import REF_QTYS
 from lcatools.lcia_engine import LciaDb, DEFAULT_CONTEXTS, DEFAULT_FLOWABLES
 
 
 from lcatools.interfaces import local_ref, EntityNotFound
 from ..catalog_query import CatalogQuery, INTERFACE_TYPES
 from .lc_resolver import LcCatalogResolver
-from ..lc_resource import LcResource
+from ..lc_resource import LcResource, download_file
 # from lcatools.flowdb.compartments import REFERENCE_INT  # reference intermediate flows
 from ..data_sources.local import TEST_ROOT
 
@@ -131,16 +130,7 @@ class LcCatalog(object):
                     return self._localize_source(local_file)
                 return local_file
 
-        r = requests.get(url, stream=True)
-        md5check = hashlib.md5()
-        with open(local_file, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=1024):
-                if chunk:  # filter out keep-alive new chunks
-                    f.write(chunk)
-                    md5check.update(chunk)
-                    # f.flush() commented by recommendation from J.F.Sebastian
-        if md5sum is not None:
-            assert md5check.hexdigest() == md5sum, 'MD5 checksum does not match'
+        download_file(url, local_file, md5sum)
         if localize:
             return self._localize_source(local_file)
         return local_file

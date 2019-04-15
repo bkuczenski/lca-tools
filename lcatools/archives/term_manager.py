@@ -123,6 +123,7 @@ class TermManager(object):
     '''
     def __getitem__(self, item):
         """
+        TermManager.__getitem__ retrieves a context known to the TermManager, or None if one is not found.
         Getitem exposes only the contexts, since flow external_refs are used as flowable synonyms
         :param item:
         :return:
@@ -370,9 +371,8 @@ class TermManager(object):
         :param ref_quantity: [entity or ref]
         :param query_quantity: [entity or ref]
         :param value: mandatory. either a numeric value or a dict mapping locations to values
-        :param context: the context for which the characterization applies.  If None, applies to all contexts.
-          If the characterization describes the reference product of a process, the context can be the process
-          external ref.  If the characterization describes an LCIA factor, the context should be a compartment.
+        :param context: the context for which the characterization applies.  Should be a string or tuple.  None means
+          the factor applies to all contexts.
         :param overwrite: whether to overwrite an existing value if it already exists (ignored if value is a dict)
         :param location: ['GLO'] (ignored if value is a dict)
         :param origin: (optional; origin of value; defaults to quantity.origin)
@@ -542,7 +542,7 @@ class TermManager(object):
             cl = self._qlookup(qq, fb)
         except NoFQEntry:
             return
-        if cx is NullContext:
+        if cx is None:
             for v in cl.values():
                 yield v
         else:
@@ -561,7 +561,7 @@ class TermManager(object):
         """
         try:
             fb = self._fm[flowable]
-            cx = self._cm[context]
+            cx = self[context]
         except KeyError:
             return
         if quantity is None:

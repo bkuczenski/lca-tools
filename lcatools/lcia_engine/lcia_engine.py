@@ -3,7 +3,7 @@ import re
 import os
 
 from lcatools.archives.term_manager import TermManager, NoFQEntry
-from lcatools.contexts import NullContext
+from lcatools.contexts import Context, NullContext
 from .quelled_cf import QuelledCF
 from .clookup import CLookup, SCLookup
 
@@ -92,6 +92,23 @@ class LciaEngine(TermManager):
 
         # difficult problem, this
         self._quell_biogenic = quell_biogenic_co2
+
+    def __getitem__(self, item):
+        """
+        LciaEngine.__getitem__ retrieves a canonical context by more intensively searching for matches from a given
+        context.  Adds foreign context's full name as synonym if one is affirmatively found.  If one is not found,
+        returns the NullContext.
+        :param item:
+        :return:
+        """
+        if item is None:
+            return None
+        try:
+            return self._cm.__getitem__(item)
+        except KeyError:
+            if isinstance(item, Context):
+                return self._cm.find_matching_context(item)
+            return None
 
     def apply_context_hints(self, origin, hints):
         """
@@ -191,7 +208,7 @@ class LciaEngine(TermManager):
                 fb = self._create_flowable(cf.flowable)
             self.add_quantity(cf.ref_quantity)
 
-            cx = self._cm.find_matching_context(cf.context)
+            cx = self[cf.context]
             self._qassign(qq, fb, cf, context=cx)
 
     def _find_exact_cf(self, qq, fb, cx, origin):
@@ -296,7 +313,7 @@ class LciaEngine(TermManager):
             cl = self._qlookup(qq, fb)
         except NoFQEntry:
             return
-        if cx is NullContext:
+        if cx is None:
             for v in cl.cfs():
                 yield v
         else:

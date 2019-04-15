@@ -1,6 +1,8 @@
 import json
 import os
 from collections import defaultdict
+import requests
+import hashlib
 
 from lcatools.archives import InterfaceError, index_archive, update_archive, create_archive
 
@@ -8,6 +10,19 @@ from .foreground import LcForeground
 from .catalog_query import INTERFACE_TYPES, NoCatalog
 
 # from .providers import create_archive
+
+
+def download_file(url, local_file, md5sum=None):
+    r = requests.get(url, stream=True)
+    md5check = hashlib.md5()
+    with open(local_file, 'wb') as f:
+        for chunk in r.iter_content(chunk_size=1024):
+            if chunk:  # filter out keep-alive new chunks
+                f.write(chunk)
+                md5check.update(chunk)
+                # f.flush() commented by recommendation from J.F.Sebastian
+    if md5sum is not None:
+        assert md5check.hexdigest() == md5sum, 'MD5 checksum does not match'
 
 
 class LcResource(object):
@@ -100,20 +115,13 @@ class LcResource(object):
         else:
             src = self.source
 
-        # setup term mgr: use LciaEngine (if available) for all non-static local resources
-        tm = None
-        if catalog is not None:
-            if not self.static:
-                tm = catalog.lcia_engine
-
         if self.ds_type.lower() in ('foreground', 'lcforeground'):
-            self._archive = LcForeground(src, catalog=catalog, ref=self.reference, term_manager=tm, **self.init_args)
+            self._archive = LcForeground(src, catalog=catalog, ref=self.reference, **self.init_args)
         else:
-            self._archive = create_archive(src, self.ds_type, catalog=catalog, ref=self.reference, term_manager=tm,
-                                           **self.init_args)
+            self._archive = create_archive(src, self.ds_type, catalog=catalog, ref=self.reference, **self.init_args)
         if catalog is not None and os.path.exists(catalog.cache_file(self.source)):
             update_archive(self._archive, catalog.cache_file(self.source))
-        self._static = self._archive.static
+        self._static |= self._archive.static
         if self.static and self.ds_type.lower() != 'json':
             self._archive.load_all()  # static json archives are by convention saved in complete form
 
@@ -154,12 +162,16 @@ class LcResource(object):
         return self._archive.make_interface(iface)
 
     def apply_config(self, catalog=None):
-        if len(self._config) > 0:
-            print('Applying stored configuration')
-            self._archive.make_interface('configure').apply_config(self._config)
+        if len(self._config) == 0:
+            return
+        print('Applying stored configuration')
         if catalog is not None:
             if 'context_hint' in self._config:
-                catalog.lcia_engine.apply_context_hints(self.reference, self._config['context hint'])
+                catalog.lcia_engine.apply_context_hints(self.reference, self._config['context_hint'])
+        try:
+            self._archive.make_interface('configure').apply_config(self._config)
+        except InterfaceError:
+            pass
 
     def add_interface(self, iface):
         if iface in INTERFACE_TYPES:
@@ -324,29 +336,35 @@ class LcResource(object):
         """
         self._config[config].add(args)
 
-    def add_config(self, config, *args, store=None):
+    def add_context_hint(self, local_name, canonical_name, catalog=None):
+        hint = (local_name, canonical_name)
+        self._config['context_hint'].add(hint)
+        if catalog is None:
+            print('No Catalog - context hint must be applied manually')
+        else:
+            catalog.lcia_engine.apply_context_hints(self.reference, [hint])
+
+    def add_config(self, option, *args, store=None):
         """
         Add a configuration setting to the resource, and apply it to the archive.
-        :param config:
+        :param option: the option being configured
         :param args: the arguments, in the proper sequence
         :param store: [None] or bool: default is to store on non-internal resources
         :return: None if archive doesn't support configuration; False if unsuccessful, True if successful
         """
+        if option == 'context_hint':
+            raise ValueError('Use add_context_hint')
         try:
             cf = self._archive.make_interface('configure')
         except InterfaceError:
             return None
         if store is None:
-            store = not self.internal  # don't want to store config on internal (derived) archives (?)
+            store = not self.internal  # don't want to store option on internal (derived) archives (?)
 
-        if cf.check_config(config, args):
+        if cf.check_config(option, args):
             if store:
-                self._add_config(config, *args)
-            if config == 'context_hint':
-                print('Note: Context hints cannot be automatically applied after instantiation. Please save and')
-                print('reload, or apply manually.')
-            else:
-                cf.apply_config({config: {args}})
+                self._add_config(option, *args)
+            cf.apply_config({option: {args}})
             return True
         print('Configuration failed validation.')
         return False
@@ -386,31 +404,34 @@ class LcResource(object):
             return k['dataSource'] == self.source
         return k['download']['url'] == self._args['download']['url']
 
-    def write_to_file(self, path):
+    def write_to_file(self, path, assign_ref=None):
         """
         Adds the resource to a file whose name is the resource's semantic reference. If the same datasource is
         already present in the file, replace it with the current resource.  otherwise append.
         :param path: directory to store the resource file.
+        :param assign_ref: assign this ref instead of the resource's current ref
         :return:
         """
+        if assign_ref is None:
+            assign_ref = self.reference
         if not os.path.isdir(path):
             if os.path.exists(path):
                 raise ValueError('Please provide a directory path')
             os.makedirs(path)
 
 
-        filename = os.path.join(path, self.reference)
+        filename = os.path.join(path, assign_ref)
         if os.path.exists(filename):
             try:
                 with open(filename, 'r') as fp:
                     j = json.load(fp)
             except json.JSONDecodeError:
-                j = {self.reference: []}
+                j = {assign_ref: []}
 
-            resources = [k for k in j[self.reference] if not self.matches(k)]
+            resources = [k for k in j[assign_ref] if not self.matches(k)]
             resources.append(self.serialize())
         else:
             resources = [self.serialize()]
-        with open(os.path.join(path, self.reference), 'w') as fp:
-            json.dump({self.reference: resources}, fp, indent=2)
+        with open(os.path.join(path, assign_ref), 'w') as fp:
+            json.dump({assign_ref: resources}, fp, indent=2)
         self._issaved = True

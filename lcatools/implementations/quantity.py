@@ -91,6 +91,12 @@ class QuantityConversion(object):
         return '/'.join(locs)
 
     @property
+    def origin(self):
+        if len(self._results) > 0:
+            return self._results[0].origin
+        return ''
+
+    @property
     def results(self):
         for res in self._results:
             yield res
@@ -533,7 +539,11 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
                 qr, mis = self._quantity_relation(x.flow.name, ref_q, q, x.termination, locale=locale,
                                                   **kwargs)
                 if qr is None and len(mis) > 0:
-                    res.add_error(x, mis)
+                    res.add_error(x, mis[0])
+                    if len(mis) > 1:
+                        print('omitting mismatches:')
+                        for k in mis[1:]:
+                            print(k)
                 elif qr.value == 0:
                     res.add_zero(x, qr)
                 else:

@@ -43,7 +43,8 @@ HERE the problem is that add_characterization creates contexts via add_compartme
 
 SO: what we should do :
  0- rewrite find_matching_context to be a "best-fit" engine that does not modify the context manager, other than to apply shortcut hints when it does find affirmative matches
- 1- abandon the multiply-used LciaEngine. Only Qdb uses LciaEngine, because we don't want the canonical set of contexts to be messed with
+ 1- abandon the multiply-used LciaEngine. Only Qdb uses LciaEngine, because we don't want the canonical set of contexts to be messed with on external archives
+ 1a- foregrounds also use the LciaEngine.
  2- override add_context to use find_matching_context in the lcia engine, substituting NullContext for any non-matching context.  This is an interim / proposed solution but I think it should work.  The only thing it compromises is the (as-yet-unachieved and not even well-motivated) use case of supporting robustly multi-context characterizations of intermediate flows.
  3- establish the configuration framework above
  3a- manually assign origins to contexts created.. somewhere
@@ -57,12 +58,27 @@ What is not supported but could be in the future:
 - reclassifying CFs stored under NullContext to be stored under a more suitable context, which could be done by an exhaustive search of _q_dict[qq][*][NullContext][*]
             ^               ^
 	    fb              list of contexts (or just one if SCLookup)
+- potential problems with non-static resources learning CFs that are not linked to LciaEngine (but these can be handled by [re-]importing CFs)
 - reassigning context hints.
 
 This would allow poorly-configured LCIA resources to be rescued, and since find_matching_context is used dynamically, 
 
 
-       	    
+
+Sat 2019-04-13 18:14:30 -0700
+
+Working on the train, I accomplished 0-2 and started 3, though that is obviously a big, open-ended project of indeterminate length.  The real thing I need it to do right now is to identify context hints.  But then I got distracted by the flowables list which is still only a skeleton.
+
+I can get a long way there by importing the ecoinvent flowables, which is easy enough but not easy enough to fit into 90 minutes of work sitting in Jason's living room.  What needs to get done is: figure out the reference quantity (of which there are about seven), generate a FlowInterface, and then add it to LciaDb and save it.
+
+OK, then try for LCIA.
+
+
+Mon 2019-04-15 00:16:58 -0700
+
+LCIA is so-so close.  We are getting non-zero results, only after merging "ecospold quantity kg" with "mass" (after discovery via LciaResult.errors()). Weird issue with 'co2, in air' coming up as a cutoff rather than a context-terminated exchange, when it seems as though the context is present (?).  So we will debug that,.... tomorrow?
+
+the repetitive declarations of 'air' -> 'to air' and 'water' -> 'to water' are irritating.  and they apply to basically every resource.
 
 
 ==========

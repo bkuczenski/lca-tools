@@ -7,7 +7,7 @@ from ..interfaces import ConfigureInterface, check_direction
 ValidConfig = namedtuple('ValidConfig', ('nargs', 'argtypes'))
 
 valid_configs = {
-    'context_hint': ValidConfig(2, ('context', 'str')),
+    'hints': ValidConfig(3, ('hint', 'str', 'str')),
     'set_reference': ValidConfig(3, ('process', 'flow', 'direction')),
     'unset_reference': ValidConfig(3, ('process', 'flow', 'direction')),
     'characterize_flow': ValidConfig(3, ('flow', 'quantity', 'float')),
@@ -60,7 +60,10 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
         if len(c_args) != vc.nargs:
             raise ValueError('Wrong number of arguments (%d supplied; %d required)' % (len(c_args), vc.nargs))
         for i, t in enumerate(vc.argtypes):
-            if t == 'float':
+            if t == 'hint':
+                if c_args[i] in ('context', 'flowable', 'quantity'):
+                    continue
+            elif t == 'float':
                 if isinstance(c_args[i], float):
                     continue
             elif t == 'str':

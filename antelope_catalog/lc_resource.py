@@ -125,7 +125,6 @@ class LcResource(object):
         if self.static and self.ds_type.lower() != 'json':
             self._archive.load_all()  # static json archives are by convention saved in complete form
 
-        self.apply_config(catalog)
 
     @property
     def is_loaded(self):
@@ -138,14 +137,14 @@ class LcResource(object):
         if self._archive is None:
             # TODO: try/catch exceptions or return false
             self._instantiate(catalog)
+        self.apply_config(catalog)
         return True
 
     def save(self, catalog):
         self.write_to_file(catalog.resource_dir)
 
     def make_index(self, index_file, force=True):
-        if self._archive is None:
-            self._instantiate()
+        self.check(None)
         self._archive.load_all()
 
         the_index = index_archive(self._archive, index_file, force=force)
@@ -166,8 +165,8 @@ class LcResource(object):
             return
         print('Applying stored configuration')
         if catalog is not None:
-            if 'context_hint' in self._config:
-                catalog.lcia_engine.apply_context_hints(self.reference, self._config['context_hint'])
+            if 'hints' in self._config:
+                catalog.lcia_engine.apply_hints(self.reference, self._config['hints'])
         try:
             self._archive.make_interface('configure').apply_config(self._config)
         except InterfaceError:
@@ -315,6 +314,18 @@ class LcResource(object):
     def init_args(self):
         return self._args
 
+    @property
+    def config(self):
+        return self._config
+
+    @config.setter
+    def config(self, config_dict):
+        cf = self.archive.make_interface('configure')
+        for cfg, cfgs in config_dict.items():
+            for args in cfgs:
+                cf.check_config(cfg, args)
+        self._config = config_dict
+
     def satisfies(self, ifaces):
         if ifaces is None:
             return True
@@ -335,39 +346,6 @@ class LcResource(object):
         :return:
         """
         self._config[config].add(args)
-
-    def add_context_hint(self, local_name, canonical_name, catalog=None):
-        hint = (local_name, canonical_name)
-        self._config['context_hint'].add(hint)
-        if catalog is None:
-            print('No Catalog - context hint must be applied manually')
-        else:
-            catalog.lcia_engine.apply_context_hints(self.reference, [hint])
-
-    def add_config(self, option, *args, store=None):
-        """
-        Add a configuration setting to the resource, and apply it to the archive.
-        :param option: the option being configured
-        :param args: the arguments, in the proper sequence
-        :param store: [None] or bool: default is to store on non-internal resources
-        :return: None if archive doesn't support configuration; False if unsuccessful, True if successful
-        """
-        if option == 'context_hint':
-            raise ValueError('Use add_context_hint')
-        try:
-            cf = self._archive.make_interface('configure')
-        except InterfaceError:
-            return None
-        if store is None:
-            store = not self.internal  # don't want to store option on internal (derived) archives (?)
-
-        if cf.check_config(option, args):
-            if store:
-                self._add_config(option, *args)
-            cf.apply_config({option: {args}})
-            return True
-        print('Configuration failed validation.')
-        return False
 
     def _serialize_config(self):
         j = dict()
@@ -404,16 +382,19 @@ class LcResource(object):
             return k['dataSource'] == self.source
         return k['download']['url'] == self._args['download']['url']
 
-    def write_to_file(self, path, assign_ref=None):
+    def write_to_file(self, path, assign_ref=None, apply_config=None):
         """
         Adds the resource to a file whose name is the resource's semantic reference. If the same datasource is
         already present in the file, replace it with the current resource.  otherwise append.
         :param path: directory to store the resource file.
         :param assign_ref: assign this ref instead of the resource's current ref
+        :param apply_config: overwrites configuration with supplied dict
         :return:
         """
         if assign_ref is None:
             assign_ref = self.reference
+        if apply_config is not None:
+            self.config = apply_config  # tests configuration before storing it
         if not os.path.isdir(path):
             if os.path.exists(path):
                 raise ValueError('Please provide a directory path')

@@ -3,7 +3,7 @@ import re
 import os
 
 from lcatools.archives.term_manager import TermManager, NoFQEntry
-from lcatools.contexts import Context, NullContext
+from lcatools.contexts import Context
 from .quelled_cf import QuelledCF
 from .clookup import CLookup, SCLookup
 
@@ -110,7 +110,7 @@ class LciaEngine(TermManager):
                 return self._cm.find_matching_context(item)
             return None
 
-    def apply_context_hints(self, origin, hints):
+    def apply_hints(self, origin, hints):
         """
         Hints should be
         :param origin:
@@ -118,8 +118,13 @@ class LciaEngine(TermManager):
         canonical is the corresponding canonical context.
         :return:
         """
-        for term, canonical in hints:
-            self._cm.add_context_hint(origin, term, canonical)
+        for hint_type, term, canonical in hints:
+            if hint_type == 'context':
+                self._cm.add_context_hint(origin, term, canonical)
+            elif hint_type == 'quantity':
+                self._qm.add_synonym(term, canonical)
+            elif hint_type == 'flowable':
+                self._fm.add_synonym(term, canonical)
 
     def _add_flow_terms(self, flow, merge_strategy=None):
         """

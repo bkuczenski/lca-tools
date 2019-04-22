@@ -3,14 +3,24 @@ import re
 
 from .lc_resource import LcResource
 from lcatools.lcia_engine import LciaDb
-from lcatools.contexts import NullContext
+
+from lcatools.interfaces import EntityNotFound
 from lcatools.archives.entity_store import local_ref
+from lcatools.archives import InterfaceError
 
 
 class Configurator(object):
 
-    _config = dict()
     _cat_root = None
+
+    def _add_config(self, config, *args):
+        """
+        does no validation
+        :param config:
+        :param args:
+        :return:
+        """
+        self._config[config].add(args)
 
     '''Catalog Emulation'''
     def abs_path(self, rel_path):
@@ -51,18 +61,20 @@ class Configurator(object):
         pass
 
     @classmethod
-    def from_existing_resource(cls, cat_root, ref, interface='basic'):
-        resource_file = os.path.join(cat_root, 'resources', ref)
+    def from_existing_resource(cls, catalog_root, ref, interface='basic'):
+        resource_file = os.path.join(catalog_root, 'resources', ref)
         ress = [k for k in LcResource.from_json(resource_file) if interface in k.interfaces]
         if len(ress) > 1:
             print('Warning: using first of several matching resources')
         cfg = cls(ress[0])
-        cfg.catalog_root = cat_root
+        cfg.catalog_root = catalog_root
+        return cfg
 
     def __init__(self, resource):
         self._ldb = LciaDb.new()
         self._resource = resource
         self._resource.check(self)
+        self._config = resource.config
 
     @property
     def archive(self):
@@ -75,18 +87,51 @@ class Configurator(object):
     def load_all(self):
         self._resource.archive.load_all()
 
-    def add_context_hint(self, local_name, canonical_name):
-        self._resource.add_context_hint(local_name, canonical_name, catalog=self)
+    def add_hint(self, hint_type, local_name, canonical_name):
+        if hint_type not in ('context', 'flowable', 'quantity'):
+            raise ValueError('Hint type %s not valid' % hint_type)
+        hint = (hint_type, local_name, canonical_name)
+        self._config['hints'].add(hint)
+        self.lcia_engine.apply_hints(self.archive.ref, [hint])
 
-    def write_to_catalog(self, assign_ref=None, cat_root=None):
-        if cat_root is None:
+    def add_config(self, option, *args):
+        """
+        Add a configuration setting to the resource, and apply it to the archive.
+        :param option: the option being configured
+        :param args: the arguments, in the proper sequence
+        :return: None if archive doesn't support configuration; False if unsuccessful, True if successful
+        """
+        if option == 'hints':
+            self.add_hint(*args)
+            return True
+        try:
+            cf = self.archive.make_interface('configure')
+        except InterfaceError:
+            print('No Configure interface')
+            return None
+
+        if cf.check_config(option, args):
+            self._add_config(option, *args)
+            cf.apply_config({option: {args}})
+            return True
+        print('Configuration failed validation.')
+        return False
+
+    def _serialize_config(self):
+        j = dict()
+        for k, v in self._config.items():
+            j[k] = sorted([list(g) for g in v], key=lambda x: x[0])
+        return j
+
+    def write_to_catalog(self, assign_ref=None, catalog_root=None):
+        if catalog_root is None:
             if self.catalog_root is None:
                 raise ValueError('Catalog root must be specified')
-            cat_root = self.catalog_root
-        resource_root = os.path.join(cat_root, 'resources')
+            catalog_root = self.catalog_root
+        resource_root = os.path.join(catalog_root, 'resources')
         if assign_ref is None:
             assign_ref = self._resource.reference
-        self._resource.write_to_file(resource_root, assign_ref)
+        self._resource.write_to_file(resource_root, assign_ref, apply_config=self._config)
 
     def check_contexts(self):
         valid = []
@@ -103,6 +148,23 @@ class Configurator(object):
         print('Null Contexts:')
         for k in null:
             print(' %s' % k.fullname)
+
+    def check_quantities(self):
+        valid = []
+        null = []
+        for q in self.archive.entities_by_type('quantity'):
+            try:
+                can = self.lcia_engine.get_canonical(q)
+                valid.append((q, can))
+            except EntityNotFound:
+                null.append(q)
+        print ('Valid Quantities:')
+        for k in valid:
+            print(' %s ==> %s' % (k[0].name, k[1].name))
+
+        print('Unrecognized Quantities:')
+        for k in null:
+            print(' %s' % k)
 
     def check_flowables(self):
         return self._ldb.tm.unmatched_flowables(self._resource.make_interface('index').flowables())

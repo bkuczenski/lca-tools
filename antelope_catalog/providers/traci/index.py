@@ -10,6 +10,5 @@ class Traci21IndexImplementation(IndexImplementation):
     """
     def contexts(self, **kwargs):
         for v in q_info.values():
-
-
-    pass
+            self._archive.tm.add_context(v.Compartment, origin=self.origin)
+        return super(Traci21IndexImplementation, self).contexts(**kwargs)

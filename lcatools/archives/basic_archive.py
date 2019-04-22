@@ -3,7 +3,7 @@ from collections import defaultdict
 from .entity_store import EntityStore, SourceAlreadyKnown, EntityExists
 from .term_manager import TermManager
 
-from ..implementations import BasicImplementation, IndexImplementation, QuantityImplementation
+from ..implementations import BasicImplementation, IndexImplementation, QuantityImplementation, ConfigureImplementation
 from lcatools.interfaces import BasicQuery
 from lcatools.entities import LcQuantity, LcUnit, LcFlow
 from lcatools.entity_refs import FlowInterface
@@ -158,6 +158,8 @@ class BasicArchive(EntityStore):
             return QuantityImplementation(self)
         elif iface == 'index':
             return IndexImplementation(self)
+        elif iface == 'configure':
+            return ConfigureImplementation(self)
         else:
             raise InterfaceError('Unable to create interface %s' % iface)
 

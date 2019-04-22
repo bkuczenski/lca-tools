@@ -20,6 +20,7 @@ from lcatools.characterizations import DuplicateCharacterizationError
 
 from .q_info import ns_uuid_21 as t_uuid
 from .quantity import Traci21QuantityImplementation, transform_numeric_cas, CAS_regexp, q_info
+from .index import Traci21IndexImplementation
 
 
 def transform_string_cas(string_cas):
@@ -61,6 +62,8 @@ class Traci21Factors(BasicArchive):
     def make_interface(self, iface):
         if iface == 'quantity':
             return Traci21QuantityImplementation(self)
+        elif iface == 'index':
+            return Traci21IndexImplementation(self)
         else:
             return super(Traci21Factors, self).make_interface(iface)
 
@@ -150,7 +153,7 @@ class Traci21Factors(BasicArchive):
     """
 
     def _char_from_flow_compartment_method(self, flow, cm, q, cf):
-        cx = self.tm.add_context(cm)
+        cx = self.tm.add_context(cm, origin=self.ref)
         try:
             self.tm.add_characterization(flow.name, flow.reference_entity, q, cf, context=cx)
         except DuplicateCharacterizationError:

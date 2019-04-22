@@ -160,6 +160,6 @@ class EcoinventLcia(BasicArchive):
             except ValueError:
                 print('Skipping row %s' % row)
                 continue
-            cx = self.tm.add_context((row['compartment'], row['subcompartment']))
+            cx = self.tm.add_context((row['compartment'], row['subcompartment']), origin=self.ref)
             self.tm.add_characterization(row['name'], self._mass, q, v, context=cx, origin=self.ref)
         self.check_counter()

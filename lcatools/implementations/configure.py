@@ -17,12 +17,14 @@ valid_configs = {
 
 class ConfigureImplementation(BasicImplementation, ConfigureInterface):
 
+    _config_options = ('characterize_flow', )
+
     def _apply_config(self, config, option, **kwargs):
         if option in config:
             for k in config[option]:
                 getattr(self, option)(*k, **kwargs)
 
-    def apply_config(self, config, overwrite=False):
+    def apply_config(self, config, **kwargs):
         """
         Apply a collection of configuration objects to the archive.
 
@@ -41,10 +43,9 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
             print('adding %s synonyms (%s|%d)' % (k[0], k[1], len(k) - 1))
             self.add_terms(*k)
         '''
-        self._apply_config(config, 'set_reference')
-        self._apply_config(config, 'unset_reference')
-        self._apply_config(config, 'characterize_flow', overwrite=overwrite)
-        self._apply_config(config, 'allocate_by_quantity')
+        for opt in self._config_options:
+            self._apply_config(config, opt, **kwargs)
+
         if hasattr(self._archive, 'ti'):
             self._archive.make_interface('index').re_index()
 
@@ -89,6 +90,33 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
                     continue
             raise TypeError('Argument %d should be type %s' % (i, t))
         return True
+
+    def characterize_flow(self, flow_ref, quantity_ref, value, location='GLO', overwrite=False, **kwargs):
+        """
+        A ConfigFlowCharacterization provides a procedural mechanism for specifying flow quantity characterizations
+        after loading an archive.  The 'flow_ref' and 'quantity_ref' have to lookup successfully in the archive.
+
+        Not clear how to deal with contexts
+
+        :param flow_ref:
+        :param quantity_ref:
+        :param value:
+        :param location:
+        :param overwrite:
+        :param kwargs:
+        :return:
+        """
+        print('Characterizing flow %s by %s: %g' % (flow_ref, quantity_ref, value))
+        flow = self._archive.retrieve_or_fetch_entity(flow_ref)
+        qty = self._archive.retrieve_or_fetch_entity(quantity_ref)
+        self._archive.tm.add_characterization(flow['Name'], flow.reference_entity, qty, value, context=flow.context,
+                                              location=location,
+                                              origin=self.origin, overwrite=overwrite)
+
+
+class LcConfigureImplementation(ConfigureImplementation):
+
+    _config_options = ('set_reference', 'unset_reference', 'characterize_flow', 'allocate_by_quantity')
 
     @staticmethod
     def _check_direction(pr, fl):
@@ -152,38 +180,6 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
             if direction is None:
                 direction = self._check_direction(pr, fl)
             pr.remove_reference(fl, direction)
-
-    def characterize_flow(self, flow_ref, quantity_ref, value, location='GLO', overwrite=False, **kwargs):
-        """
-        A ConfigFlowCharacterization provides a procedural mechanism for specifying flow quantity characterizations
-        after loading an archive.  The 'flow_ref' and 'quantity_ref' have to lookup successfully in the archive.
-
-        Not clear how to deal with contexts
-
-        :param flow_ref:
-        :param quantity_ref:
-        :param value:
-        :param location:
-        :param overwrite:
-        :param kwargs:
-        :return:
-        """
-        print('Characterizing flow %s by %s: %g' % (flow_ref, quantity_ref, value))
-        flow = self._archive.retrieve_or_fetch_entity(flow_ref)
-        qty = self._archive.retrieve_or_fetch_entity(quantity_ref)
-        self._archive.tm.add_characterization(flow['Name'], flow.reference_entity, qty, value, context=flow.context,
-                                              location=location,
-                                              origin=self.origin, overwrite=overwrite)
-        '''
-        if flow.has_characterization(qty):
-            if overwrite:
-                flow.del_characterization(qty)
-            else:
-                print('Flow %s already characterized for %s. Skipping.' % (flow, qty))
-                return
-        flow.add_characterization(qty, value=value, location=location)
->>>>>>> master
-        '''
 
     def allocate_by_quantity(self, process_ref, quantity_ref, overwrite=False, **kwargs):
         """

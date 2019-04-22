@@ -199,15 +199,20 @@ class TermManager(object):
             yield c
             c = c.parent
 
-    def add_context(self, context):
+    def add_context(self, context, origin=None):
         """
 
         :param context:
+        :param origin: apply origin to context if it has none
         :return:
         """
         if isinstance(context, str):
             context = (context,)
-        return self._cm.add_compartments(tuple(context))
+        cx = self._cm.add_compartments(tuple(context))
+        if origin is not None:
+            if cx.fullname == cx.name:
+                cx.add_origin(origin)
+        return cx
 
     def _check_context(self, flow):
         """
@@ -384,7 +389,7 @@ class TermManager(object):
         try:
             cx = self._cm[context]
         except KeyError:
-            cx = self.add_context(context)
+            cx = self.add_context(context, origin=origin)
 
         try:
             fb = self._fm[flowable]

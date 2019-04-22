@@ -9,7 +9,7 @@ import os
 
 from ..entities import LcProcess
 from ..from_json import from_json
-from ..implementations import InventoryImplementation, BackgroundImplementation, ConfigureImplementation
+from ..implementations import InventoryImplementation, BackgroundImplementation, LcConfigureImplementation
 from .basic_archive import BasicArchive, BASIC_ENTITY_TYPES
 from lcatools.interfaces import LcQuery
 
@@ -36,7 +36,7 @@ class LcArchive(BasicArchive):
         elif iface == 'background':
             return BackgroundImplementation(self)
         elif iface == 'configure':
-            return ConfigureImplementation(self)
+            return LcConfigureImplementation(self)
         else:
             return super(LcArchive, self).make_interface(iface)
 

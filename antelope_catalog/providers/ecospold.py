@@ -49,6 +49,19 @@ conversion_dict = {
     ('m3', 'l'): 1000
 }
 
+def apply_conversion(local_q, f):
+    if (f.unit(), local_q.unit()) in conversion_dict:
+        val = conversion_dict[(f.unit(), local_q.unit())]
+        f.reference_entity['UnitConversion'][local_q.unit()] = val
+        local_q['UnitConversion'][f.unit()] = 1.0 / val
+        return local_q.cf(f) == val
+    elif (local_q.unit(), f.unit()) in conversion_dict:
+        val = conversion_dict[(local_q.unit(), f.unit())]
+        local_q['UnitConversion'][f.unit()] = val
+        f.reference_entity['UnitConversion'][local_q.unit()] = 1.0 / val
+        return local_q.cf(f) == 1.0 / val
+    return False
+
 
 def not_none(x):
     return x if x is not None else ''
@@ -155,15 +168,11 @@ class EcospoldV1Archive(LcArchive):
         if exch.get("unit") != f.unit():
             local_q = self._create_quantity(exch.get("unit"))
             if local_q.cf(f) == 0.0:
-                if (f.unit(), local_q.unit()) in conversion_dict:
-                    val = conversion_dict[(f.unit(), local_q.unit())]
-                elif (local_q.unit(), f.unit()) in conversion_dict:
-                    val = 1.0 / conversion_dict[(local_q.unit(), f.unit())]
-                else:
+                if not apply_conversion(local_q, f):
                     print('Flow %s needs characterization for unit %s' % (f, local_q))
                     val = parse_math(input('Enter conversion factor 1 %s = x %s' % (f.unit(), local_q)))
-                self.tm.add_characterization(f['Name'], f.reference_entity, local_q, val, context=f.context,
-                                             origin=self.ref)
+                    self.tm.add_characterization(f['Name'], f.reference_entity, local_q, val, context=f.context,
+                                                 origin=self.ref)
         return f
 
     def _extract_exchanges(self, o):

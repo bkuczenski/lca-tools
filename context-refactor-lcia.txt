@@ -1,4 +1,42 @@
 ==========
+Fri Apr 19 10:51:10 -0700 2019
+
+We are converging... but now there is this problem with allocation, and no immediate answer to the question of how it SHOULD work.
+
+Here's what's happening:
+Well, I don't know exactly what's happening.  But in both ecospold and olca, petroleum refinery is only getting allocated to products native in mass; CFs are getting loaded into the captive term manager, but presumably because of context specificity, they are not being found by cf()- even though they should be, since in the allocation method the literal flow object is being used...
+
+also btw, the unit conversion CFs are redundantly added for every flowable AND every context in which they appear.  by flowable it is not clear how the current architecture could avoid that, but by context it [maybe] should?
+
+Fri 2019-04-19 12:19:12 -0700
+ok, so we monkeyed around with quantities so that the ecospold engine could add unit conversions to them; now we have a bizarro problem where the mass's quantity implementation points to the LcIndex archive, whereas the CFs are loaded into the Ecospold archive.  Serious SMH moment here bcause again everything is at risk of crashing down and/or being futile and useless.
+
+Fri 2019-04-19 12:47:15 -0700
+We seem to have solved that problem by disallowing the index to generate quantity interfaces, and then by catching InterfaceErrors.
+Now we have progressed up to the point of:
+ * traci et al need context hints (e.g. air -> to air)
+ * ecospold et al need quantity hints
+
+and now I am needed downstairs
+
+Fri 2019-04-19 13:57:50 -0700
+
+Real quick: needed:
+ * configurator: add context hints
+   = figure out general solution to context hints
+ * configurator: quantity + flowable hints
+ * OLCA - figure out why the q_dict is getting unity conversions
+ * ecospold2- add flowables to canonical set
+ * construct flowable set from scratch
+   - traci
+   - figure out current diff from traci
+   - ecospold2
+
+
+
+
+
+==========
 Fri Apr 12 14:12:12 -0700 2019
 
 Big Fucking Mess, part 3

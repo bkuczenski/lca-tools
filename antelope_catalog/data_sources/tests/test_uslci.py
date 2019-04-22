@@ -40,6 +40,9 @@ class UsLciTestContainer(object):
         _ex_len = None
         _test_case_lcia = 0.0
 
+        _petro_rx_values = set()
+
+
         @property
         def reference(self):
             return '.'.join([cfg.prefix, self._atype])
@@ -86,6 +89,12 @@ class UsLciTestContainer(object):
             v = self.query.exchange_relation(rx.process.external_ref, rx.flow.external_ref, k.external_ref, 'Input')
             self.assertEqual(v, 0.000175)
 
+        def test_22_petro_allocation(self):
+            p = next(self.query.processes(Name='petroleum refining, at refinery'))
+            self.assertEqual(len(p.reference_entity), 9)
+            rx_vals = set(round(next(p.exchange_values(rx.flow)).value, 6) for rx in p.references())
+            self.assertSetEqual(rx_vals, self._petro_rx_values)
+
         def test_30_bg_gen(self):
             self.assertTrue(self.query.check_bg())
 
@@ -111,12 +120,24 @@ class UsLciEcospoldTest(UsLciTestContainer.UsLciTestBase):
     _atype = 'ecospold'
     _initial_count = (5, 97, 5)
     _bg_len = 38
-    _ex_len = 3286
+    _ex_len = 3285
     _test_case_lcia = 0.0415466  # more robust bc of ocean freight??
 
+    _petro_rx_values = {0.037175, 0.049083, 0.051454, 0.051826, 0.059594, 0.061169, 0.112458, 0.252345, 0.570087}
+
     def test_get_by_id(self):
-        f = cat.query(self.reference).get(2176)  # this flow was loaded via the config mechanism
-        self.assertGreaterEqual(len(f.profile()), 2)
+        f = self.query.get(2176)  # this flow was loaded via the config mechanism
+        pvs = [k.value for k in f.profile()]
+        self.assertGreaterEqual(len(pvs), 1)
+        self.assertIn(11.111, pvs)
+
+    def test_40_lcia_fg(self):
+        if gwp:
+            lci = self._get_fg_test_case_lci()
+            res0 = gwp.do_lcia(lci)
+            self.assertAlmostEqual(res0.total(), 0.0)
+            res = gwp.do_lcia(lci, dist=2)
+            self.assertAlmostEqual(res.total(), self._test_case_lcia)
 
 
 class UsLciOlcaTest(UsLciTestContainer.UsLciTestBase):
@@ -124,7 +145,11 @@ class UsLciOlcaTest(UsLciTestContainer.UsLciTestBase):
     _atype = 'olca'
     _initial_count = (4, 71, 3)
     _bg_len = 36
+    _ex_len = 3990
     _test_case_lcia = .04110577
+
+    # volume unit is m3 in olca, versus l in ecospold
+    _petro_rx_values = {4.9e-05, 5.2e-05, 0.000112, 0.000252, 0.00057, 0.037175, 0.051454, 0.059594, 0.061169}
 
 
 

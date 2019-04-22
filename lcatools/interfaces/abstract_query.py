@@ -23,6 +23,10 @@ class NoUuid(Exception):
     pass
 
 
+class BackgroundSetup(Exception):
+    pass
+
+
 class AbstractQuery(object):
     """
     Abstract base class for executing queries
@@ -78,6 +82,13 @@ class AbstractQuery(object):
             print('Performing %s query, iface %s' % (attrname, itype))
         try:
             for iface in self._iface(itype, strict=strict):
+                if itype == 'background':
+                    if self._debug:
+                        print('Setting up background interface')
+                    try:
+                        iface.setup_bm(self)
+                    except StopIteration:
+                        raise BackgroundSetup('Failed to configure background')
                 try:
                     result = getattr(iface, attrname)(*args, **kwargs)
                 except exc.__class__:

@@ -39,7 +39,7 @@ from ..lc_resource import LcResource, download_file
 # from lcatools.flowdb.compartments import REFERENCE_INT  # reference intermediate flows
 from ..data_sources.local import TEST_ROOT
 
-from lcatools.archives import archive_from_json
+from lcatools.archives import archive_from_json, InterfaceError
 
 
 class DuplicateEntries(Exception):
@@ -566,7 +566,10 @@ class LcCatalog(object):
 
         for res in self._sorted_resources(origin, itype, strict):
             res.check(self)
-            yield res.make_interface(itype)
+            try:
+                yield res.make_interface(itype)
+            except InterfaceError:
+                continue
 
         if itype == 'background':
             if origin.startswith('local') or origin.startswith('test'):

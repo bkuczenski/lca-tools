@@ -5,23 +5,25 @@ from collections import defaultdict
 from .entity_store import construct_new_ref
 from .basic_archive import BasicArchive, BASIC_ENTITY_TYPES, InterfaceError, ArchiveError
 from .lc_archive import LcArchive, LC_ENTITY_TYPES
-from ..implementations import IndexImplementation
+from ..implementations import BasicImplementation, IndexImplementation
 
 
 class AbstractIndex(object):
     def make_interface(self, iface):
         if iface == 'index':
             return IndexImplementation(self)
+        elif iface == 'basic':
+            return BasicImplementation(self)
         else:
             raise InterfaceError('Unable to create interface %s' % iface)
 
 
-class BasicIndex(BasicArchive, AbstractIndex):
+class BasicIndex(AbstractIndex, BasicArchive):
     def serialize(self, characterizations=False, values=False, domesticate=False):
         return super(BasicIndex, self).serialize(characterizations=False, values=False, domesticate=False)
 
 
-class LcIndex(LcArchive, AbstractIndex):
+class LcIndex(AbstractIndex, LcArchive):
     def serialize(self, exchanges=False, characterizations=False, values=False, domesticate=False):
         return super(LcIndex, self).serialize(exchanges=False, characterizations=False, values=False, domesticate=False)
 

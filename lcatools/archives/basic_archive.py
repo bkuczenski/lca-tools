@@ -178,7 +178,10 @@ class BasicArchive(EntityStore):
         if entity.entity_type == 'quantity':
             self.tm.add_quantity(entity)
             if entity.is_entity:  # not ref
-                entity.set_qi(self.make_interface('quantity'))
+                try:
+                    entity.set_qi(self.make_interface('quantity'))
+                except InterfaceError:
+                    pass  # quantities in index archives will not be able to use the quantity impl
         elif isinstance(entity, FlowInterface):
             # characterization infrastructure
             self.tm.add_flow(entity)

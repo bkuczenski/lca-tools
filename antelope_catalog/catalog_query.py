@@ -71,13 +71,6 @@ class CatalogQuery(IndexInterface, BackgroundInterface, InventoryInterface, Quan
         for i in self._catalog.gen_interfaces(self._origin, itype, strict=strict):
             if self._debug:
                 print('yielding %s' % i)
-            if isinstance(i, BackgroundInterface):
-                if self._debug:
-                    print('Setting up background interface')
-                try:
-                    i.setup_bm(self)
-                except StopIteration:
-                    raise IndexRequired('Background engine requires index interface')
             yield i
 
     def resolve(self, itype=INTERFACE_TYPES, strict=False):

@@ -27,6 +27,8 @@ class LcQuantity(LcEntity):
 
     def __init__(self, external_ref, **kwargs):
         super(LcQuantity, self).__init__('quantity', external_ref, **kwargs)
+        if not self.has_property('UnitConversion'):
+            self._d['UnitConversion'] = {self.unit(): 1.0}
         self._qi = None
 
     def __setitem__(self, key, value):

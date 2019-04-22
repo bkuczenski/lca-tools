@@ -1,5 +1,6 @@
 import unittest
 
+from ..quantities import LcQuantity
 from lcatools.archives import BasicArchive, Qdb
 
 
@@ -15,6 +16,11 @@ class QuantitiesTest(unittest.TestCase):
         cls.I = Qdb.new()
         cls.Q = BasicArchive.from_file(IPCC_2007_GWP)
         cls.gwp = cls.Q['Global Warming Air']
+
+    def test_default_conversion(self):
+        a = LcQuantity.new('Floogles', 'fl')
+        self.assertTrue(a.has_property('UnitConversion'))
+        self.assertEqual(a.convert('fl'), 1.0)
 
     def test_retrieve_quantity(self):
         self.assertIsNotNone(self.gwp)

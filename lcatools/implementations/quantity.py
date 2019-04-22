@@ -5,6 +5,7 @@ can also be upgraded to an LciaEngine, which extends the synonymization strategy
 from .basic import BasicImplementation
 from ..characterizations import QRResult
 from ..interfaces import QuantityInterface, NoFactorsFound, ConversionReferenceMismatch, FlowableMismatch, EntityNotFound
+from ..contexts import NullContext
 from ..lcia_results import LciaResult
 
 
@@ -80,6 +81,8 @@ class QuantityConversion(object):
 
     @property
     def context(self):
+        if self._results[0].context is None:
+            return NullContext
         return self._results[0].context
 
     @property
@@ -165,6 +168,10 @@ class QuantityConversionError(object):
     @property
     def context(self):
         return self._qrr.context
+
+    @property
+    def value(self):
+        return self._qrr.value
 
     def __repr__(self):
         return '%s(%s/%s [%s] %g %s/%s || %s)' % (self.__class__.__name__, self.flowable, self.context,

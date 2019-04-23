@@ -338,10 +338,12 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         If flow is not entity_type='flow', we try to fetch a flow and if that fails we return what we were given.
         If we're given a flow and/or an external ref that looks up, then flowable, ref qty, and context are taken from
         it (unless they were provided)
+        If a context query is specified and no canonical context is found, NullContext is returned (matches nothing).
+        Otherwise, None is returned (matches everything).
         :param flow:
         :param ref_quantity:
         :param context:
-        :return:
+        :return: flowable, canonical ref_quantity, canonical context or None
         """
         # skip the lookup if all terms are given
         if ref_quantity is None or context is None:
@@ -364,6 +366,8 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
             raise RefQuantityRequired
         rq = self.get_canonical(ref_quantity)
         cx = self._archive.tm[context]
+        if cx is None and context is not None:
+            cx = NullContext
         return flowable, rq, cx
 
     def quantity_conversions(self, flow, query_quantity, ref_quantity=None, context=None, locale='GLO', **kwargs):

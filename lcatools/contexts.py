@@ -11,12 +11,27 @@ In the antelope architecture, there are two different objectives for handling co
  the archive.  The role of this class is to collect information from the data source in as close to its native
  presentation as possible. This creates an "inclusive" nomenclature for the source.
 
- In the Catalog case, both catalog's local quantity DB is an LciaEngine, which is also shared among all non-static
- resources (including remote resources).  In this case the objective is to match a given context to the existing
- (exclusive) nomenclature built-in to the LciaEngine, so that contexts are guaranteed to coincide during LCIA.
+ In the Catalog case, catalog's local quantity DB is an LciaEngine, which is also shared among all foreground
+ resources.  In this case the objective is to match a given context to the existing (exclusive) nomenclature built-in
+ to the LciaEngine, so that contexts are guaranteed to coincide during LCIA.
 
 In order to accomplish this, the native add_context() method needs to be expansive, fault tolerant, and widely accepting
-of diverse inputs, whereas find_matching_context() needs to be more discerning and rigorous.
+of diverse inputs, whereas find_matching_context() needs to be more discerning and rigorous.  Thus the former accepts
+a tuple of string terms or a context, but the latter requires a context.  find_matching_context searches first bottom-up
+then top-down to look for matches.  It requires an input context to have an origin already specified, so that the
+resources can assign "hints" that map local terms to canonical contexts on an origin-specific basis.
+
+Because contexts must be directional, some terms are protected as ambiguous: "air", "water", and "ground" should be
+avoided in favor of explicit "from air" or "to air" or synonyms.
+
+The NullContext is a singleton defined in this file that is meant to imply no specific context.  It is interpreted in
+two different ways:
+ - on the characterization side, NullContext indicates the characterization has no specific context, and thus applies to
+   all contexts, as long as a more applicable characterization is not found.
+ - on the query side, NullContext indicates that a context was specified but no match was found.  Queries with
+   NullContext should not match any existing characterizations (except NullContext itself).
+
+The NullContext should be returned by the context manager
 """
 
 from synonym_dict.example_compartments import Compartment, CompartmentManager

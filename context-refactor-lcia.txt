@@ -22,15 +22,31 @@ and now I am needed downstairs
 Fri 2019-04-19 13:57:50 -0700
 
 Real quick: needed:
- * configurator: add context hints
+ x configurator: add context hints
    = figure out general solution to context hints
- * configurator: quantity + flowable hints
+ x configurator: quantity + flowable hints
  * OLCA - figure out why the q_dict is getting unity conversions
  * ecospold2- add flowables to canonical set
  * construct flowable set from scratch
    - traci
    - figure out current diff from traci
    - ecospold2
+
+
+
+Tue 2019-04-23 01:22:05 -0700
+
+USLCI tests pass. and made a discovery about NullContext:
+ - NullContext results from a definite context query that was not recognized
+ - NullContext in the database matches any query that wasn't matched by a non-null context
+ - NullContext as a query matches nothing except NullContext
+
+tomorrow: look into calrecycle; reproduce variability / ecoinvent.
+
+Tue 2019-04-23 14:12:17 -0700
+
+current: finish reviewing uses of tm[getitem]
+
 
 
 

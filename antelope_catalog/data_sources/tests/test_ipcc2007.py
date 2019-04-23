@@ -22,7 +22,12 @@ class GwpIpcc2007Test(unittest.TestCase):
 
     def test_num_entities(self):
         self.assertEqual(self.query.count('quantity'), 2)
-        self.assertEqual(self.query.count('flow'), 91)
+        self.assertEqual(self.query.count('flow'), 0)
+
+    def test_gwp(self):
+        gwp = next(self.query.lcia_methods())
+        self.assertEqual(gwp.name, 'Global Warming Air [kg CO2 eq] [LCIA]')
+        self.assertEqual(len([k for k in gwp.factors()]), 91)
 
 
 if __name__ == '__main__':

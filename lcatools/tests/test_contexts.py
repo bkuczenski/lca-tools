@@ -155,10 +155,12 @@ class DefaultContextsTest(unittest.TestCase):
     def test_matching_compartment(self):
         foreign_cm = ContextManager()
         fx = foreign_cm.add_compartments(('resources', 'water', 'CA', 'CA-QC'))
+        fx.add_origin('dummy.test')
         cx = self.cm.find_matching_context(fx)
         self.assertEqual(cx.sense, 'Source')
         self.assertIs(cx.top(), self.cm['Resources'])
-        self.assertListEqual(cx.as_list(), ['Resources', 'from water', 'CA', 'CA-QC'])
+        self.assertListEqual(cx.as_list(), ['Resources', 'from water'])  # superfluous information trimmed
+        self.assertIs(self.cm['dummy.test:CA-QC'], cx)
 
     def test_context_hint(self):
         self.cm.add_context_hint('dummy.test', 'air', 'to air')
@@ -168,6 +170,7 @@ class DefaultContextsTest(unittest.TestCase):
     def test_matching_sublineage(self):
         self.cm.add_context_hint('dummy.test', '[resources]', 'Resources')
         tgt = self.cm['from ground']
+        self.assertIs(self.cm['dummy.test:[resources]'], tgt.parent)
         foreign_cm = ContextManager()
         fx = foreign_cm.add_compartments(('Elementary Flows', 'NETL Coal Elementary Flows', 'NETL Elementary Flows',
                                           ' [Resources] ', 'ground'))

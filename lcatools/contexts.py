@@ -60,9 +60,9 @@ def valid_sense(sense):
 
 
 def _dir_mod(arg, sense):
-    mod = {'Source': 'from', 'Sink': 'to'}[sense]
+    mod = {'Source': 'from ', 'Sink': 'to ', None: ''}[sense]
     if arg.lower() in PROTECTED:
-        arg = '%s %s' % (mod, arg)
+        arg = '%s%s' % (mod, arg)
     return arg
 
 
@@ -248,10 +248,11 @@ class ContextManager(CompartmentManager):
                 args = tuple(_dir_mod(arg, parent.sense) for arg in args)
         return super(ContextManager, self).new_entry(*args, parent=parent, **kwargs)
 
-    def _gen_matching_entries(self, cx):
+    def _gen_matching_entries(self, cx, sense):
         for t in cx.terms:
-            if t in self._d:
-                yield self._d[t]
+            mt = _dir_mod(t, sense)
+            if mt in self._d:
+                yield self._d[mt]
 
     def _merge(self, existing_entry, ent):
         """
@@ -306,17 +307,18 @@ class ContextManager(CompartmentManager):
             this = missing.pop(0)  # this = active foreign match
             if current is None:
                 try:
-                    current = next(self._gen_matching_entries(this))
+                    current = next(self._gen_matching_entries(this, None))
                 except StopIteration:
                     continue
                 self.add_synonym(this.fullname, current)
             else:
                 try:
-                    nxt = next(k for k in self._gen_matching_entries(this) if k.is_subcompartment(current))
+                    nxt = next(k for k in self._gen_matching_entries(this, current.sense)
+                               if k.is_subcompartment(current))
                     self.add_synonym(this.fullname, nxt)
                     current = nxt
                 except StopIteration:
-                    continue
+                    self.add_synonym(this.fullname, current)
         return current
 
     def _check_subcompartment_lineage(self, current, c):

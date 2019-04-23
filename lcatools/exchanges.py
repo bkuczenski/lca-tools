@@ -432,7 +432,8 @@ class ExchangeValue(Exchange):
                     # raise NoAllocation('No allocation found for key %s in process %s' % (item, self.process))
                 # else fall through
         elif item.termination is not None:
-            raise ExchangeError('Cannot compute exchange values with respect to a terminated exchange')
+            if not isinstance(item.termination, Context):
+                raise ExchangeError('Cannot compute exchange values with respect to a terminated exchange')
         return self._value / item.value
 
     def __setitem__(self, key, value):

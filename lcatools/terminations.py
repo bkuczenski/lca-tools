@@ -6,7 +6,7 @@ as a ProductFlow in lca-matrix, although the FlowTermination is more powerful.  
 either one from the other.
 """
 
-from lcatools.interfaces import PrivateArchive, check_direction, comp_dir, NoFactorsFound
+from lcatools.interfaces import PrivateArchive, check_direction, comp_dir, NoFactorsFound, QuantityRequired
 
 from lcatools.exchanges import ExchangeValue
 from lcatools.lcia_results import LciaResult, LciaResults
@@ -338,9 +338,15 @@ class FlowTermination(object):
         problem is, the term doesn't know its own scenario
         :return: float = amount in term_flow ref qty that corresponds to a unit of fragment flow's ref qty
         """
-        fwd_cf = self.term_flow.reference_entity.cf(self._parent.flow)
+        try:
+            fwd_cf = self.term_flow.reference_entity.cf(self._parent.flow)
+        except QuantityRequired:
+            fwd_cf = 0.0
         if fwd_cf == 0.0:
-            rev_cf = self._parent.flow.reference_entity.cf(self.term_flow)
+            try:
+                rev_cf = self._parent.flow.reference_entity.cf(self.term_flow)
+            except QuantityRequired:
+                rev_cf = 0.0
             if rev_cf == 0.0:
                 raise FlowConversionError('Zero CF found relating %s to %s' % (self.term_flow, self._parent.flow))
             else:

@@ -71,7 +71,7 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
                 if c_args[i] in ('context', 'flowable', 'quantity'):
                     continue
             elif t == 'float':
-                if isinstance(c_args[i], float):
+                if isinstance(c_args[i], float) or isinstance(c_args[i], int):
                     continue
             elif t == 'str':
                 if isinstance(c_args[i], str):

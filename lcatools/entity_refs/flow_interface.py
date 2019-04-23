@@ -113,6 +113,7 @@ class FlowInterface(object):
 class DummyFlow(FlowInterface):
 
     class DummyQuantity(object):
+        name = 'Dummy Quantity'
         origin = 'local.dummy.quantity'
         entity_type = 'quantity'
         external_ref = 'dummy'

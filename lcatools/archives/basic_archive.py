@@ -4,7 +4,7 @@ from .entity_store import EntityStore, SourceAlreadyKnown, EntityExists
 from .term_manager import TermManager
 
 from ..implementations import BasicImplementation, IndexImplementation, QuantityImplementation, ConfigureImplementation
-from lcatools.interfaces import BasicQuery
+from lcatools.interfaces import BasicQuery, EntityNotFound
 from lcatools.entities import LcQuantity, LcUnit, LcFlow
 from lcatools.entity_refs import FlowInterface
 
@@ -249,7 +249,10 @@ class BasicArchive(EntityStore):
             rq = entity_j.pop('referenceQuantity')
         else:
             rq = next(c['quantity'] for c in chars if 'isReference' in c and c['isReference'] is True)
-        ref_q = self.tm.get_canonical(rq)
+        try:
+            ref_q = self.tm.get_canonical(rq)
+        except EntityNotFound:
+            ref_q = self._get_entity(rq)
         return LcFlow(ext_ref, referenceQuantity=ref_q, **entity_j)
 
     def _add_chars(self, flow, chars):

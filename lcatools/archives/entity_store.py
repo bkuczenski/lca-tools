@@ -481,6 +481,9 @@ class EntityStore(object):
             return self._entities[key]
         raise KeyError(key)
 
+    def __contains__(self, item):
+        return item in self._entities
+
     def __getitem__(self, item):
         """
         CLient-facing entity retrieval.  item is a key that can be converted to a valid UUID from self._ref_to_key()--

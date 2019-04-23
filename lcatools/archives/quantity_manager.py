@@ -124,6 +124,14 @@ class QuantityManager(SynonymDict):
         unit = j.pop('unit', None)
         self.new_entry(name, *syns, unit=unit, merge=False)
 
+    def find_matching_quantity(self, quantity):
+        if isinstance(quantity, str):
+            return self[quantity]
+        for term in _quantity_terms(quantity):
+            if term in self:
+                return self[term]
+        raise KeyError(quantity)
+
     def add_quantity(self, quantity):
         """
         Prunes terms on quantity unit mismatch

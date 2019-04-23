@@ -120,11 +120,16 @@ class LciaEngine(TermManager):
         """
         for hint_type, term, canonical in hints:
             if hint_type == 'context':
+                print('Applying context hint %s:%s => %s' % (origin, term, canonical))
                 self._cm.add_context_hint(origin, term, canonical)
             elif hint_type == 'quantity':
+                print('Applying quantity hint %s -> %s' % (term, canonical))
                 self._qm.add_synonym(term, canonical)
             elif hint_type == 'flowable':
+                print('Applying flowable hint %s -> %s' % (term, canonical))
                 self._fm.add_synonym(term, canonical)
+            else:
+                raise ValueError('Unknown hint type %s' % hint_type)
 
     def _add_flow_terms(self, flow, merge_strategy=None):
         """

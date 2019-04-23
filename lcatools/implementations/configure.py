@@ -1,4 +1,4 @@
-from collections import namedtuple, defaultdict
+from collections import namedtuple
 
 from .basic import BasicImplementation
 from ..interfaces import ConfigureInterface, check_direction
@@ -6,10 +6,10 @@ from ..interfaces import ConfigureInterface, check_direction
 
 ValidConfig = namedtuple('ValidConfig', ('nargs', 'argtypes'))
 
-valid_configs = {
+valid_configs = {  # 0_ indicates the arg is allowed to be None
     'hints': ValidConfig(3, ('hint', 'str', 'str')),
-    'set_reference': ValidConfig(3, ('process', 'flow', 'direction')),
-    'unset_reference': ValidConfig(3, ('process', 'flow', 'direction')),
+    'set_reference': ValidConfig(3, ('process', 'flow', '0_direction')),
+    'unset_reference': ValidConfig(3, ('0_process', '0_flow', '0_direction')),
     'characterize_flow': ValidConfig(3, ('flow', 'quantity', 'float')),
     'allocate_by_quantity': ValidConfig(2, ('process', 'quantity'))
 }
@@ -51,6 +51,8 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
 
     def check_config(self, config, c_args, **kwargs):
         """
+        Uses the config schema valid_configs to validate config arguments.  A leading '0_' indicates that the argument
+        is permitted to be None.
 
         :param config: a configuration entry
         :param c_args: a tuple of args
@@ -61,6 +63,10 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
         if len(c_args) != vc.nargs:
             raise ValueError('Wrong number of arguments (%d supplied; %d required)' % (len(c_args), vc.nargs))
         for i, t in enumerate(vc.argtypes):
+            if t.startswith('0_'):
+                if c_args[i] is None:
+                    continue
+                t = t.split('_')[1]
             if t == 'hint':
                 if c_args[i] in ('context', 'flowable', 'quantity'):
                     continue
@@ -83,8 +89,11 @@ class ConfigureImplementation(BasicImplementation, ConfigureInterface):
                     raise ValueError('Argument %d [%s] is not a recognized local context' % (i, c_args[i]))
                 continue
             else:
+                '''
                 if not isinstance(c_args[i], str):
-                    raise TypeError('Configuraton arguments must be strings and not entities')
+                    raise TypeError('%s [%d:%s]: Configuraton arguments must be strings and not entities' % (config, i,
+                                                                                                             c_args[i]))
+                '''
                 e = self._archive.retrieve_or_fetch_entity(c_args[i])
                 if e.entity_type == t:
                     continue
@@ -153,6 +162,9 @@ class LcConfigureImplementation(ConfigureImplementation):
         marking a byproduct as non-reference or non-allocatable.  The parts are 'process_ref', 'flow_ref', and
         'direction', but if process_ref is None, then all instances of the flow_ref and direction will be marked
         non-reference.
+
+        Difficult to validate because any of the three arguments is allowed to be None (and even in nontrivial
+        combinations)
 
         :param process_ref:
         :param flow_ref:

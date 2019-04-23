@@ -462,15 +462,9 @@ class TermManager(object):
         :param quantity: a quantity entity or descriptor
         :return: a canonical quantity or raise KeyError
         """
-        '''
-        try:
-            return next(q for q in self._q_dict.keys() if q == quantity)
-        except StopIteration:
-            raise UnknownQuantityRef(quantity)
-        '''
         if isinstance(quantity, str):
             return self._qm[quantity]
-        return self._qm[quantity.external_ref]
+        return self._qm.find_matching_quantity(quantity)
 
     def _canonical_q_ref(self, quantity):
         return self._canonical_q(quantity).external_ref

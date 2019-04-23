@@ -131,14 +131,6 @@ class UsLciEcospoldTest(UsLciTestContainer.UsLciTestBase):
         self.assertGreaterEqual(len(pvs), 1)
         self.assertIn(11.111, pvs)
 
-    def test_40_lcia_fg(self):
-        if gwp:
-            lci = self._get_fg_test_case_lci()
-            res0 = gwp.do_lcia(lci)
-            self.assertAlmostEqual(res0.total(), 0.0)
-            res = gwp.do_lcia(lci, dist=2)
-            self.assertAlmostEqual(res.total(), self._test_case_lcia)
-
 
 class UsLciOlcaTest(UsLciTestContainer.UsLciTestBase):
 

@@ -66,11 +66,12 @@ class Configurator(object):
         ress = [k for k in LcResource.from_json(resource_file) if interface in k.interfaces]
         if len(ress) > 1:
             print('Warning: using first of several matching resources')
-        cfg = cls(ress[0])
-        cfg.catalog_root = catalog_root
+        cfg = cls(ress[0], catalog_root=catalog_root)
         return cfg
 
-    def __init__(self, resource):
+    def __init__(self, resource, catalog_root=None):
+        if catalog_root is not None:
+            self.catalog_root = catalog_root
         self._ldb = LciaDb.new()
         self._resource = resource
         self._resource.check(self)
@@ -88,11 +89,7 @@ class Configurator(object):
         self._resource.archive.load_all()
 
     def add_hint(self, hint_type, local_name, canonical_name):
-        if hint_type not in ('context', 'flowable', 'quantity'):
-            raise ValueError('Hint type %s not valid' % hint_type)
-        hint = (hint_type, local_name, canonical_name)
-        self._config['hints'].add(hint)
-        self.lcia_engine.apply_hints(self.archive.ref, [hint])
+        return self.add_config('hints', hint_type, local_name, canonical_name)
 
     def add_config(self, option, *args):
         """
@@ -101,9 +98,6 @@ class Configurator(object):
         :param args: the arguments, in the proper sequence
         :return: None if archive doesn't support configuration; False if unsuccessful, True if successful
         """
-        if option == 'hints':
-            self.add_hint(*args)
-            return True
         try:
             cf = self.archive.make_interface('configure')
         except InterfaceError:
@@ -113,6 +107,8 @@ class Configurator(object):
         if cf.check_config(option, args):
             self._add_config(option, *args)
             cf.apply_config({option: {args}})
+            if option == 'hints':
+                self.lcia_engine.apply_hints(self.archive.ref, [args])
             return True
         print('Configuration failed validation.')
         return False
@@ -134,6 +130,11 @@ class Configurator(object):
         self._resource.write_to_file(resource_root, assign_ref, apply_config=self._config)
 
     def check_contexts(self):
+        """
+        Compares contexts known to the resource with contexts known to the captive LCIA engine.  Prints matching
+        contexts. Returns a list of non-matching contexts.
+        :return:
+        """
         valid = []
         null = []
         for cx in self._resource.make_interface('index').contexts():
@@ -145,11 +146,19 @@ class Configurator(object):
         for k in valid:
             print(' %s ==> %s' % (k.name, repr(self._ldb.tm[k])))
 
+        '''
         print('Null Contexts:')
         for k in null:
             print(' %s' % k.fullname)
+        '''
+        return null
 
     def check_quantities(self):
+        """
+        Compares quantities known to the resource with quantities known to the captive LCIA engine.  Prints recognized
+        quantities. Returns a list of unknown quantities.
+        :return:
+        """
         valid = []
         null = []
         for q in self.archive.entities_by_type('quantity'):
@@ -158,13 +167,23 @@ class Configurator(object):
                 valid.append((q, can))
             except EntityNotFound:
                 null.append(q)
-        print ('Valid Quantities:')
+        print ('Known Quantities:')
         for k in valid:
             print(' %s ==> %s' % (k[0].name, k[1].name))
 
+        '''
         print('Unrecognized Quantities:')
         for k in null:
             print(' %s' % k)
+        '''
+        return null
 
-    def check_flowables(self):
-        return self._ldb.tm.unmatched_flowables(self._resource.make_interface('index').flowables())
+    def unmatched_flowables(self):
+        """
+        Compares flowables known to the resource with flowables known to the captive LCIA engine.  Returns a list of
+        non-matching flowables (does not print known flowables).
+        :return:
+        """
+        null = self._ldb.tm.unmatched_flowables(self._resource.make_interface('index').flowables())
+        print('%d Unmatched flowables' % len(null))
+        return null

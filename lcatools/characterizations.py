@@ -245,7 +245,8 @@ class Characterization(object):
 
     def serialize(self, values=False, concise=False):
         j = {
-            'ref_quantity': self.ref_quantity.external_ref,
+            'flowable': self.flowable,
+            'ref_quantity': self.ref_quantity.external_ref
         }
         if self.ref_quantity is self.quantity:
             j['isReference'] = True

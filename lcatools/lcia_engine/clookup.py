@@ -77,8 +77,10 @@ class CLookup(object):
             self._check_qty(value)
             if key not in self._dict:
                 self._dict[key] = set()
+            '''
             if any(k.origin == value.origin for k in self._dict[key]):
                 raise DuplicateOrigin(value.origin)
+            '''
             self._dict[key].add(value)
         else:
             raise ValueError('Context is not valid: %s (%s)' % (key, type(key)))
@@ -160,6 +162,13 @@ class CLookup(object):
         return {str(c): self._ser_set(cfs, values=values) for c, cfs in self._dict.items()}
 
     def serialize_for_origin(self, origin, values=False):
+        """
+        Note: In the event that the CLookup includes multiple CFs for the same flowable and the same origin, only the
+        first (at random) will be included, because originally I had disallowed multiple CFs for the same origin.
+        :param origin:
+        :param values:
+        :return:
+        """
         cxs = dict()
         for c, cfs in self._dict.items():
             try:

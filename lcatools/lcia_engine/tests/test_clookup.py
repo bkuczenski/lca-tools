@@ -39,10 +39,13 @@ class SingleCfTest(unittest.TestCase):
         gs = SCLookup()
         g.add(cf)
         gs.add(cf)
+        ''' # now we are allowing duplicate origins
         with self.assertRaises(DuplicateOrigin):
             g.add(cfd)
+        '''
         with self.assertRaises(FactorCollision):
             gs.add(cfd)
+        g.add(cfd)
         g.add(cfo)
         with self.assertRaises(FactorCollision):
             gs.add(cfo)

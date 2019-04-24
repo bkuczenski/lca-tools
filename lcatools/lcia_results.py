@@ -62,7 +62,7 @@ class DetailedLciaResult(object):
         :param qrresult: meets the QRResult spec: has properties 'flowable', 'ref', 'query', 'context', 'locale',
         'origin', 'value'
         """
-        if exchange.flow.unit() != qrresult.ref.unit():
+        if exchange.flow.unit() != qrresult.ref.unit() and qrresult.value != 0.0:
             print('Inconsistent qty\nexch: %s\nqrr:  %s' % (exchange.flow.reference_entity, qrresult))
             #  raise InconsistentQuantity('%s\n%s' % (exchange.flow.reference_entity, qrresult))
         self._exchange = exchange
@@ -865,13 +865,16 @@ class LciaResults(dict):
         :return:
         """
         try:
-            int(item)
-            return super(LciaResults, self).__getitem__(self._indices[item])
-        except (ValueError, TypeError):
+            return super(LciaResults, self).__getitem__(item)
+        except KeyError:
             try:
-                return super(LciaResults, self).__getitem__(next(k for k in self.keys() if k.startswith(item)))
-            except StopIteration:
-                return LciaResult(None)  #
+                int(item)
+                return super(LciaResults, self).__getitem__(self._indices[item])
+            except (ValueError, TypeError):
+                try:
+                    return super(LciaResults, self).__getitem__(next(k for k in self.keys() if k.startswith(item)))
+                except StopIteration:
+                    return LciaResult(None)  #
 
     def __setitem__(self, key, value):
         assert isinstance(value, LciaResult)

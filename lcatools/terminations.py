@@ -461,13 +461,21 @@ class FlowTermination(object):
         return res
 
     def score_cache(self, quantity=None, ignore_uncached=False, refresh=False, **kwargs):
+        """
+
+        :param quantity:
+        :param ignore_uncached:
+        :param refresh: If True, re-compute unit score even if it is already present in the cache
+        :param kwargs:
+        :return:
+        """
         if quantity is None:
             return self._score_cache
         if quantity in self._score_cache and refresh is False:
             return self._score_cache[quantity]
         else:
             try:
-                res = self.compute_unit_score(quantity, refresh=refresh, **kwargs)
+                res = self.compute_unit_score(quantity, **kwargs)
             except UnCachedScore:
                 if ignore_uncached:
                     res = LciaResult(quantity)

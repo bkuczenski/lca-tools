@@ -88,18 +88,17 @@ class InventoryInterface(AbstractQuery):
         return self._perform_query(_interface, 'exchange_relation', InventoryRequired('No access to exchange data'),
                                    process, ref_flow, exch_flow, direction, termination=termination, **kwargs)
 
-    def lcia(self, process, ref_flow, quantity_ref, refresh=False, **kwargs):
+    def lcia(self, process, ref_flow, quantity_ref, **kwargs):
         """
         Perform process foreground LCIA for the given quantity reference.
         :param process:
         :param ref_flow:
         :param quantity_ref:
-        :param refresh:
         :param kwargs:
         :return:
         """
         return self._perform_query(_interface, 'lcia', InventoryRequired('No access to exchange data'),
-                                   process, ref_flow, quantity_ref, refresh=refresh, **kwargs)
+                                   process, ref_flow, quantity_ref, **kwargs)
 
     def traverse(self, fragment, scenario=None, **kwargs):
         """

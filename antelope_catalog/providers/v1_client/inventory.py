@@ -101,7 +101,7 @@ class AntelopeInventoryImplementation(InventoryImplementation):
         pass
     '''
 
-    def lcia(self, process, ref_flow, quantity_ref, refresh=False, **kwargs):
+    def lcia(self, process, ref_flow, quantity_ref, **kwargs):
         """
         Antelope v1 doesn't support or even have any knowledge of process reference-flows. this is a somewhat
         significant design flaw.  well, no matter.  each antelopev1 process must therefore represent an allocated single
@@ -114,7 +114,6 @@ class AntelopeInventoryImplementation(InventoryImplementation):
         :param process:
         :param ref_flow:
         :param quantity_ref:
-        :param refresh:
         :param kwargs:
         :return:
         """

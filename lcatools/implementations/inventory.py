@@ -64,20 +64,18 @@ class InventoryImplementation(BasicImplementation, InventoryInterface):
         else:
             return sum([x.value for x in xs]) / norm.value
 
-    def lcia(self, process, ref_flow, quantity_ref, refresh=False, **kwargs):
+    def lcia(self, process, ref_flow, quantity_ref, **kwargs):
         """
         Implementation of foreground LCIA -- moved from LcCatalog
         :param process:
         :param ref_flow:
         :param quantity_ref:
-        :param refresh:
         :param kwargs:
         :return:
         """
         p = self._archive.retrieve_or_fetch_entity(process)
         return quantity_ref.do_lcia(p.inventory(ref_flow=ref_flow),
-                                    locale=p['SpatialScope'],
-                                    refresh=refresh)
+                                    locale=p['SpatialScope'])
 
     def traverse(self, fragment, scenario=None, **kwargs):
         frag = self._archive.retrieve_or_fetch_entity(fragment)

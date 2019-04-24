@@ -1022,7 +1022,7 @@ class LcFragment(LcEntity):
         Fragments don't have access to a qdb, so this piggybacks on the quantity_ref.
         :param quantity_ref:
         :param scenario:
-        :param refresh:
+        :param refresh: whether to refresh a cached unit score
         :return:
         """
         fragmentflows = self.traverse(scenario=scenario, observed=True)

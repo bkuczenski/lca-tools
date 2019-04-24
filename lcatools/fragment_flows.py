@@ -301,7 +301,7 @@ def frag_flow_lcia(fragmentflows, quantity_ref, scenario=None, refresh=False, ig
     :param fragmentflows:
     :param quantity_ref:
     :param scenario: necessary if any remote traversals are required
-    :param refresh: whether to refresh the LCIA CFs
+    :param refresh: whether to refresh the stored unit score
     :param ignore_uncached: [True] whether to allow zero scores for un-cached, un-computable fragments
     :return:
     """

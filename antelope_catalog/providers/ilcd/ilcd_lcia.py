@@ -3,6 +3,7 @@ from ..xml_widgets import *
 from lcatools.entities import LcEntity, LcQuantity, LcUnit
 from .quantity import IlcdQuantityImplementation
 from .index import IlcdIndexImplementation
+from lcatools.interfaces import comp_dir
 
 
 def get_cf_value(exch, ns=None):
@@ -99,6 +100,14 @@ class IlcdLcia(IlcdArchive):
         if loc == '':
             loc = None
         flow = self._check_or_retrieve_child(f_uuid, f_uri)
+        cx = self.tm[flow.context]
+        if cx.sense is None:
+            cx.sense = {'Input': 'Source', 'Output': 'Sink'}[f_dir]
+        else:
+            if comp_dir(cx.sense) != f_dir:
+                print('flow %s: context %s sense %s conflicts with direction %s; negating factor' % (f_uuid, cx,
+                                                                                                     cx.sense, f_dir))
+                cf *= -1
         return self.tm.add_characterization(flow['Name'], flow.reference_entity, lcia, cf, context=flow.context, location=loc)
 
     def load_lcia_method(self, u, version=None, load_all_flows=False):

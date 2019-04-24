@@ -32,6 +32,7 @@ from collections import namedtuple
 
 from lcatools.entities.fragment_editor import create_fragment, set_child_exchanges
 from lcatools.interfaces import comp_dir
+from antelope_catalog.catalog.lc_resolver import ResourceNotFound
 
 from .data_source import DataSource, DataCollection
 from lcatools.entities.fragments import BalanceAlreadySet
@@ -176,7 +177,7 @@ class CalRecycleImporter(object):
         qi = cat.query(origin)
         try:
             fg = cat.get_archive(origin, 'foreground')
-        except KeyError:
+        except ResourceNotFound:
             cat.create_foreground(fg_path, ref=origin)  # currently this returns an interface- but op requires archive
             fg = cat.get_archive(origin, 'foreground')
 

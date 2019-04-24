@@ -159,8 +159,11 @@ class LcForeground(BasicArchive):
 
     def _flow_ref_from_json(self, e, external_ref):
         origin = e.pop('origin')
-        c = e.pop('characterizations')
-        ref_qty_uu = next(cf['quantity'] for cf in c if 'isReference' in cf and cf['isReference'] is True)
+        try:
+            ref_qty_uu = e.pop('referenceQuantity')
+        except KeyError:
+            c = e.pop('characterizations')
+            ref_qty_uu = next(cf['quantity'] for cf in c if 'isReference' in cf and cf['isReference'] is True)
         return CatalogRef.from_query(external_ref, self._catalog.query(origin), 'flow', self[ref_qty_uu], **e)
 
     def _qty_ref_from_json(self, e, external_ref):

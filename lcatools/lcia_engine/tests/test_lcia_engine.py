@@ -2,6 +2,7 @@ import unittest
 
 from .. import LciaDb
 from lcatools.entities import LcQuantity
+from lcatools.entity_refs.flow_interface import DummyFlow
 
 
 class LciaEngineTest(unittest.TestCase):
@@ -31,6 +32,19 @@ class LciaEngineTest(unittest.TestCase):
         dup_mass = LcQuantity(dummy, referenceUnit='kg', Name='Mass', origin='dummy.origin')
         self.lcia.tm.add_quantity(dup_mass)
         self.assertEqual(self.lcia.query.get_canonical(dummy), self.lcia.query.get_canonical('mass'))
+
+    def test_add_flow(self):
+        """
+        In this case, the flow's synonyms should be added. But dummy flows' links are not added to synonym set.
+        :return:
+        """
+        flow = DummyFlow()
+        for k in ('phosphene', 'phxphn', '1234567'):
+            flow._flowable.add_term(k)
+        flow.origin = 'test.origin'
+        self.lcia.tm.add_flow(flow)
+        self.assertEqual(self.lcia.tm._fm['1234-56-7'].name, 'phosphene')
+
 
 
 if __name__ == '__main__':

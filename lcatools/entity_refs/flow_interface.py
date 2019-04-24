@@ -114,7 +114,7 @@ class DummyFlow(FlowInterface):
 
     class DummyQuantity(object):
         name = 'Dummy Quantity'
-        origin = 'local.dummy.quantity'
+        origin = 'local.dummy'
         entity_type = 'quantity'
         external_ref = 'dummy'
         uuid = None
@@ -135,6 +135,10 @@ class DummyFlow(FlowInterface):
             return 'd'
 
     _reference_entity = DummyQuantity()
+
+    @property
+    def link(self):
+        return 'local.dummy/flow'
 
     @property
     def reference_entity(self):

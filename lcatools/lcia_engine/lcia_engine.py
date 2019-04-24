@@ -131,6 +131,17 @@ class LciaEngine(TermManager):
             else:
                 raise ValueError('Unknown hint type %s' % hint_type)
 
+    @staticmethod
+    def _flow_terms(flow):
+        """
+        This function was created because we don't want TermManagers getting confused about things like misassigned
+        CAS numbers, because they don't have the capacity to store multiple CFs.  So we will save the full synonym
+        list for the LciaEngine.
+        :param flow:
+        :return:
+        """
+        return flow.synonyms
+
     def _add_flow_terms(self, flow, merge_strategy=None):
         """
         Subclass handles two problems: tracking flowables by origin and biogenic CO2.
@@ -266,21 +277,21 @@ class LciaEngine(TermManager):
     def save_contetxts(self, filename=None):
         self._cm.save(filename)
 
-    def flowables(self, search=None, origin=None, new=False):
+    def flowables(self, search=None, origin=None, new=False, **kwargs):
         """
-        Adds ability to filter by origin
+        Adds ability to filter by origin-- note this is exclusive to the ability to filter by quantity
         :param search:
         :param origin:
         :param new: [False] if True, only return flowables that were not known originally
-        :return:
+        :return: generates flowable strings
         """
         if origin is None:
-            _iter = super(LciaEngine, self).flowables(search=search)
+            _iter = super(LciaEngine, self).flowables(search=search, **kwargs)
         else:
             if search is None:
                 _iter = self._fb_by_origin[origin]
             else:
-                _iter = (x for x in self._fm.objects_with_string(search) if x in self._fb_by_origin[origin])
+                _iter = (str(x) for x in self._fm.objects_with_string(search) if x in self._fb_by_origin[origin])
 
         for k in _iter:
             if new:

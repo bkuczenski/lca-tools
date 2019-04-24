@@ -58,7 +58,9 @@ class TermManagerTest(unittest.TestCase):
             flow._flowable.add_term(k)
         flow.origin = 'test.origin'
         self.tm.add_flow(flow)
-        self.assertEqual(self.tm._fm['1234567'], 'phosphene')
+        self.assertEqual(self.tm._fm[flow.link], 'phosphene')
+        with self.assertRaises(KeyError):
+            self.tm._fm['1234567']
 
     def test_add_flow_prune(self):
         pass

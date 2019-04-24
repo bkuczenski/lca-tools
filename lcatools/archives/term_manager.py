@@ -306,6 +306,17 @@ class TermManager(object):
             self._fm.merge(dominant, syn)
         return dominant
 
+    @staticmethod
+    def _flow_terms(flow):
+        """
+        This function was created because we don't want TermManagers getting confused about things like misassigned
+        CAS numbers, because they don't have the capacity to store multiple CFs.  So we will save the full synonym
+        list for the LciaEngine.
+        :param flow:
+        :return:
+        """
+        return flow.name, flow.link
+
     def _add_flow_terms(self, flow, merge_strategy=None):
         """
         This process takes in an inbound FlowInterface instance, identifies the flowable(s) that match its terms, and
@@ -316,7 +327,7 @@ class TermManager(object):
         """
         merge_strategy = merge_strategy or self._merge_strategy
         fb_map = defaultdict(list)
-        for syn in flow.synonyms:
+        for syn in self._flow_terms(flow):
             # make a list of all the existing flowables that match the incoming flow
             fb_map[self._fm.get(syn)].append(syn)
         new_terms = fb_map.pop(None, [])
@@ -593,18 +604,30 @@ class TermManager(object):
     def get_flowable(self, term):
         return self._fm[term]
 
-    def flowables(self, search=None, origin=None):
+    def flowables(self, search=None, origin=None, quantity=None):
         """
         :param origin: used in subclass
         :param search:
         :return:
         """
+        if quantity is None:
+            qq = None
+        else:
+            qq = self.get_canonical(quantity)
         if search is None:
-            for fb in self._fm.objects:
-                yield str(fb)
+            if quantity is None:
+                for fb in self._fm.objects:
+                    yield str(fb)
+            else:
+                for fb in self._q_dict[qq].keys():
+                    yield str(fb)
         else:
             for fb in self._fm.objects_with_string(search):
+                if qq is None:
                     yield str(fb)
+                else:
+                    if fb in self._q_dict[qq]:
+                        yield str(fb)
 
     def unmatched_flowables(self, flowables):
         """

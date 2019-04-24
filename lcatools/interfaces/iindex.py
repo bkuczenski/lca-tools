@@ -25,13 +25,32 @@ def check_direction(dirn):
         raise InvalidDirection(_dir)
 
 
+class InvalidSense(Exception):
+    pass
+
+
+def valid_sense(sense):
+    if sense is None:
+        return None
+    try:
+        v = {'source': 'Source',
+             'sink': 'Sink'}[sense.lower()]
+    except KeyError:
+        raise InvalidSense(sense)
+    return v
+
+
 def comp_dir(direction):
     if direction is None:
         return None
     try:
         _dirn = check_direction(direction)
-    except KeyError:
-        raise InvalidDirection('%s' % direction)
+    except InvalidDirection:
+        try:
+            return {'Source': 'Input',
+                    'Sink': 'Output'}[valid_sense(direction)]
+        except InvalidSense:
+            raise InvalidDirection('%s' % direction)
     return next(k for k in directions if k != _dirn)
 
 

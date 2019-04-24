@@ -35,6 +35,7 @@ The NullContext should be returned by the context manager
 """
 
 from synonym_dict.example_compartments import Compartment, CompartmentManager
+from lcatools.interfaces import valid_sense
 
 ELEMENTARY = {'resources', 'emissions'}
 
@@ -48,10 +49,6 @@ class ProtectedTerm(Exception):
     pass
 
 
-class InvalidSense(Exception):
-    pass
-
-
 class InconsistentSense(Exception):
     pass
 
@@ -61,17 +58,6 @@ class FrozenElementary(Exception):
     top-level elementary contexts may not be assigned parents
     """
     pass
-
-
-def valid_sense(sense):
-    if sense is None:
-        return None
-    try:
-        v = {'source': 'Source',
-             'sink': 'Sink'}[sense.lower()]
-    except KeyError:
-        raise InvalidSense(sense)
-    return v
 
 
 def _dir_mod(arg, sense):

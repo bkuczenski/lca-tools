@@ -9,7 +9,7 @@ from .abstract_query import UnknownOrigin, PrivateArchive, EntityNotFound, NoUui
 
 from .iconfigure import ConfigureInterface
 from .iinventory import InventoryInterface, InventoryRequired
-from .iindex import IndexInterface, IndexRequired, directions, comp_dir, check_direction
+from .iindex import IndexInterface, IndexRequired, directions, comp_dir, check_direction, valid_sense
 from .ibackground import BackgroundInterface, BackgroundRequired
 from .iquantity import QuantityInterface, QuantityRequired, NoFactorsFound, ConversionReferenceMismatch, FlowableMismatch
 

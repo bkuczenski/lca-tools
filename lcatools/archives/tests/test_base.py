@@ -193,6 +193,7 @@ class LcArchiveTest(unittest.TestCase):
         :return:
         """
         ar = LcArchive('/my/file')
+        ar._entities['21d34f33-b0af-3d82-9bef-3cf03e0db9dc'] = None  # need to avoid KeyError with nsuuid
         ar.load_from_dict(from_json(test_file), jsonfile='/my/test/json')
         self.assertIn(test_json['dataReference'], ar.catalog_names)
         self.assertEqual(ar.ref, 'local.my.file')

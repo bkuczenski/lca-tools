@@ -17,6 +17,12 @@ frag_ext_name = 'the bodacious reference fragment'
 a_different_frag_uuid = str(uuid4())
 a_different_frag_ref = 'a completely separate reference fragment'
 
+mass_json = {
+    'externalId': 'kg',
+    'referenceUnit': 'kg',
+    'entityType': 'quantity'
+}
+
 flow_json = {
     'externalId': flow_uuid,
     'entityType': 'flow',
@@ -74,6 +80,7 @@ class LcForegroundTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.fg = LcForeground(WORKING_DIR, ref=test_ref)
+        cls.fg.entity_from_json(mass_json)
         cls.fg.entity_from_json(flow_json)
 
     def test_0_retrieve_flow_by_uuid(self):

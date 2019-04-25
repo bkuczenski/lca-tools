@@ -104,6 +104,10 @@ class CatalogRef(BaseRef):
 
         self._asgn_etype = entity_type
 
+    @property
+    def name(self):
+        return self._name
+
     def validate(self):
         """
         Always returns true in order to add to an archive. this should probably be fixed.

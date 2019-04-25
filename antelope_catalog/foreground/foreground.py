@@ -179,13 +179,7 @@ class LcForeground(BasicArchive):
                 return self._qty_ref_from_json(e, ext_ref)
         return super(LcForeground, self)._make_entity(e, etype, ext_ref)
 
-    def add(self, entity):
-        """
-        Reimplement base add to (1) allow fragments, (2) merge instead of raising a key error.
-        This is totally missing tm tie-ins so that may be an error
-        :param entity:
-        :return:
-        """
+    def _ensure_valid_refs(self, entity):
         if entity.origin is None:
             entity.origin = self.ref  # have to do this now in order to have the link properly defined
         elif entity.is_entity and entity.origin != self.ref:
@@ -195,6 +189,20 @@ class LcForeground(BasicArchive):
             print('my ref: %s' % self.ref)
             raise NonLocalEntity(entity)
             '''
+        super(LcForeground, self)._ensure_valid_refs(entity)
+        if entity.uuid is not None:
+            # technically this should happen after _add to get interrupted by EntityExists
+            self._uuid_map[entity.uuid].add(entity.link)
+
+    '''
+    def add(self, entity):
+        """
+        Reimplement base add to (1) allow fragments, (2) merge instead of raising a key error.
+        not sure we really want/need to do the merge thing- we will find out
+        This is totally missing tm tie-ins so that may be an error
+        :param entity:
+        :return:
+        """
         self._ensure_valid_refs(entity)
         try:
             self._add(entity, entity.link)
@@ -203,8 +211,7 @@ class LcForeground(BasicArchive):
             # merge incoming entity's properties with existing entity
             current = self[entity.link]
             current.merge(entity)
-        if entity.uuid is not None:
-            self._uuid_map[entity.uuid].add(entity.link)
+    '''
 
     def _add_children(self, entity):
         if entity.entity_type == 'fragment':

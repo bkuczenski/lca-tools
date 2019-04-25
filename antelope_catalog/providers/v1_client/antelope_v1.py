@@ -162,11 +162,6 @@ class AntelopeV1Client(BasicArchive):
     def _ref_to_key(self, key):
         return key
 
-    def add(self, entity):
-        if entity.entity_type not in self._entity_types:
-            raise ValueError('%s is not a valid entity type' % entity.entity_type)
-        self._add(entity, entity.external_ref, quiet=True)
-
     def _fetch(self, entity, **kwargs):
         j = self.get_endpoint(entity, cache=False)[0]
         return self._parse_and_save_entity(j)

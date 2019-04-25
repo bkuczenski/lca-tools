@@ -215,7 +215,7 @@ class BasicArchive(EntityStore):
     def add_entity_and_children(self, entity):
         try:
             self.add(entity)
-        except KeyError:
+        except EntityExists:
             return
         self._add_children(entity)
 

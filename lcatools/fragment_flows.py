@@ -73,7 +73,7 @@ class FragmentFlow(object):
             else:
                 val = fpm['magnitude'] / magnitude
             try:
-                flow.characterize(mag_qty, value=val, compartment=None)
+                flow.characterize(mag_qty, value=val)
             except DuplicateCharacterizationError:
                 if not isclose(mag_qty.cf(flow), val):
                     raise ValueError('Characterizations do not match: %g vs %g' % (mag_qty.cf(flow), val))

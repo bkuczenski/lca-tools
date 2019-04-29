@@ -44,7 +44,7 @@ def generate_ipcc_2007_traci21(source, target):
 
     print(str(q))
 
-    ar = BasicArchive(None, ref=AUTHORIZED_REF, ns_uuid=T.init_args['nsUuid'])
+    ar = BasicArchive(None, ref=AUTHORIZED_REF, ns_uuid=T.init_args['ns_uuid'])
     Ti = T.make_interface('index')
 
     for f in Ti.flows():

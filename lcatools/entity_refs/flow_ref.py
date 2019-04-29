@@ -75,8 +75,8 @@ class FlowRef(EntityRef):
         for i in self._characterizations.values():
             yield i
 
-    def serialize(self, characterizations=False, domesticate=False, **kwargs):
-        j = super(FlowRef, self).serialize(domesticate=domesticate)
+    def serialize(self, characterizations=False, domesticate=False, drop_fields=None, **kwargs):
+        j = super(FlowRef, self).serialize(domesticate=domesticate, drop_fields=drop_fields)
         if characterizations:
             j['characterizations'] = sorted([x.serialize(**kwargs) for x in self._characterizations.values()],
                                             key=lambda x: x['quantity'])

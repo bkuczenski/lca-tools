@@ -44,15 +44,17 @@ class LciaDb(Qdb):
             item = item.link
         return super(LciaDb, self).__getitem__(item)
 
+    def _ensure_valid_refs(self, entity):
+        if entity.origin is None:
+            raise AttributeError('Origin not set! %s' % entity)
+        super(LciaDb, self)._ensure_valid_refs(entity)
+
     def add(self, entity):
         """
         Add entity to archive.  If entity is a quantity ref, add a masquerade to the lcia engine
         :param entity:
         :return:
         """
-        if entity.origin is None:
-            raise AttributeError('Origin not set! %s' % entity)
-        self._ensure_valid_refs(entity)
         try:
             self._add(entity, entity.link)
         except EntityExists:
@@ -60,6 +62,12 @@ class LciaDb(Qdb):
             current = self[entity.link]
             current.merge(entity)
 
+        if entity.uuid is not None:
+            self._entities[entity.uuid] = entity
+
+        self._add_to_tm(entity)
+
+    def _add_to_tm(self, entity):
         if entity.entity_type == 'quantity':
             if entity.is_entity:  # not ref
                 print('Adding real entity %s' % entity.link)
@@ -78,3 +86,4 @@ class LciaDb(Qdb):
                 assert self.tm.get_canonical(entity) is q_masq
         elif isinstance(entity, FlowInterface):
             self.tm.add_flow(entity)
+

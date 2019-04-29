@@ -25,6 +25,10 @@ class FragmentNotFound(Exception):
     pass
 
 
+class FragmentMismatch(Exception):
+    pass
+
+
 class NonLocalEntity(Exception):
     """
     Foregrounds should store only local entities and references to remote entities
@@ -55,14 +59,15 @@ class LcForeground(BasicArchive):
 
     def _ref_to_key(self, key):
         """
-        Fragments MUST have UUIDs.  Fragments should also be permitted to have any desired external_ref -- which means
-        the foreground needs to store a mapping of non-standard external refs to uuids.  This is only because fragments
-        are the only entity type that is intended to be mutable (especially, nameable) after creation.
+        In a foreground, there are three different ways to retrieve an entity.
 
-        This function is a little different from other EntityStore subclasses because it (uniquely) needs to handle
-        entities from a variety of origins. Therefore we use the link and not the uuid as an identifer.  However, we
-        still need to support retrieval by UUID.  **WE WANT TO DO THIS WITHOUT HAVING TO OVERRIDE __getitem__**.
-        So the operation is as follows:
+        (0) by link.  The master key for each entity is its link, which is its key in _entities.
+
+        (1) by uuid.  fg archives have no nsuuid capabilities, but if an entity has a uuid, it can be retrieved by it.
+
+        (2) by name.  Fragments and any other entities native to the foreground archive can also be retrieved by their
+        external ref.  Fragments are the only entities that can be *assigned* a name after creation.  [for this reason,
+        Fragments MUST have UUIDs to be used for hashing]
 
          * _ref_to_key transmits the user's heterogeneous input into a valid key to self._entities, or None
            - if the key is already a known link, it's easy
@@ -85,6 +90,11 @@ class LcForeground(BasicArchive):
             if uid in self._uuid_map:
                 return next(k for k in self._uuid_map[uid])
         return None
+
+    def _add_ext_ref_mapping(self, entity):
+        if entity.external_ref in self._ext_ref_mapping:
+            raise EntityExists('External Ref %s already refers to %s' % (entity.external_ref, self[entity.external_ref]))
+        self._ext_ref_mapping[entity.external_ref] = entity.link
 
     def __getitem__(self, item):
         """
@@ -180,9 +190,7 @@ class LcForeground(BasicArchive):
         return super(LcForeground, self)._make_entity(e, etype, ext_ref)
 
     def _ensure_valid_refs(self, entity):
-        if entity.origin is None:
-            entity.origin = self.ref  # have to do this now in order to have the link properly defined
-        elif entity.is_entity and entity.origin != self.ref:
+        if entity.is_entity and entity.origin != self.ref:
             entity = entity.make_ref(self._catalog.query(entity.origin))  # only store foreign entities as refs
             '''
             entity.show()
@@ -190,28 +198,31 @@ class LcForeground(BasicArchive):
             raise NonLocalEntity(entity)
             '''
         super(LcForeground, self)._ensure_valid_refs(entity)
-        if entity.uuid is not None:
-            # technically this should happen after _add to get interrupted by EntityExists
-            self._uuid_map[entity.uuid].add(entity.link)
 
-    '''
     def add(self, entity):
         """
-        Reimplement base add to (1) allow fragments, (2) merge instead of raising a key error.
+        Reimplement base add to (1) use link instead of external_ref, (2) merge instead of raising a key error.
         not sure we really want/need to do the merge thing- we will find out
-        This is totally missing tm tie-ins so that may be an error
         :param entity:
         :return:
         """
-        self._ensure_valid_refs(entity)
+        if entity.origin is None:
+            entity.origin = self.ref  # have to do this now in order to have the link properly defined
         try:
             self._add(entity, entity.link)
-        #TODO: do we need to consult the tm?
         except EntityExists:
             # merge incoming entity's properties with existing entity
             current = self[entity.link]
             current.merge(entity)
-    '''
+
+        if entity.uuid is not None:
+            # self._entities[entity.uuid] = entity
+            self._uuid_map[entity.uuid].add(entity.link)
+
+        if entity.origin == self.ref and entity.external_ref != entity.uuid:
+            self._add_ext_ref_mapping(entity)
+
+        self._add_to_tm(entity)
 
     def _add_children(self, entity):
         if entity.entity_type == 'fragment':
@@ -236,18 +247,21 @@ class LcForeground(BasicArchive):
          * pop the old link and replace its object with the new link in _entities
          * remove the old link and replace it with the new link in the uuid map
          * remove the old link and replace it with the new link in ents_by_type['fragment']
-         * add the name with the new link to the ext ref mapping
+         * add the name with the new link to the ext_ref_mapping
         :param frag:
         :param name:
         :return:
         """
-        if self[frag.link] is not frag:
-            raise FragmentNotFound(frag)
+        current = self[frag.link]
+        if current is not frag:
+            if current is None:
+                raise FragmentNotFound(frag)
+            raise FragmentMismatch('%s\n%s' % (current, frag))
         if self._ref_to_key(name) is not None:
             raise ValueError('Name is already taken: "%s"' % name)
         oldname = frag.link
         frag.external_ref = name  # will raise PropertyExists if already set
-        self._ext_ref_mapping[name] = frag.link
+        self._add_ext_ref_mapping(frag)
         self._entities[frag.link] = self._entities.pop(oldname)
 
         self._uuid_map[frag.uuid].remove(oldname)
@@ -261,8 +275,8 @@ class LcForeground(BasicArchive):
     def _do_load(self, fragments):
         for f in fragments:
             frag = LcFragment.from_json(self, f)
-            if frag.external_ref != frag.uuid:
-                self._ext_ref_mapping[frag.external_ref] = frag.link
+            # if frag.external_ref != frag.uuid:  # don't need this anymore- auto-added for entities with self.ref
+            #     self._add_ext_ref_mapping(frag)
             self.add(frag)
 
         for f in fragments:

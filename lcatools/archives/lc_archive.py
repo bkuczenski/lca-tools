@@ -5,10 +5,7 @@ Interim classes with useful building blocks
 from __future__ import print_function, unicode_literals
 
 
-import os
-
 from ..entities import LcProcess
-from ..from_json import from_json
 from ..implementations import InventoryImplementation, BackgroundImplementation, LcConfigureImplementation
 from .basic_archive import BasicArchive, BASIC_ENTITY_TYPES
 from lcatools.interfaces import LcQuery
@@ -164,9 +161,3 @@ class LcArchive(BasicArchive):
 
     def _serialize_all(self, **kwargs):
         return self.serialize(exchanges=True, characterizations=True, values=True, **kwargs)
-
-    def _load_all(self, **kwargs):
-        if self.source is None:
-            return
-        if os.path.exists(self.source):
-            self.load_from_dict(from_json(self.source))

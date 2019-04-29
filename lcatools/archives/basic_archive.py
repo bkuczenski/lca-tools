@@ -1,3 +1,4 @@
+import os
 import re
 from collections import defaultdict
 from .entity_store import EntityStore, SourceAlreadyKnown, EntityExists
@@ -164,19 +165,19 @@ class BasicArchive(EntityStore):
             raise InterfaceError('Unable to create interface %s' % iface)
 
     def _ensure_valid_refs(self, entity):
-        if entity.uuid is None:
-            uu = self._ref_to_uuid(entity.external_ref)
-            if uu is not None:
-                entity.uuid = uu
         if self.tm[entity.external_ref] is not None:
             raise ContextCollision('Entity external_ref %s is already known as a context identifier' %
                                    entity.external_ref)
+        super(BasicArchive, self)._ensure_valid_refs(entity)
 
     def add(self, entity):
-        self._ensure_valid_refs(entity)
         self._add(entity, entity.external_ref)
         if entity.uuid is not None:  # BasicArchives: allow UUID to retrieve entity as well, if defined
             self._entities[entity.uuid] = entity
+
+        self._add_to_tm(entity)
+
+    def _add_to_tm(self, entity):
         if entity.entity_type == 'quantity':
             self.tm.add_quantity(entity)
             if entity.is_entity:  # not ref
@@ -370,6 +371,12 @@ class BasicArchive(EntityStore):
 
         if _check:
             self.check_counter()
+
+    def _load_all(self, **kwargs):
+        if self.source is None:
+            return
+        if os.path.exists(self.source):
+            self.load_from_dict(from_json(self.source))
 
     @staticmethod
     def _narrow_search(entity, **kwargs):

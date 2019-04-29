@@ -509,7 +509,20 @@ class EntityStore(object):
         except KeyError:
             return None
 
+    def _ensure_valid_refs(self, entity):
+        """
+        Hook to validate the incoming entity's references-- namely, to set its uuid
+        :param entity:
+        :return:
+        """
+        if entity.uuid is None:
+            uu = self._ref_to_uuid(entity.external_ref)
+            if uu is not None:
+                entity.uuid = uu
+
     def _add(self, entity, key, quiet=False):
+        self._ensure_valid_refs(entity)
+
         if key is None:
             raise ValueError('Key not allowed to be None')
         if key in self._entities:

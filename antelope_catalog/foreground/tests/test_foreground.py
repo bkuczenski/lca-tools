@@ -94,10 +94,12 @@ class LcForegroundTestCase(unittest.TestCase):
 
     def test_2_retrieve_fragment(self):
         frag = self.fg[frag_uuid]
+        self.assertIsNotNone(frag)
         self.assertEqual(frag['Comment'], 'Test Fragment')
 
     def test_3_name_fragment(self):
         frag = self.fg[frag_uuid]
+        self.assertIsNotNone(frag)
         self.fg.name_fragment(frag, frag_ext_name)
         self.assertIs(frag, self.fg[frag_ext_name])
 

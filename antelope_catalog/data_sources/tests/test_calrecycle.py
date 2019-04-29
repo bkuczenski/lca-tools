@@ -103,7 +103,26 @@ class CalRecycleTest(unittest.TestCase):
         self.assertEqual(floor(incin.value), 484433)
 
     def test_lcia_0_indicators(self):
+        """
+        Investigation into gwp flowables from pre- to post-context-refactor:
+        pre: 100 flowables,
+         * includes two distinct 'nitrous oxide' entries with 10024-97-2 and 10024-97-3
+         * includes 'carbon dioxide (biogenic)' as well as 'carbon dioxide (fossil)' and 'carbon dioxide'
+         * includes 'dichloromethane' and 'cfc-12'
+        post: 98 flowables
+         * excludes 'dichlorodifluoromethane' and 'methylenechloride'
+         * only has 'carbon dioxide' and 'carbon dioxide (fossil)
+         * only has one 'nitrous oxide' (as correct)
+        assessment:
+         = 'dichlorodifluoromethane' and 'cfc-12' are the same
+         = 'methylenechloride' and 'dichloromethane' are the same
+
+        So it's an open question whether the biogenic CO2 situation is a problem or not since it's not yet tested.
+        but it's explicable.
+        :return:
+        """
         self.assertEqual(len([x for x in self.gwp.flowables()]), 98)  # was 100- what's missing?
+        # self.assertEqual(len([x for x in self.gwp.flowables()]), 100)
         self.assertEqual(len([x for x in self.criteria.flowables()]), 6)
 
     def test_lcia_1_rere(self):

@@ -2,6 +2,7 @@ import json
 import os
 
 from lcatools.entities import *
+from lcatools.entities.processes import NoExchangeFound
 from lcatools.archives import LcArchive
 from .file_store import FileStore
 
@@ -113,6 +114,18 @@ class OpenLcaJsonLdArchive(LcArchive):
         self.add(q)
         return q
 
+    def _create_allocation_quantity(self, process, alloc_type):
+        key = '%s_%s' % (process.name, alloc_type)
+        u = self._key_to_nsuuid(key)
+        q = self[u]
+        if q is not None:
+            return q
+
+        unit, _ = self._create_unit('alloc')
+        q = LcQuantity(u, Name=alloc_type, ReferenceUnit=unit, external_ref=key)
+        self.add(q)
+        return q
+
     def _create_flow(self, f_id):
         q = self[f_id]
         if q is not None:
@@ -177,6 +190,41 @@ class OpenLcaJsonLdArchive(LcArchive):
 
         return p.add_exchange(flow, dirn, value=value, add_dups=True)
 
+    def _apply_olca_allocation(self, p):
+        """
+        For each allocation factor, we want to characterize the flow so that its exchange value times its
+        characterization equals the stated factor.  Then we want to allocate the process by its default allocation
+        property.
+        :param p:
+        :return:
+        """
+        if p.has_property('allocationFactors'):
+            for af in p['allocationFactors']:
+                if af['value'] == 0:
+                    continue
+                if af['allocationType'] == 'CAUSAL_ALLOCATION':
+                    # not sure how to correctly interpret this
+                    print('Speculative CAUSAL_ALLOCATION')
+                    continue
+                q = self._create_allocation_quantity(p, af['allocationType'])
+                f = self.retrieve_or_fetch_entity(af['product']['@id'], typ='flows')
+                try:
+                    x = p.reference(f)
+                except NoExchangeFound:
+                    try:
+                        x = next(rx for rx in p.exchange_values(f) if rx.termination is None)
+                        p.add_reference(f, x.direction)
+                    except StopIteration:
+                        print('%s: Unable to find allocatable exchange for %s' % (p.external_ref, f.external_ref))
+                        continue
+
+                v = af['value'] / x.value
+                f.add_characterization(q, value=v)
+
+        if p.has_property('defaultAllocationMethod'):
+            aq = self._create_allocation_quantity(p, p['defaultAllocationMethod'])
+            p.allocate_by_quantity(aq)
+
     def _create_process(self, p_id):
         q = self[p_id]
         if q is not None:
@@ -211,6 +259,8 @@ class OpenLcaJsonLdArchive(LcArchive):
                 flow = self.retrieve_or_fetch_entity(ex['flow']['@id'], typ='flows')
                 dirn = 'Input' if ex['input'] else 'Output'
                 p.add_reference(flow, dirn)
+
+        self._apply_olca_allocation(p)
 
         return p
 

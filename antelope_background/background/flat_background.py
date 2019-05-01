@@ -198,7 +198,11 @@ class FlatBackground(object):
             return pf.flow.external_ref, pf.direction, pf.process.external_ref, _scc_id
 
         def _make_term_ext(em):
-            return em.flow.external_ref, comp_dir(em.direction), em.compartment[-1], 0
+            try:
+                comp = em.compartment[-1]
+            except IndexError:
+                comp = None
+            return em.flow.external_ref, comp_dir(em.direction), comp, 0
 
         return cls([_make_term_ref(x) for x in be.foreground_flows(outputs=False)],
                    [_make_term_ref(x) for x in be.background_flows()],

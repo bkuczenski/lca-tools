@@ -13,6 +13,9 @@ class OpenLcaException(Exception):
     pass
 
 
+SKIP_DURING_INDEX = ('context.json', 'meta.info')
+
+
 class OpenLcaJsonLdArchive(LcArchive):
     """
     Opens JSON-LD archives formatted according to the OpenLCA schema
@@ -21,7 +24,7 @@ class OpenLcaJsonLdArchive(LcArchive):
         self._print('Generating index')
         self._type_index = dict()
         for f in self._archive.listfiles():
-            if f == 'context.json':
+            if f in SKIP_DURING_INDEX:
                 continue
             ff = f.split('/')
             fg = ff[1].split('.')
@@ -57,8 +60,11 @@ class OpenLcaJsonLdArchive(LcArchive):
         j.pop('@id')
         name = j.pop('name')
 
-        c_j = j.pop('category')
-        cat = self._get_category_list(c_j['@id'])
+        if 'category' in j:
+            c_j = j.pop('category')
+            cat = self._get_category_list(c_j['@id'])
+        else:
+            cat = ['None']
         return j, name, cat
 
     def _get_category_list(self, cat_key):
@@ -178,8 +184,12 @@ class OpenLcaJsonLdArchive(LcArchive):
 
         p_j, name, cls = self._clean_object('processes', p_id)
         ss = p_j.pop('location', {'name': 'GLO'})['name']
-        stt = {'begin': p_j['processDocumentation']['validFrom'],
-               'end': p_j['processDocumentation']['validUntil']}
+        stt = dict()
+        for key, tgt in (('validFrom', 'begin'), ('validUntil', 'end')):
+            try:
+                stt[tgt] = p_j['processDocumentation'][key]
+            except KeyError:
+                pass
 
         exch = p_j.pop('exchanges')
 
@@ -210,13 +220,14 @@ class OpenLcaJsonLdArchive(LcArchive):
                 self._gen_index()
             typ = self._type_index[key]
         try:
-            ent = {'processes': self._create_process,
+            _ent_g = {'processes': self._create_process,
                    'flows': self._create_flow,
-                   'flow_properties': self._create_quantity}[typ](key)
+                   'flow_properties': self._create_quantity}[typ]
         except KeyError:
-            ent = self._create_object(typ, key)
+            print('Warning: generating generic object for unrecognized type %s' % typ)
+            _ent_g = lambda x: self._create_object(typ, x)
 
-        return ent
+        return _ent_g(key)
 
     def _load_all(self, **kwargs):
         for f in self._archive.listfiles(in_prefix='process'):

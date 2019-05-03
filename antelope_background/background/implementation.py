@@ -44,10 +44,16 @@ class TarjanBackgroundImplementation(BackgroundImplementation):
     def setup_bm(self, index=None):
         if self._index is None:
             super(TarjanBackgroundImplementation, self).setup_bm(index)
+
+    def check_bg(self, reset=False, **kwargs):
+        if self._flat is None or reset:
+            if reset:
+                self._archive.reset()
             if hasattr(self._archive, 'create_flat_background'):
-                self._flat = self._archive.create_flat_background(index)
+                self._flat = self._archive.create_flat_background(self._index, **kwargs)
             else:
-                self._flat = FlatBackground.from_index(index)
+                self._flat = FlatBackground.from_index(self._index, **kwargs)
+        return True
 
     def _check_ref(self, arg, opt_arg):
         """
@@ -58,6 +64,7 @@ class TarjanBackgroundImplementation(BackgroundImplementation):
         :param opt_arg:
         :return:
         """
+        self.check_bg()
         try:
             if isinstance(arg, str):
                 process_ref = arg
@@ -91,14 +98,17 @@ class TarjanBackgroundImplementation(BackgroundImplementation):
         return p.reference(tr.flow_ref)
 
     def foreground_flows(self, search=None, **kwargs):
+        self.check_bg()
         for fg in self._flat.fg:
             yield self._exchange_from_term_ref(fg)
 
     def background_flows(self, search=None, **kwargs):
+        self.check_bg()
         for bg in self._flat.bg:
             yield self._exchange_from_term_ref(bg)
 
     def exterior_flows(self, search=None, **kwargs):
+        self.check_bg()
         for ex in self._flat.ex:
             c = ex.term_ref
             f = self[ex.flow_ref]

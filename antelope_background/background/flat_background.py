@@ -171,15 +171,16 @@ class FlatBackground(object):
     Static, ordered background stored in an easily serializable way
     """
     @classmethod
-    def from_index(cls, index, **kwargs):
+    def from_index(cls, index, quiet=True, **kwargs):
         """
         :param index: an index interface with operable processes() and terminate()
-        :param kwargs: origin, quiet
+        :param quiet: passed to cls
+        :param kwargs: passed to add_all_ref_products()
         :return:
         """
         be = BackgroundEngine(index)
-        be.add_all_ref_products()
-        return cls.from_background_engine(be, **kwargs)
+        be.add_all_ref_products(**kwargs)
+        return cls.from_background_engine(be, quiet=quiet)
 
     @classmethod
     def from_background_engine(cls, be, **kwargs):

@@ -114,6 +114,7 @@ class BackgroundEngine(object):
         """
         """
         self.fg = index_interface
+        self.preferred_processes = []  # use to resolve termination errors. should be a list of
         self._quiet = quiet
         self._lowlinks = dict()  # dict mapping product_flow key to lowlink -- which is a key into TarjanStack.sccs
 
@@ -195,7 +196,7 @@ class BackgroundEngine(object):
         :param bad_pf:
         :return:
         """
-        while 1:
+        while len(self._interior_incoming) > 0:
             pf = self.tstack.pop_from_stack()
             self._print('!!!removing %s' % pf)
             while 1:
@@ -286,6 +287,11 @@ class BackgroundEngine(object):
             elif len(terms) == 1:
                 term = terms[0]
             else:
+                for pref in self.preferred_processes:
+                    # sequential to allow ordering by preference
+                    if pref in terms:
+                        return pref
+
                 if strategy == 'abort':
                     print('flow: %s\nAmbiguous termination found for %s: %s' % (exch.flow.external_ref,
                                                                                 exch.direction, exch.flow))
@@ -541,9 +547,11 @@ class BackgroundEngine(object):
 
         # self.make_foreground()
 
-    def add_all_ref_products(self, multi_term='abort', default_allocation=None, net_coproducts=False):
+    def add_all_ref_products(self, multi_term='abort', default_allocation=None, net_coproducts=False, prefer=None):
         if self._all_added:
             return
+        if prefer is not None:
+            self.preferred_processes = prefer
         for p in self.fg.processes():
             for x in p.references():
                 j = self.check_product_flow(x.flow, p)
@@ -571,7 +579,12 @@ class BackgroundEngine(object):
         j = self.check_product_flow(flow, term)
 
         if j is None:
-            j = self._add_ref_product(flow, term, multi_term, default_allocation, net_coproducts)
+            try:
+                j = self._add_ref_product(flow, term, multi_term, default_allocation, net_coproducts)
+            except TerminationError:
+                print('add_ref_product failed.')
+                return
+
             self._update_component_graph()
         return j
 

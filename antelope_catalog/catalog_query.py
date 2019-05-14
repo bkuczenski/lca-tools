@@ -113,7 +113,7 @@ class CatalogQuery(IndexInterface, BackgroundInterface, InventoryInterface, Quan
     '''
     def get_canonical(self, quantity, **kwargs):
         try:
-            print('Gone canonical')
+            # print('Gone canonical')
             q_can = self._tm.get_canonical(quantity)
         except EntityNotFound:
             if hasattr(quantity, 'entity_type') and quantity.entity_type == 'quantity' and not quantity.is_entity:
@@ -128,6 +128,6 @@ class CatalogQuery(IndexInterface, BackgroundInterface, InventoryInterface, Quan
     def make_ref(self, entity):
         e_ref = super(CatalogQuery, self).make_ref(entity)
         if entity.entity_type == 'quantity':
-            print('Going canonical')
+            # print('Going canonical')
             return self.get_canonical(e_ref)
         return e_ref

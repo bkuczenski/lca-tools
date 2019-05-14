@@ -93,33 +93,47 @@ class ProcessRef(EntityRef):
     '''
 
     def _use_ref_exch(self, ref_flow):
+        """
+        returns a string which is the external_ref of a flow; default_rx if none was specified and the process has one.
+        :param ref_flow:
+        :return:
+        """
         if ref_flow is None:
             if self._default_rx is not None:
                 ref_flow = self._default_rx
-        elif ref_flow.entity_type == 'exchange':
-            ref_flow = ref_flow.flow
+        elif hasattr(ref_flow, 'entity_type'):
+            if ref_flow.entity_type == 'exchange':
+                return ref_flow.flow.external_ref
+            elif ref_flow.entity_type == 'flow':
+                return ref_flow.external_ref
+            raise TypeError('Invalid reference exchange: %s' % ref_flow)
         return ref_flow
 
     '''
     Inventory queries
     '''
     def exchanges(self, **kwargs):
-        return self._query.exchanges(self.external_ref, **kwargs)
+        for x in self._query.exchanges(self.external_ref, **kwargs):
+            yield x.make_ref(self._query)
 
     def exchange_values(self, flow, direction=None, termination=None, reference=None, **kwargs):
         if not isinstance(flow, str) and not isinstance(flow, int):
             flow = flow.external_ref
-        return self._query.exchange_values(self.external_ref, flow, direction,
-                                           termination=termination, reference=reference, **kwargs)
+        for x in  self._query.exchange_values(self.external_ref, flow, direction,
+                                              termination=termination, reference=reference, **kwargs):
+            yield x.make_ref(self._query)
 
     def inventory(self, ref_flow=None, **kwargs):
         # ref_flow = self._use_ref_exch(ref_flow)  # ref_flow=None returns unallocated inventory
-        return self._query.inventory(self.external_ref, ref_flow=ref_flow, **kwargs)
+        for x in self._query.inventory(self.external_ref, ref_flow=ref_flow, **kwargs):
+            yield x.make_ref(self._query)
 
     def exchange_relation(self, ref_flow, exch_flow, direction, termination=None, **kwargs):
         ref_flow = self._use_ref_exch(ref_flow)
-        return self._query.exchange_relation(self.external_ref, ref_flow.external_ref,
-                                             exch_flow.external_ref, direction,
+        if hasattr(exch_flow, 'external_ref'):
+            exch_flow = exch_flow.external_ref
+        return self._query.exchange_relation(self.external_ref, ref_flow,
+                                             exch_flow, direction,
                                              termination=termination, **kwargs)
 
     def fg_lcia(self, lcia_qty, ref_flow=None, **kwargs):

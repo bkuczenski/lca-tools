@@ -133,7 +133,7 @@ class EntityStore(object):
         """
         if key in self._entities:
             return key
-        uu = self._ref_to_nsuuid(key)
+        uu = self._ref_to_uuid(key)
         if uu is not None:
             if uu in self._entities:
                 return uu
@@ -539,8 +539,8 @@ class EntityStore(object):
                 entity.origin = self.ref
             self._entities[key] = entity
             if self._ns_uuid is not None:  # ensure UUID3s work even if custom UUIDs are specified
-                nsuuid = self._ref_to_nsuuid(entity.external_ref)
-                if nsuuid not in self._entities:
+                nsuuid = self._ref_to_uuid(entity.external_ref)
+                if nsuuid is not None and nsuuid not in self._entities:
                     self._entities[nsuuid] = entity
             self._counter[entity.entity_type] += 1
             self._ents_by_type[entity.entity_type].add(key)  # it's not ok to change an entity's type

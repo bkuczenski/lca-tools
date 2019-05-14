@@ -330,7 +330,8 @@ class EcospoldV2Archive(LcArchive):
             v = float(exch.get('amount'))  # or None if not found
             t = exch.get('activityLinkId')  # or None if not found
             if t is None:
-                t = self.tm[f.context]
+                if 'elementary' in exch.tag:
+                    t = self.tm[f.context]
             try:
                 c = '; '.join([str(c) for c in exch.iterchildren() if c.tag == '{%s}comment' % o.nsmap[None]])
             except ValueError:

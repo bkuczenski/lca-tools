@@ -402,6 +402,8 @@ class ExchangeValue(Exchange):
         """
         if isinstance(item, str) and item in ('process', 'flow', 'termination', 'value'):
             return getattr(self, item)  # %*(#%)(* Marshmallow!
+        if not self.process.is_entity:
+            return self.process.exchange_relation(item, self.flow, self.direction, self.termination)
         '''
         if len(self._value_dict) == 0:
             # unallocated exchanges always read the same

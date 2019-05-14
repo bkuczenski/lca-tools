@@ -117,7 +117,7 @@ def _extract_and_reduce_lci(node):
     exchs = random.sample([_x for _x in p_ref.inventory(ref_flow=p_rx)], 100)
 
     p_slim = LcProcess(p_ref.uuid, Name=p_ref['Name'])
-    p_slim.add_exchange(p_rx.flow, p_rx.direction, value=p_ref.reference_value(p_rx.flow))
+    p_slim.add_exchange(p_rx.flow, p_rx.direction, value=1.0)  # value=p_ref.reference_value(p_rx.flow)) ##
     p_slim.set_reference(p_rx.flow, p_rx.direction)
 
     for x in exchs:
@@ -169,7 +169,7 @@ class EcoinventLciTest(unittest.TestCase):
             challenge = cat.query('local.ecoinvent.%s.%s' % (node.version, node.model), debug=False).get(node.node)
 
             c_lci = challenge.lci(ref_flow=rx.flow.external_ref, threshold=1e-10)
-            lci_check = {x.key: x for x in c_lci}
+            lci_check = {x.flow.external_ref: x for x in c_lci}
 
             count = 0
             inverted = []
@@ -177,7 +177,7 @@ class EcoinventLciTest(unittest.TestCase):
 
             for i in lci_result.inventory(rx):  # inventory method normalizes in ExchangeValue.from_allocated
                 count += 1
-                z = lci_check[i.key]
+                z = lci_check[i.flow.external_ref]
                 if isclose(i.value, z.value, rel_tol=1e-6):
                     continue
                 elif isclose(i.value, -z.value, rel_tol=1e-6):

@@ -365,6 +365,20 @@ class LcProcess(LcEntity):
                 else:
                     yield ExchangeValue.from_allocated(i, ref_exch)
 
+    def exchange_relation(self, ref_flow, exch_flow, direction, termination=None):
+        rx = self.reference(ref_flow)
+        if termination is None:
+            xs = [x for x in self.exchange_values(flow=exch_flow, direction=direction)]
+            if len(xs) == 1:
+                return xs[0].value / rx.value
+            elif len(xs) == 0:
+                return 0.0
+            else:
+                return sum([x.value for x in xs]) / rx.value
+        else:
+            x = self.get_exchange(hash((self.external_ref, exch_flow, direction, termination)))
+            return x[rx]
+
     def find_exchange(self, spec=None, reference=None, direction=None):
         """
         returns an exchange matching the specification.

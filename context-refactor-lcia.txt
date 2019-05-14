@@ -28,6 +28,74 @@ Solution: enable renaming of _entry_group and force all to Flowables.
 Mon 2019-05-13 18:39:47 -0700
 done.
 
+Mon 2019-05-13 21:52:17 -0700
+
+OK, on to testing ecoinvent in context refactor via variability_jlca notebooks... cutoff bg built, now doing APOS. of course, this doesn't mean the LCI is correct.. to say nothing of the LCIA.. ugh I don't even want to be doing this.
+
+Mon 2019-05-13 22:04:30 -0700
+
+Unittest fails with 0 LCIA scores. plus loads of debugging info incl. 15,000 "Gone canonical"s.
+
+I'll take this up later maybe.
+
+Tue 2019-05-14 11:11:22 -0700
+
+OK, so now I am wading into the ecoinvent lci unittest I wrote almost a year ago- discovered that the test would not initialize because there was no LCI 7z resource (which I had deleted to save disk space) and found (with some gratification) that simply downloading the file and re-attempting was successful in detecting and adding the resource.
+
+Now a problem with a quantity conflict in _extract_and_reduce_lci which I completely do not have the patience for.
+
+Tue 2019-05-14 11:33:05 -0700
+
+OK, so there is some meat here.  The frankenprocess we have constructed has a reference flow that's an RxRef- so its constituents, namely the flow's reference quantity, are all refs.  The process itself, though, is a literal entity and not a ref, and its exchanges are added directly... but.. the flows are drawn from the inventory() call which is called on the process ref so they should be refs and not entities as well.. except they're NOT! the interface does not call make_ref on exchanges, presumably for performance reasons.
+
+Now we have another conundrum.  We either need to change the RxRef to use authentic entities instead of refs, and save an archive of authentic entities, or we need to change the inventory() call to return refs instead of entities.  The second choice SEEMS better, but it is a thoroughgoing change and who knows what effects it will have- since we haven't gotten as far as testing all that yet.  We are not sure whether entity refs will serialize in a way that allows them to be deserialized correctly- but I seem to remember some policy that was crafted in my head in which archives should not store refs.  So perhaps the solution is to de-ref-ify the flow and quantity as it is coming in-- except that would mean modifying the exchange object itself which we cannot do.
+
+Really we should try it both ways and see if the solution works either way.  But who has time for that?
+
+first let's investigate how the inventory call is SUPPOSED to work and see if it is working correctly.
+
+Minor brainstorm: just add the make_ref call to the process_ref method, rather than the interface.  Not sure whether this is correct or not.
+
+Tue 2019-05-14 12:13:58 -0700
+
+Initial results: the archive serialized and deserialized just fine.
+Note: somehow the quantities even de-serialized AS Refs! Don't understand that....
+time for lunch.
+Tue 2019-05-14 13:32:08 -0700
+Nevermind-- the query was returning them as refs, but they are still native quantities.
+
+Tue 2019-05-14 14:07:38 -0700
+
+OK, we have hit the impasse- and as suspected, it is in the Background Engine.  The problem comes down to RxRefs not KNOWING their own exchange values, which is a problem in ExchangeValue.__getitem__ when computing self._value / item.value where item is a reference exchange (or, as it happens, an RxRef).
+
+The REASON we did not want RxRefs to know their own values was because we want Index Interfaces to know reference flows without knowing reference magnitudes- i.e. for them to be purely value-free. Hence the InventoryRequired error.
+
+The problem is that, now we are computing exchange values from Refs-- Refs aren't supposed to be able to do that ANYWAY. Computing exchange values is something the authentic process is supposed to be able to do, but not the ref. (WHY? our normative logic is getting ever more tortured)
+
+I am whizzing through all these TERRIBLE ideas to fix this problem:
+ * Exchange.make_ref() makes flow refs but not process refs
+ * ProcessRef.inventory() calls make_ref for non-None ref_flow but not for None ref_flow
+ * catch InventoryRequired in __getitem__ and do something different
+ * once again allow RxRefs to remember/memoize values
+ * allow process refs to memoize RxRef values
+
+Our conceptual idea of what is an entity versus what is a ref has completely collapsed.  Is it a firewall? is it a convenience measure? nothing really holds up because the two objects have been redesigned and refactored to be more or less entirely equivalent. And HERE, in computing allocations and normalized exchange values, the last bastion of distinction between a process and a ref, is being attacked, and the entire reason for the existence of the ref is threatened. Why the fuck were we doing this anyway?
+
+To recap: the reason for a process_ref is so that we can access remote resources as though they were local.  If that is the case, the error is in calling exch[rx] in the first case, expecting it to behave as though it were a local exchange, when in fact we are dealing with a process ref.
+
+But WHY are we even treating everything as a process ref INSIDE the BACKGROUND ENGINE? Because we're giving it a query, which turns everything into a reference.
+
+Really, the background should have privileged access to the archive when it is local-- but should still work when the archive is remote.  This means the getitem call is the problem.
+
+Question 1: can we make it so that the objects seen by the background engine are processes and not refs?
+Question 2: can we make it so that the exch[rx] access is seamless for both processes and refs, but still preserving the [notional] performance boost that comes from accessing __getitem__?
+
+answer 1: when we run add_all_ref_products, if we had an archive we could ask for entities_by_type(process) instead of processes()
+No, no, no, no, the idea that the fg is an index interface is FUNDAMENTAL.  Instead we need to work-around exch[rx] in a way that is more or less the same performance.
+
+Tue 2019-05-14 14:35:05 -0700
+
+AHA! a conjoined problem: LcProcess has no exchange_relation implementation!
 
 ==========
 Fri Apr 19 10:51:10 -0700 2019

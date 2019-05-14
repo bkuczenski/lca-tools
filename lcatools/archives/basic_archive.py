@@ -130,7 +130,7 @@ class BasicArchive(EntityStore):
         :param key:
         :return:
         """
-        u = self._ref_to_nsuuid(key)
+        u = self._ref_to_uuid(key)
         try:
             e = self._get_entity(u)
         except KeyError:

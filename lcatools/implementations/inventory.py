@@ -52,17 +52,18 @@ class InventoryImplementation(BasicImplementation, InventoryInterface):
         :return:
         """
         p = self._archive.retrieve_or_fetch_entity(process)
-        xs = [x for x in p.inventory(ref_flow=ref_flow)
-              if x.flow.external_ref == exch_flow and x.direction == direction]
         norm = p.reference(ref_flow)
-        if termination is not None:
-            xs = [x for x in xs if x.termination == termination]
-        if len(xs) == 1:
-            return xs[0].value / norm.value
-        elif len(xs) == 0:
-            return 0.0
+        if termination is None:
+            xs = [x for x in p.exchange_values(flow=exch_flow, direction=direction)]
+            if len(xs) == 1:
+                return xs[0].value / norm.value
+            elif len(xs) == 0:
+                return 0.0
+            else:
+                return sum([x.value for x in xs]) / norm.value
         else:
-            return sum([x.value for x in xs]) / norm.value
+            x = p.get_exchange(hash((p.external_ref, exch_flow, direction, termination)))
+            return x[norm]
 
     def lcia(self, process, ref_flow, quantity_ref, **kwargs):
         """

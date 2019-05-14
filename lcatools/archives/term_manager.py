@@ -103,7 +103,7 @@ class TermManager(object):
         """
         # the synonym sets
         self._cm = ContextManager(source_file=contexts)
-        self._fm = SynonymDict(source_file=flowables)
+        self._fm = SynonymDict(source_file=flowables, entry_group="Flowables")
         self._qm = QuantityManager(source_file=quantities)
 
         self._q_dict = dict()  # dict of dicts. _q_dict[canonical quantity][canonical flowable] -> a context lookup
@@ -789,6 +789,9 @@ class TermManager(object):
         :param origin:
         :return:
         """
+        if 'SynonymSets' in j and 'Flowables' not in j:
+            j['Flowables'] = j.pop('SynonymSets')
+
         self._cm.load_dict(j)  # automatically pulls out 'Compartments'
         self._fm.load_dict(j)
         for f in self._fm.objects:

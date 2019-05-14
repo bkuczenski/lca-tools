@@ -348,11 +348,6 @@ class LciaEngine(TermManager):
             else:
                 yield k
 
-    def add_from_json(self, j, q_map, origin=None):
-        if 'SynonymSets' in j and 'Flowables' not in j:
-            j['Flowables'] = j.pop('SynonymSets')
-        super(LciaEngine, self).add_from_json(j, q_map, origin=origin)
-
     def _serialize_qdict(self, origin, quantity, values=False):
         _ql = self._qaccess(quantity)
         return {str(fb): cl.serialize_for_origin(origin, values=values) for fb, cl in _ql.items()}

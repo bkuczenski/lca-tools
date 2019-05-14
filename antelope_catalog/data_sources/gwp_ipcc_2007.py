@@ -1,10 +1,10 @@
 from .data_source import DataSource, ResourceInfo
-from antelope_utilities.lcia.ipcc_2007_traci import AUTHORIZED_REF
+from antelope_utilities import IPCC_2007_TRACI_REF
 from lcatools.lcia_engine import IPCC_2007_GWP
 
 
 gwp_ipcc_2007 = ResourceInfo(IPCC_2007_GWP, 'json', None, None,
-                             {'context_hint': [['air', 'to air'], ['water', 'to water']]}, {})
+                             {'hints': [['context', 'air', 'to air']]}, {})
 
 
 class GwpIpcc2007(DataSource):
@@ -21,12 +21,12 @@ class GwpIpcc2007(DataSource):
         heh- I hint at this challenge in the definite source by naming it AUTHORIZED_REF
         :return:
         """
-        yield AUTHORIZED_REF
+        yield IPCC_2007_TRACI_REF
 
-    def interfaces(self, ref=AUTHORIZED_REF):
+    def interfaces(self, ref=IPCC_2007_TRACI_REF):
         for i in ('index', 'quantity'):
             yield i
 
-    def make_resources(self, ref=AUTHORIZED_REF):
+    def make_resources(self, ref=IPCC_2007_TRACI_REF):
         if ref in self.references:
             yield self._make_resource(ref, info=gwp_ipcc_2007, interfaces=self.interfaces(), static=True)

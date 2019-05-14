@@ -12,6 +12,13 @@ from .catalog_query import INTERFACE_TYPES, NoCatalog
 # from .providers import create_archive
 
 
+class ResourceInvalid(Exception):
+    """
+    resource points to an invalid filename
+    """
+    pass
+
+
 def download_file(url, local_file, md5sum=None):
     r = requests.get(url, stream=True)
     md5check = hashlib.md5()
@@ -118,7 +125,10 @@ class LcResource(object):
         if self.ds_type.lower() in ('foreground', 'lcforeground'):
             self._archive = LcForeground(src, catalog=catalog, ref=self.reference, **self.init_args)
         else:
-            self._archive = create_archive(src, self.ds_type, catalog=catalog, ref=self.reference, **self.init_args)
+            try:
+                self._archive = create_archive(src, self.ds_type, catalog=catalog, ref=self.reference, **self.init_args)
+            except FileNotFoundError as e:
+                raise ResourceInvalid('%s: %s' % (self.reference, e.filename))
         if catalog is not None and os.path.exists(catalog.cache_file(self.source)):
             update_archive(self._archive, catalog.cache_file(self.source))
         self._static |= self._archive.static

@@ -105,10 +105,10 @@ class Configurator(object):
             return None
 
         if cf.check_config(option, args):
-            self._add_config(option, *args)
-            cf.apply_config({option: {args}})
             if option == 'hints':
                 self.lcia_engine.apply_hints(self.archive.ref, [args])
+            cf.apply_config({option: {args}})
+            self._add_config(option, *args)
             return True
         print('Configuration failed validation.')
         return False

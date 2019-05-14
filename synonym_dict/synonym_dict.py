@@ -68,7 +68,15 @@ class SynonymDict(object):
         with open(self._filename, 'w') as fp:
             json.dump(self.serialize(), fp, indent=2)
 
-    def __init__(self, source_file=None, ignore_case=None):
+    @property
+    def entry_group(self):
+        return self._entry_group
+
+    @entry_group.setter
+    def entry_group(self, value):
+        self._entry_group = str(value)
+
+    def __init__(self, source_file=None, ignore_case=None, entry_group=None):
         """
         Create a synonym dictionary that stores entries of a certain type.
         :param ignore_case: [False] whether the synonyms should be considered case-sensitive. This setting also causes
@@ -87,6 +95,8 @@ class SynonymDict(object):
             ent.add_child(a): include a's terms with ent's terms
         """
         self._filename = source_file
+        if entry_group is not None:
+            self.entry_group = str(entry_group)
 
         ignore_case = ignore_case or self._ignore_case
 

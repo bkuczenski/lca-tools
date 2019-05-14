@@ -168,6 +168,21 @@ class DefaultContextsTest(unittest.TestCase):
         tgt = self.cm['to air']
         self.assertIs(self.cm['dummy.test:air'], tgt)
 
+    def test_matching_sublineage_alt(self):
+        """
+        This was originally going to test the disregarded functionality- only to realize that does not get triggered
+        by find_matching_context.. without that, it is more or less the same as the test below it
+        :return:
+        """
+        self.cm.add_context_hint('dummy.test', 'air', 'to air')
+        tgt = self.cm['to air']
+        foreign_cm = ContextManager()
+        fx = foreign_cm.add_compartments(('Elementary Flows', 'NETL Coal Elementary Flows', 'air', 'unspecified'))
+        fx.add_origin('dummy.test')
+        self.assertEqual(fx.name, 'air, unspecified')  # just throwing this in there
+        self.assertIs(self.cm.find_matching_context(fx), tgt)
+        # self.assertIn('Elementary Flows', self.cm.disregarded_terms)
+
     def test_matching_sublineage(self):
         self.cm.add_context_hint('dummy.test', '[resources]', 'Resources')
         tgt = self.cm['from ground']

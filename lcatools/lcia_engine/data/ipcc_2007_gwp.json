@@ -20,6 +20,9 @@
       "Method": "TRACI 2.1",
       "Name": "Global Warming Air",
       "Source": "IPCC Fourth Assessment Report, Working Group I: Technical Summary, table TS-2",
+      "UnitConversion": {
+        "kg CO2 eq": 1.0
+      },
       "entityType": "quantity",
       "externalId": "Global Warming Air",
       "referenceUnit": "kg CO2 eq"
@@ -27,6 +30,9 @@
     {
       "Comment": "",
       "Name": "Mass",
+      "UnitConversion": {
+        "kg": 1.0
+      },
       "entityType": "quantity",
       "externalId": "Mass",
       "referenceUnit": "kg"
@@ -43,19 +49,27 @@
             }
           }
         },
+        "Methane, bromo-, Halon 1001": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 5.0
+            }
+          }
+        },
+        "Methane, tetrachloro-": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 1400.0
+            }
+          }
+        },
         "carbon dioxide": {
           "air": {
             "ref_quantity": "Mass",
             "value": {
               "GLO": 1.0
-            }
-          }
-        },
-        "carbon tetrachloride": {
-          "air": {
-            "ref_quantity": "Mass",
-            "value": {
-              "GLO": 1400.0
             }
           }
         },
@@ -99,14 +113,6 @@
             }
           }
         },
-        "cfc-12": {
-          "air": {
-            "ref_quantity": "Mass",
-            "value": {
-              "GLO": 10900.0
-            }
-          }
-        },
         "cfc-13": {
           "air": {
             "ref_quantity": "Mass",
@@ -120,6 +126,14 @@
             "ref_quantity": "Mass",
             "value": {
               "GLO": 31.0
+            }
+          }
+        },
+        "dichlorodifluoromethane": {
+          "air": {
+            "ref_quantity": "Mass",
+            "value": {
+              "GLO": 10900.0
             }
           }
         },
@@ -635,14 +649,6 @@
             }
           }
         },
-        "methyl bromide": {
-          "air": {
-            "ref_quantity": "Mass",
-            "value": {
-              "GLO": 5.0
-            }
-          }
-        },
         "methyl chloride": {
           "air": {
             "ref_quantity": "Mass",
@@ -767,176 +773,202 @@
     },
     "Compartments": [
       {
-        "name": "air"
+        "name": "air",
+        "synonyms": [
+          "local.traci.2.1.spreadsheet:air"
+        ]
       }
     ],
-    "SynonymSets": [
+    "Flowables": [
       {
         "name": "1,1,1-trichloroethane",
         "synonyms": [
-          "71-55-6",
-          "local.traci.2.1.spreadsheet/1,1,1-trichloroethane"
+          "Ethane, 1,1,1-trichloro-, HCFC-140",
+          "local.traci.2.1.spreadsheet/1,1,1-trichloroethane",
+          "71-55-6"
+        ]
+      },
+      {
+        "name": "Methane, bromo-, Halon 1001",
+        "synonyms": [
+          "Bromomethane",
+          "Methane, bromo-",
+          "local.traci.2.1.spreadsheet/methyl bromide",
+          "methyl bromide",
+          "74-83-9"
+        ]
+      },
+      {
+        "name": "Methane, tetrachloro-",
+        "synonyms": [
+          "Methane, tetrachloro-, CFC-10",
+          "carbon tetrachloride",
+          "local.traci.2.1.spreadsheet/carbon tetrachloride",
+          "tetrachloromethane",
+          "56-23-5"
         ]
       },
       {
         "name": "carbon dioxide",
         "synonyms": [
+          "Carbon dioxide, biogenic",
+          "Carbon dioxide, fossil",
+          "Carbon dioxide, in air",
+          "carbon dioxide (biogenic)",
+          "local.traci.2.1.spreadsheet/carbon dioxide",
           "124-38-9",
-          "local.traci.2.1.spreadsheet/carbon dioxide"
-        ]
-      },
-      {
-        "name": "carbon tetrachloride",
-        "synonyms": [
-          "56-23-5",
-          "local.traci.2.1.spreadsheet/carbon tetrachloride"
+          "carbon dioxide (biotic)"
         ]
       },
       {
         "name": "carbon tetrafluoride",
         "synonyms": [
-          "75-73-0",
-          "local.traci.2.1.spreadsheet/carbon tetrafluoride"
+          "local.traci.2.1.spreadsheet/carbon tetrafluoride",
+          "75-73-0"
         ]
       },
       {
         "name": "cfc-11",
         "synonyms": [
-          "75-69-4",
-          "local.traci.2.1.spreadsheet/cfc-11"
+          "local.traci.2.1.spreadsheet/cfc-11",
+          "75-69-4"
         ]
       },
       {
         "name": "cfc-113",
         "synonyms": [
-          "76-13-1",
-          "local.traci.2.1.spreadsheet/cfc-113"
+          "local.traci.2.1.spreadsheet/cfc-113",
+          "76-13-1"
         ]
       },
       {
         "name": "cfc-114",
         "synonyms": [
-          "76-14-2",
-          "local.traci.2.1.spreadsheet/cfc-114"
+          "local.traci.2.1.spreadsheet/cfc-114",
+          "76-14-2"
         ]
       },
       {
         "name": "cfc-115",
         "synonyms": [
-          "76-15-3",
-          "local.traci.2.1.spreadsheet/cfc-115"
-        ]
-      },
-      {
-        "name": "cfc-12",
-        "synonyms": [
-          "75-71-8",
-          "local.traci.2.1.spreadsheet/cfc-12"
+          "local.traci.2.1.spreadsheet/cfc-115",
+          "76-15-3"
         ]
       },
       {
         "name": "cfc-13",
         "synonyms": [
-          "75-72-9",
-          "local.traci.2.1.spreadsheet/cfc-13"
+          "local.traci.2.1.spreadsheet/cfc-13",
+          "75-72-9"
         ]
       },
       {
         "name": "chloroform",
         "synonyms": [
-          "67-66-3",
-          "local.traci.2.1.spreadsheet/chloroform"
+          "local.traci.2.1.spreadsheet/chloroform",
+          "67-66-3"
+        ]
+      },
+      {
+        "name": "dichlorodifluoromethane",
+        "synonyms": [
+          "Methane, dichlorodifluoro-",
+          "Methane, dichlorodifluoro-, CFC-12",
+          "cfc-12",
+          "local.traci.2.1.spreadsheet/cfc-12",
+          "75-71-8"
         ]
       },
       {
         "name": "dimethylether",
         "synonyms": [
-          "115-10-6",
-          "local.traci.2.1.spreadsheet/dimethylether"
+          "local.traci.2.1.spreadsheet/dimethylether",
+          "115-10-6"
         ]
       },
       {
         "name": "halon 1201",
         "synonyms": [
-          "1511-62-2",
-          "local.traci.2.1.spreadsheet/halon 1201"
+          "bromodifluoromethane",
+          "local.traci.2.1.spreadsheet/halon 1201",
+          "1511-62-2"
         ]
       },
       {
         "name": "halon 1211",
         "synonyms": [
-          "353-59-3",
-          "local.traci.2.1.spreadsheet/halon 1211"
+          "local.traci.2.1.spreadsheet/halon 1211",
+          "353-59-3"
         ]
       },
       {
         "name": "halon 1301",
         "synonyms": [
-          "75-63-8",
-          "local.traci.2.1.spreadsheet/halon 1301"
+          "local.traci.2.1.spreadsheet/halon 1301",
+          "75-63-8"
         ]
       },
       {
         "name": "halon 2402",
         "synonyms": [
-          "124-73-2",
-          "local.traci.2.1.spreadsheet/halon 2402"
+          "local.traci.2.1.spreadsheet/halon 2402",
+          "124-73-2"
         ]
       },
       {
         "name": "hcfc-123",
         "synonyms": [
-          "306-83-2",
-          "local.traci.2.1.spreadsheet/hcfc-123"
+          "local.traci.2.1.spreadsheet/hcfc-123",
+          "306-83-2"
         ]
       },
       {
         "name": "hcfc-124",
         "synonyms": [
-          "2837-89-0",
-          "local.traci.2.1.spreadsheet/hcfc-124"
+          "local.traci.2.1.spreadsheet/hcfc-124",
+          "2837-89-0"
         ]
       },
       {
         "name": "hcfc-141b",
         "synonyms": [
-          "1717-00-6",
-          "local.traci.2.1.spreadsheet/hcfc-141b"
+          "local.traci.2.1.spreadsheet/hcfc-141b",
+          "1717-00-6"
         ]
       },
       {
         "name": "hcfc-142b",
         "synonyms": [
-          "75-68-3",
-          "local.traci.2.1.spreadsheet/hcfc-142b"
+          "local.traci.2.1.spreadsheet/hcfc-142b",
+          "75-68-3"
         ]
       },
       {
         "name": "hcfc-21",
         "synonyms": [
-          "75-43-4",
-          "local.traci.2.1.spreadsheet/hcfc-21"
+          "local.traci.2.1.spreadsheet/hcfc-21",
+          "75-43-4"
         ]
       },
       {
         "name": "hcfc-22",
         "synonyms": [
-          "75-45-6",
-          "local.traci.2.1.spreadsheet/hcfc-22"
+          "local.traci.2.1.spreadsheet/hcfc-22",
+          "75-45-6"
         ]
       },
       {
         "name": "hcfc-225ca",
         "synonyms": [
-          "422-56-0",
-          "local.traci.2.1.spreadsheet/hcfc-225ca"
+          "local.traci.2.1.spreadsheet/hcfc-225ca",
+          "422-56-0"
         ]
       },
       {
         "name": "hcfc-225cb",
         "synonyms": [
-          "507-55-1",
-          "local.traci.2.1.spreadsheet/hcfc-225cb"
+          "local.traci.2.1.spreadsheet/hcfc-225cb",
+          "507-55-1"
         ]
       },
       {
@@ -948,155 +980,155 @@
       {
         "name": "hfc-125",
         "synonyms": [
-          "354-33-6",
-          "local.traci.2.1.spreadsheet/hfc-125"
+          "local.traci.2.1.spreadsheet/hfc-125",
+          "354-33-6"
         ]
       },
       {
         "name": "hfc-134",
         "synonyms": [
-          "359-35-3",
-          "local.traci.2.1.spreadsheet/hfc-134"
+          "local.traci.2.1.spreadsheet/hfc-134",
+          "359-35-3"
         ]
       },
       {
         "name": "hfc-134a",
         "synonyms": [
-          "811-97-2",
-          "local.traci.2.1.spreadsheet/hfc-134a"
+          "local.traci.2.1.spreadsheet/hfc-134a",
+          "811-97-2"
         ]
       },
       {
         "name": "hfc-143",
         "synonyms": [
-          "430-66-0",
-          "local.traci.2.1.spreadsheet/hfc-143"
+          "local.traci.2.1.spreadsheet/hfc-143",
+          "430-66-0"
         ]
       },
       {
         "name": "hfc-143a",
         "synonyms": [
-          "420-46-2",
-          "local.traci.2.1.spreadsheet/hfc-143a"
+          "local.traci.2.1.spreadsheet/hfc-143a",
+          "420-46-2"
         ]
       },
       {
         "name": "hfc-152",
         "synonyms": [
-          "624-72-6",
-          "local.traci.2.1.spreadsheet/hfc-152"
+          "local.traci.2.1.spreadsheet/hfc-152",
+          "624-72-6"
         ]
       },
       {
         "name": "hfc-152a",
         "synonyms": [
-          "75-37-6",
-          "local.traci.2.1.spreadsheet/hfc-152a"
+          "local.traci.2.1.spreadsheet/hfc-152a",
+          "75-37-6"
         ]
       },
       {
         "name": "hfc-161",
         "synonyms": [
-          "353-36-6",
-          "local.traci.2.1.spreadsheet/hfc-161"
+          "local.traci.2.1.spreadsheet/hfc-161",
+          "353-36-6"
         ]
       },
       {
         "name": "hfc-227ea",
         "synonyms": [
-          "431-89-0",
-          "local.traci.2.1.spreadsheet/hfc-227ea"
+          "local.traci.2.1.spreadsheet/hfc-227ea",
+          "431-89-0"
         ]
       },
       {
         "name": "hfc-23",
         "synonyms": [
-          "75-46-7",
-          "local.traci.2.1.spreadsheet/hfc-23"
+          "local.traci.2.1.spreadsheet/hfc-23",
+          "75-46-7"
         ]
       },
       {
         "name": "hfc-236cb",
         "synonyms": [
-          "677-56-5",
-          "local.traci.2.1.spreadsheet/hfc-236cb"
+          "local.traci.2.1.spreadsheet/hfc-236cb",
+          "677-56-5"
         ]
       },
       {
         "name": "hfc-236ea",
         "synonyms": [
-          "431-63-0",
-          "local.traci.2.1.spreadsheet/hfc-236ea"
+          "local.traci.2.1.spreadsheet/hfc-236ea",
+          "431-63-0"
         ]
       },
       {
         "name": "hfc-236fa",
         "synonyms": [
-          "690-39-1",
-          "local.traci.2.1.spreadsheet/hfc-236fa"
+          "local.traci.2.1.spreadsheet/hfc-236fa",
+          "690-39-1"
         ]
       },
       {
         "name": "hfc-245ca",
         "synonyms": [
-          "679-86-7",
-          "local.traci.2.1.spreadsheet/hfc-245ca"
+          "local.traci.2.1.spreadsheet/hfc-245ca",
+          "679-86-7"
         ]
       },
       {
         "name": "hfc-245fa",
         "synonyms": [
-          "460-73-1",
-          "local.traci.2.1.spreadsheet/hfc-245fa"
+          "local.traci.2.1.spreadsheet/hfc-245fa",
+          "460-73-1"
         ]
       },
       {
         "name": "hfc-32",
         "synonyms": [
-          "75-10-5",
-          "local.traci.2.1.spreadsheet/hfc-32"
+          "local.traci.2.1.spreadsheet/hfc-32",
+          "75-10-5"
         ]
       },
       {
         "name": "hfc-365mfc",
         "synonyms": [
-          "406-58-6",
-          "local.traci.2.1.spreadsheet/hfc-365mfc"
+          "local.traci.2.1.spreadsheet/hfc-365mfc",
+          "406-58-6"
         ]
       },
       {
         "name": "hfc-41",
         "synonyms": [
-          "593-53-3",
-          "local.traci.2.1.spreadsheet/hfc-41"
+          "local.traci.2.1.spreadsheet/hfc-41",
+          "593-53-3"
         ]
       },
       {
         "name": "hfc-43-10mee",
         "synonyms": [
-          "138495-42-8",
-          "local.traci.2.1.spreadsheet/hfc-43-10mee"
+          "local.traci.2.1.spreadsheet/hfc-43-10mee",
+          "138495-42-8"
         ]
       },
       {
         "name": "hfe-125",
         "synonyms": [
-          "3822-68-2",
-          "local.traci.2.1.spreadsheet/hfe-125"
+          "local.traci.2.1.spreadsheet/hfe-125",
+          "3822-68-2"
         ]
       },
       {
         "name": "hfe-134",
         "synonyms": [
-          "1691-17-4",
-          "local.traci.2.1.spreadsheet/hfe-134"
+          "local.traci.2.1.spreadsheet/hfe-134",
+          "1691-17-4"
         ]
       },
       {
         "name": "hfe-143a",
         "synonyms": [
-          "421-14-7",
-          "local.traci.2.1.spreadsheet/hfe-143a"
+          "local.traci.2.1.spreadsheet/hfe-143a",
+          "421-14-7"
         ]
       },
       {
@@ -1132,8 +1164,8 @@
       {
         "name": "hfe-245fa1",
         "synonyms": [
-          "1885-48-9",
-          "local.traci.2.1.spreadsheet/hfe-245fa1"
+          "local.traci.2.1.spreadsheet/hfe-245fa1",
+          "1885-48-9"
         ]
       },
       {
@@ -1181,8 +1213,8 @@
       {
         "name": "hfe-347mcf2",
         "synonyms": [
-          "406-78-0",
-          "local.traci.2.1.spreadsheet/hfe-347mcf2"
+          "local.traci.2.1.spreadsheet/hfe-347mcf2",
+          "406-78-0"
         ]
       },
       {
@@ -1218,8 +1250,8 @@
       {
         "name": "hfe-365mcf3",
         "synonyms": [
-          "378-16-5",
-          "local.traci.2.1.spreadsheet/hfe-365mcf3"
+          "local.traci.2.1.spreadsheet/hfe-365mcf3",
+          "378-16-5"
         ]
       },
       {
@@ -1255,107 +1287,105 @@
       {
         "name": "methane",
         "synonyms": [
-          "74-82-8",
-          "local.traci.2.1.spreadsheet/methane"
+          "Methane, fossil",
+          "local.traci.2.1.spreadsheet/methane",
+          "74-82-8"
         ]
       },
       {
         "name": "methane, dibromo-",
         "synonyms": [
-          "74-95-3",
-          "local.traci.2.1.spreadsheet/methane, dibromo-"
+          "local.traci.2.1.spreadsheet/methane, dibromo-",
+          "74-95-3"
         ]
       },
       {
         "name": "methane, iodotrifluoro-",
         "synonyms": [
-          "2314-97-8",
-          "local.traci.2.1.spreadsheet/methane, iodotrifluoro-"
-        ]
-      },
-      {
-        "name": "methyl bromide",
-        "synonyms": [
-          "74-83-9",
-          "local.traci.2.1.spreadsheet/methyl bromide"
+          "local.traci.2.1.spreadsheet/methane, iodotrifluoro-",
+          "2314-97-8"
         ]
       },
       {
         "name": "methyl chloride",
         "synonyms": [
-          "74-87-3",
-          "local.traci.2.1.spreadsheet/methyl chloride"
+          "Methane, monochloro-, R-40",
+          "local.traci.2.1.spreadsheet/methyl chloride",
+          "74-87-3"
         ]
       },
       {
         "name": "methylenechloride",
         "synonyms": [
-          "75-09-2",
+          "Methane, dichloro-, HCC-30",
+          "dichloromethane",
           "local.traci.2.1.spreadsheet/methylenechloride ",
-          "methylenechloride "
+          "methylenechloride ",
+          "75-09-2"
         ]
       },
       {
         "name": "nitrogen trifluoride",
         "synonyms": [
-          "7783-54-2",
-          "local.traci.2.1.spreadsheet/nitrogen trifluoride"
+          "local.traci.2.1.spreadsheet/nitrogen trifluoride",
+          "7783-54-2"
         ]
       },
       {
         "name": "nitrous oxide",
         "synonyms": [
-          "10024-97-2",
-          "local.traci.2.1.spreadsheet/nitrous oxide"
+          "Dinitrogen monoxide",
+          "local.traci.2.1.spreadsheet/nitrous oxide",
+          "10024-97-2"
         ]
       },
       {
         "name": "perfluorocyclobutane",
         "synonyms": [
-          "115-25-3",
-          "local.traci.2.1.spreadsheet/perfluorocyclobutane"
+          "local.traci.2.1.spreadsheet/perfluorocyclobutane",
+          "115-25-3"
         ]
       },
       {
         "name": "pfc-116",
         "synonyms": [
-          "76-16-4",
-          "local.traci.2.1.spreadsheet/pfc-116"
+          "local.traci.2.1.spreadsheet/pfc-116",
+          "76-16-4"
         ]
       },
       {
         "name": "pfc-218",
         "synonyms": [
-          "76-19-7",
-          "local.traci.2.1.spreadsheet/pfc-218"
+          "local.traci.2.1.spreadsheet/pfc-218",
+          "76-19-7"
         ]
       },
       {
         "name": "pfc-3-1-10",
         "synonyms": [
-          "355-25-9",
-          "local.traci.2.1.spreadsheet/pfc-3-1-10"
+          "local.traci.2.1.spreadsheet/pfc-3-1-10",
+          "355-25-9"
         ]
       },
       {
         "name": "pfc-4-1-12",
         "synonyms": [
-          "678-26-2",
-          "local.traci.2.1.spreadsheet/pfc-4-1-12"
+          "local.traci.2.1.spreadsheet/pfc-4-1-12",
+          "678-26-2"
         ]
       },
       {
         "name": "pfc-5-1-14",
         "synonyms": [
-          "355-42-0",
-          "local.traci.2.1.spreadsheet/pfc-5-1-14"
+          "local.traci.2.1.spreadsheet/pfc-5-1-14",
+          "355-42-0"
         ]
       },
       {
         "name": "pfc-9-1-18",
         "synonyms": [
-          "306-94-5",
-          "local.traci.2.1.spreadsheet/pfc-9-1-18"
+          "local.traci.2.1.spreadsheet/pfc-9-1-18",
+          "306-94-5"
         ]
       },
       {
@@ -1373,8 +1403,8 @@
       {
         "name": "sulfur hexafluoride",
         "synonyms": [
-          "2551-62-4",
-          "local.traci.2.1.spreadsheet/sulfur hexafluoride"
+          "local.traci.2.1.spreadsheet/sulfur hexafluoride",
+          "2551-62-4"
         ]
       },
       {

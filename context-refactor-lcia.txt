@@ -1,4 +1,35 @@
 ==========
+Mon May 13 16:31:57 -0700 2019
+
+We are now noodling in context refactor as a dangerous prelude to even BEGINNING work on EPA- now 43 days overdue- because the prospect of having to write a USEEIO provider in the old master is so immiserating and because we want to make use of the new Qdb functionality to build fragments for EPA.
+
+AND THAT BRINGS US TO: stupid shot-self-foot problem #1,648,341: in the interest of efficiency, the term manager no longer collects all the synonyms from flowables, only the name and the external ref (see commit 6b6dc49)-- THAT'S RIGHT! Because of shot-self-foot problem #1,414,233, which was the requirement that TermManagers have strict CLookups- or in fact, not even strict CLookups but dicts (are we even using strict CLookups at all? only by request on LciaEngine invocation) AND because ILCD reference flows (at least from 3.2) are horribly curated and included CAS collisions.
+
+So now we are running into a problem that stems from shot-self-foot issue #1,234,569, which was the simplification of TermManager to store flowables in a SynonymDict rather than a Flowables dict (commit 26219e2) which was done for performance reasons, on the reasoning that: why should we bother with all of that when the whole purpose of TermManager was to learn terms that were specifically supplied by the archive, whereas the whole purpose of LciaEngine was to do elaborate term matching?
+
+So, fine, except two things:
+1- I get a twinge of regret when I see that the IPCC database now serializes flow names but not CAS numbers, so I attempt to rectify that by using an LciaEngine instead to generate the canonical IPCC set, only
+2- now the SynonymDict is stored as Flowables and so it doesn't deserialize because of stupidity.
+
+Now we can fix this easily, by hacking something in analogous to LciaEngine.add_from_json, which subs the old for the new (and it will have to be a hack in the superclass in order to comport with that exact hack in the subclass), or else we come up with a more systematic solution.
+
+Every conceivable solution involves SOME level of hack:
+ * making the _entry_group property of a SynonymDict non-private so it can be inspected
+ * specifying the _entry_group redundantly in the client code (e.g. term_manager.py and lcia_engine.py)
+ * doing a double-take and try: pop Flowables, except Key Error: pop SynonymSets
+
+The REASON we are having this problem is.. REASONS we are having this problem are:
+ - we are leveraging the SynonymDict's ability to automatically know the types of its serialized entries, for the EXACT REASON of preventing client code from doign what we are trying to do, namely de-serializing one serialized type as a different type
+ - we are trying to capture LciaEngine functionality in a TermManager
+
+Mon 2019-05-13 18:35:59 -0700
+
+Solution: enable renaming of _entry_group and force all to Flowables.
+Mon 2019-05-13 18:39:47 -0700
+done.
+
+
+==========
 Fri Apr 19 10:51:10 -0700 2019
 
 We are converging... but now there is this problem with allocation, and no immediate answer to the question of how it SHOULD work.

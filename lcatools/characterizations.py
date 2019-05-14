@@ -244,17 +244,24 @@ class Characterization(object):
     '''
 
     def serialize(self, values=False, concise=False):
+        """
+        The "concise" option is used within term manager when query quantity, context, and flowable are already
+        serialized
+        :param values:
+        :param concise:
+        :return:
+        """
         j = {
-            'flowable': self.flowable,
             'ref_quantity': self.ref_quantity.external_ref
         }
         if self.ref_quantity is self.quantity:
             j['isReference'] = True
         else:
             if not concise:
-                j['entityType'] = self.entity_type,
-                j['query_quantity'] = self.quantity.external_ref,
+                j['entityType'] = self.entity_type
+                j['query_quantity'] = self.quantity.external_ref
                 j['context'] = str(self.context)
+                j['flowable'] = self.flowable
             if values:
                 if self.value is not None:
                     j['value'] = self._locations

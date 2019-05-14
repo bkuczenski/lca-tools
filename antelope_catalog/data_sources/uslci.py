@@ -105,8 +105,14 @@ INFO = {
             "0aaf1e13-5d80-37f9-b7bb-81a6b8965c71",
             "93a60a56-a3c8-11da-a746-0800200b9a66"
           ]
+    ],
+    "hints": [
+     ["context", "water", "to water"],
+     ["context", "air", "to air"],
+     ["quantity", "Energy", "Net Calorific Value"]
     ]
-},
+
+                         },
                          {}),
     'ecospold': ResourceInfo(None,
                              'EcospoldV1Archive',
@@ -136,6 +142,12 @@ INFO = {
         [
             'Petroleum refining, at refinery', 'kg'
         ]
+    ],
+    "hints": [
+        [ "context", "water", "to water" ],
+        [ "context", "air", "to air" ],
+        [ "quantity", "EcoSpold Quantity m3", "volume" ],
+        [ "quantity", "EcoSpold Quantity kg", "mass" ]
     ]
 },
                              {

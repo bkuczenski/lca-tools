@@ -64,7 +64,7 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
         :param kwargs:
         :return:
         """
-        self.setup_bm()
+        self.check_bg()
         for p in self._index.processes():
             for rx in p.references():
                 if search_skip(p, search):
@@ -80,7 +80,7 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
         :param kwargs:
         :return:
         """
-        self.setup_bm()
+        self.check_bg()
         for f in self._index.flows():
             if search_skip(f, search):
                 continue
@@ -126,7 +126,7 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
             yield i
 
     def foreground(self, process, ref_flow=None, **kwargs):
-        self.setup_bm()
+        self.check_bg()
         ref_flow = self._ensure_ref_flow(ref_flow)
         p = self._index.get(process)
         yield p.reference(ref_flow)  # should be just one exchange
@@ -142,7 +142,7 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
         return False  # proxy has no knowledge of SCCs
 
     def is_in_background(self, process, ref_flow=None, **kwargs):
-        self.setup_bm()
+        self.check_bg()
         try:
             self._index.get(process)
         except EntityNotFound:
@@ -158,7 +158,7 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
             yield i
 
     def lci(self, process, ref_flow=None, **kwargs):
-        self.setup_bm()
+        self.check_bg()
         ref_flow = self._ensure_ref_flow(ref_flow)
         p = self._index.get(process)
         for x in p.inventory(ref_flow=ref_flow):

@@ -42,7 +42,8 @@ class BackgroundInterface(AbstractQuery):
 
     def check_bg(self, **kwargs):
         """
-        Trivial method to force creation of background / check if it exists
+        Trivial method to force creation of background / check if it exists.  Also provides a way to reset / pass
+        keyword arguments to the background engine.
         :param kwargs:
         :return:
         """

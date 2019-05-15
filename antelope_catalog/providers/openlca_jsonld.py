@@ -2,6 +2,7 @@ import json
 import os
 
 from lcatools.entities import *
+from lcatools.entities.processes import NoExchangeFound
 from lcatools.archives import LcArchive
 from .file_store import FileStore
 
@@ -13,6 +14,9 @@ class OpenLcaException(Exception):
     pass
 
 
+SKIP_DURING_INDEX = ('context.json', 'meta.info')
+
+
 class OpenLcaJsonLdArchive(LcArchive):
     """
     Opens JSON-LD archives formatted according to the OpenLCA schema
@@ -21,7 +25,7 @@ class OpenLcaJsonLdArchive(LcArchive):
         self._print('Generating index')
         self._type_index = dict()
         for f in self._archive.listfiles():
-            if f == 'context.json':
+            if f in SKIP_DURING_INDEX:
                 continue
             ff = f.split('/')
             fg = ff[1].split('.')
@@ -57,8 +61,11 @@ class OpenLcaJsonLdArchive(LcArchive):
         j.pop('@id')
         name = j.pop('name')
 
-        c_j = j.pop('category')
-        cat = self._get_category_list(c_j['@id'])
+        if 'category' in j:
+            c_j = j.pop('category')
+            cat = self._get_category_list(c_j['@id'])
+        else:
+            cat = ['None']
         return j, name, cat
 
     def _get_category_list(self, cat_key):
@@ -104,6 +111,18 @@ class OpenLcaJsonLdArchive(LcArchive):
 
         q = LcQuantity(q_id, Name=name, ReferenceUnit=unit, UnitConversion=unitconv, Category=cat, **q_j)
 
+        self.add(q)
+        return q
+
+    def _create_allocation_quantity(self, process, alloc_type):
+        key = '%s_%s' % (process.name, alloc_type)
+        u = self._ref_to_nsuuid(key)
+        q = self[u]
+        if q is not None:
+            return q
+
+        unit, _ = self._create_unit('alloc')
+        q = LcQuantity(u, Name=alloc_type, ReferenceUnit=unit, external_ref=key)
         self.add(q)
         return q
 
@@ -189,6 +208,41 @@ class OpenLcaJsonLdArchive(LcArchive):
 
 
 
+    def _apply_olca_allocation(self, p):
+        """
+        For each allocation factor, we want to characterize the flow so that its exchange value times its
+        characterization equals the stated factor.  Then we want to allocate the process by its default allocation
+        property.
+        :param p:
+        :return:
+        """
+        if p.has_property('allocationFactors'):
+            for af in p['allocationFactors']:
+                if af['value'] == 0:
+                    continue
+                if af['allocationType'] == 'CAUSAL_ALLOCATION':
+                    # not sure how to correctly interpret this
+                    print('Speculative CAUSAL_ALLOCATION')
+                    continue
+                q = self._create_allocation_quantity(p, af['allocationType'])
+                f = self.retrieve_or_fetch_entity(af['product']['@id'], typ='flows')
+                try:
+                    x = p.reference(f)
+                except NoExchangeFound:
+                    try:
+                        x = next(rx for rx in p.exchange_values(f) if rx.termination is None)
+                        p.add_reference(f, x.direction)
+                    except StopIteration:
+                        print('%s: Unable to find allocatable exchange for %s' % (p.external_ref, f.external_ref))
+                        continue
+
+                v = af['value'] / x.value
+                f.add_characterization(q, value=v)
+
+        if p.has_property('defaultAllocationMethod'):
+            aq = self._create_allocation_quantity(p, p['defaultAllocationMethod'])
+            p.allocate_by_quantity(aq)
+
     def _create_process(self, p_id):
         q = self[p_id]
         if q is not None:
@@ -196,8 +250,12 @@ class OpenLcaJsonLdArchive(LcArchive):
 
         p_j, name, cls = self._clean_object('processes', p_id)
         ss = p_j.pop('location', {'name': 'GLO'})['name']
-        stt = {'begin': p_j['processDocumentation']['validFrom'],
-               'end': p_j['processDocumentation']['validUntil']}
+        stt = dict()
+        for key, tgt in (('validFrom', 'begin'), ('validUntil', 'end')):
+            try:
+                stt[tgt] = p_j['processDocumentation'][key]
+            except KeyError:
+                pass
 
         exch = p_j.pop('exchanges')
 
@@ -213,6 +271,15 @@ class OpenLcaJsonLdArchive(LcArchive):
         for ex in exch:
             self._add_exchange(p, ex)
 
+        for ex in exch:
+            ref = ex.pop('quantitativeReference', False)
+            if ref:
+                flow = self.retrieve_or_fetch_entity(ex['flow']['@id'], typ='flows')
+                dirn = 'Input' if ex['input'] else 'Output'
+                p.set_reference(flow, dirn)
+
+        self._apply_olca_allocation(p)
+
         return p
 
     def _fetch(self, key, typ=None, **kwargs):
@@ -221,13 +288,14 @@ class OpenLcaJsonLdArchive(LcArchive):
                 self._gen_index()
             typ = self._type_index[key]
         try:
-            ent = {'processes': self._create_process,
+            _ent_g = {'processes': self._create_process,
                    'flows': self._create_flow,
-                   'flow_properties': self._create_quantity}[typ](key)
+                   'flow_properties': self._create_quantity}[typ]
         except KeyError:
-            ent = self._create_object(typ, key)
+            print('Warning: generating generic object for unrecognized type %s' % typ)
+            _ent_g = lambda x: self._create_object(typ, x)
 
-        return ent
+        return _ent_g(key)
 
     def _load_all(self, **kwargs):
         for f in self._archive.listfiles(in_prefix='process'):

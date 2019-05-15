@@ -35,18 +35,22 @@ class TarjanBackground(LcArchive):
         else:
             raise NotImplementedError('%s: This class can only implement the background interface' % iface)
 
-    def create_flat_background(self, index):
+    def create_flat_background(self, index, **kwargs):
         """
         Create an ordered background, save it, and instantiate it as a flat background
         :param index: index interface to use for the engine
         :return:
         """
         if self._flat is None:
-            self._flat = FlatBackground.from_index(index)
+            print('Creating flat background')
+            self._flat = FlatBackground.from_index(index, **kwargs)
             self._add_name(index.origin, self.source, rewrite=True)
             if self._save_after:
                 self.write_to_file()  # otherwise, the user / catalog must explicitly request it
         return self._flat
+
+    def reset(self):
+        self._flat = None
 
     def write_to_file(self, filename=None, gzip=False, complete=True, **kwargs):
         if filename is None:

@@ -105,6 +105,11 @@ class ExchangesTest(unittest.TestCase):
         self.assertAlmostEqual(exch[ref], opt_per_kg * kg_per_unit_ref, places=10)
 
     def test_alloc_consistency(self):
+        """
+        For each non-reference item in the inventory, test that the values allocated to each reference, weighted by the
+        reference values, sum up to the un-allocated value.
+        :return:
+        """
         for k in self.petro.inventory():
             if k.is_reference:
                 continue

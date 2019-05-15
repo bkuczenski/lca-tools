@@ -147,7 +147,7 @@ class LcResource(object):
         if self._archive is None:
             # TODO: try/catch exceptions or return false
             self._instantiate(catalog)
-        self.apply_config(catalog)
+            self.apply_config(catalog)  # can't remember why I set this to happen recurrently- but it's no good
         return True
 
     def save(self, catalog):

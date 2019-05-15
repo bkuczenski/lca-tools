@@ -2,6 +2,13 @@ from lcatools.implementations import IndexImplementation
 
 
 class EcoSpold2IndexImplementation(IndexImplementation):
+    def re_index(self, cutoffs=False):
+        """
+        do nothing here as termination index is not subject to change.
+        :param cutoffs:
+        :return:
+        """
+        pass
 
     def terminate(self, flow, **kwargs):
         for p in self._terminations[flow]:

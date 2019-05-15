@@ -15,6 +15,16 @@ MODELMAP = {
     'cutoff': ('cutoff',)
 }
 
+E_CFG = {'hints': [  # cover elementary contexts that need directional hints, plus units used in elementary flows only
+    ['context', 'air', 'to air'],
+    ['context', 'water', 'to water'],
+    ['quantity', 'EcoSpold Quantity kg', 'Mass'],
+    ['quantity', 'EcoSpold Quantity m2', 'Area'],
+    ['quantity', 'EcoSpold Quantity MJ', 'Net Calorific Value'],
+    ['quantity', 'EcoSpold Quantity m2*year', 'Area*time'],
+    ['quantity', 'EcoSpold Quantity m3', 'Volume']
+]}  # omitted: kBq, EUR2005, m3*year
+
 
 class Ecoinvent3Base(DataSource):
 
@@ -48,9 +58,9 @@ class Ecoinvent3Base(DataSource):
 
     def make_resources(self, ref):
         if ref in self._lci_ref:
-            yield self._make_resource(ref, self.lci_source, interfaces='inventory', prefix='datasets')
+            yield self._make_resource(ref, self.lci_source, interfaces='inventory', prefix='datasets', config=E_CFG)
         elif ref in self._inv_ref:
-            yield self._make_resource(ref, self.inv_source, interfaces='inventory', prefix='datasets')
+            yield self._make_resource(ref, self.inv_source, interfaces='inventory', prefix='datasets', config=E_CFG)
 
     def _fname(self, ftype=None):
         precheck = os.path.join(self.root, self._model)
@@ -136,6 +146,7 @@ class EcoinventConfig(DataCollection):
                     yield EcoinventLciaConfig(os.path.join(data_root, v), version=v)
 
     def elementary_exchanges(self):
+        print('DEPRECATED. please use configured EcospoldV2 Archives instead. (??)')
         for k, v in sorted(self._sources.items(), key=lambda x: x[0], reverse=True):
             if hasattr(v, 'elementary_exchanges'):
                 for e in v.elementary_exchanges():

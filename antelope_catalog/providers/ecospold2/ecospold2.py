@@ -20,6 +20,7 @@ from lcatools.archives import LcArchive, uuid_regex
 from ..xml_widgets import *
 
 from .ecospold2_index import EcoSpold2IndexImplementation
+from .master_data import EcoSpoldMasterData
 
 
 EcospoldExchange = namedtuple('EcospoldExchange', ('flow', 'direction', 'value', 'termination', 'is_ref', 'comment'))
@@ -47,6 +48,29 @@ class EcospoldV2Error(Exception):
     pass
 
 
+def _add_syn_if(syn, synset):
+    g = syn.strip()
+    if g != '' and g != 'PSM':
+        synset.add(syn)
+
+
+def _syn_set(exch):
+    synonym_tag = list(find_tags(exch, 'synonym'))
+    syns = set()
+    if len(synonym_tag) == 1:
+        # parse the comma-separated list
+        if bool(re.search('etc\.', str(synonym_tag[0]))):
+            syns.add(str(synonym_tag[0]).strip())
+        else:
+            for x in str(synonym_tag[0]).split(', '):
+                _add_syn_if(x, syns)
+    else:
+        # multiple entries- allow embedded comma-space
+        for syn in synonym_tag:
+            _add_syn_if(str(syn), syns)
+    return syns
+
+
 class EcospoldV2Archive(LcArchive):
     """
     class for loading metadata from ecospold v2 files. Now I know ecoinvent supplies a whole ton of supplementary
@@ -71,10 +95,19 @@ class EcospoldV2Archive(LcArchive):
             self._serialize_dict['prefix'] = prefix
 
         self._archive = FileStore(self.source, internal_prefix=prefix)
+        self._master = EcoSpoldMasterData(self.source)
+
+        for exch in self._master.elementary_exchanges.values():
+            self._create_flow(exch)
+
         self._linked = linked
         self._process_flow_map = defaultdict(set)
         self._terminations = defaultdict(set)
         self._map_datasets()
+
+    @property
+    def master_data(self):
+        return self._master
 
     '''
     def fg_proxy(self, proxy):
@@ -154,7 +187,19 @@ class EcospoldV2Archive(LcArchive):
 
     def _create_quantity(self, exchange):
         """
-        In ecospold v2, quantities are still only units, defined by string.  They do get their own uuids, but only
+        In ecospold v2, quantities are defined by a Properties.xml master file-- but unfortunately Ecospold files
+        do not USE them to describe exchanges-- only to characterize the flows.
+
+        Update: the units and properties in ecoinvent datasets are UTTER FUCKING TOSH.  I'm sorry I spent any time at
+        all trying to make sense of them.  We have "No unit", "dimensionless", "kg/kg" all equivalently representing
+        dimensionless units; we have "capacity" measured in "TEU", "kWp", "MW", "kg/s", "l/hour" and also "lifetime
+        capacity" measured in "metric ton*km", "Unit", "m3", "h", "kg*day", "l", "kWh", and "kg". and all manner of
+        other abbreviations, shortcuts, and mutually contradictory conveniences.  We have "net heating value" measured
+        in MJ/kg and "heating value, net" measured in MJ, not to mention "net heating value, per m3" (measured at least
+        in MJ/m3).  These are defined entirely arbitrarily to suit whomever happens to be poking the computer.  How is
+        anyone supposed to work with this??
+
+        Thereby, quantities in Ecospold v2 are still only units, defined by string.  They do get their own uuids, but only
         as 'properties' of the flows- flows themselves are only measured by unit.
         this code is cc'd from ecospold1
         :param exchange:
@@ -195,10 +240,16 @@ class EcospoldV2Archive(LcArchive):
         :return:
         """
         if 'intermediate' in exchange.tag:
-            uid = exchange.attrib['intermediateExchangeId']
+            try:
+                uid = exchange.attrib['intermediateExchangeId']
+            except KeyError:
+                uid = exchange.attrib['id']
             cat = [self._cls_to_text(exchange.classification)]
         elif 'elementary' in exchange.tag:
-            uid = exchange.attrib['elementaryExchangeId']
+            try:
+                uid = exchange.attrib['elementaryExchangeId']
+            except KeyError:
+                uid = exchange.attrib['id']
             cat = self._cat_to_text(exchange.compartment)
         else:
             raise AttributeError('No exchange type found for id %s' % exchange.attrib['id'])
@@ -219,6 +270,10 @@ class EcospoldV2Archive(LcArchive):
 
         f = LcFlow(uid, Name=n, CasNumber=cas, Comment=c, Compartment=cat, ReferenceQuantity=q)
         # TODO: implement ecospold flow properties, only for reference products
+
+        syns = _syn_set(exchange)
+        if len(syns) > 0:
+            f['Synonyms'] = syns
 
         self.add(f)
 

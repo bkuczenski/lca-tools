@@ -10,6 +10,12 @@ EI_LCIA_SPREADSHEETS = {
 }
 
 
+E_CFG = {'hints': [  # cover elementary contexts that need directional hints
+    ['context', 'air', 'to air'],
+    ['context', 'water', 'to water']
+]}
+
+
 class EcoinventLciaConfig(DataSource):
     _ifaces = ('index', 'quantity')
     _ds_type = 'EcoinventLcia'
@@ -38,4 +44,5 @@ class EcoinventLciaConfig(DataSource):
         if self._sourcefile is None:
             raise AttributeError('This exception should never occur')  # because self.references screens self._info
         source = os.path.join(self._root, self._sourcefile)
-        yield self._make_resource(ref, source=source, interfaces=self._ifaces, version=self._version, static=True)
+        yield self._make_resource(ref, source=source, interfaces=self._ifaces, version=self._version, static=True,
+                                  config=E_CFG)

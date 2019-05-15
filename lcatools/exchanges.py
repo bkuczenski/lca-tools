@@ -340,8 +340,11 @@ class ExchangeValue(Exchange):
             self._value_dict = value_dict
 
     def make_ref(self, query):
-        return ExchangeValue(self._process.make_ref(query), self._flow.make_ref(query), self.direction,
-                             self.termination, value=self._value, value_dict=self._value_dict, comment=self.comment)
+        ref = ExchangeValue(self._process.make_ref(query), self._flow.make_ref(query), self.direction,
+                            self.termination, value=self._value, value_dict=self._value_dict, comment=self.comment)
+        if self.is_reference:
+            ref.set_ref(ref.process)
+        return ref
 
     @property
     def value(self):

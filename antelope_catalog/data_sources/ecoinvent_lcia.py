@@ -1,5 +1,4 @@
 from .data_source import DataSource
-from collections import namedtuple
 import os
 
 

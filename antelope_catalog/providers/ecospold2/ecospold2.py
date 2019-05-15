@@ -188,16 +188,12 @@ class EcospoldV2Archive(LcArchive):
     def _create_quantity(self, exchange):
         """
         In ecospold v2, quantities are defined by a Properties.xml master file-- but unfortunately Ecospold files
-        do not USE them to describe exchanges-- only to characterize the flows.
+        do not USE them to describe exchanges-- only to characterize the flows.  Exchanges themselves are still defined
+        using only a unit of measure, not a quantity.
 
-        Update: the units and properties in ecoinvent datasets are UTTER FUCKING TOSH.  I'm sorry I spent any time at
-        all trying to make sense of them.  We have "No unit", "dimensionless", "kg/kg" all equivalently representing
-        dimensionless units; we have "capacity" measured in "TEU", "kWp", "MW", "kg/s", "l/hour" and also "lifetime
-        capacity" measured in "metric ton*km", "Unit", "m3", "h", "kg*day", "l", "kWh", and "kg". and all manner of
-        other abbreviations, shortcuts, and mutually contradictory conveniences.  We have "net heating value" measured
-        in MJ/kg and "heating value, net" measured in MJ, not to mention "net heating value, per m3" (measured at least
-        in MJ/m3).  These are defined entirely arbitrarily to suit whomever happens to be poking the computer.  How is
-        anyone supposed to work with this??
+        Moreover, there are widespread inconsistencies in the implementation of Ecoinvent's units and flow properties,
+        which seem largely crafted for ad hoc convenience (e.g.: "net heating value" measured in MJ/kg and "heating
+        value, net" measured in MJ).
 
         Thereby, quantities in Ecospold v2 are still only units, defined by string.  They do get their own uuids, but only
         as 'properties' of the flows- flows themselves are only measured by unit.

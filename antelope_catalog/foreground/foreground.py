@@ -132,6 +132,8 @@ class LcForeground(BasicArchive):
         self._uuid_map = defaultdict(set)
         self._catalog = catalog
         self._ext_ref_mapping = dict()
+        self._frags_with_flow = defaultdict(set)
+
         if not os.path.isdir(self.source):
             os.makedirs(self.source)
         self.load_all()
@@ -224,6 +226,9 @@ class LcForeground(BasicArchive):
 
         self._add_to_tm(entity)
 
+        if entity.entity_type == 'fragment':
+            self._frags_with_flow[entity.flow].add(entity)
+
     def _add_children(self, entity):
         if entity.entity_type == 'fragment':
             self.add_entity_and_children(entity.flow)
@@ -252,6 +257,8 @@ class LcForeground(BasicArchive):
         :param name:
         :return:
         """
+        if frag.external_ref == name:
+            return  # nothing to do-- fragment is already assigned that name
         current = self[frag.link]
         if current is not frag:
             if current is None:
@@ -379,6 +386,10 @@ class LcForeground(BasicArchive):
                     for k in self._show_frag_children(f):
                         yield k
 
+    def fragments_with_flow(self, flow):
+        for k in self._frags_with_flow[flow]:
+            yield k
+
     def frag(self, string, strict=True):
         """
         strict=True is slow
@@ -409,6 +420,26 @@ class LcForeground(BasicArchive):
     '''
     Utilities for finding terminated fragments and deleting fragments
     '''
+    def delete_fragment(self, frag):
+        """
+        Need to purge the fragment from:
+         _entities
+         _ents_by_type
+         _ext_ref_mapping
+         _uuid_map
+         _frags_with_flow
+        and correct _counter.
+        The fragment is not destroyed- and can be re-added. Deleting child fragments is left to interface code (why?)
+        :param frag:
+        :return:
+        """
+        self._entities.pop(frag.link)
+        self._ents_by_type['fragment'].remove(frag.link)
+        self._counter['fragment'] -= 1
+        self._uuid_map.pop(frag.uuid)
+        self._ext_ref_mapping.pop(frag.external_ref, None)
+        self._frags_with_flow[frag.flow].remove(frag)
+
     def _del_f(self, f):
         print('Deleting %s' % f)
         del self._entities[f.uuid]

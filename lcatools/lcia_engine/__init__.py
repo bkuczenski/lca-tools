@@ -69,21 +69,20 @@ class LciaDb(Qdb):
 
     def _add_to_tm(self, entity):
         if entity.entity_type == 'quantity':
+            q_masq = QuantityRef(entity.external_ref, self.query, entity.reference_entity, Name=entity['Name'])
+            if entity.has_property('Indicator'):
+                q_masq['Indicator'] = entity['Indicator']
+            self._print('Adding masquerade %s' % q_masq)
+            self.tm.add_quantity(q_masq)
+            self.tm.add_quantity(entity)  # should turn up as a child
+            assert self.tm.get_canonical(entity) is q_masq
             if entity.is_entity:  # not ref
-                print('Adding real entity %s' % entity.link)
-                self.tm.add_quantity(entity)
+                self._print('Adding real entity %s' % entity.link)
                 entity.set_qi(self.make_interface('quantity'))
             else:
-                print('Adding qty ref %s' % entity)
-                q_masq = QuantityRef(entity.external_ref, self.query, entity.reference_entity, Name=entity['Name'])
-                if entity.has_property('Indicator'):
-                    q_masq['Indicator'] = entity['Indicator']
-                print('Adding masquerade %s' % q_masq)
-                self.tm.add_quantity(q_masq)
-                self.tm.add_quantity(entity)  # should turn up as a child
-                print('Importing factors')
+                self._print('Adding qty ref %s' % entity)
+                self._print('Importing factors')
                 self.tm.import_cfs(entity)
-                assert self.tm.get_canonical(entity) is q_masq
         elif isinstance(entity, FlowInterface):
             self.tm.add_flow(entity)
 

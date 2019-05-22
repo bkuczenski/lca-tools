@@ -56,7 +56,7 @@ def create_fragment(flow, direction, uuid=None, parent=None, name=None, comment=
                               balance_flow=balance, Name=name, **kwargs)
 
         # traverse -- may not need to do this anymore if we switch to live traversals for everything
-        parent.traverse(None)  # in fact, let's skip it
+        # parent.traverse(None)  # in fact, let's skip it
 
     # this cannot be done internally-- really we need create_fragment_from_exchange to do this
     # if flow.context.elementary:
@@ -156,6 +156,9 @@ def split_subfragment(fragment):
     :param fragment:
     :return:
     """
+    if fragment.reference_entity is None:
+        raise AttributeError('Fragment is already a reference fragment')
+
     surrogate = _fork_fragment(fragment, comment='New subfragment')
 
     fragment.unset_parent()

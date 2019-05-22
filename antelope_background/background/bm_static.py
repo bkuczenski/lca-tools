@@ -3,6 +3,7 @@ LcArchive subclass that supports rich background computations by providing a Fla
 """
 
 import os
+import time
 
 from lcatools.archives import LcArchive, InterfaceError
 from .flat_background import FlatBackground, SUPPORTED_FILETYPES
@@ -43,8 +44,10 @@ class TarjanBackground(LcArchive):
         """
         if self._flat is None:
             print('Creating flat background')
+            start = time.time()
             self._flat = FlatBackground.from_index(index, **kwargs)
             self._add_name(index.origin, self.source, rewrite=True)
+            print('Completed in %.3g sec' % (time.time() - start))
             if self._save_after:
                 self.write_to_file()  # otherwise, the user / catalog must explicitly request it
         return self._flat

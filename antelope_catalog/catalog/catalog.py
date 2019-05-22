@@ -622,13 +622,14 @@ class LcCatalog(object):
         org, ext = link.split('/', maxsplit=1)
         return self.fetch(org, ext)
 
-    def create_foreground(self, path, ref=None, quiet=True):
+    def create_foreground(self, path, ref=None, quiet=True, reset=False):
         """
         Creates or activates a foreground as a sub-folder within the catalog's root directory.  Returns a
         Foreground interface.
         :param path: either an absolute path or a directory name (not an arbitrary relative path) to put the foreground
         :param ref: semantic reference (optional)
         :param quiet: passed to fg archive
+        :param reset: [False] if True, clear the archive and create it from scratch, before returning the interface
         :return:
         """
         if not os.path.isabs(path):
@@ -644,6 +645,9 @@ class LcCatalog(object):
             res = next(self._resolver.resources_with_source(local_path))
         except StopIteration:
             res = self.new_resource(ref, local_path, 'LcForeground', interfaces=['index', 'foreground'], quiet=quiet)
+
+        if reset:
+            res.remove_archive()
 
         res.check(self)
         return res.make_interface('foreground')

@@ -6,12 +6,31 @@ class XlDict(object):
     def from_sheetname(cls, workbook, sheetname):
         return cls(workbook.sheet_by_name(sheetname))
 
-    def __init__(self, sheet):
+    def __init__(self, sheet, nulls=None):
         """
 
         :param sheet: an xlrd.sheet.Sheet
+        :param nulls: What value to assign to empty entries.  Default is to set them to None.  Pass in the desired
+        literal
         """
         self._sheet = sheet
+        self._nulls = nulls
+
+    def _map_value(self, value):
+        if not isinstance(value, str):
+            return value
+        value = value.strip()
+        if value == '':
+            return self.nulls
+        return value
+
+    @property
+    def nulls(self):
+        return self._nulls
+
+    @nulls.setter
+    def nulls(self, value):
+        self._nulls = value
 
     def iterrows(self):
         """
@@ -25,7 +44,7 @@ class XlDict(object):
         index = 0
         for r in _gen:
             index += 1
-            yield index, dict((k, r[v].value) for k, v in d.items())
+            yield index, dict((k, self._map_value(r[v].value)) for k, v in d.items())
 
     def unique_units(self, internal=False):
         """

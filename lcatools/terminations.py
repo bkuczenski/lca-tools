@@ -338,6 +338,8 @@ class FlowTermination(object):
         problem is, the term doesn't know its own scenario
         :return: float = amount in term_flow ref qty that corresponds to a unit of fragment flow's ref qty
         """
+        if self.term_flow.reference_entity == self._parent.flow.reference_entity:
+            return 1.0
         try:
             fwd_cf = self.term_flow.reference_entity.cf(self._parent.flow)
         except QuantityRequired:
@@ -550,7 +552,7 @@ class FlowTermination(object):
 
     def __eq__(self, other):
         """
-        Terminations are equal if they are both null, or if their term_node, term_flow, and direction are equal
+        Terminations are equal if they are both null, both fg, or if their term_node, term_flow, and direction are equal
         :param other:
         :return:
         """
@@ -560,6 +562,10 @@ class FlowTermination(object):
             return False
         if self.is_null:
             if other.is_null:
+                return True
+            return False
+        if self.is_fg:
+            if other.is_fg:
                 return True
             return False
         return (self.term_node.external_ref == other.term_node.external_ref and

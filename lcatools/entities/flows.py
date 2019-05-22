@@ -10,7 +10,7 @@ class RefQuantityError(Exception):
     pass
 
 
-def new_flow(name, ref_quantity, cas_number='', comment='', context=None, compartment=None, **kwargs):
+def new_flow(name, ref_quantity, cas_number='', comment='', context=None, compartment=None, external_ref=None, **kwargs):
     if compartment is None:
         if context is None:
             compartment = []
@@ -21,7 +21,9 @@ def new_flow(name, ref_quantity, cas_number='', comment='', context=None, compar
     kwargs['Comment'] = kwargs.pop('Comment', comment)
     kwargs['Compartment'] = kwargs.pop('Compartment', compartment)
 
-    return LcFlow.new(name, ref_quantity, **kwargs)
+    if external_ref is None:
+        return LcFlow.new(name, ref_quantity, **kwargs)
+    return LcFlow(external_ref, Name=name, ReferenceQuantity=ref_quantity, **kwargs)
 
 
 class LcFlow(LcEntity, FlowInterface):

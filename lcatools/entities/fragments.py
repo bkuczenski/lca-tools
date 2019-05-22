@@ -243,6 +243,7 @@ class LcFragment(LcEntity):
         self.reference_entity.remove_child(self)
         self._set_reference(None)
 
+    '''
     def has_child(self, flow, direction, termination=None):
         for c in self.child_flows:
             if c.flow == flow and c.direction == direction:
@@ -257,6 +258,7 @@ class LcFragment(LcEntity):
                     if term.is_frag and term.term_node.term.term_node.external_ref == termination:
                         return True
         return False
+    '''
 
     def add_child(self, child):
         """
@@ -284,8 +286,12 @@ class LcFragment(LcEntity):
             yield k
 
     @property
-    def _parent(self):
+    def parent(self):
         return self.reference_entity
+
+    @property
+    def is_reference(self):
+        return self.reference_entity is None
 
     @property
     def term(self):
@@ -1039,7 +1045,10 @@ class LcFragment(LcEntity):
         io, _ = self.unit_inventory(scenario=scenario, observed=observed)
         frag_exchs = []
         for f in io:
-            frag_exchs.append(ExchangeValue(self, f.fragment.flow, f.fragment.direction, value=f.magnitude * scale))
+            xv = ExchangeValue(self, f.fragment.flow, f.fragment.direction, value=f.magnitude * scale)
+            if f.fragment.flow == self.flow and f.fragment.direction == comp_dir(self.direction):
+                xv.set_ref(self)
+            frag_exchs.append(xv)
         return sorted(frag_exchs, key=lambda x: (x.direction == 'Input', x.value), reverse=True)
 
     def exchanges(self, scenario=None):

@@ -55,13 +55,29 @@ class ForegroundInterface(AbstractQuery):
 
     def name_fragment(self, fragment, name, **kwargs):
         """
-
+        Assign a fragment a non-UUID external ref to facilitate its easy retrieval.  I suspect this should be
+        constrained to reference fragments.
         :param fragment:
         :param name:
         :return:
         """
         return self._perform_query(_interface, 'name_fragment', ForegroundRequired, fragment, name, **kwargs)
 
+    def fragments_with_flow(self, flow, direction=None, reference=None, background=None, **kwargs):
+        """
+        Generates fragments made with the specified flow, optionally filtering by direction, reference status, and
+        background status.  For all three filters, the default None is to generate all fragments.
+        :param flow:
+        :param direction: [None | 'Input' | 'Output']
+        :param reference: [None | False | True]
+        :param background: [None | False | True]
+        :param kwargs:
+        :return:
+        """
+        return self._perform_query(_interface, 'fragments_with_flow', ForegroundRequired,
+                                   flow, direction=direction, reference=reference, background=background, **kwargs)
+
+    '''
     def find_or_create_term(self, exchange, background=None):
         """
         Finds a fragment that terminates the given exchange
@@ -82,6 +98,7 @@ class ForegroundInterface(AbstractQuery):
         """
         return self._perform_query(_interface, 'create_fragment_from_node', ForegroundRequired,
                                    process_ref, ref_flow=ref_flow, include_elementary=include_elementary)
+    '''
 
     def clone_fragment(self, frag, **kwargs):
         """

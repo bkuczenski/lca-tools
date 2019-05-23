@@ -65,7 +65,7 @@ class OpenLcaJsonLdArchive(LcArchive):
             c_j = j.pop('category')
             cat = self._get_category_list(c_j['@id'])
         else:
-            cat = ['None']
+            cat = []
         return j, name, cat
 
     def _get_category_list(self, cat_key):
@@ -116,14 +116,16 @@ class OpenLcaJsonLdArchive(LcArchive):
 
     def _create_allocation_quantity(self, process, alloc_type):
         key = '%s_%s' % (process.name, alloc_type)
+        name = '%s (%s)' % (alloc_type, process.name.strip())
         u = self._ref_to_nsuuid(key)
         q = self[u]
         if q is not None:
             return q
 
         unit, _ = self._create_unit('alloc')
-        q = LcQuantity(u, Name=alloc_type, ReferenceUnit=unit, external_ref=key)
+        q = LcQuantity(key, Name=name, ReferenceUnit=unit)
         self.add(q)
+        assert q.uuid == u
         return q
 
     def _create_flow(self, f_id):
@@ -231,13 +233,15 @@ class OpenLcaJsonLdArchive(LcArchive):
                 except NoExchangeFound:
                     try:
                         x = next(rx for rx in p.exchange_values(f) if rx.termination is None)
-                        p.add_reference(f, x.direction)
+                        p.set_reference(f, x.direction)
                     except StopIteration:
                         print('%s: Unable to find allocatable exchange for %s' % (p.external_ref, f.external_ref))
                         continue
 
                 v = af['value'] / x.value
-                f.add_characterization(q, value=v)
+
+                self.tm.add_characterization(f.name, f.reference_entity, q, v, context=f.context, origin=self.ref)
+                #f.add_characterization(q, value=v)
 
         if p.has_property('defaultAllocationMethod'):
             aq = self._create_allocation_quantity(p, p['defaultAllocationMethod'])

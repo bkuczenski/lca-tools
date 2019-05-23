@@ -446,7 +446,7 @@ class FlatBackground(object):
     def dependencies(self, process, ref_flow):
         if self.is_in_background(process, ref_flow):
             index = self._bg_index[process, ref_flow]
-            fg_deps = []
+            fg_deps = csr_matrix([])
             bg_deps = self._A[:, index]
         else:
             index = self._fg_index[process, ref_flow]

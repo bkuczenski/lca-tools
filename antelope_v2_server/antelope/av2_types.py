@@ -106,7 +106,7 @@ class ExchangeSchema(Schema):
 class CharacterizationSchema(Schema):
     id = fields.Function(lambda x: '%s(%s, %s)' % (x.quantity.external_ref,
                                                    x.flow.external_ref,
-                                                   x.flow['Compartment'][-1]))
+                                                   x.context[-1]))
     flow = fields.Relationship(
         related_url='/{flow_link}',
         related_url_kwargs={'flow_link': '<flow.link>'}

@@ -29,7 +29,7 @@ def new_flow(name, ref_quantity, cas_number='', comment='', context=None, compar
 class LcFlow(LcEntity, FlowInterface):
 
     _ref_field = 'referenceQuantity'
-    _new_fields = ['CasNumber', 'Compartment']
+    _new_fields = ['CasNumber']  # finally abolishing the obligation for the flow to have a Compartment
 
     @classmethod
     def new(cls, name, ref_qty, **kwargs):

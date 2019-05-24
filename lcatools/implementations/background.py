@@ -1,7 +1,7 @@
 import re
 
 from .basic import BasicImplementation
-from ..interfaces import BackgroundInterface, ProductFlow, ExteriorFlow, EntityNotFound
+from ..interfaces import BackgroundInterface, ProductFlow, ExteriorFlow, EntityNotFound, comp_dir
 
 
 class NonStaticBackground(Exception):
@@ -87,10 +87,15 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
             try:
                 next(self._index.terminate(f.external_ref, direction=direction))
             except StopIteration:
+                cx = self._index.get_context(f.context)
+                dir = comp_dir(cx.sense)
+                '''
                 if self.is_elementary(f):
                     yield ExteriorFlow(self._archive.ref, f, 'Output', f['Compartment'])
                 else:
                     yield ExteriorFlow(self._archive.ref, f, 'Output', None)
+                '''
+                yield ExteriorFlow(self._archive.ref, f, dir, cx)
 
     def consumers(self, process, ref_flow=None, **kwargs):
         """

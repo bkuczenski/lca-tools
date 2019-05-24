@@ -29,7 +29,7 @@ class AllocationGrid(BaseTableOutput):
         :param item: an allocated exchange
         :return: 3-tuple: direction, is_ref (bool), flow name, flow compartment
         """
-        row = item.direction, False, '; '.join(item.flow['Compartment']), item.flow['Name']
+        row = item.direction, False, '; '.join(item.flow.context), item.flow['Name']
         if row not in self._notes:
             self._notes[row] = self._pull_note_from_item(item)
         return row
@@ -87,7 +87,7 @@ class AllocationGrid(BaseTableOutput):
             rx = ExchangeValue(k.process, k.flow, k.direction, value=1.0)  # we do this to avoid calling RxRef.value
             # (and because table exchanges are normalized to this value, so 1.0 is the only correct value to report)
             rx.set_ref(k.process)
-            row = k.direction, True, '; '.join(k.flow['Compartment']), k.flow['Name']
+            row = k.direction, True, '; '.join(k.flow.context), k.flow['Name']
             self._add_rowitem(col_idx, rx, row=row)
         self._columns.append(arg)
 

@@ -1115,7 +1115,7 @@ class LcFragment(LcEntity):
             cos, _ = group_ios(self, cos, include_ref_flow=False)
 
         return sorted([ExchangeValue(f.fragment, f.fragment.flow, f.fragment.direction, value=f.magnitude)
-                       for f in cos], key=lambda x: (x.direction == 'Input', x.flow['Compartment'],
+                       for f in cos], key=lambda x: (x.direction == 'Input', x.flow.context,
                                                      x.flow['Name'], x.value), reverse=True)
 
     def traverse(self, scenario=None, observed=False):

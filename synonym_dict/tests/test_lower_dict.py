@@ -46,6 +46,11 @@ class LcEntityTest(unittest.TestCase):
         self.assertTrue('Name' in e.keys())
         self.assertFalse('namee' in e.keys())
 
+    def test_items(self):
+        e = LowerDict(Name='James Bond', Number='007')
+        d = {k: v for k, v in e.items()}
+        self.assertEqual(d.pop('Number'), '007')
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -16,7 +16,7 @@ class LowerDictKeys(object):
 
     def __iter__(self):
         for k in self._orig:
-            yield k
+            yield str(k)
 
 
 class LowerDict(dict):
@@ -57,11 +57,15 @@ class LowerDict(dict):
 
     '''
     # NOTE: as of 2019/02/15, in merge master, I cannot replicate the behavior that inspired this addition
-    # So I'm leaving it commented out but present, so that it can be reinstated [and tested] if a test case is found 
+    # So I'm leaving it commented out but present, so that it can be reinstated [and tested] if a test case is found
+    # 2019/05/24 done. see test_items(). Solution is also less ugly.
     def items(self):
         # this may be ugly, but.. um.. so's your mother
         return {str(k): v for k, v in super(LowerDict, self).items()}.items()
     '''
+    def items(self):
+        for k, v in super(LowerDict, self).items():
+            yield str(k), v
 
     def get(self, key, default=None):
         try:

@@ -135,6 +135,10 @@ class LcEntity(object):
                            [cls._ref_field] if cls._ref_field is not [] else [], cls._post_fields)
 
     @property
+    def reference_field(self):
+        return self._ref_field
+
+    @property
     def external_ref(self):
         return self._external_ref
 

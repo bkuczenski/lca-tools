@@ -4,6 +4,7 @@ import uuid
 from .entities import LcEntity
 # from lcatools.entities.quantities import LcQuantity
 from lcatools.entity_refs import FlowInterface
+from lcatools.interfaces import CONTEXT_STATUS_
 
 
 class RefQuantityError(Exception):
@@ -11,7 +12,7 @@ class RefQuantityError(Exception):
 
 
 def new_flow(name, ref_quantity, cas_number='', comment='', context=None, compartment=None, external_ref=None, **kwargs):
-    if compartment is None:
+    if CONTEXT_STATUS_ == 'compat' and compartment is None:
         if context is None:
             compartment = []
         else:

@@ -17,6 +17,7 @@ class FlowRef(EntityRef, FlowInterface):
     Flows can lookup:
     """
     _etype = 'flow'
+    _ref_field = 'referenceQuantity'
 
     def __init__(self, *args, **kwargs):
         super(FlowRef, self).__init__(*args, **kwargs)

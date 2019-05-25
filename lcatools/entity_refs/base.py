@@ -18,6 +18,7 @@ The classes in this file get imported elsewhere; the CatalogRef class imports al
 *instantiates* all the others.
 """
 from synonym_dict import LowerDict
+from itertools import chain
 
 
 class NoCatalog(Exception):
@@ -50,7 +51,7 @@ class BaseRef(object):
         self._uuid = uuid
 
         self._d = LowerDict()
-        self._d.update(kwargs)
+        self._d.update({k: v for k, v in filter(lambda x: x[1] is not None, kwargs.items())})
 
     @property
     def origin(self):
@@ -91,6 +92,10 @@ class BaseRef(object):
         :return:
         """
         return self._localitem(item)
+
+    def properties(self):
+        for k in self._d.keys():
+            yield k
 
     def get(self, item, default=None):
         try:
@@ -135,7 +140,7 @@ class BaseRef(object):
             return False
 
     def __str__(self):
-        return '[%s] %s' % (self.origin, self.name)
+        return '[%s] %s' % (self.origin, self._name)
 
     def __hash__(self):
         return hash(self.link)
@@ -211,6 +216,12 @@ class EntityRef(BaseRef):
     UUID is looked up when queried, but not all entities have uuids and I don't want to import the interface just for
     exception checking
     """
+    _ref_field = 'referenceEntity'
+
+    @property
+    def reference_field(self):
+        return self._ref_field
+
     def make_ref(self, *args):
         return self
 
@@ -256,6 +267,9 @@ class EntityRef(BaseRef):
     @property
     def resolved(self):
         return True
+
+    def signature_fields(self):
+        yield self._ref_field
 
     def _show_ref(self):
         print('reference: %s' % self.reference_entity)
@@ -305,6 +319,8 @@ class EntityRef(BaseRef):
         raise KeyError(item)
 
     def __getitem__(self, item):
+        if item == self._ref_field:
+            return self._reference_entity
         val = self.get_item(item)
         if val is None:
             raise KeyError(item)

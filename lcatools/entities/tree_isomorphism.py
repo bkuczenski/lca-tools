@@ -44,7 +44,9 @@ def isomorphic(f1, f2, scenario=None):
     if f1.direction != f2.direction:
         raise DirectionMismatch('%s | %s' % (f1, f2.direction))
     if f1.exchange_value(scenario) != f2.exchange_value(scenario):
-        raise ExchangeValueMismatch('%s | %s' % (f1, f2.exchange_value(scenario)))
+        if not(f1.is_reference ^ f2.is_reference):
+            # if both references or neither references, the exchange values should match.
+            raise ExchangeValueMismatch('%s | %s' % (f1, f2.exchange_value(scenario)))
     if f1.termination(scenario) != f2.termination(scenario):
         raise TermMismatch('%s | %s' % (f1, f2.termination(scenario)))
 

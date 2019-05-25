@@ -6,6 +6,7 @@ class QuantityRef(EntityRef):
     Quantities can lookup:
     """
     _etype = 'quantity'
+    _ref_field = 'referenceUnit'
 
     def unit(self):
         if isinstance(self.reference_entity, str):

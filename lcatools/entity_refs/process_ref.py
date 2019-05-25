@@ -6,6 +6,7 @@ class ProcessRef(EntityRef):
     Processes can lookup:
     """
     _etype = 'process'
+    _ref_field = 'referenceExchange'
 
     @property
     def _addl(self):

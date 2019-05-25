@@ -12,6 +12,7 @@ class FragmentRef(EntityRef):
         self._known_scenarios = dict()
     '''
     _etype = 'fragment'
+    _ref_field = 'parent'
 
     def __init__(self, *args, **kwargs):
         super(FragmentRef, self).__init__(*args, **kwargs)

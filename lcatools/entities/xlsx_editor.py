@@ -17,11 +17,11 @@ There are two basic parts to this operation:
 For the first one, the only capability of the archive that is needed is (arguably) external to the feature-- namely,
 the ability to generate the entities. Therefore I think it should be a utility function and not an object at all.
 
-For the second one here, this seems like more a capability of an archive rather than a separate class. Therefore, I
-think this should be a mixin.  We (for now) want to be strict about the sheet naming- let's take that flexibility away
+For the second one here, this seems like more a capability of an archive rather than a separate class. I think this
+should be a context mgr.  We (for now) want to be strict about the sheet naming- let's take that flexibility away
 from the user.
 
-The required fields should be: origin, external_ref, uuid[can be None], *signature_fields.  All others are optional.
+The required fields should be: external_ref, uuid[can be None], *signature_fields.
 """
 import os
 import re
@@ -119,18 +119,18 @@ def write_to_excel(filename, entity_iter, overwrite=False):
     if os.path.exists(filename):
         if not overwrite:
             raise FileExistsError('Use overwrite=True')
-    w = Workbook(filename)
-    count = 0
-    d = dict()
-    for ent in entity_iter:
-        etype = ent.entity_type
-        if etype not in d:
-            d[etype] = XlsxEntityTypeWriter(w, etype)
-        sh = d[etype]
-        if sh.add_entity(ent):
-            count += 1
-    print('Writing %d entities to %s' % (count, filename))
-    w.close()
+    with Workbook(filename) as w:
+        count = 0
+        d = dict()
+        for ent in entity_iter:
+            etype = ent.entity_type
+            if etype not in d:
+                d[etype] = XlsxEntityTypeWriter(w, etype)
+            sh = d[etype]
+            if sh.add_entity(ent):
+                count += 1
+        print('Writing %d entities to %s' % (count, filename))
+        # w.close()  # happens automatically with context exit
 
 
 def _check_merge(merge):
@@ -212,6 +212,10 @@ class XlsxArchiveUpdater(object):
     def apply(self):
         for etype in self._ar._entity_types:
             self._process_sheet(etype)
+
+    def __enter__(self):
+        """Return self object to use with "with" statement."""
+        return self
 
     def __exit__(self):
         self._xl.release_resources()

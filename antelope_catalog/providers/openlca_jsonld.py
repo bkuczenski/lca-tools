@@ -208,8 +208,6 @@ class OpenLcaJsonLdArchive(LcArchive):
 
         return exch
 
-
-
     def _apply_olca_allocation(self, p):
         """
         For each allocation factor, we want to characterize the flow so that its exchange value times its
@@ -286,6 +284,44 @@ class OpenLcaJsonLdArchive(LcArchive):
 
         return p
 
+    def _create_lcia_quantity(self, l_j, method, **kwargs):
+        q_id = l_j['@id']
+        l = self[q_id]
+        if l is not None:
+            return l
+
+        l_obj, l_name, cats = self._clean_object('lcia_categories', q_id)
+        c_desc = l_obj.pop('description', None)
+        ver = l_obj.pop('version', None)
+        indicator = l_obj.pop('referenceUnitName')
+        unit = LcUnit(indicator)
+
+        q_name = ', '.join([method, l_name])
+
+        q = LcQuantity(q_id, Name=q_name, ReferenceUnit=unit, Method=method, Category=l_name, Indicator=indicator,
+                       CategoryDescription=c_desc, Version=ver, **kwargs)
+
+        self.add(q)
+        for factor in l_obj['impactFactors']:
+            flow = self._create_flow(factor['flow']['@id'])
+            ref_qty = self._create_quantity(factor['flowProperty']['@id'])
+            assert flow.reference_entity == ref_qty
+            self.tm.add_characterization(flow.name, ref_qty, q, factor['value'], context=flow.context, origin=self.ref)
+
+        return q
+
+    def _create_lcia_method(self, m_id):
+        """
+        Note: in OLCA archives, an "LCIA Method" is really a methodology with a collection of category indicators, which
+        is what we colloquially call "methods". So every method includes zero or more distinct quantities.
+        :param m_id:
+        :return:
+        """
+        m_obj, method, cats = self._clean_object('lcia_methods', m_id)
+        m_desc = m_obj.pop('description', None)
+        for imp in m_obj.pop('impactCategories', []):
+            self._create_lcia_quantity(imp, method, MethodDescription=m_desc)
+
     def _fetch(self, key, typ=None, **kwargs):
         if typ is None:
             if self._type_index is None:
@@ -302,7 +338,13 @@ class OpenLcaJsonLdArchive(LcArchive):
         return _ent_g(key)
 
     def _load_all(self, **kwargs):
-        for f in self._archive.listfiles(in_prefix='process'):
+        self._print('Loading processes')
+        for f in self._archive.listfiles(in_prefix='processes'):
             ff = f.split('/')
             fg = ff[1].split('.')
             self._create_process(fg[0])
+        self._print('Loading LCIA methods')
+        for f in self._archive.listfiles(in_prefix='lcia_methods'):
+            ff = f.split('/')
+            fg = ff[1].split('.')
+            self._create_lcia_method(fg[0])

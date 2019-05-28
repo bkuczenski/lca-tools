@@ -12,6 +12,10 @@ class LcEntityTest(unittest.TestCase):
         self.assertEqual(e['quorum'], 42)
         self.assertEqual(e['comment'], '')
 
+    def test_null_property(self):
+        e = LcEntity('my sharona', uuid4(), Shame=None)
+        self.assertFalse(e.has_property('Shame'))
+
     def test_contains(self):
         e = LcEntity('the biggest goober', uuid4(), Annotation='a subtle yet profound statement', domain='society')
         self.assertTrue('annotation' in e.keys())

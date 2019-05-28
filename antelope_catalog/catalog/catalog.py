@@ -199,9 +199,9 @@ class LcCatalog(object):
             copy2(REF_QTYS, self._reference_qtys)
 
     @classmethod
-    def make_tester(cls):
+    def make_tester(cls, **kwargs):
         rmtree(TEST_ROOT, ignore_errors=True)
-        return cls(TEST_ROOT)
+        return cls(TEST_ROOT, **kwargs)
 
     @classmethod
     def load_tester(cls):

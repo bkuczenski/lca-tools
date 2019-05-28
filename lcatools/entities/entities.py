@@ -69,6 +69,8 @@ class LcEntity(object):
         self._query_ref = None  # memoize this
 
         for k, v in kwargs.items():
+            if v is None:
+                continue
             self[k] = v
 
     @property

@@ -222,7 +222,8 @@ class OpenLcaJsonLdArchive(LcArchive):
                     continue
                 if af['allocationType'] == 'CAUSAL_ALLOCATION':
                     # not sure how to correctly interpret this
-                    print('Speculative CAUSAL_ALLOCATION')
+                    if af['value'] != 1.0:  # 1.0 is default NOP for causal allocation
+                        print('Skipping Speculative CAUSAL_ALLOCATION of %g' % af['value'])
                     continue
                 q = self._create_allocation_quantity(p, af['allocationType'])
                 f = self.retrieve_or_fetch_entity(af['product']['@id'], typ='flows')

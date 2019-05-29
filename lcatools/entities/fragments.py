@@ -1397,7 +1397,7 @@ def _do_subfragment_traversal(ff, scenario, observed):
       + scenario matching + finds ev and term
       - selects handler based on term type:
        - LcFragment._subfragment_traversal
-       |- invokes (static) _do_subfragment_traversal
+       |- invokes (static) _do_subfragment_traversal (YOU ARE HERE)
        ||- calls [internally recursive] term_node.unit_inventory, which is just a wrapper for
        || - (static) group_ios
        ||  + reference flow and autoconsumption handling

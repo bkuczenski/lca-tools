@@ -153,6 +153,11 @@ class LcForeground(BasicArchive):
         else:
             return super(LcForeground, self).make_interface(iface)
 
+    def set_origin(self, origin):
+        super(LcForeground, self).set_origin(origin)
+        for k in self.entities_by_type('fragment'):
+            k._origin = origin
+
     def catalog_ref(self, origin, external_ref, entity_type=None):
         """
         TODO: make foreground-generated CatalogRefs lazy-loading. This mainly requires removing the expectation of a
@@ -335,7 +340,7 @@ class LcForeground(BasicArchive):
                 os.remove(os.path.join(self._fragment_dir, leftover))
 
     def save(self, save_unit_scores=False):
-        self.write_to_file(self._archive_file, gzip=False, characterizations=True, values=True)
+        self.write_to_file(self._archive_file, gzip=False, characterizations=True, values=True, domesticate=True)
         if not os.path.isdir(self._fragment_dir):
             os.makedirs(self._fragment_dir)
         self.save_fragments(save_unit_scores=save_unit_scores)

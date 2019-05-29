@@ -278,7 +278,10 @@ class EntityRef(BaseRef):
         if self.uuid is not None:
             print('UUID: %s' % self.uuid)
         for i in ('Name', 'Comment'):
-            print('%7s: %s' % (i, self.get_item(i)))
+            try:
+                print('%7s: %s' % (i, self.get_item(i)))
+            except KeyError:
+                pass
 
     def validate(self):
         """

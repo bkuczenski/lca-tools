@@ -626,20 +626,20 @@ class LcCatalog(object):
         """
         Creates or activates a foreground as a sub-folder within the catalog's root directory.  Returns a
         Foreground interface.
-        :param path: either an absolute path or a directory name (not an arbitrary relative path) to put the foreground
+        :param path: either an absolute path or a subdirectory path relative to the catalog root
         :param ref: semantic reference (optional)
         :param quiet: passed to fg archive
         :param reset: [False] if True, clear the archive and create it from scratch, before returning the interface
         :return:
         """
         if not os.path.isabs(path):
-            if path.find(os.path.sep) != -1:
-                raise ValueError('Relative path not allowed; use directory name only')
             path = os.path.join(self._rootdir, path)
-        local_path = self._localize_source(path)
+
+        local_path = self._localize_source(os.path.abspath(path))
+        _fg_path = re.sub('^\$CAT_ROOT', '', local_path)
 
         if ref is None:
-            ref = local_ref(path)
+            ref = local_ref(_fg_path, prefix='foreground')
 
         try:
             res = next(self._resolver.resources_with_source(local_path))
@@ -651,6 +651,25 @@ class LcCatalog(object):
 
         res.check(self)
         return res.make_interface('foreground')
+
+    def assign_new_ref(self, old_ref, new_ref):
+        """
+        This only works for certain types of archives. Foregrounds, in particular. but it is hard to say what else.
+        What needs to happen here is:
+         - first we retrieve the archive for the ref (ALL archives?)
+         - then we call set_origin() on the archive
+         - then we save the archive
+         - then we rename the resource file
+         = actually we just rewrite the resource file, since the filename and JSON key have to match
+         = since we can't update resource references, it's easiest to just blow them away and reload them
+         = but to save time we should transfer the archives from the old resource to the new resource
+         = anyway, it's not clear when we would want to enable this operation in the first place.
+         * so for now we leave it
+        :param old_ref:
+        :param new_ref:
+        :return:
+        """
+        pass
 
     def configure_resource(self, reference, config, *args):
         """

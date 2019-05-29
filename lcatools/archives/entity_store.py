@@ -256,8 +256,8 @@ class EntityStore(object):
 
         self._catalog_names = defaultdict(set)  # this is a place to map semantic references to data sources
         self._add_name(ref, source)
-
         self._serialize_dict['dataReference'] = ref
+
         if self._ns_uuid is not None:
             self._serialize_dict['ns_uuid'] = str(self._ns_uuid)
 
@@ -309,6 +309,8 @@ class EntityStore(object):
         self._descendant = True
 
     def set_origin(self, origin):
+        self._serialize_dict['dataReference'] = origin
+        self._add_name(origin, self.source, rewrite=True)
         self._origin = origin
 
     @property

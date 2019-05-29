@@ -217,5 +217,5 @@ class XlsxArchiveUpdater(object):
         """Return self object to use with "with" statement."""
         return self
 
-    def __exit__(self):
+    def __exit__(self, *args):
         self._xl.release_resources()

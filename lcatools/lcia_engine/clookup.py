@@ -194,5 +194,7 @@ class SCLookup(CLookup):
         if key in self._dict and len(self._dict[key]) > 0:
             if list(self._dict[key])[0] == value:
                 return
+            print('Collision with context: %s' % repr(key))
+            print(repr(value))
             raise FactorCollision('This context already has a CF defined!')
         super(SCLookup, self).add(value, key)

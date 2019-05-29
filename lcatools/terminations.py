@@ -387,15 +387,23 @@ class FlowTermination(object):
         """
         Generator which yields exchanges from the term node's inventory that are not found among the child flows, for
           LCIA purposes
+
+        Challenge here going forward: we made some kind of normative decision early on that terminations do not know
+        their own scenarios, that the fragment maps scenario to termination. The problem is that now terminations
+        cannot themselves carry out traversal on the term_node because they don't know what scenarios to pass.
+
+        The upshot is that we cannot meaningfully compute "unobserved exchanges" for subfragments, since we don't
+        know our scenario.
+
         :return:
         """
         if self.is_context:
             x = ExchangeValue(self._parent, self.term_flow, self.direction, termination=self.term_node,
                               value=self.node_weight_multiplier)
             yield x
-        # elif self.is_frag:  # fragments can have unobserved exchanges too!
-        #     for x in []:
-        #         yield x
+        elif self.is_frag:  # fragments can have unobserved exchanges too! (CAN THEY?)
+            for x in []:
+                yield x
         else:
             children = set()
             children.add((self.term_flow.external_ref, self.direction, None))

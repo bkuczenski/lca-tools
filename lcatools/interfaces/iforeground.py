@@ -35,13 +35,15 @@ class ForegroundInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'new_flow', ForegroundRequired, name, ref_quantity, context=context,
+        return self._perform_query(_interface, 'new_flow', ForegroundRequired('Foreground access required'),
+                                   name, ref_quantity, context=context,
                                    **kwargs)
 
     def fragments(self, show_all=False, **kwargs):
         if show_all:
             raise ValueError('Cannot retrieve non-parent fragments via interface')
-        for i in self._perform_query(_interface, 'fragments', ForegroundRequired, **kwargs):
+        for i in self._perform_query(_interface, 'fragments', ForegroundRequired('Foreground access required'),
+                                     **kwargs):
             yield self.make_ref(i)
 
     def new_fragment(self, *args, **kwargs):
@@ -51,7 +53,8 @@ class ForegroundInterface(AbstractQuery):
         :param kwargs: uuid=None, parent=None, comment=None, value=None, balance=False; **kwargs passed to LcFragment
         :return:
         """
-        return self._perform_query(_interface, 'new_fragment', ForegroundRequired, *args, **kwargs)
+        return self._perform_query(_interface, 'new_fragment', ForegroundRequired('Foreground access required'),
+                                   *args, **kwargs)
 
     def name_fragment(self, fragment, name, **kwargs):
         """
@@ -61,7 +64,8 @@ class ForegroundInterface(AbstractQuery):
         :param name:
         :return:
         """
-        return self._perform_query(_interface, 'name_fragment', ForegroundRequired, fragment, name, **kwargs)
+        return self._perform_query(_interface, 'name_fragment', ForegroundRequired('Foreground access required'),
+                                   fragment, name, **kwargs)
 
     def fragments_with_flow(self, flow, direction=None, reference=None, background=None, **kwargs):
         """
@@ -74,7 +78,7 @@ class ForegroundInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'fragments_with_flow', ForegroundRequired,
+        return self._perform_query(_interface, 'fragments_with_flow', ForegroundRequired('Foreground access required'),
                                    flow, direction=direction, reference=reference, background=background, **kwargs)
 
     '''
@@ -108,7 +112,49 @@ class ForegroundInterface(AbstractQuery):
                        comment (override existing Comment if present; applied to all)
         :return:
         """
-        return self._perform_query(_interface, 'clone_fragment', ForegroundRequired, frag, **kwargs)
+        return self._perform_query(_interface, 'clone_fragment', ForegroundRequired('Foreground access required'),
+                                   frag, **kwargs)
+
+    def split_subfragment(self, fragment, replacement=None, **kwargs):
+        """
+                Given a non-reference fragment, split it off into a new reference fragment, and create a surrogate child
+        that terminates to it.
+
+        without replacement:
+        Old:   ...parent-->fragment
+        New:   ...parent-->surrogate#fragment;   (fragment)
+
+        with replacement:
+        Old:   ...parent-->fragment;  (replacement)
+        New:   ...parent-->surrogate#replacement;  (fragment);  (replacement)
+
+        :param fragment:
+        :param replacement:
+        :param kwargs:
+        :return:
+        """
+        return self._perform_query(_interface, 'split_subfragment', ForegroundRequired('Foreground access required'),
+                                   fragment, replacement=replacement, **kwargs)
+
+    def delete_fragment(self, fragment, **kwargs):
+        """
+        Remove the fragment and all its subfragments from the archive (they remain in memory)
+        This does absolutely no safety checking.
+
+        :param fragment:
+        :param kwargs:
+        :return:
+        """
+        return self._perform_query(_interface, 'delete_fragment', ForegroundRequired('Foreground access required'),
+                                   fragment, **kwargs)
+
+    def save(self, **kwargs):
+        """
+        Save the foreground to local storage.  Revert is not supported for now
+        :param kwargs:
+        :return:
+        """
+        return self._perform_query(_interface, 'save', ForegroundRequired('Foreground access required'), **kwargs)
 
     def observe(self, fragment, exch_value, scenario=None, **kwargs):
         """
@@ -133,7 +179,8 @@ class ForegroundInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'set_balance_flow', ForegroundRequired, fragment, **kwargs)
+        return self._perform_query(_interface, 'set_balance_flow', ForegroundRequired('Foreground access required'),
+                                   fragment, **kwargs)
 
     def unset_balance_flow(self, fragment, **kwargs):
         """
@@ -143,4 +190,5 @@ class ForegroundInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'unset_balance_flow', ForegroundRequired, fragment, **kwargs)
+        return self._perform_query(_interface, 'unset_balance_flow', ForegroundRequired('Foreground access required'),
+                                   fragment, **kwargs)

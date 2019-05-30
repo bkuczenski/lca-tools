@@ -210,9 +210,6 @@ class LcUnit(object):
     def unitstring(self):
         return self._unitstring
 
-    def get_uuid(self):
-        return self._unitstring  # needed for upward compat
-
     def __str__(self):
         return '[%s]' % self._unitstring
 

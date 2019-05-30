@@ -3,7 +3,7 @@ Query Interface -- used to operate catalog refs
 """
 
 from lcatools.interfaces import (IndexInterface, BackgroundInterface, InventoryInterface, QuantityInterface,
-                                 EntityNotFound, IndexRequired, PropertyExists)
+                                 ForegroundInterface, EntityNotFound, IndexRequired, PropertyExists)
 
 INTERFACE_TYPES = {'basic', 'index', 'inventory', 'background', 'quantity', 'foreground'}
 READONLY_INTERFACE_TYPES = {'basic', 'index', 'inventory', 'background', 'quantity'}
@@ -13,7 +13,7 @@ class NoCatalog(Exception):
     pass
 
 
-class CatalogQuery(IndexInterface, BackgroundInterface, InventoryInterface, QuantityInterface):
+class CatalogQuery(IndexInterface, BackgroundInterface, InventoryInterface, QuantityInterface, ForegroundInterface):
     """
     A CatalogQuery is a class that performs any supported query against a supplied catalog.
     Supported queries are defined in the lcatools.interfaces, which are all abstract.

@@ -58,7 +58,10 @@ class BasicImplementation(object):
         return entity.reference_entity
 
     def get_uuid(self, external_ref):
-        return self._archive.get_uuid(external_ref)
+        u = self._archive.get_uuid(external_ref)
+        if u is None:
+            return False
+        return u
 
     def _fetch(self, external_ref, **kwargs):
         if external_ref is None:

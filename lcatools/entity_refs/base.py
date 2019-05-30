@@ -18,7 +18,6 @@ The classes in this file get imported elsewhere; the CatalogRef class imports al
 *instantiates* all the others.
 """
 from synonym_dict import LowerDict
-from itertools import chain
 
 
 class NoCatalog(Exception):
@@ -275,7 +274,7 @@ class EntityRef(BaseRef):
         print('reference: %s' % self.reference_entity)
 
     def _show_hook(self):
-        if self.uuid is not None:
+        if self._uuid:
             print('UUID: %s' % self.uuid)
         for i in ('Name', 'Comment'):
             try:
@@ -331,6 +330,6 @@ class EntityRef(BaseRef):
 
     def serialize(self, **kwargs):
         j = super(EntityRef, self).serialize(**kwargs)
-        if self.uuid is not None:
+        if self._uuid:
             j['uuid'] = self.uuid
         return j

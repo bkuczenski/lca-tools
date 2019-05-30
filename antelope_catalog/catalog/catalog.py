@@ -644,13 +644,13 @@ class LcCatalog(object):
         try:
             res = next(self._resolver.resources_with_source(local_path))
         except StopIteration:
-            res = self.new_resource(ref, local_path, 'LcForeground', interfaces=['index', 'foreground'], quiet=quiet)
+            res = self.new_resource(ref, local_path, 'LcForeground', interfaces=['index', 'foreground', 'quantity'],
+                                    quiet=quiet)
 
         if reset:
             res.remove_archive()
 
-        res.check(self)
-        return res.make_interface('foreground')
+        return self.query(ref)
 
     def assign_new_ref(self, old_ref, new_ref):
         """

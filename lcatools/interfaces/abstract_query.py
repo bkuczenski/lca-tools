@@ -19,10 +19,6 @@ class EntityNotFound(Exception):
     pass
 
 
-class NoUuid(Exception):
-    pass
-
-
 class BackgroundSetup(Exception):
     pass
 
@@ -154,7 +150,7 @@ class AbstractQuery(object):
                                    external_ref, item)
 
     def get_uuid(self, external_ref):
-        return self._perform_query(None, 'get_uuid', NoUuid('%s/%s' % (self.origin, external_ref)),
+        return self._perform_query(None, 'get_uuid', EntityNotFound('%s/%s' % (self.origin, external_ref)),
                                    external_ref)
 
 '''# maybe we don't need these?!

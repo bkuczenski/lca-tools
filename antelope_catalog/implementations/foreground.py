@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from lcatools.implementations import IndexImplementation
+from lcatools.implementations import BasicImplementation
 from lcatools.interfaces import ForegroundInterface, CONTEXT_STATUS_  # , comp_dir, BackgroundRequired
 
 from lcatools.entities.flows import new_flow
@@ -12,7 +12,7 @@ class NotForeground(Exception):
     pass
 
 
-class ForegroundImplementation(IndexImplementation, ForegroundInterface):
+class ForegroundImplementation(BasicImplementation, ForegroundInterface):
     """
     A foreground manager allows a user to build foregrounds.  This should work with catalog references, rather
     than actual entities.
@@ -51,7 +51,7 @@ class ForegroundImplementation(IndexImplementation, ForegroundInterface):
     _frags_with_flow = defaultdict(set)
     _recursion_check = None
 
-    def get_canonical(self, quantity):
+    def _get_canonical(self, quantity):
         """
         By convention, a foreground archive's Term Manager is the catalog's LCIA engine, which is the Qdb of record
         for the foreground.
@@ -86,7 +86,7 @@ class ForegroundImplementation(IndexImplementation, ForegroundInterface):
         if CONTEXT_STATUS_ == 'compat':
             if context is not None and 'compartment' not in kwargs:
                 kwargs['compartment'] = str(context)
-        ref_q = self.get_canonical(ref_quantity)
+        ref_q = self._get_canonical(ref_quantity)
         f = new_flow(name, ref_q, **kwargs)
         self._archive.add_entity_and_children(f)
         return f
@@ -128,10 +128,31 @@ class ForegroundImplementation(IndexImplementation, ForegroundInterface):
                 continue
             yield f
 
-    def split_subfragment(self, fragment, replacement=None):
+    def clone_fragment(self, frag, **kwargs):
+        """
+
+        :param frag: the fragment (and subfragments) to clone
+        :param kwargs: suffix (default: ' (copy)', applied to Name of top-level fragment only)
+                       comment (override existing Comment if present; applied to all)
+        :return:
+        """
+        clone = clone_fragment(frag, **kwargs)
+        self._archive.add_entity_and_children(clone)
+        return clone
+
+    def split_subfragment(self, fragment, replacement=None, **kwargs):
         """
         Given a non-reference fragment, split it off into a new reference fragment, and create a surrogate child
         that terminates to it.
+
+        without replacement:
+        Old:   ...parent-->fragment
+        New:   ...parent-->surrogate#fragment;   (fragment)
+
+        with replacement:
+        Old:   ...parent-->fragment;  (replacement)
+        New:   ...parent-->surrogate#replacement;  (fragment);  (replacement)
+
         :param fragment:
         :param replacement: [None] if non-None, the surrogate is terminated to the replacement instead of the fork.
         :return:
@@ -153,7 +174,7 @@ class ForegroundImplementation(IndexImplementation, ForegroundInterface):
 
         return fragment
 
-    def delete_fragment(self, fragment):
+    def delete_fragment(self, fragment, **kwargs):
         """
         Remove the fragment and all its subfragments from the archive (they remain in memory)
         This does absolutely no safety checking.
@@ -163,6 +184,8 @@ class ForegroundImplementation(IndexImplementation, ForegroundInterface):
         self._archive.delete_fragment(fragment)
         for c in fragment.child_flows:
             self.delete_fragment(c)
+        return True
 
     def save(self):
         self._archive.save()
+        return True

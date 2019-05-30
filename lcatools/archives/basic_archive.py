@@ -177,7 +177,7 @@ class BasicArchive(EntityStore):
 
         self._add_to_tm(entity)
 
-    def _add_to_tm(self, entity):
+    def _add_to_tm(self, entity, merge_strategy=None):
         if entity.entity_type == 'quantity':
             self.tm.add_quantity(entity)
             if entity.is_entity:  # not ref
@@ -187,7 +187,7 @@ class BasicArchive(EntityStore):
                     pass  # quantities in index archives will not be able to use the quantity impl
         elif isinstance(entity, FlowInterface):
             # characterization infrastructure
-            self.tm.add_flow(entity)
+            self.tm.add_flow(entity, merge_strategy=merge_strategy)
 
     def __getitem__(self, item):
         """

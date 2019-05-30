@@ -193,7 +193,11 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         :param quantity: external_id of quantity
         :return: quantity entity
         """
-        return self._archive.tm.get_canonical(quantity)
+        try:
+            return self._archive.tm.get_canonical(quantity)
+        except EntityNotFound:
+            q = self._archive.retrieve_or_fetch_entity(quantity)
+            return self._archive.tm.get_canonical(q.external_ref)
 
     def factors(self, quantity, flowable=None, context=None, dist=0):
         q = self.get_canonical(quantity)
@@ -338,34 +342,42 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         If flow is not entity_type='flow', we try to fetch a flow and if that fails we return what we were given.
         If we're given a flow and/or an external ref that looks up, then flowable, ref qty, and context are taken from
         it (unless they were provided)
-        If a context query is specified and no canonical context is found, NullContext is returned (matches nothing).
+        If a context query is specified and no canonical context is found, NullContext is returned (matches only
+        NullContext characterizations).
         Otherwise, None is returned (matches everything).
         :param flow:
         :param ref_quantity:
         :param context:
         :return: flowable, canonical ref_quantity, canonical context or None
         """
-        # skip the lookup if all terms are given
-        if ref_quantity is None or context is None:
-            if hasattr(flow, 'entity_type') and flow.entity_type == 'flow':
-                f = flow
+        if hasattr(flow, 'entity_type'):
+            if flow.entity_type == 'flow':
+                flowable = flow.name  # or should be flow.link??
             else:
-                f = self.get(flow)
-
-            if f is None:
-                flowable = flow
-            else:
-                flowable = f.name
-                if ref_quantity is None:
-                    ref_quantity = f.reference_entity
-                if context is None:
-                    context = f.context
+                raise TypeError('Flowable expected, %s given' % type(flow))
+            if ref_quantity is None:
+                ref_quantity = flow.reference_entity
+            if context is None:
+                context = flow.context
         else:
-            flowable = flow
-        if ref_quantity is None:
-            raise RefQuantityRequired
+            # skip the lookup if all terms are given
+            if ref_quantity is None or context is None:
+                f = self.get(flow)  # assume
+
+                if f is None:  # lookup failed
+                    if ref_quantity is None:
+                        raise RefQuantityRequired
+                    flowable = flow
+                else:
+                    flowable = flow.name
+                    if ref_quantity is None:
+                        ref_quantity = f.reference_entity
+                    if context is None:
+                        context = f.context
+            else:
+                flowable = flow
         rq = self.get_canonical(ref_quantity)
-        cx = self._archive.tm[context]
+        cx = self._archive.tm[context]  # will fall back to find_matching_context if tm is an LciaEngine
         if cx is None and context is not None:
             cx = NullContext
         return flowable, rq, cx
@@ -466,7 +478,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
                                                    strategy=strategy, allow_proxy=allow_proxy, **kwargs)
         if result is None:
             if len(mismatch) > 0:
-                fb, rq, _ = self._get_flowable_info(flowable, ref_quantity, context)
+                fb, rq, _ = self._get_flowable_info(flowable, ref_quantity, context)  # call only for exception handling
                 for k in mismatch:
                     print('Conversion failure: Flowable: %s\nfrom: %s %s\nto: %s %s' % (fb, k.fail, k.fail.link,
                                                                                         rq, rq.link))

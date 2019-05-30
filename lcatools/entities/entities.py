@@ -61,7 +61,7 @@ class LcEntity(object):
         self._reference_entity = None
 
         if origin is not None:
-            self._origin = origin
+            self.origin = origin
 
         self._d['Name'] = ''
         self._d['Comment'] = ''

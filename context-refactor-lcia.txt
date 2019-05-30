@@ -1,4 +1,115 @@
 ==========
+Thu May 30 12:58:29 -0700 2019
+
+Well, it wouldn't be an antelope project if it didn't include a desperate 11th-hour discovery of a coding design failure.  In this case a somewhat indeterminate situation with flow characterizations.
+
+Basically: several things are true.
+ - catalog.create_foreground needs to return a query to a foreground resource, NOT a foreground impl
+ - foregrounds need to intrinsically include quantity interface
+ - coding bug in lcia_engine serialize that was wrongly filtering out canonical quantities that did not match the origin (but all canonical quantities will have 'local.qdb')
+ - LcFlows cannot implement profile()
+ - LcFlows DO not implement characterize()
+ - general lack of protocol for characterizing flows (hint: DON'T use external_ref)
+
+In Term Managers, flows are known by flow.name and flow.link, and those ALONE.  In Lcia Engines, flows are known by their synonyms, which include those plus cas number and synonym properties.
+
+When we are characterizing flows while building a foreground, we should use the foreground's quantity implementation to do it, mindful of the fact that foregrounds share the catalog's term manager (LciaDb)
+ - first we should be sure that the flowable is already known by the LciaDb, since the foreground DOES call _add_to_tm()
+ - but, we must remember that (for characterizations), external_ref is the wrong key. link is the right key.
+ - BUT, we need to make sure that the traversal-termination-flow quantity conversion machinery has a comparable expectation.  What does it do?
+   = forward: term_flow.reference_entity.cf(_parent.flow)
+   = reverse: _parent.flow.reference_entity.cf(term_flow)
+ The cf just goes straight to the quantity interface, where it ultimately uses _get_flowable_info.
+
+It turns out _get_flowable_info is rather peculiarly implemented.  Here's what it's supposed to do: Given whatever the user provided in terms of flowable, ref_quantity, and context, come up with canonical values for all of those things.
+
+Here's what it actually does:
+ - if (and ONLY IF) ref quantity or context is lacking, try to retrieve a flow entity based on flowable. If successful, flow.name is taken (which is appropriate since .name and .link are the two guaranteed terms, though maybe .link would be more robust).
+
+If unsuccessful, or if both quantity and context are provided, whatever was given as flowable is just passed right on.  So _get_flowable_info does not directly parse the flowable argument.
+
+What we should do instead: just check to see if it's a flow first.
+
+Last detail: for current code to work, methods currently defined in the foreground implementation but not in the interface need to be moved to the interface.  This is fine because part of the outcome of this project is supposed to be defining the foreground interface. They include:
+ - split_subfragment (with replacement)
+ - delete_fragment (with error / termination checking to be handled in the future)
+ - save
+
+Noted foreground interface methods that have not yet been implemented:
+ - observe
+ - set/unset balance flow
+
+And hypothetical operations that have not yet been defined in the interface or the implementation:
+ - find_or_create_term (maybe outmoded by fragments_with_flow)
+ - terminate fragment (maybe unnecessary since the fg interface returns actual fragments and not refs)
+ - build fragment from term (add_child_flows)
+ - build forest from [foreground | traversal]
+
+Thu 2019-05-30 11:21:02 -0700
+
+OK, where are we at?
+ - One, LINKS ARE NOT BEING ADDED TO FM for some fucking reason
+ - Two, the whole thing is fucked because many flows (with different characterizations) have the same NAME and so are SYNONYMS.
+
+Remedies: either fundamentally change how we create flowables, or change how we are assigning flow names.
+
+FUK.
+
+
+Thu 2019-05-30 12:59:04 -0700
+
+OK, here's the situation.  The process for adding flowable terms to the Term Manager is fukkokked.  Untested, poorly defined, clearly broken for first real-world use case.  Time for some test-driven development.
+
+Currently, terms are added to _fm in the following places:
+A * in _create_flowable(name, *syns)
+A1   = called from _add_flow_terms, in zero match case, to create new entry for all terms
+A2   = called from _add_flow_terms (via _add_pruned_terms) to add new terms to new match
+A3   = called from add_characterization, to create single-term entry in case none exists
+B * in _add_flow_terms(flow):
+B1   - in merge|prune mode, in single-match case, to add new terms to existing match
+B2   - in merge mode, to add new terms to merged entry
+   = called from add_flow()
+
+So A1, A2, B1, B2 all come from _add_flow_terms; A3 is an exceptional case.  So we need to refactor _add_flow_terms, which is ONLY called from add_flow().  All of our test cases should use add_flow()
+
+What do we want to do:
+
+ * For elementary flows, we want to reduce a large number of flows to a smaller number of curated flowables.  Here we want to merge aggressively, but then, curate. This is also not a normal operating mode.
+
+ - In this mode, if we find one match we automatically throw in with it, and we only deal with conflicts if we find two or more matches.
+   = the merge strategy means collapse two (or more) different flowables together, with the attendant challenges of remapping all the CF lookup dicts
+   = the prune strategy means prune off all the new terms into a new flowable and return that. this also begs curation
+ - This mode should be entered when we are importing characterization factors and we find a context that we identify as elementary.  For Term Managers, let's say any flow that has a non-null context should merge this way (which- merge or prune?)
+
+ * For intermediate flows, and especially foregrounds, but generally any flow that has no context, it is important to preserve the exact flow information, so we should add flows in a 'distinct' way.  This means we use an existing entry only if all terms match it; otherwise we follow the 'prune' strategy even if number of matches is only one.
+ - realistically, this means the flow's link is its only guaranteed identifying factor.
+ = We should be using the link to retrieve characterizations whenever it's available.
+
+Thu 2019-05-30 14:45:21 -0700
+
+OK, so now it's 3/4 of the way through the day. I haven't TOUCHED the EPA project which is due TOMORROW.  I've definitely fixed the problem with links not loading (hint: remove a single underscore, in entities.py, to use origin.setter, to trigger flowable update.  I've also added the 'distinct' merge strategy.  (but I've not tested it nor any of the other merge strategies)
+
+Now I'm on the LAST part- which is using flow.link instead of flow.name-- I said to "retrieve" CFs, but it seems pretty important to also use it to "assign" CFs.  The assignment is specific; the LciaEngine generalizes it-- again, using the curated flows-- so how is this supposed to work for LCIA? If I create all my CFs using the link, then I need to import flowable links before I can import CFs, or else all the CFs will just be siloed in their own private flowables.
+
+I can't possibly include every possible link as a synonym for every canonical flow-- minor versions and the like-- so that doesn't work.
+
+What's the theory of operation for adding and retrieving CFs? (what a great thing to be thinking about with 2 hours left in the last full day of work on the EPA project)
+
+It comes down to the two different modes of using the LciaEngine.  Mode 1 is using it as a storehouse to assign and retrieve flow profile information (as in the EPA project).  Here we want both the assignment and the retrieval to be as specific as possible, so we should use the link both times.  We do NOT have/want the expectation that the LciaDb will find a near match in this use case.  This use case corresponds with the use of the 'distinct' merge strategy.
+
+In Mode 0, which is also the original design mode, the LciaDb is an interoperator which is meant to smooth over incidental differences in favor of curated flows.  In this case... the retrieval mechanism should map a specific query to a curated flowable-- which means, YES, the source repository from which the query flow originates needs to FIRST register its flow synonyms with the LciaDb, so that the link from that query will resolve to the curated flowable.  And that should be done with the source repo for the characterization as well.  That means we can't get away with just using flowables just yet- we need to write a mechanistic process for mapping links to flowables. and we need to converge on using links for everything.
+
+That is a task for later. For now we are in mode 1.
+
+But in general, in ALL CASES (which is what "in general" means), if a flow's link is available to identify a flowable, USE IT.  When assigning characterizations or retrieving them.
+
+Right now we have the problem where half the time, via the quantity interface, we are using flow external_ref, but there is no simple way to distinguish between an external ref and a link without doing complicated and highly contingent string manipulations.  Let's look closely at the quantity interface and see where (if ever) external_ref is okay:
+
+get_canonical-- here external_refs are supposed to be general because there is a small number of quantities.  _quantity_terms explicitly includes external_ref.
+
+
+
+==========
 Mon May 13 16:31:57 -0700 2019
 
 We are now noodling in context refactor as a dangerous prelude to even BEGINNING work on EPA- now 43 days overdue- because the prospect of having to write a USEEIO provider in the old master is so immiserating and because we want to make use of the new Qdb functionality to build fragments for EPA.

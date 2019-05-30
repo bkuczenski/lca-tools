@@ -68,6 +68,9 @@ class TermManagerTest(unittest.TestCase):
     def test_add_flow_merge(self):
         pass
 
+    def test_add_flow_distinct(self):
+        pass
+
     def test_add_characterization(self):
         cf = self.tm.add_characterization('water', rq, qq, 0.001)
         self.assertEqual(cf.value, .001)

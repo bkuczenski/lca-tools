@@ -350,4 +350,9 @@ class LciaEngine(TermManager):
 
     def _serialize_qdict(self, origin, quantity, values=False):
         _ql = self._qaccess(quantity)
-        return {str(fb): cl.serialize_for_origin(origin, values=values) for fb, cl in _ql.items()}
+        d = {}
+        for fb, cl in _ql.items():
+            _od = cl.serialize_for_origin(origin, values=values)
+            if len(_od) > 0:
+                d[str(fb)] = _od
+        return d

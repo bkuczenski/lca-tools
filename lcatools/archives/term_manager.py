@@ -225,6 +225,7 @@ class TermManager(object):
         except KeyError:
             _c = self._cm.add_compartments(flow.context)
         _c.add_origin(flow.origin)
+        return _c
 
     def _create_flowable(self, name, *syns, prune=False):
         fb = self._fm.new_entry(name, *syns, prune=prune).object
@@ -235,15 +236,16 @@ class TermManager(object):
             self._fq_map[fb] = set()
         return fb
 
-    def _add_pruned_terms(self, name, new_terms):
+    def _add_pruned_terms(self, flow, new_terms):
         s1 = tuple(new_terms)  # unfamiliar terms
         if len(s1) == 0:
-            fb = self._fm[name]
+            fb = self._fm[flow.name]
             self._print('No unique terms')
             s2 = set()
         else:
             fb = self._create_flowable(*s1, prune=True)
             s2 = set(self._fm.synonyms(str(fb)))  # known terms synonymous to new object
+            flow.name = str(fb)
         if not self._quiet:
             for k in sorted(set(s1).union(s2), key=lambda x: x in s2):
                 if k in s2:
@@ -335,6 +337,8 @@ class TermManager(object):
             if len(new_terms) == 0:
                 raise AttributeError('Flow appears to have no terms: %s' % flow)
             fb = self._create_flowable(flow.name, *new_terms)
+        elif merge_strategy == 'distinct':
+            fb = self._add_pruned_terms(flow, new_terms)
         elif len(fb_map) == 1:  # one existing match
             fb = list(fb_map.keys())[0]
             for term in new_terms:
@@ -342,8 +346,7 @@ class TermManager(object):
         else:  # > 2 matches-- invoke merge strategy
             if merge_strategy == 'prune':
                 self._print('\nPruning entry for %s' % flow)
-                fb = self._add_pruned_terms(flow.name, new_terms)
-                flow.name = str(fb)
+                fb = self._add_pruned_terms(flow, new_terms)
 
             elif merge_strategy == 'merge':
                 # this is trivial but
@@ -375,8 +378,10 @@ class TermManager(object):
         """
         if flow.reference_entity is not None:
             self.add_quantity(flow.reference_entity)  # ensure exists
-        self._check_context(flow)
-        self._add_flow_terms(flow, merge_strategy=merge_strategy)
+        cx = self._check_context(flow)
+        if cx is NullContext:
+            merge_strategy = 'distinct'  # keep distinct terms for null-context flows
+        return self._add_flow_terms(flow, merge_strategy=merge_strategy)
 
     def add_characterization(self, flowable, ref_quantity, query_quantity, value, context=None, origin=None,
                              location='GLO', overwrite=False):
@@ -475,6 +480,8 @@ class TermManager(object):
         """
         if isinstance(quantity, str):
             return self._qm[quantity]
+        elif hasattr(quantity, 'external_ref'):
+            return self._qm[quantity.external_ref]
         return self._qm.find_matching_quantity(quantity)
 
     def _canonical_q_ref(self, quantity):
@@ -712,9 +719,12 @@ class TermManager(object):
     '''
     def _serialize_qdict(self, origin, quantity, values=False):
         _ql = self._qaccess(quantity)
-        return {str(fb):
-                    {str(c): cf.serialize(values=values, concise=True) for c, cf in cl.items() if cf.origin == origin}
-                for fb, cl in _ql.items()}
+        d = {}
+        for fb, cl in _ql.items():
+            _od = {str(c): cf.serialize(values=values, concise=True) for c, cf in cl.items() if cf.origin == origin}
+            if len(_od) > 0:
+                d[str(fb)] = _od
+        return d
 
     def _serialize_factors(self, origin, *quantities, values=False):
         """
@@ -734,8 +744,6 @@ class TermManager(object):
             qqs = [self._canonical_q(q) for q in quantities]
         j = dict()
         for q in qqs:
-            if q.origin != origin:
-                continue
             _sq = self._serialize_qdict(origin, q, values=values)
             if len(_sq) > 0:
                 j[self._canonical_q_ref(q)] = _sq

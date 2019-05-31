@@ -3,17 +3,13 @@ import uuid
 
 
 from lcatools.entities.entities import LcEntity
-from lcatools.entity_refs.quantity_ref import QuantityRef
-
-
-class NoUnitConversionTable(Exception):
-    pass
+from lcatools.entity_refs.quantity_ref import QuantityRef, convert
 
 
 class LcQuantity(LcEntity):
 
     _ref_field = 'referenceUnit'
-    _new_fields = []
+    _new_fields = ()
 
     @classmethod
     def new(cls, name, ref_unit, **kwargs):
@@ -26,14 +22,16 @@ class LcQuantity(LcEntity):
         return cls(str(u), entity_uuid=u, Name=name, ReferenceUnit=LcUnit(ref_unit), **kwargs)
 
     def __init__(self, external_ref, **kwargs):
+        self._is_lcia = False
         super(LcQuantity, self).__init__('quantity', external_ref, **kwargs)
         if not self.has_property('UnitConversion'):
             self._d['UnitConversion'] = {self.unit(): 1.0}
         self._qi = None
 
     def __setitem__(self, key, value):
-        if key.lower == 'indicator':
-            self._new_fields.append('Indicator')
+        if key.lower() == 'indicator':
+            self._new_fields = ('Indicator', )
+            self._is_lcia = True
         super(LcQuantity, self).__setitem__(key, value)
 
     def _set_reference(self, ref_entity):
@@ -51,7 +49,7 @@ class LcQuantity(LcEntity):
         return self.reference_entity
 
     def is_lcia_method(self):
-        return 'Indicator' in self.keys()
+        return self._is_lcia
 
     def add_synonym(self, k):
         if self.has_property('Synonyms'):
@@ -98,56 +96,13 @@ class LcQuantity(LcEntity):
     def do_lcia(self, inventory, **kwargs):
         return self._qi.do_lcia(self, inventory, **kwargs)
 
+    def convert(self, from_unit=None, to=None):
+        return convert(self, from_unit, to)
+
     """
     Interior utility functions
     These are not exactly exposed by the quantity interface and maybe should be retired
     """
-    def convert(self, from_unit=None, to=None):
-        """
-        Perform unit conversion within a quantity, using a 'UnitConversion' table stored in the object properties.
-        For instance, if the quantity name was 'mass' and the reference unit was 'kg', then
-        quantity.convert('lb') would[should] return 0.4536...
-        quantity.convert('lb', to='ton') should return 0.0005
-
-        This function requires that the quantity have a 'UnitConversion' property that works as a dict, with
-        the unit names being keys. The requirement is that the values for every key all correspond to the same
-        amount.  For instance, if the quantity was mass, then the following would be equivalent:
-
-        quantity['UnitConversion'] = { 'kg': 1, 'lb': 2.204622, 'ton': 0.0011023, 't': 0.001 }
-        quantity['UnitConversion'] = { 'kg': 907.2, 'lb': 2000.0, 'ton': 1, 't': 0.9072 }
-
-        If the quantity's reference unit is missing from the dict, it is assumed to be 1 implicitly.
-
-        If the quantity is missing a unit conversion property, raises NoUnitConversionTable.  If the quantity does
-        have such a table but one of the specified units is missing from it, raises KeyError
-
-        :param from_unit: unit to convert from (default is the reference unit)
-        :param to: unit to convert to (default is the reference unit)
-        :return: a float indicating how many to_units there are in one from_unit
-        """
-        try:
-            uc_table = self._d['UnitConversion']
-        except KeyError:
-            raise NoUnitConversionTable
-
-        if from_unit is None:
-            if self.reference_entity.unitstring in uc_table:
-                inbound = uc_table[self.reference_entity.unitstring]
-            else:
-                inbound = 1.0
-        else:
-            inbound = uc_table[from_unit]
-
-        if to is None:
-            if self.reference_entity.unitstring in uc_table:
-                outbound = uc_table[self.reference_entity.unitstring]
-            else:
-                outbound = 1.0
-
-        else:
-            outbound = uc_table[to]
-
-        return round(outbound / inbound, 12)  # round off to curtail numerical / serialization issues
 
     def _print_ref_field(self):
         return self.reference_entity.unitstring

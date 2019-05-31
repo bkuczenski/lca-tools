@@ -272,7 +272,7 @@ class BasicArchive(EntityStore):
                 # raise KeyError
             if 'value' in c:
                 v = c['value']
-            self.tm.add_characterization(flow['Name'], flow.reference_entity, q, v, context=flow.context,
+            self.tm.add_characterization(flow.link, flow.reference_entity, q, v, context=flow.context,
                                          origin=flow.origin)
 
     def _make_entity(self, e, etype, ext_ref):

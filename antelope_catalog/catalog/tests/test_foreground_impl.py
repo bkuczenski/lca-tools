@@ -16,7 +16,8 @@ class FgImplementationTest(unittest.TestCase):
 
     def test_new_flow(self):
         f = self.fg.new_flow('Test flow', 'mass')
-        self.assertIs(self.fg._archive[f.external_ref], f)
+        ar = self.cat.get_archive(self.fg.origin)
+        self.assertIs(ar[f.external_ref], f)
 
     @classmethod
     def tearDownClass(cls):

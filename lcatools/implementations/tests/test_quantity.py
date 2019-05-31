@@ -1,6 +1,7 @@
 from ...archives import BasicArchive, Qdb
 from ...lcia_engine import IPCC_2007_GWP
 from ...interfaces import EntityNotFound, ConversionReferenceMismatch  # , NoFactorsFound
+from ..quantity import RefQuantityRequired
 
 import unittest
 
@@ -19,7 +20,7 @@ class QuantityImplementation(unittest.TestCase):
         cls.gwp = cls.qq_traci['Global Warming Air'].make_ref(cls.qq_traci)
 
     def test_bad_ref(self):
-        with self.assertRaises(EntityNotFound):
+        with self.assertRaises(RefQuantityRequired):
             self.qq_traci.cf('hfc-134', self.gwp)
 
     def test_gwp_factor(self):

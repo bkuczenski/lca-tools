@@ -197,6 +197,8 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
             return self._archive.tm.get_canonical(quantity)
         except EntityNotFound:
             q = self._archive.retrieve_or_fetch_entity(quantity)
+            if q is None:
+                raise
             return self._archive.tm.get_canonical(q.external_ref)
 
     def factors(self, quantity, flowable=None, context=None, dist=0):
@@ -220,6 +222,8 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         """
         rq = self.get_canonical(ref_quantity)
         qq = self.get_canonical(query_quantity)
+        if qq.origin != self._archive.ref:
+            self._archive.add_entity_and_children(qq)  # catches EntityExists
         if origin is None:
             origin = self.origin
         return self._archive.tm.add_characterization(flowable, rq, qq, value, context=context, location=location,
@@ -352,7 +356,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         """
         if hasattr(flow, 'entity_type'):
             if flow.entity_type == 'flow':
-                flowable = flow.name  # or should be flow.link??
+                flowable = flow.link
             else:
                 raise TypeError('Flowable expected, %s given' % type(flow))
             if ref_quantity is None:
@@ -360,22 +364,19 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
             if context is None:
                 context = flow.context
         else:
-            # skip the lookup if all terms are given
-            if ref_quantity is None or context is None:
-                f = self.get(flow)  # assume
+            f = self.get(flow)  # assume
 
-                if f is None:  # lookup failed
-                    if ref_quantity is None:
-                        raise RefQuantityRequired
-                    flowable = flow
-                else:
-                    flowable = flow.name
-                    if ref_quantity is None:
-                        ref_quantity = f.reference_entity
-                    if context is None:
-                        context = f.context
-            else:
+            if f is None:  # lookup failed
+                if ref_quantity is None:
+                    raise RefQuantityRequired
                 flowable = flow
+            else:
+                flowable = f.link
+                if ref_quantity is None:
+                    ref_quantity = f.reference_entity
+                if context is None:
+                    context = f.context
+
         rq = self.get_canonical(ref_quantity)
         cx = self._archive.tm[context]  # will fall back to find_matching_context if tm is an LciaEngine
         if cx is None and context is not None:

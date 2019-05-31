@@ -99,10 +99,7 @@ class FlowRef(EntityRef, FlowInterface):
     def characterize(self, quantity, value, context=None, **kwargs):
         if context is None:
             context = self.context
-        try:
-            flowable = self['Name']
-        except KeyError:
-            flowable = self.link
+        flowable = self.link
         return self._query.characterize(flowable, self.reference_entity, quantity, value, context=context, **kwargs)
 
     '''

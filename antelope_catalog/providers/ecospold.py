@@ -171,7 +171,7 @@ class EcospoldV1Archive(LcArchive):
                 if not apply_conversion(local_q, f):
                     print('Flow %s needs characterization for unit %s' % (f, local_q))
                     val = parse_math(input('Enter conversion factor 1 %s = x %s' % (f.unit(), local_q)))
-                    self.tm.add_characterization(f['Name'], f.reference_entity, local_q, val, context=f.context,
+                    self.tm.add_characterization(f.link, f.reference_entity, local_q, val, context=f.context,
                                                  origin=self.ref)
         return f
 

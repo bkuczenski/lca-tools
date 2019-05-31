@@ -393,7 +393,7 @@ class IlcdArchive(LcArchive):
 
         for qty, val in chars:
             try:
-                self.tm.add_characterization(f['Name'], f.reference_entity, qty, val, context=f.context)
+                self.tm.add_characterization(f.link, f.reference_entity, qty, val, context=f.context)
             except DuplicateCharacterizationError:
                 print('Duplicate Characterization in entity %s\n %s = %g' % (u, qty, val))
                 # let it go

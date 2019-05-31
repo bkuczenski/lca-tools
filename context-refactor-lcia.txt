@@ -107,6 +107,23 @@ Right now we have the problem where half the time, via the quantity interface, w
 
 get_canonical-- here external_refs are supposed to be general because there is a small number of quantities.  _quantity_terms explicitly includes external_ref.
 
+characterize-- this is the tough one. circle back.
+
+quantity_relation,
+
+Fri 2019-05-31 09:08:21 -0700
+
+OK, part of the problem is this principled decision for a term manager not to know its own origin- so captive term managers SHOULD operate strictly on external refs.  but obviously that breaks down in the LciaEngine case.
+
+
+so, argument: TermManager._flow_terms should be name and external_ref, LciaEngine._flow_terms stays as is.
+
+BUT WHAT ABOUT _get_flowable_info? This is the gateway into quantity_conversions, which is the first point of entry for quantity_relation, profile, do_lcia, cf.
+
+Well, one approach is to have get() handle either external_ref or link-- which it NOW DOES-- and just include get() in _get_flowable_info.
+ok. done. maybe a bit costly. we haven't gotten to optimization yet. but we need to move forward.
+
+flow.link is the canonical flowable in all cases.  The LciaDb needs to facilitate mapping an archive's links to curated flows, full stop.  This can be accomplished via flowable hints (though not in their present implementation).
 
 
 ==========

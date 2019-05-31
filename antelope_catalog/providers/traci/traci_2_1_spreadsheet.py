@@ -155,7 +155,7 @@ class Traci21Factors(BasicArchive):
     def _char_from_flow_compartment_method(self, flow, cm, q, cf):
         cx = self.tm.add_context(cm, origin=self.ref)
         try:
-            self.tm.add_characterization(flow.name, flow.reference_entity, q, cf, context=cx)
+            self.tm.add_characterization(flow.link, flow.reference_entity, q, cf, context=cx)
         except DuplicateCharacterizationError:
             pass
 

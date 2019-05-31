@@ -294,6 +294,7 @@ class EntityRef(BaseRef):
 
     def get_item(self, item, force_query=False):
         """
+
         This keeps generating recursion errors. Let's think it through.
          - first checks locally. If known, great.
          - if not, need to check remotely by running the query.
@@ -311,10 +312,7 @@ class EntityRef(BaseRef):
             if loc is not None:
                 return loc
         self._check_query('getitem %s' % item)
-        try:
-            val = self._query.get_item(self.external_ref, item)
-        except KeyError:
-            return None
+        val = self._query.get_item(self.external_ref, item)
         if val is not None and val != '':
             self._d[item] = val
             return val
@@ -327,6 +325,18 @@ class EntityRef(BaseRef):
         if val is None:
             raise KeyError(item)
         return val
+
+    def has_property(self, item):
+        """
+        let's deal with the recursion issue head-on
+        :param item:
+        :return:
+        """
+        try:
+            self.get_item(item)
+        except KeyError:
+            return False
+        return True
 
     def serialize(self, **kwargs):
         j = super(EntityRef, self).serialize(**kwargs)

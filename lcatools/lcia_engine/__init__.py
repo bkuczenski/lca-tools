@@ -67,7 +67,7 @@ class LciaDb(Qdb):
 
         self._add_to_tm(entity)
 
-    def _add_to_tm(self, entity):
+    def _add_to_tm(self, entity, merge_strategy=None):
         if entity.entity_type == 'quantity':
             q_masq = QuantityRef(entity.external_ref, self.query, entity.reference_entity, Name=entity['Name'])
             if entity.has_property('Indicator'):
@@ -84,5 +84,4 @@ class LciaDb(Qdb):
                 self._print('Importing factors')
                 self.tm.import_cfs(entity)
         elif isinstance(entity, FlowInterface):
-            self.tm.add_flow(entity)
-
+            self.tm.add_flow(entity, merge_strategy=merge_strategy)

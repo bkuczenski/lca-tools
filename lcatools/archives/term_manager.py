@@ -480,8 +480,8 @@ class TermManager(object):
         """
         if isinstance(quantity, str):
             return self._qm[quantity]
-        elif hasattr(quantity, 'external_ref'):
-            return self._qm[quantity.external_ref]
+        elif hasattr(quantity, 'link'):
+            return self._qm[quantity.link]
         return self._qm.find_matching_quantity(quantity)
 
     def _canonical_q_ref(self, quantity):

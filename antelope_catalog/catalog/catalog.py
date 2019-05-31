@@ -428,6 +428,7 @@ class LcCatalog(object):
                     return inx.ref
 
             print('Re-indexing %s' % source)
+            # TODO: need to delete the old index resource!!
         the_index = res.make_index(inx_file, force=force)
         self.new_resource(the_index.ref, inx_local, 'json', priority=priority, store=stored, interfaces='index',
                           _internal=True, static=True, preload_archive=the_index)

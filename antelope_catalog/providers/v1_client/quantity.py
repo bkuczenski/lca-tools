@@ -23,6 +23,6 @@ class AntelopeQuantityImplementation(QuantityImplementation):
                 location = cf['location']
             else:
                 location = 'GLO'
-            self.characterize(f['Name'], f.reference_entity, q, cf['magnitude'], context=f.context, location=location)
+            self.characterize(f.link, f.reference_entity, q, cf['magnitude'], context=f.context, location=location)
         for cf in self._archive.tm.factors_for_flowable(f.flowable):
             yield cf

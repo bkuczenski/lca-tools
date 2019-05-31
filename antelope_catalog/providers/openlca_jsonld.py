@@ -158,10 +158,11 @@ class OpenLcaJsonLdArchive(LcArchive):
             raise OpenLcaException('No reference flow property found: %s' % f_id)
         f = LcFlow(f_id, Name=name, Compartment=comp, CasNumber=cas, ReferenceQuantity=ref_q, **f_j)
 
-        for i, q in enumerate(qs):
-            self.tm.add_characterization(name, ref_q, q, facs[i], context=f.context, location=loc)
-
         self.add(f)
+
+        for i, q in enumerate(qs):
+            self.tm.add_characterization(f.link, ref_q, q, facs[i], context=f.context, location=loc)
+
         return f
 
     def _add_exchange(self, p, ex):
@@ -239,7 +240,7 @@ class OpenLcaJsonLdArchive(LcArchive):
 
                 v = af['value'] / x.value
 
-                self.tm.add_characterization(f.name, f.reference_entity, q, v, context=f.context, origin=self.ref)
+                self.tm.add_characterization(f.link, f.reference_entity, q, v, context=f.context, origin=self.ref)
                 #f.add_characterization(q, value=v)
 
         if p.has_property('defaultAllocationMethod'):
@@ -307,7 +308,7 @@ class OpenLcaJsonLdArchive(LcArchive):
             flow = self._create_flow(factor['flow']['@id'])
             ref_qty = self._create_quantity(factor['flowProperty']['@id'])
             assert flow.reference_entity == ref_qty
-            self.tm.add_characterization(flow.name, ref_qty, q, factor['value'], context=flow.context, origin=self.ref)
+            self.tm.add_characterization(flow.link, ref_qty, q, factor['value'], context=flow.context, origin=self.ref)
 
         return q
 

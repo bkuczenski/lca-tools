@@ -108,7 +108,7 @@ class IlcdLcia(IlcdArchive):
                 print('flow %s: context %s sense %s conflicts with direction %s; negating factor' % (f_uuid, cx,
                                                                                                      cx.sense, f_dir))
                 cf *= -1
-        return self.tm.add_characterization(flow['Name'], flow.reference_entity, lcia, cf, context=flow.context, location=loc)
+        return self.tm.add_characterization(flow.link, flow.reference_entity, lcia, cf, context=flow.context, location=loc)
 
     def load_lcia_method(self, u, version=None, load_all_flows=False):
         """

@@ -1,6 +1,13 @@
 from ..interfaces import EntityNotFound
 
 
+class NoAccessToEntity(Exception):
+    """
+    Used when the actual entity is not accessible
+    """
+    pass
+
+
 class BasicImplementation(object):
     def __init__(self, archive, **kwargs):
         """
@@ -43,10 +50,21 @@ class BasicImplementation(object):
         return self._archive[item]
 
     def get_item(self, external_ref, item):
+        """
+        This function causes recursion errors if the entity that comes back from _fetch is a ref.  hence the is_entity
+        check.
+        :param external_ref:
+        :param item:
+        :return:
+        """
         entity = self._fetch(external_ref)
-        if entity and entity.has_property(item):
-            return entity[item]
-        raise KeyError('%s: %s [%s]' % (self.origin, external_ref, item))
+        if entity:
+            if not entity.is_entity and entity.origin == self.origin:
+                raise NoAccessToEntity(entity.link)
+            if entity.has_property(item):
+                return entity[item]
+            raise KeyError('%s: %s [%s]' % (self.origin, external_ref, item))
+        raise EntityNotFound(external_ref)
 
     def get_reference(self, key):
         entity = self._fetch(key)
@@ -71,7 +89,7 @@ class BasicImplementation(object):
         try:
             return self._archive.retrieve_or_fetch_entity(external_ref, **kwargs)
         except NotImplementedError:
-            raise EntityNotFound
+            return None
 
     def lookup(self, external_ref, **kwargs):
         if self._fetch(external_ref, **kwargs) is not None:
@@ -79,4 +97,14 @@ class BasicImplementation(object):
         return False
 
     def get(self, external_ref, **kwargs):
-        return self._fetch(external_ref, **kwargs)
+        """
+        :param external_ref: may also be link, as long as requested origin is equal or lesser in specificity
+        :param kwargs:
+        :return: entity or None
+        """
+        e = self._fetch(external_ref, **kwargs)
+        if e is not None:
+            return e
+        er_s = external_ref.split('/')
+        if self.origin.startswith(er_s[0]):
+            return self._fetch('/'.join(er_s[1:]), **kwargs)

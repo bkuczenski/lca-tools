@@ -1,12 +1,66 @@
 from .base import EntityRef
 
 
+class NoUnitConversionTable(Exception):
+    pass
+
+
+def convert(quantity, from_unit=None, to=None):
+    """
+    Perform unit conversion within a quantity, using a 'UnitConversion' table stored in the object properties.
+    For instance, if the quantity name was 'mass' and the reference unit was 'kg', then
+    quantity.convert('lb') would[should] return 0.4536...
+    quantity.convert('lb', to='ton') should return 0.0005
+
+    This function requires that the quantity have a 'UnitConversion' property that works as a dict, with
+    the unit names being keys. The requirement is that the values for every key all correspond to the same
+    amount.  For instance, if the quantity was mass, then the following would be equivalent:
+
+    quantity['UnitConversion'] = { 'kg': 1, 'lb': 2.204622, 'ton': 0.0011023, 't': 0.001 }
+    quantity['UnitConversion'] = { 'kg': 907.2, 'lb': 2000.0, 'ton': 1, 't': 0.9072 }
+
+    If the quantity's reference unit is missing from the dict, it is assumed to be 1 implicitly.
+
+    If the quantity is missing a unit conversion property, raises NoUnitConversionTable.  If the quantity does
+    have such a table but one of the specified units is missing from it, raises KeyError
+
+    :param quantity: something with a __getitem__ and a unit() function
+    :param from_unit: unit to convert from (default is the reference unit)
+    :param to: unit to convert to (default is the reference unit)
+    :return: a float indicating how many to_units there are in one from_unit
+    """
+    try:
+        uc_table = quantity['UnitConversion']
+    except KeyError:
+        raise NoUnitConversionTable
+
+    if from_unit is None:
+        if quantity.unit() in uc_table:
+            inbound = uc_table[quantity.unit()]
+        else:
+            inbound = 1.0
+    else:
+        inbound = uc_table[from_unit]
+
+    if to is None:
+        if quantity.unit() in uc_table:
+            outbound = uc_table[quantity.unit()]
+        else:
+            outbound = 1.0
+
+    else:
+        outbound = uc_table[to]
+
+    return round(outbound / inbound, 12)  # round off to curtail numerical / serialization issues
+
+
 class QuantityRef(EntityRef):
     """
     Quantities can lookup:
     """
     _etype = 'quantity'
     _ref_field = 'referenceUnit'
+    _is_lcia = None
 
     def unit(self):
         if isinstance(self.reference_entity, str):
@@ -29,15 +83,18 @@ class QuantityRef(EntityRef):
         return j
 
     def is_lcia_method(self):
-        try:
-            ind = self.get_item('Indicator')
-        except KeyError:
-            return False
-        if ind is None:
-            return False
-        elif len(ind) == 0:
-            return False
-        return True
+        if self._is_lcia is None:
+            try:
+                ind = self.get_item('Indicator')
+            except KeyError:
+                ind = None
+            if ind is None:
+                self._is_lcia = False
+            elif ind == '':
+                self._is_lcia = False
+            else:
+                self._is_lcia = True
+        return self._is_lcia
 
     def __eq__(self, other):
         if other is None:
@@ -46,6 +103,9 @@ class QuantityRef(EntityRef):
 
     def __hash__(self):
         return hash(self.link)
+
+    def convert(self, from_unit=None, to=None):
+        return convert(self, from_unit, to)
 
     """
     Interface methods

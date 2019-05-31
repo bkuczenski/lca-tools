@@ -61,6 +61,7 @@ class LciaDb(Qdb):
             # merge incoming entity's properties with existing entity
             current = self[entity.link]
             current.merge(entity)
+            return
 
         if entity.uuid is not None:
             self._entities[entity.uuid] = entity
@@ -69,19 +70,27 @@ class LciaDb(Qdb):
 
     def _add_to_tm(self, entity, merge_strategy=None):
         if entity.entity_type == 'quantity':
-            q_masq = QuantityRef(entity.external_ref, self.query, entity.reference_entity, Name=entity['Name'])
-            if entity.has_property('Indicator'):
-                q_masq['Indicator'] = entity['Indicator']
-            self._print('Adding masquerade %s' % q_masq)
+            if entity.is_lcia_method():
+                ind = entity['Indicator']
+            else:
+                ind = None
+            if entity.is_entity:  # not ref -- local db is authentic source - do not masquerade
+                # print('LciaDb: Adding real entity %s' % entity.link)
+                q_masq = QuantityRef(entity.external_ref, self.query, entity.reference_entity,
+                                     Name=entity['Name'], Indicator=ind)
+                entity.set_qi(self.make_interface('quantity'))
+            else:  # ref -- masquerade
+                # print('LciaDb: Adding qty ref %s' % entity)
+                q_masq = QuantityRef(entity.external_ref, self.query, entity.reference_entity, masquerade=entity.origin,
+                                     Name=entity['Name'], Indicator=ind)
+            # print('LciaDb: Adding masquerade %s' % q_masq)
             self.tm.add_quantity(q_masq)
             self.tm.add_quantity(entity)  # should turn up as a child
             assert self.tm.get_canonical(entity) is q_masq
-            if entity.is_entity:  # not ref
-                self._print('Adding real entity %s' % entity.link)
-                entity.set_qi(self.make_interface('quantity'))
-            else:
-                self._print('Adding qty ref %s' % entity)
-                self._print('Importing factors')
+
+            if not entity.is_entity:  # not ref
+                # print('LciaDb: Importing factors')
                 self.tm.import_cfs(entity)
+
         elif isinstance(entity, FlowInterface):
             self.tm.add_flow(entity, merge_strategy=merge_strategy)

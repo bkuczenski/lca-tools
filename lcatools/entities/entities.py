@@ -131,10 +131,9 @@ class LcEntity(object):
         else:
             raise PropertyExists('Origin already set to %s' % self._origin)
 
-    @classmethod
-    def signature_fields(cls):
-        return concatenate(cls._pre_fields, cls._new_fields,
-                           [cls._ref_field] if cls._ref_field is not [] else [], cls._post_fields)
+    def signature_fields(self):
+        return concatenate(self._pre_fields, self._new_fields,
+                           [self._ref_field] if self._ref_field is not [] else [], self._post_fields)
 
     @property
     def reference_field(self):
@@ -298,13 +297,10 @@ class LcEntity(object):
         else:
             # if self.origin != other.origin:
             #     print('Merging entities with differing origin: \nnew: %s\nexisting: %s'% (other.origin, self.origin))
-            for k in other.keys():
-                if k not in self.keys():
+            for k in other.properties():
+                if k not in self._d.keys():
                     print('Merge: Adding key %s: %s' % (k, other[k]))
                     self[k] = other[k]
-
-    def keys(self):
-        return self._d.keys()
 
     def show(self):
         print('%s Entity (ref %s)' % (self.entity_type.title(), self.external_ref))

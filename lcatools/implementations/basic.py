@@ -51,15 +51,21 @@ class BasicImplementation(object):
 
     def get_item(self, external_ref, item):
         """
-        This function causes recursion errors if the entity that comes back from _fetch is a ref.  hence the is_entity
-        check.
+        In this, we accept either an external_ref or an entity reference itself.  If the latter, we dereference via
+        the archive to an actual entity, which we then ask for the item.  If the dereference and the reference are the
+        same, throws an error.
         :param external_ref:
         :param item:
         :return:
         """
-        entity = self._fetch(external_ref)
+        if hasattr(external_ref, 'external_ref'):
+            eref = external_ref
+            external_ref = eref.external_ref
+        else:
+            eref = None
+        entity = self.get(external_ref)
         if entity:
-            if not entity.is_entity and entity.origin == self.origin:
+            if entity is eref:
                 raise NoAccessToEntity(entity.link)
             if entity.has_property(item):
                 return entity[item]

@@ -395,7 +395,7 @@ class BasicArchive(EntityStore):
                 return ' '.join([_recurse_expand_subtag(t) for t in tag])
         keep = True
         for k, v in kwargs.items():
-            if k not in entity.keys():
+            if not entity.has_property(k):
                 return False
             if isinstance(v, str):
                 v = [v]

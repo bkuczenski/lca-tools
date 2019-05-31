@@ -29,7 +29,7 @@ class LcQuantity(LcEntity):
         self._qi = None
 
     def __setitem__(self, key, value):
-        if key.lower() == 'indicator':
+        if key.lower() == 'indicator' and len(value) > 0:
             self._new_fields = ('Indicator', )
             self._is_lcia = True
         super(LcQuantity, self).__setitem__(key, value)

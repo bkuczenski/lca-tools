@@ -146,7 +146,12 @@ class AbstractQuery(object):
         :param item:
         :return:
         """
-        return self._perform_query(None, 'get_item', EntityNotFound('%s/%s' % (self.origin, external_ref)),
+        if hasattr(external_ref, 'external_ref'):
+            err_str = external_ref.external_ref
+        else:
+            err_str = external_ref
+
+        return self._perform_query(None, 'get_item', EntityNotFound('%s/%s' % (self.origin, err_str)),
                                    external_ref, item)
 
     def get_uuid(self, external_ref):

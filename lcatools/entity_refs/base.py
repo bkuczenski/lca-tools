@@ -230,14 +230,15 @@ class EntityRef(BaseRef):
         if ref != self.external_ref:
             raise ValueError('Ref collision! [%s] != [%s]' % (ref, self.external_ref))
 
-    def __init__(self, external_ref, query, reference_entity, **kwargs):
+    def __init__(self, external_ref, query, reference_entity, masquerade=None, **kwargs):
         """
 
         :param external_ref:
         :param query:
         :param kwargs:
         """
-        super(EntityRef, self).__init__(query.origin, external_ref, **kwargs)
+        origin = masquerade or query.origin
+        super(EntityRef, self).__init__(origin, external_ref, **kwargs)
         if not query.validate():
             raise InvalidQuery('Query failed validation')
         self._reference_entity = reference_entity
@@ -312,7 +313,7 @@ class EntityRef(BaseRef):
             if loc is not None:
                 return loc
         self._check_query('getitem %s' % item)
-        val = self._query.get_item(self.external_ref, item)
+        val = self._query.get_item(self, item)
         if val is not None and val != '':
             self._d[item] = val
             return val

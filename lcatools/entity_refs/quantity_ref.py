@@ -60,7 +60,10 @@ class QuantityRef(EntityRef):
     """
     _etype = 'quantity'
     _ref_field = 'referenceUnit'
-    _is_lcia = None
+
+    def __init__(self, *args, **kwargs):
+        super(QuantityRef, self).__init__(*args, **kwargs)
+        self._is_lcia = 'Indicator' in self._d
 
     def unit(self):
         if isinstance(self.reference_entity, str):
@@ -80,20 +83,11 @@ class QuantityRef(EntityRef):
     def serialize(self, **kwargs):
         j = super(QuantityRef, self).serialize(**kwargs)
         j['referenceUnit'] = self.unit()
+        if self._is_lcia:
+            j['Indicator'] = self.get_item('Indicator')
         return j
 
     def is_lcia_method(self):
-        if self._is_lcia is None:
-            try:
-                ind = self.get_item('Indicator')
-            except KeyError:
-                ind = None
-            if ind is None:
-                self._is_lcia = False
-            elif ind == '':
-                self._is_lcia = False
-            else:
-                self._is_lcia = True
         return self._is_lcia
 
     def __eq__(self, other):

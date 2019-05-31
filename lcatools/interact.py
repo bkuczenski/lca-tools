@@ -230,7 +230,7 @@ def pick_by_tag(entities, tag, prompt=None):
     :return:
     """
     def get_tag(ent):
-        if tag in ent.keys():
+        if tag in ent.properties():
             return ent[tag]
         return '(none)'
 
@@ -239,7 +239,7 @@ def pick_by_tag(entities, tag, prompt=None):
 
 def group_by_tag(entities, tag):
     def get_tag(ent):
-        if tag in ent.keys():
+        if tag in ent.properties():
             return ent[tag]
         return '(none)'
 

@@ -186,7 +186,9 @@ class LcForeground(BasicArchive):
     def _qty_ref_from_json(self, e, external_ref):
         origin = e.pop('origin')
         unitstring = e.pop('referenceUnit')
-        return CatalogRef.from_query(external_ref, self._catalog.query(origin), 'quantity', unitstring, **e)
+        q = self._catalog.query(origin)
+        ref = CatalogRef.from_query(external_ref, q, 'quantity', unitstring, **e)
+        return q.get_canonical(ref)
 
     def _make_entity(self, e, etype, ext_ref):
         if e['origin'] != self.ref:

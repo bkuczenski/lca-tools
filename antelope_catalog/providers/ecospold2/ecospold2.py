@@ -576,7 +576,7 @@ class EcospoldV2Archive(LcArchive):
 
         tags = dict()
         for q in quantities:
-            if 'Method' in q.keys():
+            if 'Method' in q.properties():
                 if q['Name'] in tags:
                     raise KeyError('Name collision %s' % q['Name'])
                 tags[q['Name']] = q

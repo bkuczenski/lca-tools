@@ -135,7 +135,7 @@ class UsLciEcospoldTest(UsLciTestContainer.UsLciTestBase):
 class UsLciOlcaTest(UsLciTestContainer.UsLciTestBase):
 
     _atype = 'olca'
-    _initial_count = (4, 71, 3)
+    _initial_count = (8, 71, 3)  # 4 physical quantities + 4 alloc quantities
     _bg_len = 36
     _ex_len = 3990
     _test_case_lcia = .04110577

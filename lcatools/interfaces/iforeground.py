@@ -46,15 +46,27 @@ class ForegroundInterface(AbstractQuery):
                                      **kwargs):
             yield self.make_ref(i)
 
-    def new_fragment(self, *args, **kwargs):
+    def new_fragment(self, flow, direction, **kwargs):
         """
+        Create a fragment and add it to the foreground.
 
-        :param args: flow, direction
+        If creating a child flow ('parent' kwarg is non-None), then supply the direction with respect to the parent
+        fragment. Otherwise, supply the direction with respect to the newly created fragment.  Example: for a fragment
+        for electricity production:
+
+        >>> fg = ForegroundInterface(...)
+        >>> elec = fg.new_flow('Electricity supply fragment', 'kWh')
+        >>> my_frag = fg.new_fragment(elec, 'Output')
+        >>> child = fg.new_fragment(elec, 'Input', parent=my_frag, balance=True)
+        >>> child.terminate(elec_production_process)
+
+        :param flow: a flow entity/ref, or an external_ref known to the foreground
+        :param direction:
         :param kwargs: uuid=None, parent=None, comment=None, value=None, balance=False; **kwargs passed to LcFragment
-        :return:
+        :return: the fragment? or a fragment ref? <== should only be used in the event of a non-local foreground
         """
         return self._perform_query(_interface, 'new_fragment', ForegroundRequired('Foreground access required'),
-                                   *args, **kwargs)
+                                   flow, direction, **kwargs)
 
     def name_fragment(self, fragment, name, **kwargs):
         """

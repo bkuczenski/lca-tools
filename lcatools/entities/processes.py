@@ -42,7 +42,10 @@ class RxRef(object):
     """
     A placeholder object to store reference exchange info for process_refs.  It can be modified to interoperate in
     places where exchanges are expected, e.g by having equivalent equality tests, hashes, etc., as needed.
+    NO QUANTITATIVE DATA (i.e. exchange values)- these require an inventory interface.
     """
+    entity_type = 'exchange'
+
     def __init__(self, process_ref, flow, direction, comment=None):
         self._process_ref = None
         self._flow_ref = flow
@@ -108,10 +111,6 @@ class RxRef(object):
         if self._cached_value is not None:
             return '%.3g' % self._cached_value
         return ' --- '
-
-    @property
-    def entity_type(self):
-        return 'exchange'
 
     '''
     @property

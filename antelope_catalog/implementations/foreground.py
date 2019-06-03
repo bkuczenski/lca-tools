@@ -91,15 +91,15 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         self._archive.add_entity_and_children(f)
         return f
 
-    def new_fragment(self, *args, **kwargs):
+    def new_fragment(self, flow, direction, **kwargs):
         """
-
-        :param args: flow, direction (w.r.t. parent)
+        :param flow:
+        :param direction:
         :param kwargs: uuid=None, parent=None, comment=None, value=None, units=None, balance=False;
           **kwargs passed to LcFragment
         :return:
         """
-        frag = create_fragment(*args, origin=self.origin, **kwargs)
+        frag = create_fragment(flow, direction, origin=self.origin, **kwargs)
         self._archive.add_entity_and_children(frag)
         return frag
 

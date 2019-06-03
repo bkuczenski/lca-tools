@@ -1,4 +1,48 @@
 ==========
+Sun Jun 02 22:36:42 -0700 2019
+
+Ok, all that is fixed and now-- the 13th hour-- I am poised at the threshold when I see another problem that doubtless has a solution, though I can't immediately see it:
+
+ getting the fragment built; doing the traversal; traversal fails on flow conversion
+ Investigating, I see that the term_flow, which is derived from the RxRef of the term node, has a reference entity whose query is not masqueraded. It's an authentic local.uslci.olca reference (i.e. its query origin is local.uslci.olca).
+
+But I see that it's a catalog query, and not a basic query, so there is hope.
+
+Two ways forward:
+ 1- ensure that RxRefs built from catalog queries have their flows' reference entities masqueraded
+    -- but how deep does that problem go?
+
+ 2- throw in a get_canonical in the flow_conversion
+
+The latter seems irritating- since presumably traversal will happen a lot more than construction.  Plus we already call get_canonical too many times (maybe the wrong times?)
+
+Sun 2019-06-02 23:19:29 -0700
+
+The former turned out to be a one liner (plus a debug)
+The answer: it's shallow. Just use query.get_canonical(reference_entity) to make the quantity ref.
+
+And we now have running scenario-ized fragment traversal and disclosure.
+
+no small feat for 2h on a Sunday.
+
+
+
+
+==========
+Fri May 31 11:51:29 -0700 2019
+
+OK, now it is the 12th hour.
+
+WE got everything passing, except we are still uncovering new ground.  Specifically: in order to be able to save foreground characterizations, we need remote quantity refs to be present in the foreground entities list.  This is fine, EXCEPT that the quantity refs available to the archive are in fact MASQUERADES hosted by the catalog and pointed to local.qdb.  This is fine, too, EXCEPT that upon initialization the local qdb doesn't know how to retreive the original quantities, because the masqueraded information is lost.
+
+I see a couple of paths forward.
+
+First, I tried altering the serialization to include the original authentic origin-- that worked and allowed the fg to initialize, but the new catalog ref somehow worked its way
+
+
+
+
+==========
 Thu May 30 12:58:29 -0700 2019
 
 Well, it wouldn't be an antelope project if it didn't include a desperate 11th-hour discovery of a coding design failure.  In this case a somewhat indeterminate situation with flow characterizations.

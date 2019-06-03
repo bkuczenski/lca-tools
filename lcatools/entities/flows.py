@@ -59,6 +59,11 @@ class LcFlow(LcEntity, FlowInterface):
             if k not in self._d:
                 self._d[k] = ''
 
+    def _make_ref_ref(self, query):
+        if self.reference_entity is not None:
+            return query.get_canonical(self.reference_entity)
+        return None
+
     def unit(self):
         return super(LcFlow, self).unit()
 

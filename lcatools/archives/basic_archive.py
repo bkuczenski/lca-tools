@@ -250,10 +250,14 @@ class BasicArchive(EntityStore):
             rq = entity_j.pop('referenceQuantity')
         else:
             rq = next(c['quantity'] for c in chars if 'isReference' in c and c['isReference'] is True)
-        try:
-            ref_q = self.tm.get_canonical(rq)
-        except EntityNotFound:
-            ref_q = self._get_entity(rq)
+        if rq is None:
+            print('Warning: no reference quantity for flow %s' % ext_ref)
+            ref_q = None
+        else:
+            try:
+                ref_q = self.tm.get_canonical(rq)
+            except EntityNotFound:
+                ref_q = self._get_entity(rq)
         return LcFlow(ext_ref, referenceQuantity=ref_q, **entity_j)
 
     def _add_chars(self, flow, chars):

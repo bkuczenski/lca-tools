@@ -140,7 +140,7 @@ def interpose(fragment):
     """
     interp = _fork_fragment(fragment, comment='Interposed node')
 
-    interp.term.self_terminate()
+    interp.to_foreground()
     fragment.set_parent(interp)
 
     return interp

@@ -164,9 +164,12 @@ class FlowTermination(object):
         if term_flow is None:
             if self.is_process:
                 self._term_flow = self._term.reference().flow
+            elif self.is_frag:
+                self._term_flow = self.term_node.flow
             else:
                 self._term_flow = self._parent.flow
         else:
+            # TODO: check to see if supplied term flow is valid / can be a reference flow for term
             self._term_flow = term_flow
         if self.node_weight_multiplier == 0:
             print('Warning: 0 node weight multiplier for term of %s' % self._parent.external_ref)

@@ -5,7 +5,7 @@ from lcatools.interfaces import ForegroundInterface, CONTEXT_STATUS_  # , comp_d
 
 from lcatools.entities.flows import new_flow
 from lcatools.entities.fragments import InvalidParentChild
-from lcatools.entities.fragment_editor import create_fragment, clone_fragment, _fork_fragment
+from lcatools.entities.fragment_editor import create_fragment, clone_fragment, interpose, _fork_fragment
 
 
 class NotForeground(Exception):

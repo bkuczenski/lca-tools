@@ -231,6 +231,8 @@ class LcFragment(LcEntity):
         return self.reference_entity.top()
 
     def set_parent(self, parent):
+        if self.reference_entity is not None:
+            self.unset_parent()
         if self.origin != parent.origin:
             if self.origin is None:
                 self.origin = parent.origin
@@ -1468,7 +1470,7 @@ def _do_subfragment_traversal(ff, scenario, observed):
         # if aggregating, we are only setting unit scores- so don't scale
         self.dbg_print('aggregating', level=0)
         ff.aggregate_subfragments(subfrags, scenario=scenario, observed=observed)  # include params to reproduce
-        ff.node_weight = downstream_nw
+        ff.node_weight = downstream_nw  # NOTE: this may be problematic; undone in lca_disclosures
         ffs = [ff]
 
     return ffs, unit_inv, downstream_nw

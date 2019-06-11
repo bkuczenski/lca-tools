@@ -43,7 +43,7 @@ class QuantityImplementation(unittest.TestCase):
         self.assertEqual(self.gwp.quantity_relation(mass, 'carbon dioxide', 'water').value, 0.0)
         # this will only work with an LciaEngine
         ilcd_vol = self.I[volu_uuid]
-        ar.add(ilcd_vol)
+        # ar.add(ilcd_vol)  ## done automatically in get_canonical
         with self.assertRaises(ConversionReferenceMismatch):
             self.gwp.quantity_relation(ilcd_vol, 'carbon tetrachloride', 'air')
 

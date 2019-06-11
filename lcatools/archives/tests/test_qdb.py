@@ -17,7 +17,7 @@ class QdbTestCase(BasicEntityTest):
         super(QdbTestCase, cls).setUpClass()
         cls._qdb = Qdb.new()
 
-    def test_qdb(self):
+    def test_0_qdb_initialization(self):
         self.assertEqual(self._qdb.count_by_type('quantity'), 25)
 
     def test_mass(self):
@@ -46,7 +46,8 @@ class QdbTestCase(BasicEntityTest):
             if k.external_ref in ('f6811440-ee37-11de-8a39-0800200c9a66', 'e288b5d2-9fcc-4a10-b13c-440786090f43'):
                 # 'energy' (unspecified) and 'emissive coolness' respectively
                 with self.assertRaises(EntityNotFound):
-                    self._qdb.query.get_canonical(k)
+                    self._qdb.query.get_canonical(k.external_ref)
+                self.assertIs(self._qdb.query.get_canonical(k), k)
             else:
                 qc = self._qdb.query.get_canonical(k)
                 self.assertEqual(qc.origin, 'local.qdb')

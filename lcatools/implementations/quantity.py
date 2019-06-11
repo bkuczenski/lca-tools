@@ -196,10 +196,15 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         try:
             return self._archive.tm.get_canonical(quantity)
         except EntityNotFound:
-            q = self._archive.retrieve_or_fetch_entity(quantity)
-            if q is None:
-                raise
-            return self._archive.tm.get_canonical(q.external_ref)
+            if isinstance(quantity, str):
+                q = self._archive.retrieve_or_fetch_entity(quantity)
+                if q is None:
+                    raise
+                return self._archive.tm.get_canonical(q.external_ref)
+            elif hasattr(quantity, 'entity_type') and quantity.entity_type == 'quantity':
+                self._archive.add_entity_and_children(quantity)
+                return self._archive.tm.get_canonical(quantity)
+
 
     def factors(self, quantity, flowable=None, context=None, dist=0):
         q = self.get_canonical(quantity)

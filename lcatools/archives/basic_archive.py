@@ -180,7 +180,7 @@ class BasicArchive(EntityStore):
     def _add_to_tm(self, entity, merge_strategy=None):
         if entity.entity_type == 'quantity':
             self.tm.add_quantity(entity)
-            if entity.is_entity:  # not ref
+            if entity.is_entity and not entity.configured:  # not ref
                 try:
                     entity.set_qi(self.make_interface('quantity'))
                 except InterfaceError:

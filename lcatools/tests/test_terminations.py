@@ -31,11 +31,11 @@ class FlowTerminationTestCase(BasicEntityTest):
 
     def _petro_term(self):
         frag = self._petro_frag()
-        return frag.terminate(self.petro)
+        return frag.terminate(self.petro, term_flow=frag.flow)
 
     def test_create_term(self):
         frag = self._petro_frag()
-        term = FlowTermination(frag, self.petro)
+        term = FlowTermination(frag, self.petro, term_flow=frag.flow)
         self.assertIs(frag.flow, term.term_flow)
         self.assertEqual(comp_dir(frag.direction), term.direction)
         self.assertTrue(term.is_process)
@@ -52,7 +52,7 @@ class FlowTerminationTestCase(BasicEntityTest):
 
     def _frag_with_child(self):
         frag = self._petro_frag()
-        frag.terminate(self.petro)
+        frag.terminate(self.petro, term_flow=frag.flow)
         lead = next(x for x in self.petro.inventory(frag.flow) if x.flow['Name'].startswith('Lead'))
         c = create_fragment(flow=lead.flow, direction=lead.direction, parent=frag, value=lead.value)
         c.terminate(self.A.tm[lead.flow.context])

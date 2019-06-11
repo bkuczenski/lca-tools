@@ -82,7 +82,7 @@ class FragmentFlow(object):
 
         if 'parentFragmentFlowID' in j:
             parent = 'fragments/%s/fragmentflows/%s' % (j['fragmentID'], j['parentFragmentFlowID'])
-            frag = GhostFragment(parent, flow, dirn)
+            frag = GhostFragment(parent, flow, dirn)  # distinctly not reference
 
         else:
             frag = query.get('fragments/%s' % j['fragmentID'])
@@ -108,6 +108,7 @@ class FragmentFlow(object):
             conserved = False
         return cls(frag, magnitude, nw, term, conserved)
 
+    '''
     @classmethod
     def ref_flow(cls, parent, use_ev):
         """
@@ -120,6 +121,7 @@ class FragmentFlow(object):
         term = FlowTermination.null(fragment)
         return cls(fragment, use_ev, 1.0, term,
                    parent.is_conserved_parent)
+    '''
 
     @classmethod
     def cutoff(cls, parent, flow, direction, magnitude, is_conserved=False):
@@ -353,6 +355,10 @@ class GhostFragment(object):
     @property
     def reference_entity(self):
         return self._parent
+
+    @property
+    def is_reference(self):
+        return self._parent is None
 
     @property
     def is_background(self):

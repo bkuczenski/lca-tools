@@ -140,8 +140,12 @@ class FlowTermination(object):
         self._parent = fragment
         if entity is not None:
             if entity.entity_type == 'flow':
-                raise TypeError('Can no longer terminate fragments with flows. Use context instead')
-            if entity.entity_type not in ('context', 'process', 'fragment'):
+                if term_flow is not None and term_flow != entity:
+                    raise ValueError('Inconsistent flow and term_flow provided: %s' % entity)
+                term_flow = entity
+                entity = fragment  # foreground termination with flow conversion
+                # raise TypeError('Can no longer terminate fragments with flows. Use context instead')
+            elif entity.entity_type not in ('context', 'process', 'fragment'):
                 raise TypeError('Inappropriate termination type: %s' % entity.entity_type)
         self._term = entity  # this must have origin, external_ref, and entity_type, and be operable (if ref)
         self._score_cache = LciaResults(fragment)

@@ -46,6 +46,19 @@ class ForegroundInterface(AbstractQuery):
                                      **kwargs):
             yield self.make_ref(i)
 
+    def frag(self, string, many=False, **kwargs):
+        """
+        Return the unique fragment whose ID starts with string.
+
+        Default: If the string is insufficiently specific (i.e. there are multiple matches), raise
+        :param string:
+        :param many: [False] if true, return a generator and don't raise an error
+        :param kwargs:
+        :return:
+        """
+        return self._perform_query(_interface, 'frag', ForegroundRequired('Foreground access required'),
+                                   string, many=many, **kwargs)
+
     def new_fragment(self, flow, direction, **kwargs):
         """
         Create a fragment and add it to the foreground.

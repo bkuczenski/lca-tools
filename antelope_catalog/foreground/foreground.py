@@ -397,27 +397,33 @@ class LcForeground(BasicArchive):
         for k in self._frags_with_flow[flow]:
             yield k
 
-    def frag(self, string, strict=True):
+    def frag(self, string, many=False, strict=True):
         """
         strict=True is slow
         Works as an iterator. If nothing is found, raises StopIteration. If multiple hits are found and strict is set,
         raises Ambiguous Reference.
         :param string:
-        :param strict: [True] whether to check for ambiguous reference. if False, return first matching fragment.
+        :param many: [False] if true, generate
+        :param strict: [True] synonym for not many
         :return:
         """
-        if strict:
+        if strict and not many:
             k = [f for f in self.fragments(show_all=True) if f.uuid.startswith(string.lower())]
             if len(k) > 1:
                 for i in k:
                     print('%s' % i)
-                raise AmbiguousReference()
+                raise AmbiguousReference(string)
             try:
                 return k[0]
             except IndexError:
-                raise StopIteration
+                raise FragmentNotFound(string)
         else:
-            return next(f for f in self.fragments(show_all=True) if f.uuid.startswith(string.lower()))
+            return self.frags(string)
+
+    def frags(self, string):
+        for f in self.fragments(show_all=True):
+            if f.uuid.startswith(string.lower()):
+                yield f
 
     def draw(self, string, **kwargs):
         if not isinstance(string, LcFragment):

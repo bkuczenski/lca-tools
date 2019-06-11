@@ -68,8 +68,13 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         else:
             raise NotForeground('The resource does not contain fragments: %s' % self._archive.ref)
 
-    def frag(self, string, strict=True):
-        return self._archive.frag(string, strict=strict)
+    def frag(self, string, **kwargs):
+        """
+        :param string:
+        :param kwargs: many=False
+        :return:
+        """
+        return self._archive.frag(string, **kwargs)
 
     '''
     Create and modify fragments

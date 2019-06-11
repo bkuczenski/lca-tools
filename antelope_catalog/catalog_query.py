@@ -106,16 +106,19 @@ class CatalogQuery(IndexInterface, BackgroundInterface, InventoryInterface, Quan
             # print('Gone canonical')
             q_can = self._tm.get_canonical(quantity)
         except EntityNotFound:
-            if hasattr(quantity, 'entity_type') and quantity.entity_type == 'quantity' and not quantity.is_entity:
+            if hasattr(quantity, 'entity_type') and quantity.entity_type == 'quantity':
                 print('Missing canonical quantity-- adding to LciaDb')
                 self._catalog.register_quantity_ref(quantity)
                 q_can = self._tm.get_canonical(quantity)
                 print('Retrieving canonical %s' % q_can)
             else:
-                raise
+                raise TypeError(quantity)
         return q_can
 
     def make_ref(self, entity):
+        if entity.entity_type == 'fragment':
+            # TODO: create a new ForegroundQuery to eliminate the need for this hack
+            return entity  # don't make references for fragments just now
         e_ref = super(CatalogQuery, self).make_ref(entity)
         if entity.entity_type == 'quantity':
             # print('Going canonical')

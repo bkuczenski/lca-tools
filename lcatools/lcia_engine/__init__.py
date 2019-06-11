@@ -74,7 +74,7 @@ class LciaDb(Qdb):
                 ind = entity['Indicator']
             else:
                 ind = None
-            if entity.is_entity:  # not ref -- local db is authentic source - do not masquerade
+            if entity.is_entity and not entity.configured:  # local db is authentic source - do not masquerade
                 # print('LciaDb: Adding real entity %s' % entity.link)
                 q_masq = QuantityRef(entity.external_ref, self.query, entity.reference_entity,
                                      Name=entity['Name'], Indicator=ind)

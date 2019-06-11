@@ -6,6 +6,10 @@ from lcatools.entities.entities import LcEntity
 from lcatools.entity_refs.quantity_ref import QuantityRef, convert
 
 
+class QuantityAlreadyConfigured(Exception):
+    pass
+
+
 class LcQuantity(LcEntity):
 
     _ref_field = 'referenceUnit'
@@ -39,8 +43,20 @@ class LcQuantity(LcEntity):
             ref_entity = LcUnit(ref_entity)
         super(LcQuantity, self)._set_reference(ref_entity)
 
+    @property
+    def configured(self):
+        return self._qi is not None
+
     def set_qi(self, qi):
-        self._qi = qi
+        """
+        Configures the quantity to access its native term manager.  Can only be set once; otherwise ignored.
+        :param qi:
+        :return:
+        """
+        if self._qi is None:
+            self._qi = qi
+        else:
+            raise QuantityAlreadyConfigured(self)
 
     def unit(self):
         return self.reference_entity.unitstring

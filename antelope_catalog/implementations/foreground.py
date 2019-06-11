@@ -105,6 +105,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
 
     def name_fragment(self, fragment, name, **kwargs):
         self._archive.name_fragment(fragment, name)
+        return fragment
 
     def fragments_with_flow(self, flow, direction=None, reference=None, background=None, **kwargs):
         """

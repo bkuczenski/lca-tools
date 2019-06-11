@@ -233,8 +233,9 @@ class IlcdArchive(LcArchive):
     def _search_for_term(self, term, dtype=None):
         search_results = self.search_by_id(term, dtype=dtype)
         if len(search_results) > 0:
-            self._print('Found Results:')
-            [print(i) for i in search_results]
+            self._print('Found %d Results:' % len(search_results))
+            if len(search_results) < 100:
+                [print(i) for i in search_results]
             if len(search_results) > 1:
                 print('Please refine search')
                 return None
@@ -489,6 +490,9 @@ class IlcdArchive(LcArchive):
                 dtype = _extract_dtype(term, self._pathtype)
             except ValueError:
                 pass
+
+        if term is None or len(term) == 0:
+            return None
 
         o = self.objectify(term, dtype=dtype, version=version, **kwargs)
         if o is None:

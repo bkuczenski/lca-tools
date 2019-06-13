@@ -56,7 +56,7 @@ class BasicArchive(EntityStore):
     The BasicArchive should be used for all archives that only contain flows and quantities (and contexts in the future)
 
     """
-    _entity_types = set(BASIC_ENTITY_TYPES)
+    _entity_types = BASIC_ENTITY_TYPES
 
     _drop_fields = defaultdict(list)  # dict mapping entity type to fields that should be omitted from serialization
 

@@ -13,6 +13,9 @@ from .index import AntelopeIndexImplementation
 from .exceptions import AntelopeV1Error
 
 
+ANTELOPE_ENTITY_TYPES = LC_ENTITY_TYPES + tuple(filter(lambda k: k not in LC_ENTITY_TYPES, FOREGROUND_ENTITY_TYPES))
+
+
 import requests
 
 try:
@@ -58,7 +61,7 @@ class AntelopeV1Client(BasicArchive):
     Provider class for .NET-era Antelope servers.  The basic function is to rely on the interface whenever possible
     but also to cache inventory and LCIA results locally as catalog refs.
     """
-    _entity_types = set(FOREGROUND_ENTITY_TYPES).union(set(LC_ENTITY_TYPES))
+    _entity_types = ANTELOPE_ENTITY_TYPES
 
     def __init__(self, source, ref=None, **kwargs):
         """

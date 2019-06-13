@@ -21,7 +21,7 @@ class LcArchive(BasicArchive):
 
     To support processes, adds inventory, background, and configure interfaces.
     """
-    _entity_types = set(LC_ENTITY_TYPES)
+    _entity_types = LC_ENTITY_TYPES
 
     @property
     def query(self):

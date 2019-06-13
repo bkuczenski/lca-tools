@@ -50,7 +50,7 @@ class LcForeground(BasicArchive):
 
     Foreground models can be constructed flow by flow (observed from unit process inventories
     """
-    _entity_types = set(FOREGROUND_ENTITY_TYPES)
+    _entity_types = FOREGROUND_ENTITY_TYPES
     _ns_uuid_required = None
 
     def _load_entities_json(self, filename):

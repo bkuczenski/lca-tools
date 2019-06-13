@@ -2,7 +2,7 @@ import re
 import gzip as gz
 import json
 
-from eight import USING_PYTHON2
+import six
 
 
 def from_json(fname):
@@ -13,7 +13,7 @@ def from_json(fname):
     """
     print('Loading JSON data from %s:' % fname)
     if bool(re.search('\.gz$', fname)):
-        if USING_PYTHON2:
+        if six.PY2:
             with gz.open(fname, 'r') as fp:
                 j = json.load(fp)
         else:

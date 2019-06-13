@@ -178,7 +178,7 @@ class CalRecycleImporter(object):
         try:
             fg = cat.get_archive(origin, 'foreground')
         except ResourceNotFound:
-            cat.create_foreground(fg_path, ref=origin)  # currently this returns an interface- but op requires archive
+            cat.foreground(fg_path, ref=origin)  # currently this returns an interface- but op requires archive
             fg = cat.get_archive(origin, 'foreground')
 
         if fg.count_by_type('fragment') < len(imp.ff):

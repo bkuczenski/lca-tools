@@ -12,7 +12,7 @@ class FgImplementationTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.cat = LcCatalog(WORKING_DIR)
-        cls.fg = cls.cat.create_foreground('fg', ref=test_ref)
+        cls.fg = cls.cat.foreground('fg', ref=test_ref)
 
     def test_new_flow(self):
         f = self.fg.new_flow('Test flow', 'mass')
@@ -24,6 +24,15 @@ class FgImplementationTest(unittest.TestCase):
         f = self.fg.new_flow('a silly flow', 'number of items')
         frag = self.fg.new_fragment(f, 'Output')
         self.assertIs(self.fg.frag(frag.uuid[:3]), frag)
+
+    def test_named_frag(self):
+        f = self.fg.new_flow('a reference flow')
+        frag_name = 'a stupendous fragment'
+        frag = self.fg.new_fragment(f, 'Output', external_ref=frag_name)
+        self.assertIs(self.fg.get(frag_name), frag)
+        self.assertIs(self.fg.get(frag.uuid), frag)
+        with self.assertRaises(ValueError):
+            self.fg.new_fragment(f, 'Output', external_ref=frag_name)
 
     @classmethod
     def tearDownClass(cls):

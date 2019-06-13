@@ -623,7 +623,7 @@ class LcCatalog(object):
         org, ext = link.split('/', maxsplit=1)
         return self.fetch(org, ext)
 
-    def create_foreground(self, path, ref=None, quiet=True, reset=False):
+    def foreground(self, path, ref=None, quiet=True, reset=False, delete=False):
         """
         Creates or activates a foreground as a sub-folder within the catalog's root directory.  Returns a
         Foreground interface.
@@ -631,13 +631,25 @@ class LcCatalog(object):
         :param ref: semantic reference (optional)
         :param quiet: passed to fg archive
         :param reset: [False] if True, clear the archive and create it from scratch, before returning the interface
+        :param delete: [False] if True, delete the existing tree completely and irreversibly. actually just rename
+        the directory to whatever-DELETED; but if this gets overwritten, there's no going back.  Overrides reset.
         :return:
         """
         if not os.path.isabs(path):
             path = os.path.join(self._rootdir, path)
 
-        local_path = self._localize_source(os.path.abspath(path))
+        abs_path = os.path.abspath(path)
+        local_path = self._localize_source(abs_path)
         _fg_path = re.sub('^\$CAT_ROOT', '', local_path)
+
+        if delete:
+            if os.path.exists(abs_path):
+                del_path = abs_path + '-DELETED'
+                if os.path.exists(del_path):
+                    rmtree(del_path)
+                os.rename(abs_path, del_path)
+            for k in self._resolver.resources_with_source(local_path):
+                self.delete_resource(k, delete_source=True, delete_cache=True)
 
         if ref is None:
             ref = local_ref(_fg_path, prefix='foreground')

@@ -130,6 +130,13 @@ class LcFlow(LcEntity, FlowInterface):
         context = '[%s]' % ';'.join(self.context)
         return '%s%s %s' % (self.get('Name'), cas, context)
 
+    def characterize(self, quantity, value, context=None, **kwargs):
+        if context is None:
+            context = self.context
+        flowable = self.link
+        return quantity.characterize(flowable, self.reference_entity, value, context=context, origin=self.origin,
+                                     **kwargs)
+
     '''
     def profile(self):
         print('%s' % self)

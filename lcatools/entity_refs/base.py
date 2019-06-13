@@ -98,7 +98,7 @@ class BaseRef(object):
 
     def get(self, item, default=None):
         try:
-            self.__getitem__(item)
+            return self.__getitem__(item)
         except KeyError:
             return default
 
@@ -203,7 +203,9 @@ class BaseRef(object):
         }
         if self._etype is not None:
             j['entityType'] = self._etype
-        j.update(self._d)
+        # j.update(self._d)  ## don't want this
+        if 'Name' in self._d:
+            j['Name'] = self._d['Name']
         return j
 
 

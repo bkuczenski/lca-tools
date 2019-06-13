@@ -210,9 +210,6 @@ class LcFragment(LcEntity):
         else:
             raise PropertyExists('External Ref already set to %s' % self._external_ref)
 
-    def __hash__(self):
-        return hash((self.origin, self.uuid))
-
     def set_debug_threshold(self, level):
         self.__dbg_threshold = level
 

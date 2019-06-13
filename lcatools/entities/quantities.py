@@ -151,7 +151,7 @@ class LcQuantity(LcEntity):
     def __hash__(self):
         if self._origin is None:
             raise AttributeError('Origin not set!')
-        return hash((self.origin, self.external_ref))
+        return hash(self.link)
 
 
 class LcUnit(object):

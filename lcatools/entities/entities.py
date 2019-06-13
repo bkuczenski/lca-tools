@@ -332,7 +332,7 @@ class LcEntity(object):
         """
         if self._origin is None:
             raise AttributeError('Origin not set!')
-        return hash((self.origin, self.external_ref))
+        return hash(self.link)
 
     def __eq__(self, other):
         """

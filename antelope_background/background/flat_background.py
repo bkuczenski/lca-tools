@@ -323,6 +323,10 @@ class FlatBackground(object):
         return len(self._fg)
 
     @property
+    def mdim(self):
+        return len(self._ex)
+
+    @property
     def fg(self):
         return self._fg
 
@@ -533,9 +537,9 @@ class FlatBackground(object):
         to_json(ix, ix_filename, gzip=True)
 
     def _write_mat(self, filename, complete=True):
-        d = {'Af': csr_matrix((0, 0)) if self._af is None else self._af,
-             'Ad': csr_matrix((0, 0)) if self._ad is None else self._ad,
-             'Bf': csr_matrix((0, 0)) if self._bf is None else self._bf}
+        d = {'Af': csr_matrix((self.pdim, self.pdim)) if self._af is None else self._af,
+             'Ad': csr_matrix((self.ndim, self.pdim)) if self._ad is None else self._ad,
+             'Bf': csr_matrix((self.mdim, self.pdim)) if self._bf is None else self._bf}
         if complete and self._complete:
             d['A'] = self._A
             d['B'] = self._B

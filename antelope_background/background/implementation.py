@@ -104,7 +104,7 @@ class TarjanBackgroundImplementation(BackgroundImplementation):
             elif hasattr(arg, 'entity_type'):
                 if arg.entity_type == 'process':
                     process_ref = arg.external_ref
-                    flow_ref = arg.reference(opt_arg)
+                    flow_ref = arg.reference(opt_arg).flow.external_ref
                 elif arg.entity_type == 'exchange':
                     if not arg.is_reference:
                         raise ValueError('Exchange argument must be reference exchange')

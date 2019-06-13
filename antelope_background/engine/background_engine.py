@@ -13,6 +13,8 @@ import numpy as np
 import scipy as sp
 from scipy.sparse import csc_matrix, csr_matrix
 
+from lcatools.interfaces import comp_dir
+
 from .tarjan_stack import TarjanStack
 from .product_flow import ProductFlow, NoMatchingReference
 from .emission import Emission
@@ -535,8 +537,8 @@ class BackgroundEngine(object):
             else:
                 self._cutoff.append(k)
 
-        if self.tstack.background is None:
-            return
+        # if self.tstack.background is None:
+        #     return
 
         if self._a_matrix is None:
             self._construct_a_matrix()
@@ -652,6 +654,11 @@ class BackgroundEngine(object):
             if val is None or val == 0:
                 # don't add zero entries (or descendants) to sparse matrix
                 continue
+            if exch.flow == rx.flow and exch.direction == comp_dir(rx.direction) and val == 1.0:
+                # skip pass-thru flows
+                print('Skipping pass-thru exchange: %s' % exch)
+                continue
+
             # interior flow-- enforce normative direction
             if exch.direction == 'Output':
                 pval *= -1

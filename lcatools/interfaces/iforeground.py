@@ -26,17 +26,17 @@ _interface = 'foreground'
 
 
 class ForegroundInterface(AbstractQuery):
-    def new_flow(self, name, ref_quantity, context=None, **kwargs):
+    def new_flow(self, name, ref_quantity=None, context=None, **kwargs):
         """
         Creates a new flow entity and adds it to the foreground
         :param name: required flow name
-        :param ref_quantity:
-        :param context: [None] Required for elementary flows. Should be a string
+        :param ref_quantity: [None] implementation must handle None / specify a default
+        :param context: [None] Required if flow is strictly elementary. Should be a tuple
         :param kwargs:
         :return:
         """
         return self._perform_query(_interface, 'new_flow', ForegroundRequired('Foreground access required'),
-                                   name, ref_quantity, context=context,
+                                   name, ref_quantity=ref_quantity, context=context,
                                    **kwargs)
 
     def fragments(self, show_all=False, **kwargs):

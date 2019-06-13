@@ -79,11 +79,11 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
     '''
     Create and modify fragments
     '''
-    def new_flow(self, name, ref_quantity, context=None, **kwargs):
+    def new_flow(self, name, ref_quantity=None, context=None, **kwargs):
         """
 
         :param name:
-        :param ref_quantity:
+        :param ref_quantity: defaults to "Number of items"
         :param context: [None] pending context refactor
         :param kwargs:
         :return:
@@ -91,6 +91,8 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         if CONTEXT_STATUS_ == 'compat':
             if context is not None and 'compartment' not in kwargs:
                 kwargs['compartment'] = str(context)
+        if ref_quantity is None:
+            ref_quantity = 'Number of items'
         ref_q = self._get_canonical(ref_quantity)
         f = new_flow(name, ref_q, **kwargs)
         self._archive.add_entity_and_children(f)

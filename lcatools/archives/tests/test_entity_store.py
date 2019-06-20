@@ -23,7 +23,7 @@ class ArchiveInterfaceTest(unittest.TestCase):
 
     def test_new_ref(self):
         now = datetime.now().strftime('%Y%m%d')
-        self.assertEqual(self._ar._construct_new_ref('bumped'), '.'.join([phony_ref_bumped, now]))
+        self.assertEqual(self._ar.construct_new_ref('bumped'), '.'.join([phony_ref_bumped, now]))
 
     def test_nsuuid(self):
         """

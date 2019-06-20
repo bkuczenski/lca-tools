@@ -1,5 +1,11 @@
 """
+A repository of typed entities, retrievable by their external reference
 
+Entity object API:
+  entity.entity_type --> string used for groupung
+  entity.external_ref --> lookup name
+  entity.origin --> one-time settable parameter, set by the entity store
+  entity.validate() --> must return True
 
 """
 from __future__ import print_function, unicode_literals
@@ -14,8 +20,6 @@ from collections import defaultdict
 
 from ..interfaces import local_ref
 from ..from_json import to_json
-
-LD_CONTEXT = 'https://bkuczenski.github.io/lca-tools-datafiles/context.jsonld'
 
 
 # CatalogRef = namedtuple('CatalogRef', ['archive', 'id'])
@@ -62,31 +66,6 @@ class InvalidSemanticReference(Exception):
 
 class ReferenceCreationError(Exception):
     pass
-
-
-def construct_new_ref(ref, signifier):
-    new_date = datetime.now().strftime('%Y%m%d')
-    old_tail = ref.split('.')[-1]
-    if signifier is None:
-        if old_tail == new_date:
-            new_tail = datetime.now().strftime('%Y%m%d-%H%M')
-        else:
-            new_tail = new_date
-    else:
-        if not bool(re.match('[A-Za-z0-9_-]+', signifier)):
-            raise ValueError('Invalid signifier %s' % signifier)
-        new_tail = '.'.join([signifier, new_date])
-
-    if bool(re.search('[0-9-]{6,}$', old_tail)):
-        # strip trailing date
-        new_ref = '.'.join(ref.split('.')[:-1])
-    else:
-        # use current if no date found
-        new_ref = ref
-    new_ref = '.'.join([new_ref, new_tail])
-    if new_ref == ref:
-        raise ReferenceCreationError('%s == %s', (new_ref, ref))
-    return new_ref
 
 
 class EntityStore(object):
@@ -357,26 +336,30 @@ class EntityStore(object):
         for d in s:
             yield d
 
-    def _construct_new_ref(self, signifier):
-        new_date = datetime.now().strftime('%Y%m%d')
-        old_tail = self.ref.split('.')[-1]
+    def construct_new_ref(self, signifier):
+        today = datetime.now().strftime('%Y%m%d')
         if signifier is None:
-            if old_tail == new_date:
-                new_tail = datetime.now().strftime('%Y%m%d-%H%M')
-            else:
-                new_tail = new_date
+            new_tail = today
         else:
             if not bool(re.match('[A-Za-z0-9_-]+', signifier)):
                 raise ValueError('Invalid signifier %s' % signifier)
-            new_tail = '.'.join([signifier, new_date])
+            new_tail = '.'.join([signifier, datetime.now().strftime('%Y%m%d')])
 
-        if bool(re.search('[0-9-]{6,}$', old_tail)):
-            # strip trailing date
-            new_ref = '.'.join(self.ref.split('.')[:-1])
-        else:
-            # use current if no date found
-            new_ref = self.ref
-        new_ref = '.'.join([new_ref, new_tail])
+        if len(self.ref.split('.')) > 2:  # must be true to be postfixing a postfix
+            old_tail = '.'.join(self.ref.split('.')[-2:])
+            if old_tail.startswith(new_tail):
+                hm = '.' + datetime.now().strftime('-%H%M')
+                if old_tail.startswith(new_tail + hm):
+                    hm += datetime.now().strftime('%S')
+                    if old_tail.startswith(new_tail + hm):
+                        raise ReferenceCreationError('HMS? %s', (self.ref, hm))
+                new_tail += hm
+
+            elif old_tail.find('.' + today) >= 0 and signifier is not None:
+                # don't reprint the date if it already shows up
+                new_tail = signifier
+
+        new_ref = '.'.join([self.ref, new_tail])
         return new_ref
 
     def create_descendant(self, archive_path, signifier=None, force=False):
@@ -401,7 +384,7 @@ class EntityStore(object):
         if not os.path.exists(archive_path):
             os.makedirs(archive_path)
 
-        new_ref = self._construct_new_ref(signifier)
+        new_ref = self.construct_new_ref(signifier)
         if new_ref == self.ref:
             raise KeyError('Refs are the same!')  # KeyError bc it's a key in catalog_names
 
@@ -537,6 +520,7 @@ class EntityStore(object):
             if not (self._quiet or quiet):
                 print('Adding %s entity with %s: %s' % (entity.entity_type, key, entity['Name']))
             if entity.origin is None:
+                # TODO: uncomment / enforce this
                 # assert self._ref_to_key(entity.external_ref) == key, 'entity uuid must match origin repository key!'
                 entity.origin = self.ref
             self._entities[key] = entity
@@ -670,7 +654,6 @@ class EntityStore(object):
 
     def serialize(self, **kwargs):
         j = {
-            '@context': LD_CONTEXT,
             'dataSourceType': self.__class__.__name__,
             'dataSource': self.source,
             'catalogNames': {k: sorted(filter(None, s)) for k, s in self._catalog_names.items()},

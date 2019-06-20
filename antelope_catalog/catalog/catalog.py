@@ -648,7 +648,8 @@ class LcCatalog(object):
                 if os.path.exists(del_path):
                     rmtree(del_path)
                 os.rename(abs_path, del_path)
-            for k in self._resolver.resources_with_source(local_path):
+            dels = [k for k in self._resolver.resources_with_source(local_path)]
+            for k in dels:
                 self.delete_resource(k, delete_source=True, delete_cache=True)
 
         if ref is None:

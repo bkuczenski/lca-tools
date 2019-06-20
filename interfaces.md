@@ -128,7 +128,7 @@ ArchiveInterface:
 
     make_interface [overloads]
 
-    _construct_new_ref <- create_descendant
+    construct_new_ref <- create_descendant
 
     entities [0]
 

@@ -351,6 +351,10 @@ class SynonymDict(object):
         for t in sorted(self._l[ent].values()):
             yield t
 
+    def items(self):
+        for k, v in self._d.items():
+            yield k, v.object
+
     def __len__(self):
         return len(self._l)
 

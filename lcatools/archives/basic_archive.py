@@ -29,6 +29,8 @@ class ArchiveError(Exception):
     pass
 
 
+LD_CONTEXT = 'https://bkuczenski.github.io/lca-tools-datafiles/context.jsonld'
+
 BASIC_ENTITY_TYPES = ('quantity', 'flow')
 
 
@@ -440,6 +442,8 @@ class BasicArchive(EntityStore):
         :return:
         """
         j = super(BasicArchive, self).serialize()
+        j['@context'] = LD_CONTEXT
+
         j['flows'] = sorted([f.serialize(domesticate=domesticate, drop_fields=self._drop_fields['flow'])
                              for f in self.entities_by_type('flow')],
                             key=lambda x: x['externalId'])

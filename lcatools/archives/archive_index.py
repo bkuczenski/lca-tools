@@ -2,7 +2,6 @@ import os
 import re
 from collections import defaultdict
 
-from .entity_store import construct_new_ref
 from .basic_archive import BasicArchive, BASIC_ENTITY_TYPES, InterfaceError, ArchiveError
 from .lc_archive import LcArchive, LC_ENTITY_TYPES
 from ..implementations import BasicImplementation, IndexImplementation
@@ -42,7 +41,7 @@ def index_archive(archive, source, ref=None, signifier='index', force=False):
             raise FileExistsError(source)
 
     if ref is None or ref == archive.ref:
-        ref = construct_new_ref(archive.ref, signifier=signifier)
+        ref = archive.construct_new_ref(signifier=signifier)
 
     if isinstance(archive, LcArchive):
         index = LcIndex(source, ref=ref, static=True, **archive.init_args)

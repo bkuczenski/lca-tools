@@ -9,24 +9,6 @@ class QuantityAlreadySet(Exception):
     pass
 
 
-def _quantity_terms(quantity):
-    yield quantity['Name']
-    yield quantity.name
-    yield str(quantity)  # this is the same as above for entities, but includes origin for refs
-    yield quantity.external_ref  # do we definitely want this?  will squash versions together
-    if quantity.uuid is not None:
-        yield quantity.uuid
-    if quantity.origin is not None:
-        yield quantity.link
-    if quantity.has_property('Synonyms'):
-        syns = quantity['Synonyms']
-        if isinstance(syns, str):
-            yield syns
-        else:
-            for syn in syns:
-                yield syn
-
-
 class QuantitySynonyms(SynonymSet):
     """
     QuantitySynonyms are string terms that all refer to the same quantity of measure. They must all have the same
@@ -36,7 +18,7 @@ class QuantitySynonyms(SynonymSet):
     """
     @classmethod
     def new(cls, quantity):
-        return cls(*_quantity_terms(quantity), quantity=quantity)
+        return cls(*quantity.quantity_terms(), quantity=quantity)
 
     def _validate_quantity(self, quantity):
         if not hasattr(quantity, 'entity_type'):
@@ -68,7 +50,7 @@ class QuantitySynonyms(SynonymSet):
             if self._validate_quantity(item):
                 self._quantity = item
                 self._unit = item.unit()
-                for term in _quantity_terms(item):
+                for term in item.quantity_terms():
                     self.add_term(term)
             else:
                 raise TypeError('Quantity fails validation (%s)' % type(item))
@@ -127,7 +109,7 @@ class QuantityManager(SynonymDict):
     def find_matching_quantity(self, quantity):
         if isinstance(quantity, str):
             return self[quantity]
-        for term in _quantity_terms(quantity):
+        for term in quantity.quantity_terms():
             if term in self:
                 return self[term]
         raise KeyError(quantity)

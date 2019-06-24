@@ -43,6 +43,23 @@ class LcQuantity(LcEntity):
             ref_entity = LcUnit(ref_entity)
         super(LcQuantity, self)._set_reference(ref_entity)
 
+    def quantity_terms(self):
+        yield self['Name']
+        yield self.name
+        yield str(self)  # this is the same as above for entities, but includes origin for refs
+        yield self.external_ref  # do we definitely want this?  will squash versions together
+        if self.uuid is not None:
+            yield self.uuid
+        if self.origin is not None:
+            yield self.link
+        if self.has_property('Synonyms'):
+            syns = self['Synonyms']
+            if isinstance(syns, str):
+                yield syns
+            else:
+                for syn in syns:
+                    yield syn
+
     @property
     def configured(self):
         return self._qi is not None

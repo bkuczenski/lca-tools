@@ -500,7 +500,7 @@ class EntityStore(object):
         :param entity:
         :return:
         """
-        if entity.uuid is None:
+        if hasattr(entity, 'uuid') and entity.uuid is None:
             uu = self._ref_to_uuid(entity.external_ref)
             if uu is not None:
                 entity.uuid = uu

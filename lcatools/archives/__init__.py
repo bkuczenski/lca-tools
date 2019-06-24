@@ -1,6 +1,7 @@
 from .entity_store import EntityStore, SourceAlreadyKnown, EntityExists, uuid_regex
 from .basic_archive import BasicArchive, BASIC_ENTITY_TYPES, InterfaceError, ArchiveError
 from .archive_index import index_archive, BasicIndex, LcIndex
+from .term_manager import TermManager
 from .lc_archive import LcArchive, LC_ENTITY_TYPES
 from ..from_json import from_json
 

@@ -123,9 +123,6 @@ class DummyFlow(FlowInterface):
         def __getitem__(self, key):
             return 'Dummy Property'
 
-        def has_property(self, key):
-            return False
-
         @property
         def link(self):
             return '%s/%s' % (self.origin, self.external_ref)
@@ -133,6 +130,11 @@ class DummyFlow(FlowInterface):
         @staticmethod
         def unit():
             return 'd'
+
+        def quantity_terms(self):
+            yield self.name
+            yield self.external_ref
+            yield self.link
 
     _reference_entity = DummyQuantity()
 

@@ -119,6 +119,8 @@ class LciaEngine(TermManager):
         :return:
         """
         for hint_type, term, canonical in hints:
+            if term in self.synonyms(canonical):
+                continue
             if hint_type == 'context':
                 print('Applying context hint %s:%s => %s' % (origin, term, canonical))
                 self._cm.add_context_hint(origin, term, canonical)

@@ -654,7 +654,7 @@ class BackgroundEngine(object):
             if val is None or val == 0:
                 # don't add zero entries (or descendants) to sparse matrix
                 continue
-            if exch.flow == rx.flow and exch.direction == comp_dir(rx.direction) and val == 1.0:
+            if exch.flow == rx.flow and exch.direction == comp_dir(rx.direction) and val == 1.0 and exch.type == 'cutoff':
                 # skip pass-thru flows
                 print('Skipping pass-thru exchange: %s' % exch)
                 continue

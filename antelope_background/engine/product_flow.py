@@ -39,7 +39,7 @@ class ProductFlow(object):
 
         try:
             ref_exch = process.reference(flow)
-        except StopIteration:
+        except KeyError:
             print('##! flow %s - termination %s : no reference found!##' % self._hash)
             raise NoMatchingReference
 

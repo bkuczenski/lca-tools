@@ -118,16 +118,16 @@ class LcForegroundTestCase(unittest.TestCase):
 
     def test_7_different_origins(self):
         my_id = uuid4()
-        q_ref_1 = CatalogRef('fictitious.origin.v1', my_id, entity_type='quantity')
-        q_ref_2 = CatalogRef('fictitious.origin.v2', my_id, entity_type='quantity')
-        self.fg.add(q_ref_1)
+        f_ref_1 = CatalogRef('fictitious.origin.v1', my_id, entity_type='flow')
+        f_ref_2 = CatalogRef('fictitious.origin.v2', my_id, entity_type='flow')
+        self.fg.add(f_ref_1)
         '''
         with self.assertRaises(EntityRefMergeError):
             # this will give an error that CatalogRefs can't merge
             self.fg.add(q_ref_2)
         '''
-        self.fg.add(q_ref_2)
-        self.assertIs(self.fg[q_ref_2.link], q_ref_2)
+        self.fg.add(f_ref_2)
+        self.assertIs(self.fg[f_ref_2.link], f_ref_2)
 
     @classmethod
     def tearDownClass(cls):

@@ -11,6 +11,10 @@ class FlowInterface(object):
     _context = ()
     _context_set_level = 0
 
+    @property
+    def link(self):
+        return NotImplemented
+
     def _catch_context(self, key, value):
         """
         Add a hook to set context in __getitem__ or wherever is appropriate, to capture and automatically set context

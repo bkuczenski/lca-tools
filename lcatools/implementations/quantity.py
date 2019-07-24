@@ -7,6 +7,7 @@ from ..characterizations import QRResult
 from ..interfaces import QuantityInterface, NoFactorsFound, ConversionReferenceMismatch, FlowableMismatch, EntityNotFound
 from ..contexts import NullContext
 from ..lcia_results import LciaResult
+from ..entity_refs import FlowInterface, convert
 
 
 class RefQuantityRequired(Exception):
@@ -300,17 +301,17 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         # TODO: port qdb functionality: detect unity conversions; quell biogenic co2; integrate convert()
         # first- check to see if the query quantity can be converted to the ref quantity directly:
         if qq is not None and rq is not None:
-            if qq.has_property('UnitConversion'):
+            if hasattr(qq, 'has_property') and qq.has_property('UnitConversion'):
                 try:
-                    fac = qq.convert(from_unit=rq.unit())
+                    fac = convert(qq, from_unit=rq.unit())
                     qr_results = [QRResult(flowable, rq, qq, context, locale, qq.origin, fac) ]
                     return qr_results, [], []
                 except KeyError:
                     pass
 
-            if rq.has_property('UnitConversion'):
+            if hasattr(rq, 'has_property') and rq.has_property('UnitConversion'):
                 try:
-                    fac = rq.convert(to=qq.unit())
+                    fac = convert(rq, to=qq.unit())
                     qr_results = [QRResult(flowable, rq, qq, context, locale, rq.origin, fac) ]
                     return qr_results, [], []
                 except KeyError:
@@ -359,28 +360,26 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         :param context:
         :return: flowable, canonical ref_quantity, canonical context or None
         """
-        if hasattr(flow, 'entity_type'):
-            if flow.entity_type == 'flow':
-                flowable = flow.link
-            else:
-                raise TypeError('Flowable expected, %s given' % type(flow))
+        if isinstance(flow, str):
+            f = self.get(flow)  # assume it's a ref
+
+            if f is not None:  # lookup succeeded
+                flow = f
+
+        if isinstance(flow, FlowInterface):
+            flowable = flow.link
             if ref_quantity is None:
                 ref_quantity = flow.reference_entity
             if context is None:
                 context = flow.context
         else:
-            f = self.get(flow)  # assume
-
-            if f is None:  # lookup failed
-                if ref_quantity is None:
-                    raise RefQuantityRequired
-                flowable = flow
+            if hasattr(flow, 'link'):
+                flowable = flow.link
             else:
-                flowable = f.link
-                if ref_quantity is None:
-                    ref_quantity = f.reference_entity
-                if context is None:
-                    context = f.context
+                flowable = str(flow)
+
+        if ref_quantity is None:
+            raise RefQuantityRequired
 
         rq = self.get_canonical(ref_quantity)
         cx = self._archive.tm[context]  # will fall back to find_matching_context if tm is an LciaEngine

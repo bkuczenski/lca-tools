@@ -220,6 +220,8 @@ class TermManager(object):
         :param flow:
         :return:
         """
+        if not hasattr(flow, 'context'):
+            return NullContext
         try:
             _c = self._cm[flow.context]
         except KeyError:
@@ -376,7 +378,7 @@ class TermManager(object):
         :param merge_strategy: overrule default merge strategy
         :return: the Flowable object to which the flow's terms have been added
         """
-        if flow.reference_entity is not None:
+        if hasattr(flow, 'reference_entity') and flow.reference_entity is not None:
             self.add_quantity(flow.reference_entity)  # ensure exists
         cx = self._check_context(flow)
         if cx is NullContext:
@@ -450,6 +452,7 @@ class TermManager(object):
     def _find_exact_cf(self, qq, fb, cx, origin):
         """
         The purpose of this function is to retrieve an exact CF if one exists.
+        WHY does this not take rq into account??
 
         origin used in subclasses
         :param qq:

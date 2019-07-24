@@ -1,4 +1,15 @@
 ==========
+Tue Jul 16 15:56:29 -0700 2019
+
+Time marches on and I get further and further behind.
+Right now, ostensibly, my task is to get the MFA working but instead I find myself pondering flows and flowables and flow interfaces and entity refs and synonyms and quantity terms.  My entities are hopelessly overengineered, but:
+ (1) fixing them should not block progress on the CATRA project
+ (2) fixing them requires clear thinking and not hasty hacks.
+
+So I am going to rollback all the current changes, and take on the entity interface later in time.
+
+
+==========
 Sun Jun 02 22:36:42 -0700 2019
 
 Ok, all that is fixed and now-- the 13th hour-- I am poised at the threshold when I see another problem that doubtless has a solution, though I can't immediately see it:

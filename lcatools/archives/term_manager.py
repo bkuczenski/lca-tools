@@ -344,7 +344,7 @@ class TermManager(object):
         elif len(fb_map) == 1:  # one existing match
             fb = list(fb_map.keys())[0]
             for term in new_terms:
-                self._fm.add_synonym(term, str(fb))
+                self._fm.add_synonym(str(fb), term)
         else:  # > 2 matches-- invoke merge strategy
             if merge_strategy == 'prune':
                 self._print('\nPruning entry for %s' % flow)
@@ -357,7 +357,7 @@ class TermManager(object):
                 if isinstance(fb, list):
                     raise FactorCollision(fb)
                 for term in new_terms:
-                    self._fm.add_synonym(term, str(fb))
+                    self._fm.add_synonym(str(fb), term)
             else:
                 raise ValueError('merge strategy %s' % self._merge_strategy)
         # log the flowables that match the flow

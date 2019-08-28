@@ -311,16 +311,16 @@ class SynonymDict(object):
     def add_synonym(self, term, syn):
         """
         Add a new term as a synonym to an existing term
-        :param term: the new term
-        :param syn: the existing synonym
+        :param term: the existing term
+        :param syn: the new synonym
         :return:
         """
-        term = str(term)
-        if isinstance(syn, self._syn_type):
-            syn = syn.name
-        ent = self._d[syn]
-        self._add_term(term, ent)  # checks TermExists
-        ent.add_term(term)
+        syn = str(syn)
+        if isinstance(term, self._syn_type):
+            term = term.name
+        ent = self._d[term]
+        self._add_term(syn, ent)  # checks TermExists
+        ent.add_term(syn)
 
     def del_term(self, term):
         """

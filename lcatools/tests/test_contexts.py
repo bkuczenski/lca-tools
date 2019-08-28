@@ -93,7 +93,7 @@ class ContextManagerTest(CompartmentContainer.CompartmentManagerTest):
     def _add_water_context(self):
         self._add_water_dict()
         c = self.cm.add_compartments(('to water', 'to groundwater'))
-        self.cm.add_synonym('ground-', c)
+        self.cm.add_synonym(c, 'ground-')
 
     def test_unspecified(self):
         c = self.cm.add_compartments(['emissions', 'water', 'unspecified'])

@@ -223,7 +223,7 @@ class ContextManager(CompartmentManager):
         if c is None:
             raise ValueError('Unrecognized canonical context %s' % c)
         syn = '%s:%s' % (origin, term)
-        self.add_synonym(syn, c)
+        self.add_synonym(c, syn)
 
     def _disregard(self, comp):
         """
@@ -311,15 +311,15 @@ class ContextManager(CompartmentManager):
                     current = next(self._gen_matching_entries(this, None))
                 except StopIteration:
                     continue
-                self.add_synonym(this.fullname, current)
+                self.add_synonym(current, this.fullname)
             else:
                 try:
                     nxt = next(k for k in self._gen_matching_entries(this, current.sense)
                                if k.is_subcompartment(current))
-                    self.add_synonym(this.fullname, nxt)
+                    self.add_synonym(nxt, this.fullname)
                     current = nxt
                 except StopIteration:
-                    self.add_synonym(this.fullname, current)
+                    self.add_synonym(current, this.fullname)
         return current
 
     def _check_subcompartment_lineage(self, current, c):

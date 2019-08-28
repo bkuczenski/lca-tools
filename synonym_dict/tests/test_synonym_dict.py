@@ -97,13 +97,13 @@ class TestContainer(object):
             g = self._test_class(ignore_case=True)
             g.new_entry('hello', 'bonjour')
             self.assertEqual(g[' bonjour'], 'hello')
-            g.add_synonym(' GREETINGS  ', 'bonjour ')
+            g.add_synonym('bonjour ', ' GREETINGS  ')
             self.assertEqual(g['greetings'], 'hello')
 
         def test_disallow_empty_string_silently(self):
             g = self._test_class()
             g.new_entry('hello', 'bonjour')
-            g.add_synonym('', 'hello')
+            g.add_synonym('hello', '')
             self.assertNotIn('', g)
 
         def test_serialize(self):
@@ -141,7 +141,7 @@ class TestContainer(object):
         def test_add_synonym(self):
             g = self._test_class()
             o1 = g.new_entry('hello', 'hola', 'hi', 'aloha')
-            g.add_synonym('greetings', 'hi')
+            g.add_synonym('hi', 'greetings')
             self.assertIn('greetings', o1)
             self.assertEqual(g['greetings'], g['hello'])
 
@@ -149,7 +149,7 @@ class TestContainer(object):
             g = self._test_class()
             o1 = g.new_entry('hello', 'hola')
             self.assertIsInstance(o1, g._syn_type)
-            g.add_synonym('greetings', o1)
+            g.add_synonym(o1, 'greetings')
             self.assertEqual(g['greetings'], g['hola'])
 
         def test_prune(self):

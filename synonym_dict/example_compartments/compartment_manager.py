@@ -187,7 +187,7 @@ class CompartmentManager(SynonymDict):
                     raise e
 
             current = new
-        self.add_synonym(auto_name, current.name)
+        self.add_synonym(current.name, auto_name)
         return current
 
     def __getitem__(self, item):

@@ -8,11 +8,12 @@ from antelope_catalog.providers.file_store import FileStore
 
 FILE_PREFIX = ('current_Version_', 'ecoinvent ')
 FILE_EXT = ('7z', 'zip')
-ECOINVENT_SYS_MODELS = ('apos', 'conseq', 'cutoff')
+ECOINVENT_SYS_MODELS = ('apos', 'conseq', 'cutoff', 'undefined')
 MODELMAP = {
     'apos': ('apos',),
     'conseq': ('consequential', 'consequential_longterm'),
-    'cutoff': ('cutoff',)
+    'cutoff': ('cutoff',),
+    'undefined': ('undefined', )
 }
 
 E_CFG = {'hints': [  # cover elementary contexts that need directional hints, plus units used in elementary flows only
@@ -60,7 +61,11 @@ class Ecoinvent3Base(DataSource):
         if ref in self._lci_ref:
             yield self._make_resource(ref, self.lci_source, interfaces='inventory', prefix='datasets', config=E_CFG)
         elif ref in self._inv_ref:
-            yield self._make_resource(ref, self.inv_source, interfaces='inventory', prefix='datasets', config=E_CFG)
+            if self._model == 'undefined':
+                yield self._make_resource(ref, self.inv_source, interfaces='inventory', prefix='datasets - public',
+                                          linked=False, config=E_CFG)
+            else:
+                yield self._make_resource(ref, self.inv_source, interfaces='inventory', prefix='datasets', config=E_CFG)
 
     def _fname(self, ftype=None):
         precheck = os.path.join(self.root, self._model)

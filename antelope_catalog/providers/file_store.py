@@ -286,10 +286,13 @@ class FileStore(object):
             return file.read()
 
         elif self.compressed:
-            file = {
-                '7z': lambda x: self._archive.getmember(x),
-                'zip': lambda x: self._archive.open(x)
-            }[self.ext](self._prefix(fname))
+            try:
+                file = {
+                    '7z': lambda x: self._archive.getmember(x),
+                    'zip': lambda x: self._archive.open(x)
+                }[self.ext](self._prefix(fname))
+            except KeyError:
+                raise FileNotFoundError(self._prefix(fname))
             if file is None:
                 return file
             else:

@@ -235,6 +235,8 @@ class LcProcess(LcEntity):
                 self._reference_entity.add(ref_entity)
             else:
                 raise ReferenceSettingFailed('%s\n%s' % (self, ref_entity))
+        else:
+            raise NoExchangeFound
         if self.alloc_qty is not None:
             self.allocate_by_quantity(self._alloc_by_quantity)
 
@@ -422,14 +424,12 @@ class LcProcess(LcEntity):
         """
         Removes an existing terminated exchange and replaces it with an unterminated one
         """
-        exs = [k for k in self._gen_exchanges(flow, dirn)]
+        exs = [k for k in self._gen_exchanges(flow, dirn) if k.termination is not None]
         if len(exs) > 1:
-            raise DuplicateExchangeError('%d exchanges found for %s: %s' % (len(exs), dirn, flow))
+            raise DuplicateExchangeError('%d terminated exchanges found for %s: %s' % (len(exs), dirn, flow))
         elif len(exs) == 0:
-            raise NoExchangeFound
+            return  # NoExchangeFound in _set_reference instead of here
         ex = exs[0]
-        if ex.termination is None:
-            return
 
         old = self._exchanges.pop(ex.key)
         new = old.reterminate(None)

@@ -113,7 +113,12 @@ Code below this line is used by the local init machinery to setup catalogs / tes
 '''
 
 
-def make_config(resource):
+def make_config(resource=None):
+    if resource is None:
+        print('Configurable Resources:')
+        for k, v in RESOURCES_CONFIG.items():
+            print('%s: %s' % (k, v['source'].__name__))
+        return None
     d = RESOURCES_CONFIG[resource]
     return d['source'](**{k: v for k, v in d.items() if k != 'source'})
 

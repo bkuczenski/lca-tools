@@ -80,7 +80,7 @@ class OpenLcaJsonLdArchive(LcArchive):
     def _create_unit(self, unit_id):
         try:
             u_j = self._create_object('unit_groups', unit_id)
-        except KeyError:
+        except FileNotFoundError:
             return LcUnit(unit_id), None
         unitconv = dict()
         unit = None

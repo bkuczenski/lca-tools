@@ -1,4 +1,44 @@
 ==========
+Sun Oct 20 20:17:03 -0700 2019
+
+Setting up ILCD LCIA for CATRA project. Two cascading problems:
+
+ 1- despite having indexed the archive, listing LCIA methods seems to require each of them to be loaded
+ 2- duplicate characterization factors are not accepted even if strict_clookup is False
+
+We'll take them in turn:
+
+1. so right away we are running get_canonical() but that actually seems like a good idea (..?)
+
+get_canonical means, get the ref that points back to the authentic version in the LCIA db
+but that in itself shouldn't require the factors to be loaded
+do we just not know how to tell whether or not the factors have been loaded?
+
+when does import_cfs get called?
+
+That's it. That's the only time. So we expect to load the factors when we add to tm.
+
+I guess that makes sense. so the question is whether we need to get_canonical here?
+ - if we don't, what is getting returned ?
+ - let's see.
+
+I think the secret is to not require make_ref to return a canonical quantity. get_canonical is declared to load factors, but that is not required to view a ref.
+when needed, get_canonical should already be getting called so this should be error-free.
+
+Sun 2019-10-20 20:37:20 -0700
+
+Nope that doesn't work, because the reference that came back is not canonical, so it doesn't know how to do lcia.  The solution must be to delay loading factors. But we can't do that naively because the actual entity that knows how to load the factors is not the masqueraded one that is "canonical". So we have to keep it around.
+
+(note: the only time this was tested was in test_uslci so that is not auspicious)
+(but at least it was caught by an existing test)
+
+Sun 2019-10-20 21:45:56 -0700
+
+OK, that seems to be working- we simply defer loading the factors. now we are more or less cooking with gas, except we are punting on that duplicate characterization situation.
+
+
+
+==========
 Tue Jul 16 15:56:29 -0700 2019
 
 Time marches on and I get further and further behind.

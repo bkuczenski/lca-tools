@@ -88,9 +88,9 @@ class LciaDb(Qdb):
             self.tm.add_quantity(entity)  # should turn up as a child
             assert self.tm.get_canonical(entity) is q_masq
 
-            if not entity.is_entity:  # not ref
+            if not entity.is_entity:  # not local -- local ones were already imported
                 # print('LciaDb: Importing factors')
-                self.tm.import_cfs(entity)
+                self.tm.save_for_later(entity)
 
         elif isinstance(entity, FlowInterface):
             self.tm.add_flow(entity, merge_strategy=merge_strategy)

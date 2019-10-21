@@ -207,10 +207,13 @@ class LcCatalog(object):
     def load_tester(cls):
         return cls(TEST_ROOT)
 
-    def __init__(self, rootdir, **kwargs):
+    def __init__(self, rootdir, strict_clookup=True, **kwargs):
         """
         Instantiates a catalog based on the resources provided in resource_dir
         :param rootdir: directory storing LcResource files.
+        :param strict_clookup: [True] whether to enforce uniqueness on characterization factors (raise an error when a
+         non-matching duplicate characterization is encountered). If False, selection among conflicting factors is
+         not well defined and may be done interactively or unpredictably
         :param kwargs: passed to Qdb
         """
         self._rootdir = os.path.abspath(rootdir)
@@ -229,7 +232,8 @@ class LcCatalog(object):
         '''
         LCIA: 
         '''
-        qdb = LciaDb.new(source=self._reference_qtys, contexts=self._contexts, flowables=self._flowables, **kwargs)
+        qdb = LciaDb.new(source=self._reference_qtys, contexts=self._contexts, flowables=self._flowables,
+                         strict_clookup=strict_clookup, **kwargs)
         self._qdb = qdb
         self.add_existing_archive(qdb, interfaces=('index', 'quantity'), store=False)
 

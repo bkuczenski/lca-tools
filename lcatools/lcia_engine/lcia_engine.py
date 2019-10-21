@@ -24,6 +24,9 @@ biogenic = re.compile('(biotic|biogenic|non-fossil|in air)', flags=re.IGNORECASE
 DEFAULT_CONTEXTS = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data', 'contexts.json'))
 DEFAULT_FLOWABLES = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data', 'flowables.json'))
 
+class QuantityMasqueradeError(Exception):
+    pass
+
 
 class LciaEngine(TermManager):
     """
@@ -92,6 +95,14 @@ class LciaEngine(TermManager):
 
         # difficult problem, this
         self._quell_biogenic = quell_biogenic_co2
+
+        self._factors_for_later = defaultdict(bool)
+
+    def save_for_later(self, quantity):
+        qc = self.get_canonical(quantity)
+        if qc is quantity:
+            raise QuantityMasqueradeError(quantity)
+        self._factors_for_later[qc] = quantity
 
     def __getitem__(self, item):
         """
@@ -223,8 +234,10 @@ class LciaEngine(TermManager):
         except KeyError:
             qq = self.add_quantity(quantity)
 
+        count = 0
         for cf in quantity.factors():
-            print(cf)
+            count += 1
+            # print(cf)
             try:
                 fb = self._fm[cf.flowable]
             except KeyError:
@@ -233,6 +246,12 @@ class LciaEngine(TermManager):
 
             cx = self[cf.context]
             self._qassign(qq, fb, cf, context=cx)
+        self._factors_for_later[quantity] = True
+        print('Imported %d factors for %s' % (count, quantity))
+
+    def _check_factors(self, qq):
+        if hasattr(self._factors_for_later[qq], 'factors'):
+            self.import_cfs(self._factors_for_later.pop(qq))
 
     def _find_exact_cf(self, qq, fb, cx, origin):
         try:
@@ -332,6 +351,7 @@ class LciaEngine(TermManager):
         :param kwargs: used in subclasses
         :return:
         """
+        self._check_factors(qq)
         try:
             cl = self._qlookup(qq, fb)
         except NoFQEntry:
@@ -349,6 +369,11 @@ class LciaEngine(TermManager):
                 yield QuelledCF.from_cf(k, flowable=self._bio_co2)
             else:
                 yield k
+
+    def factors_for_quantity(self, quantity, flowable=None, context=None, **kwargs):
+        self._check_factors(self._canonical_q(quantity))
+        return super(LciaEngine, self).factors_for_quantity(quantity, flowable=flowable, context=context, **kwargs)
+
 
     def _serialize_qdict(self, origin, quantity, values=False):
         _ql = self._qaccess(quantity)

@@ -375,7 +375,8 @@ class IlcdArchive(LcArchive):
 
             try:
                 q = self._check_or_retrieve_child(rfp_uuid, rfp_uri)
-            except (HTTPError, XMLSyntaxError, KeyError):
+            except (HTTPError, XMLSyntaxError, FileNotFoundError):  # ??
+                print('%s: skipping characterization for %s' % (u, rfp_uuid))
                 continue
 
             if int(fp.attrib['dataSetInternalID']) == ref_to_ref:
@@ -454,7 +455,7 @@ class IlcdArchive(LcArchive):
             f_id, f_uri, f_dir = get_flow_ref(exch, ns=ns)
             try:
                 f = self._check_or_retrieve_child(f_id, f_uri)
-            except (HTTPError, XMLSyntaxError, KeyError):
+            except (HTTPError, XMLSyntaxError, FileNotFoundError):
                 u = str(find_common(o, 'UUID'))
                 print('In UUID %s:' % u)
                 f = self._create_dummy_flow_from_exch(f_id, exch)

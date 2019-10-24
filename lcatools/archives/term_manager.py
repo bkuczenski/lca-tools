@@ -481,13 +481,15 @@ class TermManager(object):
         :param quantity: a quantity entity or descriptor
         :return: a canonical quantity or raise KeyError
         """
-        if isinstance(quantity, str):
+        try:
             return self._qm[quantity]
-        elif hasattr(quantity, 'link'):
-            if quantity.link in self._qm:
-                return self._qm[quantity.link]
-            else:
-                return self._qm.find_matching_quantity(quantity)
+        except KeyError:
+            if hasattr(quantity, 'link'):
+                try:
+                    return self._qm[quantity.link]
+                except KeyError:
+                    return self._qm.find_matching_quantity(quantity)
+            return self._qm[str(quantity)]
 
     def _canonical_q_ref(self, quantity):
         return self._canonical_q(quantity).external_ref

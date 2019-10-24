@@ -270,7 +270,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         """
         if ref_quantity is None:
             raise ConversionReferenceMismatch('Cannot convert to None')
-        found_ref = self.get_canonical(res.ref)
+        found_ref = self.get_canonical(res.ref)  # this is still necessary because CFs are stored with native ref quantities
         if found_ref != ref_quantity:
             # zero look for conversions
             try:
@@ -310,15 +310,15 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
                                                                            ref_quantity))
         return res
 
-    def _quantity_conversions(self, flowable, rq, qq, context, locale='GLO',
-                             **kwargs):
+    def _quantity_engine(self, fb, rq, qq, cx, locale='GLO',
+                         **kwargs):
         """
         This is the main "comprehensive" engine for performing characterizations.
 
-        :param flowable: a string that is synonymous with a known flowable.
+        :param fb: a string that is synonymous with a known flowable.
         :param rq: a canonical ref_quantity or None
         :param qq: a canonical query_quantity or None
-        :param context: a string that is synonymous with a known context
+        :param cx: a known context
         :param locale: ['GLO']
         :param kwargs:
          dist: CLookup distance (0=exact 1=subcompartments 2=parent 3=all parents)
@@ -332,7 +332,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         # first- check to see if the query quantity can be converted to the ref quantity directly:
         if qq is not None and rq is not None:
             try:
-                qr_result = try_convert(flowable, rq, qq, context, locale)
+                qr_result = try_convert(fb, rq, qq, cx, locale)
                 return [qr_result], [], []
             except NoConversion:
                 pass
@@ -341,17 +341,17 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         qr_mismatch = []
         qr_geog = []
 
-        for cf in self._archive.tm.factors_for_flowable(flowable, quantity=qq, context=context, **kwargs):
+        for cf in self._archive.tm.factors_for_flowable(fb, quantity=qq, context=cx, **kwargs):
             res = QuantityConversion(cf.query(locale))
             try:
-                qr_results.append(self._ref_qty_conversion(rq, flowable, context, res, locale))
+                qr_results.append(self._ref_qty_conversion(rq, fb, cx, res, locale))
             except ConversionReferenceMismatch:
                 qr_mismatch.append(QuantityConversionError(res, rq))
 
-        for cf in self._archive.tm.factors_for_flowable(flowable, quantity=rq, context=context, **kwargs):
+        for cf in self._archive.tm.factors_for_flowable(fb, quantity=rq, context=cx, **kwargs):
             res = QuantityConversion(cf.query(locale))
             try:
-                qr_results.append(self._ref_qty_conversion(qq, flowable, context, res, locale).invert())
+                qr_results.append(self._ref_qty_conversion(qq, fb, cx, res, locale).invert())
             except ConversionReferenceMismatch:
                 pass  # qr_mismatch.append(res.invert())  We shouldn't be surprised that there is no reverse conversion
 
@@ -413,6 +413,9 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         """
         Return a comprehensive set of conversion results for the provided inputs.  This method catches errors and
         returns a null result if no factors are found.
+
+        This function is a wrapper to handle inputs.
+
         :param flow: a string that is synonymous with a flowable characterized by the query quantity
         :param query_quantity: convert to this quantity
         :param ref_quantity: [None] convert for 1 unit of this quantity
@@ -437,25 +440,25 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
             return [QRResult(flowable, rq, qq, context, locale, qq.origin, 1.0)], [], []
 
         try:
-            return self._quantity_conversions(flowable, rq, qq, cx, locale=locale, **kwargs)
+            return self._quantity_engine(flowable, rq, qq, cx, locale=locale, **kwargs)
         except NoFactorsFound:
             if qq is None:
                 return [], [], []
             else:
                 return [QuantityConversion.null(flowable, rq, qq, cx, locale, self.origin)], [], []
 
-    def _quantity_relation(self, flowable, ref_quantity, query_quantity, context, locale='GLO',
-                          strategy=None, allow_proxy=True, **kwargs):
+    def _quantity_relation(self, fb, rq, qq, cx, locale='GLO',
+                           strategy=None, allow_proxy=True, **kwargs):
         """
         Reports the first / best result of a quantity conversion.  Returns a single QRResult interface
         (QuantityConversion result) that converts unit of the reference quantity into the query quantity for the given
-        flowable, context, and locale (default 'GLO').
+        fb, context, and locale (default 'GLO').
         If the locale is not found, this would be a great place to run a spatial best-match algorithm.
 
-        :param flowable: [flow also allowed]
-        :param ref_quantity: None allowed if flowable is entity or locally known external_ref
-        :param query_quantity:
-        :param context: None allowed if flowable is entity or locally known external_ref
+        :param fb:
+        :param rq:
+        :param qq:
+        :param cx:
         :param locale:
         :param strategy: approach for resolving multiple-CF in dist>0.  ('highest' | 'lowest' | 'average' | ...? )
           None = return first result
@@ -464,9 +467,11 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         :param kwargs:
         :return: a QRResult object or interface
         """
-        qr_results, qr_geog, qr_mismatch = self.quantity_conversions(flowable, query_quantity,
-                                                                     ref_quantity=ref_quantity, context=context,
+        try:
+            qr_results, qr_geog, qr_mismatch = self._quantity_engine(fb, rq, qq, cx,
                                                                      locale=locale, **kwargs)
+        except NoFactorsFound:
+            qr_results, qr_geog, qr_mismatch = [QuantityConversion.null(fb, rq, qq, cx, locale, self.origin)], [], []
 
         if len(qr_results) == 0 and len(qr_geog) > 0:
             if allow_proxy:
@@ -501,11 +506,12 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
     def quantity_relation(self, flowable, ref_quantity, query_quantity, context, locale='GLO',
                           strategy=None, allow_proxy=True, **kwargs):
 
-        result, mismatch = self._quantity_relation(flowable, ref_quantity, query_quantity, context, locale=locale,
+        fb, rq, cx = self._get_flowable_info(flowable, ref_quantity, context)  # call only for exception handling
+        qq = self.get_canonical(query_quantity)
+        result, mismatch = self._quantity_relation(fb, rq, qq, cx, locale=locale,
                                                    strategy=strategy, allow_proxy=allow_proxy, **kwargs)
         if result is None:
             if len(mismatch) > 0:
-                fb, rq, _ = self._get_flowable_info(flowable, ref_quantity, context)  # call only for exception handling
                 for k in mismatch:
                     print('Conversion failure: Flowable: %s\nfrom: %s %s\nto: %s %s' % (fb, k.fail, k.fail.link,
                                                                                         rq, rq.link))
@@ -592,7 +598,8 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
             except EntityNotFound:
                 ref_q = self._archive.tm.add_quantity(x.flow.reference_entity)
             try:
-                qr, mis = self._quantity_relation(x.flow.name, ref_q, q, x.termination, locale=locale,
+                cx = self._archive.tm[x.termination]
+                qr, mis = self._quantity_relation(x.flow.name, ref_q, q, cx, locale=locale,
                                                   dist=dist, **kwargs)
                 if qr is None and len(mis) > 0:
                     res.add_error(x, mis[0])

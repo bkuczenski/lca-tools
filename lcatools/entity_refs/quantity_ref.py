@@ -93,6 +93,10 @@ class QuantityRef(EntityRef):
     def __eq__(self, other):
         if other is None:
             return False
+        if other is self:
+            return True
+        if self.link == other.link:
+            return True
         return self.is_canonical(other)
 
     def __hash__(self):

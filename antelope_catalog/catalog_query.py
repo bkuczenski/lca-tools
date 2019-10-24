@@ -112,7 +112,7 @@ class CatalogQuery(IndexInterface, BackgroundInterface, InventoryInterface, Quan
                 q_can = self._tm.get_canonical(quantity)
                 print('Retrieving canonical %s' % q_can)
             else:
-                raise TypeError(quantity)
+                raise
         return q_can
 
     def make_ref(self, entity):

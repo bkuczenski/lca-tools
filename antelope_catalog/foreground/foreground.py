@@ -220,7 +220,7 @@ class LcForeground(BasicArchive):
         try:
             self._add(entity, entity.link)
         except EntityExists:
-            if entity == self[entity.link]:
+            if entity is self[entity.link]:
                 pass
             elif entity.entity_type == 'fragment' and entity.external_ref != entity.uuid:
                 raise ValueError('Name is already taken: %s' % entity.external_ref)

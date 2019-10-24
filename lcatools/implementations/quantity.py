@@ -180,6 +180,28 @@ class QuantityConversionError(object):
                                                   self._qrr.value, self.query.unit(), self._qrr.ref.unit(), self.ref.link)
 
 
+class NoConversion(Exception):
+    pass
+
+
+def try_convert(flowable, rq, qq, context, locale):
+
+    if hasattr(qq, 'has_property') and qq.has_property('UnitConversion') and not qq.has_property('Indicator'):
+        try:
+            fac = convert(qq, from_unit=rq.unit())
+            return QRResult(flowable, rq, qq, context, locale, qq.origin, fac)
+        except KeyError:
+            pass
+
+    if hasattr(rq, 'has_property') and rq.has_property('UnitConversion') and not qq.has_property('Indicator'):
+        try:
+            fac = convert(rq, to=qq.unit())
+            return QRResult(flowable, rq, qq, context, locale, rq.origin, fac)
+        except KeyError:
+            pass
+    raise NoConversion
+
+
 class QuantityImplementation(BasicImplementation, QuantityInterface):
     """
     Uses the archive's term manager to index cfs, by way of the canonical quantities
@@ -205,7 +227,8 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
             elif hasattr(quantity, 'entity_type') and quantity.entity_type == 'quantity':
                 self._archive.add_entity_and_children(quantity)
                 return self._archive.tm.get_canonical(quantity)
-
+            else:
+                raise
 
     def factors(self, quantity, flowable=None, context=None, dist=0):
         q = self.get_canonical(quantity)
@@ -249,6 +272,13 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
             raise ConversionReferenceMismatch('Cannot convert to None')
         found_ref = self.get_canonical(res.ref)
         if found_ref != ref_quantity:
+            # zero look for conversions
+            try:
+                qr_result = try_convert(flowable, ref_quantity, found_ref, compartment, locale)
+                return res.add_result(qr_result)
+            except NoConversion:
+                pass
+
             # first look for forward matches
             cfs_fwd = [cf for cf in self._archive.tm.factors_for_flowable(flowable, quantity=found_ref,
                                                                           context=compartment, dist=3)
@@ -301,21 +331,11 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         # TODO: port qdb functionality: detect unity conversions; quell biogenic co2; integrate convert()
         # first- check to see if the query quantity can be converted to the ref quantity directly:
         if qq is not None and rq is not None:
-            if hasattr(qq, 'has_property') and qq.has_property('UnitConversion'):
-                try:
-                    fac = convert(qq, from_unit=rq.unit())
-                    qr_results = [QRResult(flowable, rq, qq, context, locale, qq.origin, fac) ]
-                    return qr_results, [], []
-                except KeyError:
-                    pass
-
-            if hasattr(rq, 'has_property') and rq.has_property('UnitConversion'):
-                try:
-                    fac = convert(rq, to=qq.unit())
-                    qr_results = [QRResult(flowable, rq, qq, context, locale, rq.origin, fac) ]
-                    return qr_results, [], []
-                except KeyError:
-                    pass
+            try:
+                qr_result = try_convert(flowable, rq, qq, context, locale)
+                return [qr_result], [], []
+            except NoConversion:
+                pass
 
         qr_results = []
         qr_mismatch = []
@@ -335,13 +355,15 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
             except ConversionReferenceMismatch:
                 pass  # qr_mismatch.append(res.invert())  We shouldn't be surprised that there is no reverse conversion
 
+        # TODO: should we try a last-ditch effort to find factors for flowables using target unit conversion quantities?
+        # motivation: cf is in t --> Count; query is between kg and Count; t also has
+
+        if len(qr_results + qr_geog + qr_mismatch) == 0:
+            raise NoFactorsFound
 
         if len(qr_results) > 1:
             qr_geog = [k for k in filter(lambda x: x[0].locale != locale, qr_results)]
             qr_results = [k for k in filter(lambda x: x[0].locale == locale, qr_results)]
-
-        if len(qr_results + qr_geog + qr_mismatch) == 0:
-            raise NoFactorsFound
 
         return qr_results, qr_geog, qr_mismatch
 
@@ -535,7 +557,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
             for r in qrg + qrm:
                 yield r
 
-    def do_lcia(self, quantity, inventory, locale='GLO', group=None, **kwargs):
+    def do_lcia(self, quantity, inventory, locale='GLO', group=None, dist=2, **kwargs):
         """
         Successively implement the quantity relation over an iterable of exchanges.
 
@@ -546,6 +568,12 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
           also uses process.external_ref for hashing purposes, but that could conceivably be abandoned.
         :param locale: ['GLO']
         :param group: How to group scores.  Should be a lambda that operates on inventory items. Default x -> x.process
+        :param dist: [2] controls how strictly to interpret exchange context.
+          0 - exact context matches only;
+          1 - match child contexts (code default)
+          2 - match parent contexts [this default]
+          3 - match any ancestor context, including Null
+         exchange context; 3 - match any ancestor of exch
         :param kwargs:
         :return:
         """
@@ -565,7 +593,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
                 ref_q = self._archive.tm.add_quantity(x.flow.reference_entity)
             try:
                 qr, mis = self._quantity_relation(x.flow.name, ref_q, q, x.termination, locale=locale,
-                                                  **kwargs)
+                                                  dist=dist, **kwargs)
                 if qr is None and len(mis) > 0:
                     res.add_error(x, mis[0])
                     if len(mis) > 1:

@@ -86,6 +86,8 @@ class AbstractQuery(object):
                     except StopIteration:
                         raise BackgroundSetup('Failed to configure background')
                 try:
+                    if self._debug:
+                        print('Attempting %s query on iface %s' % (attrname, iface))
                     result = getattr(iface, attrname)(*args, **kwargs)
                 except exc.__class__:
                     continue

@@ -34,7 +34,7 @@ class TarjanBackground(LcArchive):
         if iface == 'background':
             return TarjanBackgroundImplementation(self)
         else:
-            raise NotImplementedError('%s: This class can only implement the background interface' % iface)
+            raise InterfaceError('%s: This class can only implement the background interface' % iface)
 
     def create_flat_background(self, index, **kwargs):
         """

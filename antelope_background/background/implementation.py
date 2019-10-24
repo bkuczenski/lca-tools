@@ -73,10 +73,6 @@ class TarjanBackgroundImplementation(BackgroundImplementation):
 
         self._flat = None
 
-    def setup_bm(self, index=None):
-        if self._index is None:
-            super(TarjanBackgroundImplementation, self).setup_bm(index)
-
     def check_bg(self, reset=False, **kwargs):
         if self._flat is None or reset:
             if reset:

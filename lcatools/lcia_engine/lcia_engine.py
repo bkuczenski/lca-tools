@@ -121,20 +121,22 @@ class LciaEngine(TermManager):
                 return self._cm.find_matching_context(item)
             return None
 
-    def apply_hints(self, origin, hints):
+    def apply_hints(self, names, hints):
         """
         Hints should be
-        :param origin:
+        :param names: iterable of catalog names to which context hints will apply
         :param hints: an iterable of term, canonical pairs, where term is the context as known in the origin, and
         canonical is the corresponding canonical context.
         :return:
         """
+        orgs = list(names)
         for hint_type, term, canonical in hints:
             if term in self.synonyms(canonical):
                 continue
             if hint_type == 'context':
-                print('Applying context hint %s:%s => %s' % (origin, term, canonical))
-                self._cm.add_context_hint(origin, term, canonical)
+                for org in orgs:
+                    print('Applying context hint %s:%s => %s' % (org, term, canonical))
+                    self._cm.add_context_hint(org, term, canonical)
             elif hint_type == 'quantity':
                 print('Applying quantity hint %s -> %s' % (term, canonical))
                 self._qm.add_synonym(canonical, term)

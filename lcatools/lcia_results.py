@@ -697,6 +697,11 @@ class LciaResult(object):
         for x in self._zeros:
             yield x
 
+    def details(self):
+        for c in self.components():
+            for d in c.details():
+                yield d
+
     def keys(self):
         if self._private:
             return [None]

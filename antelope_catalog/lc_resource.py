@@ -176,7 +176,7 @@ class LcResource(object):
         print('Applying stored configuration')
         if catalog is not None:
             if 'hints' in self._config:
-                catalog.lcia_engine.apply_hints(self.reference, self._config['hints'])
+                catalog.lcia_engine.apply_hints(self._archive.catalog_names, self._config['hints'])
         try:
             self._archive.make_interface('configure').apply_config(self._config)
         except InterfaceError:

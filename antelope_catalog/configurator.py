@@ -106,7 +106,7 @@ class Configurator(object):
 
         if cf.check_config(option, args):
             if option == 'hints':
-                self.lcia_engine.apply_hints(self.archive.ref, [args])
+                self.lcia_engine.apply_hints(self.archive.catalog_names, [args])
             cf.apply_config({option: {args}})
             self._add_config(option, *args)
             return True

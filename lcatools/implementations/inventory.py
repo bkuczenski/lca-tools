@@ -84,4 +84,4 @@ class InventoryImplementation(BasicImplementation, InventoryInterface):
 
     def fragment_lcia(self, fragment, quantity_ref, scenario=None, refresh=False, **kwargs):
         frag = self._archive.retrieve_or_fetch_entity(fragment)
-        return frag.top().fragment_lcia(quantity_ref, scenario=scenario, refresh=refresh)
+        return frag.top().fragment_lcia(quantity_ref, scenario=scenario, refresh=refresh, **kwargs)

@@ -10,6 +10,12 @@ class QuantityAlreadyConfigured(Exception):
     pass
 
 
+def new_quantity(name, ref_unit, external_ref=None, **kwargs):
+    if external_ref is None:
+        return LcQuantity.new(name, ref_unit, **kwargs)
+    return LcQuantity(external_ref, Name=name, ReferenceUnit=LcUnit(ref_unit), **kwargs)
+
+
 class LcQuantity(LcEntity):
 
     _ref_field = 'referenceUnit'

@@ -26,6 +26,17 @@ _interface = 'foreground'
 
 
 class ForegroundInterface(AbstractQuery):
+    def new_quantity(self, name, ref_unit=None, **kwargs):
+        """
+        Creates a new quantity entity and adds it to the foreground
+        :param name:
+        :param ref_unit:
+        :param kwargs:
+        :return:
+        """
+        return self._perform_query(_interface, 'new_quantity', ForegroundRequired('Foreground access required'),
+                                   name, ref_unit=ref_unit, **kwargs)
+
     def new_flow(self, name, ref_quantity=None, context=None, **kwargs):
         """
         Creates a new flow entity and adds it to the foreground
@@ -217,3 +228,21 @@ class ForegroundInterface(AbstractQuery):
         """
         return self._perform_query(_interface, 'unset_balance_flow', ForegroundRequired('Foreground access required'),
                                    fragment, **kwargs)
+
+    def create_process_model(self, process, ref_flow=None, include_elementary=False, terminate=True, **kwargs):
+        """
+        Create a fragment from a process_ref.  If process has only one reference exchange, it will be used automatically.
+        By default, a child fragment is created for each exchange not terminated to context, and exchanges terminated
+        to nodes are so terminated in the fragment.
+        :param process:
+        :param ref_flow: specify which exchange to use as a reference
+        :param include_elementary: [False] if true, create subfragments terminating to context for elementary flows.
+         otherwise leaves them unspecified (fragment LCIA includes unobserved exchanges)
+        :param terminate: [True] if false, create all flows as cutoff flows.
+        :param kwargs:
+        :return:
+        """
+        return self._perform_query(_interface, 'create_process_model', ForegroundRequired('Foreground access required'),
+                                   process, ref_flow=ref_flow, include_elementary=include_elementary,
+                                   terminate=terminate,
+                                   **kwargs)

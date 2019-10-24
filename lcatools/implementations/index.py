@@ -76,23 +76,27 @@ class IndexImplementation(BasicImplementation, IndexInterface):
         Generate processes in the archive that terminate a given exchange i.e. - have the same flow and a complementary
         direction.  If refs_only is specified, only report processes that terminate the exchange with a reference
         exchange.
-        :param flow_ref: flow or flow's external key
+        :param flow_ref: flow, exchange, or flow's external key
         :param direction: [None] filter
         :return:
         """
-        if hasattr(self._archive, 'terminate'):
-            for x in self._archive.terminate(flow_ref, direction=direction, **kwargs):
-                yield x
-        else:
-            cdir = comp_dir(direction)
-            if not isinstance(flow_ref, str) and not isinstance(flow_ref, int):  # NSUUID archives can use integer ids
+        if hasattr(flow_ref, 'entity_type'):
+            if flow_ref.entity_type == 'flow':
                 flow_ref = flow_ref.external_ref
-            for x in self._terminations[flow_ref]:  # defaultdict, so no KeyError
+            elif flow_ref.entity_type == 'exchange':
                 if direction is None:
+                    direction = flow_ref.direction
+                flow_ref = flow_ref.flow.external_ref
+
+        cdir = comp_dir(direction)
+        if not isinstance(flow_ref, str) and not isinstance(flow_ref, int):  # NSUUID archives can use integer ids
+            flow_ref = flow_ref.external_ref
+        for x in self._terminations[flow_ref]:  # defaultdict, so no KeyError
+            if direction is None:
+                yield x[1]
+            else:
+                if cdir == x[0]:
                     yield x[1]
-                else:
-                    if cdir == x[0]:
-                        yield x[1]
 
     def flowables(self, **kwargs):
         return self._archive.tm.flowables(**kwargs)

@@ -3,6 +3,7 @@ from collections import defaultdict
 from lcatools.implementations import BasicImplementation
 from lcatools.interfaces import ForegroundInterface, CONTEXT_STATUS_  # , comp_dir, BackgroundRequired
 
+from lcatools.entities.quantities import new_quantity
 from lcatools.entities.flows import new_flow
 from lcatools.entities.fragments import InvalidParentChild
 from lcatools.entities.fragment_editor import create_fragment, clone_fragment, interpose, _fork_fragment
@@ -79,6 +80,18 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
     '''
     Create and modify fragments
     '''
+    def new_quantity(self, name, ref_unit=None, **kwargs):
+        """
+
+        :param name:
+        :param ref_unit:
+        :param kwargs:
+        :return:
+        """
+        q = new_quantity(name, ref_unit, **kwargs)
+        self._archive.add(q)
+        return q
+
     def new_flow(self, name, ref_quantity=None, context=None, **kwargs):
         """
 
@@ -197,3 +210,20 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
     def save(self):
         self._archive.save()
         return True
+
+    def create_process_model(self, process, ref_flow=None, include_elementary=False, terminate=True, **kwargs):
+        rx = process.reference(ref_flow)
+        frag = self.new_fragment(rx.flow, rx.direction, value=1.0)
+        frag.terminate(process)
+        for ex in process.inventory(rx):
+            if not include_elementary:
+                if ex.type in ('context', 'elementary'):
+                    continue
+            ch = self.new_fragment(ex.flow, ex.direction, value=ex.value, parent=frag)
+            ch.set_background()
+            if ex.type in ('cutoff', 'self'):
+                continue
+            if terminate:
+                ch.terminate(self._archive.catalog_ref(process.origin, ex.termination, entity_type='process'))
+        frag.observe(accept_all=True)
+        return frag

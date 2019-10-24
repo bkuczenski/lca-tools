@@ -1022,15 +1022,16 @@ class LcFragment(LcEntity):
                 self._exchange_values[match] = _balance
     '''
 
-    def fragment_lcia(self, quantity_ref, scenario=None, refresh=False):
+    def fragment_lcia(self, quantity_ref, scenario=None, refresh=False, observed=True):
         """
         Fragments don't have access to a qdb, so this piggybacks on the quantity_ref.
         :param quantity_ref:
         :param scenario:
         :param refresh: whether to refresh a cached unit score
+        :param observed: [True] whether to limit the computation to observed flows
         :return:
         """
-        fragmentflows = self.traverse(scenario=scenario, observed=True)
+        fragmentflows = self.traverse(scenario=scenario, observed=observed)
         return frag_flow_lcia(fragmentflows, quantity_ref, scenario=scenario, refresh=refresh)
 
     def inventory(self, scenario=None, scale=1.0, observed=False):

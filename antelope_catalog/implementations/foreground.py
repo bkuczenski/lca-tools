@@ -207,8 +207,8 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
             self.delete_fragment(c)
         return True
 
-    def save(self):
-        self._archive.save()
+    def save(self, **kwargs):
+        self._archive.save(**kwargs)
         return True
 
     def create_process_model(self, process, ref_flow=None, include_elementary=False, terminate=True, **kwargs):

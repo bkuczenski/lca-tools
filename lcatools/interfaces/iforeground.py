@@ -187,7 +187,7 @@ class ForegroundInterface(AbstractQuery):
     def save(self, **kwargs):
         """
         Save the foreground to local storage.  Revert is not supported for now
-        :param kwargs:
+        :param kwargs: save_unit_scores [False]: whether to save cached LCIA results (for background fragments only)
         :return:
         """
         return self._perform_query(_interface, 'save', ForegroundRequired('Foreground access required'), **kwargs)

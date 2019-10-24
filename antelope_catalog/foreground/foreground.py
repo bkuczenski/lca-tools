@@ -220,13 +220,16 @@ class LcForeground(BasicArchive):
         try:
             self._add(entity, entity.link)
         except EntityExists:
-            if entity.entity_type == 'fragment' and entity.external_ref != entity.uuid:
+            if entity == self[entity.link]:
+                pass
+            elif entity.entity_type == 'fragment' and entity.external_ref != entity.uuid:
                 raise ValueError('Name is already taken: %s' % entity.external_ref)
-            # merge incoming entity's properties with existing entity
-            current = self[entity.link]
-            current.merge(entity)
+            else:
+                # merge incoming entity's properties with existing entity
+                current = self[entity.link]
+                current.merge(entity)
 
-        if entity.uuid is not None:
+        if hasattr(entity, 'uuid') and entity.uuid is not None:
             # self._entities[entity.uuid] = entity
             self._uuid_map[entity.uuid].add(entity.link)
 

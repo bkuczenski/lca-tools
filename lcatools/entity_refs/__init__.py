@@ -14,6 +14,6 @@ There are two main subclasses of entity references:
 """
 
 from .catalog_ref import CatalogRef, QuantityRef
-from .quantity_ref import convert
+from .quantity_ref import convert, NoUnitConversionTable
 from .base import NoCatalog, EntityRefMergeError
 from .flow_interface import FlowInterface

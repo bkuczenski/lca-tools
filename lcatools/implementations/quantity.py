@@ -7,7 +7,7 @@ from ..characterizations import QRResult
 from ..interfaces import QuantityInterface, NoFactorsFound, ConversionReferenceMismatch, FlowableMismatch, EntityNotFound
 from ..contexts import NullContext
 from ..lcia_results import LciaResult
-from ..entity_refs import FlowInterface, convert
+from ..entity_refs import FlowInterface, convert, NoUnitConversionTable
 
 
 class RefQuantityRequired(Exception):
@@ -56,8 +56,8 @@ class QuantityConversion(object):
             if qrr.query is None or qrr.ref is None:
                 raise ValueError('Both ref and query quantity must be defined')
             if len(self._results) > 0:
-                if self.flowable != qrr.flowable:
-                    raise FlowableMismatch('%s != %s' % (self.flowable, qrr.flowable))
+                #if self.flowable != qrr.flowable:  # don't think we care
+                #    raise FlowableMismatch('%s != %s' % (self.flowable, qrr.flowable))
                 if self.ref != qrr.query:
                     raise ConversionReferenceMismatch('%s != %s' % (self.ref, qrr.query))
             self._results.append(qrr)
@@ -186,18 +186,18 @@ class NoConversion(Exception):
 
 def try_convert(flowable, rq, qq, context, locale):
 
-    if hasattr(qq, 'has_property') and qq.has_property('UnitConversion') and not qq.has_property('Indicator'):
+    if not qq.is_lcia_method():
         try:
             fac = convert(qq, from_unit=rq.unit())
             return QRResult(flowable, rq, qq, context, locale, qq.origin, fac)
-        except KeyError:
+        except (KeyError, NoUnitConversionTable):
             pass
 
-    if hasattr(rq, 'has_property') and rq.has_property('UnitConversion') and not qq.has_property('Indicator'):
+    if not rq.is_lcia_method():
         try:
             fac = convert(rq, to=qq.unit())
             return QRResult(flowable, rq, qq, context, locale, rq.origin, fac)
-        except KeyError:
+        except (KeyError, NoUnitConversionTable):
             pass
     raise NoConversion
 
@@ -588,10 +588,11 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         if group is None:
             group = lambda _x: _x.process
         for x in inventory:
-            if x.type in ('cutoff', 'reference'):
+            xt = x.type
+            if xt in ('cutoff', 'reference'):
                 res.add_cutoff(x)
                 continue
-            elif x.type in ('node', 'self'):
+            elif xt in ('node', 'self'):
                 continue
             try:
                 ref_q = self.get_canonical(x.flow.reference_entity)

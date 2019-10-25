@@ -192,6 +192,7 @@ class LciaEngine(TermManager):
             raise TypeError('Must be quantity type')
         if quantity.link not in self._qm:
             self._qm.add_quantity(quantity)
+            assert quantity.link in self._qm
         return self._canonical_q(quantity)
 
     '''

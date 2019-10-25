@@ -63,7 +63,7 @@ class QuantityRef(EntityRef):
 
     def __init__(self, *args, **kwargs):
         super(QuantityRef, self).__init__(*args, **kwargs)
-        self._is_lcia = 'Indicator' in self._d
+        self._is_lcia = 'Indicator' in self._d  # must be specified at instantiation
 
     def unit(self):
         if isinstance(self.reference_entity, str):
@@ -89,18 +89,6 @@ class QuantityRef(EntityRef):
 
     def is_lcia_method(self):
         return self._is_lcia
-
-    def __eq__(self, other):
-        if other is None:
-            return False
-        if other is self:
-            return True
-        if self.link == other.link:
-            return True
-        return self.is_canonical(other)
-
-    def __hash__(self):
-        return hash(self.link)
 
     def convert(self, from_unit=None, to=None):
         return convert(self, from_unit, to)

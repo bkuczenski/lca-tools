@@ -110,7 +110,7 @@ class CatalogQuery(IndexInterface, BackgroundInterface, InventoryInterface, Quan
                 print('Missing canonical quantity-- adding to LciaDb')
                 self._catalog.register_quantity_ref(quantity)
                 q_can = self._tm.get_canonical(quantity)
-                print('Retrieving canonical %s' % q_can)
+                # print('Retrieving canonical %s' % q_can)
             else:
                 raise
         return q_can

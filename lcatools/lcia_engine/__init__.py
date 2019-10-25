@@ -85,8 +85,11 @@ class LciaDb(Qdb):
                                      Name=entity['Name'], Indicator=ind)
             # print('LciaDb: Adding masquerade %s' % q_masq)
             self.tm.add_quantity(q_masq)
+            assert self.tm.get_canonical(q_masq) is q_masq, 'impostor:%s\noriginal:%s' % (self.tm.get_canonical(q_masq),
+                                                                                          q_masq)
             self.tm.add_quantity(entity)  # should turn up as a child
-            assert self.tm.get_canonical(entity) is q_masq
+            assert self.tm.get_canonical(entity) is q_masq, 'child:%s\n masq:%s[%s]' % (self.tm.get_canonical(entity),
+                                                                                        q_masq, q_masq.link)
 
             if not entity.is_entity:  # not local -- local ones were already imported
                 # print('LciaDb: Importing factors')

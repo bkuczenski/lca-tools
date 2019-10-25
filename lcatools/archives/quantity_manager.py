@@ -125,3 +125,8 @@ class QuantityManager(SynonymDict):
             self.add_or_update_entry(new_q, merge=True, create_child=True)
         except QuantityUnitMismatch:
             self.add_or_update_entry(new_q, merge=False, prune=True)
+
+    def __getitem__(self, item):
+        if hasattr(item, 'link'):
+            item = item.link
+        return super(QuantityManager, self).__getitem__(item)

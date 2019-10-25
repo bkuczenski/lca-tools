@@ -34,8 +34,8 @@ class QuantitySynonyms(SynonymSet):
         return True
 
     def __init__(self, *args, quantity=None, unit=None, **kwargs):
-        super(QuantitySynonyms, self).__init__(*args, **kwargs)
         self._quantity = None
+        super(QuantitySynonyms, self).__init__(*args, **kwargs)
         self._unit = unit
         if quantity is not None:
             self.quantity = quantity
@@ -125,6 +125,14 @@ class QuantityManager(SynonymDict):
             self.add_or_update_entry(new_q, merge=True, create_child=True)
         except QuantityUnitMismatch:
             self.add_or_update_entry(new_q, merge=False, prune=True)
+
+    def add_synonym(self, term, syn):
+        super(QuantityManager, self).add_synonym(term, syn)
+        ent = self._d[syn]
+        # canonical quantity is always a ref
+        for child in ent.children:
+            if child.quantity is not None and child.quantity.is_entity:
+                child.quantity.add_synonym(str(syn).strip())
 
     def __getitem__(self, item):
         if hasattr(item, 'link'):

@@ -56,8 +56,9 @@ class QuantityConversion(object):
             if qrr.query is None or qrr.ref is None:
                 raise ValueError('Both ref and query quantity must be defined')
             if len(self._results) > 0:
-                #if self.flowable != qrr.flowable:  # don't think we care
-                #    raise FlowableMismatch('%s != %s' % (self.flowable, qrr.flowable))
+                if self.flowable != qrr.flowable:  # don't think we care
+                    # raise FlowableMismatch('%s != %s' % (self.flowable, qrr.flowable))
+                    print('Flowable changed: %s -> %s' % (self.flowable, qrr.flowable))
                 if self.ref != qrr.query:
                     raise ConversionReferenceMismatch('%s != %s' % (self.ref, qrr.query))
             self._results.append(qrr)

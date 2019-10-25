@@ -17,6 +17,17 @@ class LciaDb(Qdb):
         qdb = cls.from_file(source, term_manager=lcia, quiet=True)
         return qdb
 
+    def _add_char(self, flow, q, v):
+        """
+        For LciaDb, all factors loaded from JSON become local-- let's see if this causes any problems
+        :param flow:
+        :param q:
+        :param v:
+        :return:
+        """
+        self.tm.add_characterization(flow.link, flow.reference_entity, q, v, context=flow.context,
+                                     origin=self.ref)
+
     def _ref_to_key(self, key):
         """
         LciaDb uses links as keys so as to store different-sourced versions of the same quantity. But we also want

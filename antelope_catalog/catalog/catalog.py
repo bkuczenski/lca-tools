@@ -245,6 +245,10 @@ class LcCatalog(object):
         print('registering %s' % q_ref.link)
         self._qdb.add(q_ref)
 
+    def save_local_changes(self):
+        self._qdb.write_to_file(self._reference_qtys, characterizations=True, values=True)
+        self.lcia_engine.save_flowables(self._flowables)
+
     @property
     def sources(self):
         for k in self._resolver.sources:

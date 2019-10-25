@@ -146,6 +146,24 @@ class LciaEngine(TermManager):
             else:
                 raise ValueError('Unknown hint type %s' % hint_type)
 
+    def add_synonym(self, existing_term, synonym):
+        """
+
+        :param existing_term: flowable or quantity (cx is TBD)
+        :param synonym: string term to add
+        :return:
+        """
+        synonym = str(synonym).strip()
+        try:
+            ent = self._fm[existing_term]
+            self._fm.add_synonym(ent, synonym)
+        except KeyError:
+            try:
+                ent = self._qm[existing_term]
+                self._qm.add_synonym(ent, synonym)
+            except KeyError:
+                raise KeyError('No entry found for %s' % existing_term)
+
     @staticmethod
     def _flow_terms(flow):
         """

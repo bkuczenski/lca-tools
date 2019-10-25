@@ -262,7 +262,11 @@ class BasicArchive(EntityStore):
                 ref_q = self._get_entity(rq)
         return LcFlow(ext_ref, referenceQuantity=ref_q, **entity_j)
 
-    def _add_chars(self, flow, chars):
+    def _add_char(self, flow, q, v):
+        self.tm.add_characterization(flow.link, flow.reference_entity, q, v, context=flow.context,
+                                     origin=flow.origin)
+
+    def _add_chars(self, flow, chars, local_cf=False):
         for c in chars:
             if 'isReference' in c:
                 if c['isReference'] is True:
@@ -278,8 +282,7 @@ class BasicArchive(EntityStore):
                 # raise KeyError
             if 'value' in c:
                 v = c['value']
-            self.tm.add_characterization(flow.link, flow.reference_entity, q, v, context=flow.context,
-                                         origin=flow.origin)
+            self._add_char(flow, q, v)
 
     def _make_entity(self, e, etype, ext_ref):
         if etype == 'quantity':

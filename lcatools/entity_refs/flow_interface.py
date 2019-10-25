@@ -11,6 +11,8 @@ class FlowInterface(object):
     _context = ()
     _context_set_level = 0
 
+    _filt = str.maketrans('\u00b4\u00a0\u2032', "' '", '')  # filter name strings to pull out problematic unicode
+
     @property
     def link(self):
         return NotImplemented
@@ -42,18 +44,24 @@ class FlowInterface(object):
             self._context_set_level = min([level, 3])  # always allow context spec to override
             self._context = tuple(filter(None, value))
 
+    def _add_flowable_term(self, term, set_name=False):
+        if set_name:
+            tm = term.translate(self._filt).strip()  # have to put strip after because \u00a0 turns to space
+            self._flowable.add_term(tm)
+            self._flowable.set_name(tm)
+        self._flowable.add_term(term.strip())
+
     def _catch_flowable(self, key, value):
         if key == 'name':
-            self._flowable.add_term(value)
-            self._flowable.set_name(value)
+            self._add_flowable_term(value, set_name=True)
         elif key == 'casnumber':
-            self._flowable.add_term(value)
+            self._add_flowable_term(value)
         elif key == 'synonyms':
             if isinstance(value, str):
-                self._flowable.add_term(value)
+                self._add_flowable_term(value)
             else:
                 for v in value:
-                    self._flowable.add_term(v)
+                    self._add_flowable_term(v)
 
     __flowable = None
 

@@ -268,8 +268,8 @@ class EcospoldV2Archive(LcArchive):
         # TODO: implement ecospold flow properties, only for reference products
 
         syns = _syn_set(exchange)
-        if len(syns) > 0:
-            f['Synonyms'] = syns
+        syns.add(uid)
+        f['Synonyms'] = syns
 
         self.add(f)
 

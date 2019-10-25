@@ -73,7 +73,7 @@ class Flowable(SynonymSet):
             'name': self._name,
             'synonyms': [t for t in sorted(self._terms) if t != self._name]
         }
-        for c in self.children:
+        for c in sorted(self.children, key=lambda x:x.name):
             if c.name == self._name:
                 continue
             d['synonyms'].append(c.name)

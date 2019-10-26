@@ -37,6 +37,7 @@ class CatalogQuery(IndexInterface, BackgroundInterface, InventoryInterface, Quan
         self._debug = debug
 
         self._entity_cache = dict()
+        self._iface_cache = dict()
 
     @property
     def origin(self):
@@ -68,9 +69,14 @@ class CatalogQuery(IndexInterface, BackgroundInterface, InventoryInterface, Quan
             print('Origin: %s' % self.origin)
         if self._catalog is None:
             raise NoCatalog
+        if itype in self._iface_cache:
+            if self._debug:
+                print('Returning cached iface')
+            yield self._iface_cache[itype]
         for i in self._catalog.gen_interfaces(self._origin, itype, strict=strict):
             if self._debug:
                 print('yielding %s' % i)
+            self._iface_cache[itype] = i  # only cache the most recent iface
             yield i
 
     def resolve(self, itype=INTERFACE_TYPES, strict=False):

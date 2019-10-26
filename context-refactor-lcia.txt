@@ -1,4 +1,65 @@
 ==========
+Fri Oct 25 09:41:27 -0700 2019
+
+Moving right along.. yesterday we took 60% out of the computation time for LCIA, mainly by reshuffling the quantity interface to avoid redundant argument processing, but also by tracking down a design flaw in _canonical_q that was requiring str(qty) [which requires at least two get_item() calls for refs] to be called ALL THE TIME... I spent an embarrassingly long time to bring about 15 SLOC changes that were in retrospect very simple (see 646e859) (but the restructuring, which did most of the work, was dfa7f95)
+
+Fri 2019-10-25 17:56:22 -0700
+
+Now I have squandered an afternoon tracking down exchange relation "performance issues" (meaning discovering the terror of LcProcess.reference() )
+
+Here's the stack:
+89.6 --> 78.0 traverse_term_exchanges (9.6 s update component graph ~2s in glue / from_index)
+Of that, 42.6 exchanges.__getitem__ 42.62 sec / 8.526 tottime : 1018374 calls
+of which process_ref.exchange_relation() 1018374 calls but 38.24 / 2.646 tottime
+
+but anyway that is a big bit-- line 653 is probably called 792k times- plus probably subsidiary calls beneath => 1018374/2016979 so some of that could be double counted
+
+traverse is 6.366 foreground
+
+leaving 29 sec unaccounted for:
+	3.2s terminate
+	3.3 + 2.5 = 5.8 product flows + emissions
+	1.2 set_lowlink
+	=12.0 handling
+	==
+	-16.8 in background_engine (9.5s in foreground hmm)
+
+	===
+	12 sec
+
+78.0: 6.366 foreground
+      14.1  635: process_ref.inventory
+      42.62 653: __getitem__
+      3.2   684: terminate
+      1.2 add_emission
+      1.8 add_cutoff
+      1.3   698: check_product_flow
+      1.2 set_lowlink
+      1.5 add_interior
+      ---
+      73.3
+
+Plus glue. So the big culprits are inventory() and exchange_relation()
+and they are both dreadful.
+but they work for now and will wait until later.
+
+strict task: BUILD FRAGMENTS
+
+      
+      
+
+
+	
+
+Tracked down major problems:
+ - process_ref.exchange relation takes 38 out of ~88 for flat background [which is about 4x slow]
+ - ExchangeValue.make_ref itself takes 11 s, and why are we even making exchanges?
+   = need a proper ExchangeRef which a processRef can trivially make (like RxRef) (in fact one is a subclass)
+ - also, process.reference(flow), which should be inexpensive, is 9.1 out of 88 sec
+   = shockingly reference() starts out with find_reference which is incredibly costly
+   = references() also should not take an argument, but in fact does what reference() should do
+
+==========
 Sun Oct 20 20:17:03 -0700 2019
 
 Setting up ILCD LCIA for CATRA project. Two cascading problems:

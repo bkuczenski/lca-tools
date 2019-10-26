@@ -40,14 +40,16 @@ class BackgroundInterface(AbstractQuery):
         """
         pass
 
-    def check_bg(self, **kwargs):
+    def check_bg(self, reset=False, **kwargs):
         """
         Trivial method to force creation of background / check if it exists.  Also provides a way to reset / pass
         keyword arguments to the background engine.
+        :param reset: [False] whether to re-create the matrix
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'check_bg', BackgroundRequired('Background required'), **kwargs)
+        return self._perform_query(_interface, 'check_bg', BackgroundRequired('Background required'),
+                                   reset=reset, **kwargs)
 
     def foreground_flows(self, search=None, **kwargs):
         """

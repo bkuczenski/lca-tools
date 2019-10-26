@@ -32,14 +32,18 @@ class AbstractQuery(object):
      - _iface (generator: itype)
      - _tm (property) a TermManager
     """
-    _debug = False
+    _dbg = False
     _validated = None
 
     def on_debug(self):
-        self._debug = True
+        self._dbg = True
 
     def off_debug(self):
-        self._debug = False
+        self._dbg = False
+
+    def _debug(self, *args):
+        if self._dbg:
+            print(*args)
 
     '''
     Overridde these methods
@@ -74,20 +78,17 @@ class AbstractQuery(object):
         return self._tm[context.fullname].elementary
 
     def _perform_query(self, itype, attrname, exc, *args, strict=False, **kwargs):
-        if self._debug:
-            print('Performing %s query, iface %s' % (attrname, itype))
+        self._debug('Performing %s query, iface %s' % (attrname, itype))
         try:
             for iface in self._iface(itype, strict=strict):
                 if itype == 'background':
-                    if self._debug:
-                        print('Setting up background interface')
+                    self._debug('Setting up background interface')
                     try:
                         iface.setup_bm(self)
                     except StopIteration:
                         raise BackgroundSetup('Failed to configure background')
                 try:
-                    if self._debug:
-                        print('Attempting %s query on iface %s' % (attrname, iface))
+                    self._debug('Attempting %s query on iface %s' % (attrname, iface))
                     result = getattr(iface, attrname)(*args, **kwargs)
                 except exc.__class__:
                     continue

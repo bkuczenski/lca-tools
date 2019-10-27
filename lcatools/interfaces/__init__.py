@@ -31,7 +31,7 @@ Query classes
 class BasicQuery(IndexInterface, InventoryInterface, QuantityInterface):
     def __init__(self, archive, debug=False):
         self._archive = archive
-        self._debug = debug
+        self._dbg = debug
 
     def _iface(self, itype, **kwargs):
         if itype is None:

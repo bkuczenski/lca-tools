@@ -29,7 +29,7 @@ leaving 29 sec unaccounted for:
 
 78.0: 6.366 foreground
       14.1  635: process_ref.inventory
-      42.62 653: __getitem__
+      42.62-- 653: __getitem__
       3.2   684: terminate
       1.2 add_emission
       1.8 add_cutoff

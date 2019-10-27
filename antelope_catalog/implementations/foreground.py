@@ -1,7 +1,7 @@
 from collections import defaultdict
 
 from lcatools.implementations import BasicImplementation
-from lcatools.interfaces import ForegroundInterface, CONTEXT_STATUS_  # , comp_dir, BackgroundRequired
+from lcatools.interfaces import ForegroundInterface, CONTEXT_STATUS_, EntityNotFound  # , comp_dir, BackgroundRequired
 
 from lcatools.entities.quantities import new_quantity
 from lcatools.entities.flows import new_flow
@@ -119,6 +119,13 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
           **kwargs passed to LcFragment
         :return:
         """
+        if isinstance(flow, str):
+            f = self.__getitem__(flow)
+            if f is None:
+                raise EntityNotFound(flow)
+            if f.entity_type != 'flow':
+                raise TypeError('%s is not a flow' % flow)
+            flow = f
         frag = create_fragment(flow, direction, origin=self.origin, **kwargs)
         self._archive.add_entity_and_children(frag)
         return frag

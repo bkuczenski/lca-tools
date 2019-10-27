@@ -21,7 +21,7 @@ For the second one here, this seems like more a capability of an archive rather 
 should be a context mgr.  We (for now) want to be strict about the sheet naming- let's take that flexibility away
 from the user.
 
-The required fields should be: external_ref, uuid[can be None], *signature_fields.
+The required fields should be: external_ref, *signature_fields.  uuid is supported but not required
 """
 import os
 import re
@@ -140,6 +140,27 @@ def _check_merge(merge):
 
 
 class XlsxArchiveUpdater(object):
+    """
+    This class uses the contents of a properly formatted XLS file to create or update entities in an archive.
+
+    Uses sheet names that match the archive's "_entity_types" property, so 'flow' and 'quantity' nominally.
+
+    Each sheet must be in strict tabular format, with the first row being headers and each subsequent row being one
+    entity.
+
+    The only required column is 'external_ref', though 'name' and 'reference' are recommended for new entities.  For
+    quantities, the 'reference' column should be a unit string; for flows the 'reference' column should be a known
+    quantity signifier (external_ref, link, or canonical name recognized by the term manager)
+
+    Optional columns include 'uuid' and 'origin'
+
+    All other columns are assigned as properties.
+
+    MERGE STRATEGY
+    The updater has two merge strategies:
+      * "defer": (default) If an entity exists and has a property already defined, defer to the existing property
+      * "overwrite": Any non-null incoming property is assigned to the entity, overwriting any existing value.
+    """
     def _grab_value(self, cell):
         value = cell.value
         if isinstance(value, str):
@@ -153,7 +174,7 @@ class XlsxArchiveUpdater(object):
 
     def _new_entity(self, etype, rowdata):
         rowdata['externalId'] = rowdata.pop('external_ref')
-        rowdata['entityId'] = rowdata.pop('uuid')
+        rowdata['entityId'] = rowdata.pop('uuid', None)
         rowdata['entityType'] = etype
         self._ar.entity_from_json(rowdata)
 
@@ -162,8 +183,12 @@ class XlsxArchiveUpdater(object):
             sh = self._xl.sheet_by_name(etype)
         except xlrd.XLRDError:
             return
+        try:
+            headers = [k.value for k in sh.row(0)]
+        except IndexError:
+            self._print('Empty sheet %s' % etype)
+            return
         self._print('Opened sheet %s' % etype)
-        headers = [k.value for k in sh.row(0)]
 
         for row in range(1, sh.nrows):
             rowdata = {headers[i]: self._grab_value(k) for i, k in enumerate(sh.row(row))}
@@ -172,7 +197,7 @@ class XlsxArchiveUpdater(object):
                 self._new_entity(etype, rowdata)
             else:
                 rowdata.pop('external_ref')
-                rowdata.pop('uuid')
+                rowdata.pop('uuid', None)
                 rowdata.pop(ent.reference_field)
                 for k, v in rowdata.items():
                     if self._merge == 'defer':

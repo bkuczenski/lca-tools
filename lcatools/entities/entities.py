@@ -279,7 +279,7 @@ class LcEntity(object):
     def __setitem__(self, key, value):
         if key == 'EntityType':
             raise ValueError('Entity Type cannot be changed')
-        elif key.lower() == self._ref_field.lower():
+        elif key.lower() in (self._ref_field.lower(), 'reference', 'referenceentity', 'reference_entity'):
             self._set_reference(value)
         elif key.lower() in ('entityid', 'entitytype', 'externalid', 'origin'):
             raise KeyError('Disallowed Keyname %s' % key)

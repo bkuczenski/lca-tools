@@ -249,6 +249,11 @@ class LcCatalog(object):
         self._qdb.write_to_file(self._reference_qtys, characterizations=True, values=True)
         self.lcia_engine.save_flowables(self._flowables)
 
+    def restore_qdb(self, really=False):
+        if really:
+            copy2(REF_QTYS, self._reference_qtys)
+            print('Reference quantities restored. Please re-initialize the catalog.')
+
     @property
     def sources(self):
         for k in self._resolver.sources:
@@ -618,25 +623,25 @@ class LcCatalog(object):
             self._queries[origin] = CatalogQuery(origin, catalog=self, **kwargs)
         return self._queries[origin]
 
-    def lookup(self, origin, external_ref):
+    def lookup(self, origin, external_ref=None):
         """
         Attempts to secure an entity
         :param origin:
         :param external_ref:
         :return: The origin of the lowest-priority resource to match the query
         """
+        if external_ref is None:
+            origin, external_ref = origin.split('/', maxsplit=1)
         for i in self.gen_interfaces(origin):
             if i.lookup(external_ref):
                 return i.origin
         raise EntityNotFound('%s/%s' % (origin, external_ref))
 
-    def fetch(self, origin, external_ref):
+    def fetch(self, origin, external_ref=None):
+        if external_ref is None:
+            origin, external_ref = origin.split('/', maxsplit=1)
         org = self.lookup(origin, external_ref)
         return self.query(org).get(external_ref)
-
-    def fetch_link(self, link):
-        org, ext = link.split('/', maxsplit=1)
-        return self.fetch(org, ext)
 
     def foreground(self, path, ref=None, quiet=True, reset=False, delete=False):
         """

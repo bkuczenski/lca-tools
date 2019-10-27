@@ -266,7 +266,7 @@ class BasicArchive(EntityStore):
         self.tm.add_characterization(flow.link, flow.reference_entity, q, v, context=flow.context,
                                      origin=flow.origin)
 
-    def _add_chars(self, flow, chars, local_cf=False):
+    def _add_chars(self, flow, chars):
         for c in chars:
             if 'isReference' in c:
                 if c['isReference'] is True:

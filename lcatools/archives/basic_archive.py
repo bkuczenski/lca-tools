@@ -435,6 +435,11 @@ class BasicArchive(EntityStore):
         if upstream and self._upstream is not None:
             self._upstream.search(etype, upstream=upstream, **kwargs)
 
+    def _serialize_quantities(self, domesticate=False):
+        return sorted([q.serialize(domesticate=domesticate, drop_fields=self._drop_fields['quantity'])
+                       for q in self.entities_by_type('quantity')],
+                      key=lambda x: x['externalId'])
+
     def serialize(self, characterizations=False, values=False, domesticate=False):
         """
 
@@ -452,9 +457,8 @@ class BasicArchive(EntityStore):
                             key=lambda x: x['externalId'])
         if characterizations:
             j['termManager'], _, _ = self.tm.serialize(self.ref, values=values)
-        j['quantities'] = sorted([q.serialize(domesticate=domesticate, drop_fields=self._drop_fields['quantity'])
-                                  for q in self.entities_by_type('quantity')],
-                                 key=lambda x: x['externalId'])
+        j['quantities'] = self._serialize_quantities(domesticate=domesticate)
+
         return j
 
     def export_quantity(self, filename, quantity, domesticate=False, values=True, gzip=False):

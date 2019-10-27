@@ -11,6 +11,12 @@ TRACI_VERSIONS = {
 }  # would be great for this to be downloadable somewhere
 
 
+E_CFG = {'hints': [  # cover elementary contexts that need directional hints
+    ['context', 'air', 'to air'],
+    ['context', 'water', 'to water']
+]}
+
+
 class TraciConfig(DataSource):
 
     _prefix = 'local.lcia.traci'
@@ -52,4 +58,4 @@ class TraciConfig(DataSource):
         except KeyError:
             raise KeyError('Unknown version %s' % ver)
         yield self._make_resource(ref, os.path.join(self._root, info['filename']), ds_type=info['ds_type'],
-                                  interfaces=self._ifaces)
+                                  interfaces=self._ifaces, config=E_CFG)

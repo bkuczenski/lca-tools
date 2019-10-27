@@ -1,4 +1,4 @@
-from lcatools.archives import Qdb, REF_QTYS, EntityExists
+from lcatools.archives import Qdb, REF_QTYS
 from .lcia_engine import LciaEngine, DEFAULT_CONTEXTS, DEFAULT_FLOWABLES
 from lcatools.entity_refs import QuantityRef, FlowInterface
 
@@ -60,6 +60,7 @@ class LciaDb(Qdb):
             raise AttributeError('Origin not set! %s' % entity)
         super(LciaDb, self)._ensure_valid_refs(entity)
 
+    '''
     def add(self, entity):
         """
         Add entity to archive.  If entity is a quantity ref, add a masquerade to the lcia engine
@@ -78,6 +79,7 @@ class LciaDb(Qdb):
             self._entities[entity.uuid] = entity
 
         self._add_to_tm(entity)
+    '''
 
     def _add_to_tm(self, entity, merge_strategy=None):
         if entity.entity_type == 'quantity':
@@ -108,3 +110,13 @@ class LciaDb(Qdb):
 
         elif isinstance(entity, FlowInterface):
             self.tm.add_flow(entity, merge_strategy=merge_strategy)
+
+    def _serialize_quantities(self, domesticate=False):
+        """
+        Do not save masqueraded quantities
+        :param domesticate:
+        :return:
+        """
+        return sorted([q.serialize(domesticate=domesticate, drop_fields=self._drop_fields['quantity'])
+                       for q in self.entities_by_type('quantity') if q.is_entity],
+                      key=lambda x: x['externalId'])

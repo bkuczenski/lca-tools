@@ -222,15 +222,30 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         rx = process.reference(ref_flow)
         frag = self.new_fragment(rx.flow, rx.direction, value=1.0)
         frag.terminate(process)
+        self.extend_process_model(frag, include_elementary=include_elementary, terminate=terminate, **kwargs)
+        return frag
+
+    def extend_process_model(self, fragment, include_elementary=False, terminate=True, **kwargs):
+        """
+        "Build out" a fragment, creating child flows from its terminal node's intermediate flows
+        :param fragment:
+        :param include_elementary:
+        :param terminate:
+        :param kwargs:
+        :return:
+        """
+        fragment.unset_background()
+        process = fragment.term.term_node
+        rx = fragment.term.term_flow
         for ex in process.inventory(rx):
             if not include_elementary:
                 if ex.type in ('context', 'elementary'):
                     continue
-            ch = self.new_fragment(ex.flow, ex.direction, value=ex.value, parent=frag)
+            ch = self.new_fragment(ex.flow, ex.direction, value=ex.value, parent=fragment)
             ch.set_background()
             if ex.type in ('cutoff', 'self'):
                 continue
             if terminate:
                 ch.terminate(self._archive.catalog_ref(process.origin, ex.termination, entity_type='process'))
-        frag.observe(accept_all=True)
-        return frag
+        fragment.observe(accept_all=True)
+        return fragment

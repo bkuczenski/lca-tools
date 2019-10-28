@@ -148,13 +148,21 @@ class XlsxArchiveUpdater(object):
     Each sheet must be in strict tabular format, with the first row being headers and each subsequent row being one
     entity.
 
-    The only required column is 'external_ref', though 'name' and 'reference' are recommended for new entities.  For
-    quantities, the 'reference' column should be a unit string; for flows the 'reference' column should be a known
-    quantity signifier (external_ref, link, or canonical name recognized by the term manager)
+    The only required column is 'external_ref', though 'name' and 'reference' are recommended for new entities.  NOTE:
+    for the time being, quantities require a 'referenceUnit' column and flows require a 'referenceQuantity' column,
+    though the hope is to eliminate that requirement in the future. For quantities, the 'referenceUnit' column should
+    be a unit string; for flows the 'referenceQuantity' column should be a known quantity signifier (external_ref,
+    link, or canonical name recognized by the term manager)
 
     Optional columns include 'uuid' and 'origin'
 
     All other columns are assigned as properties.
+
+    CELL CONTENTS
+    Cells are read as strings, except for the following:
+     - if a cell's first character is '!', the subsequent characters are interpreted as an entity reference
+     - if a cell's first character is '*', the subsequent characters are EVALUATED, so obviously this is terribly
+       insecure, but it was intended to allow people to store lists, sets, and dicts.
 
     MERGE STRATEGY
     The updater has two merge strategies:

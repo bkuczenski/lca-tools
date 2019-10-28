@@ -386,7 +386,7 @@ class LciaEngine(TermManager):
 
     def factors_for_flowable(self, flowable, quantity=None, context=None, **kwargs):
         for k in super(LciaEngine, self).factors_for_flowable(flowable, quantity=quantity, context=context, **kwargs):
-            if self._quell_co2(flowable, k.context):
+            if self._quell_co2(flowable, context):
                 yield QuelledCF.from_cf(k, flowable=self._bio_co2)
             else:
                 yield k

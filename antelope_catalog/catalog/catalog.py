@@ -422,7 +422,7 @@ class LcCatalog(object):
         """
         res = next(r for r in self._resolver.resources_with_source(source))
         res.check(self)
-        priority = min([priority, res.priority])
+        priority = min([priority, res.priority])  # why are we doing this?? we want index to have higher priority i.e. get loaded second
         stored = self._resolver.is_permanent(res)
 
         # save configuration hints in derived index
@@ -683,8 +683,9 @@ class LcCatalog(object):
 
         if reset:
             res.remove_archive()
+        res.check(self)
 
-        return self.query(ref)
+        return res.make_interface('foreground')
 
     def assign_new_ref(self, old_ref, new_ref):
         """

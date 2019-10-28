@@ -855,16 +855,25 @@ class TermManager(object):
         :return:
         """
         for query_ext_ref, fbs in j.items():
-            query_q = q_map[query_ext_ref]
+            try:
+                query_q = q_map[query_ext_ref]
+            except KeyError:
+                query_q = self._canonical_q(query_ext_ref)
             for fb, cxs in fbs.items():
                 if origin is None:
                     for cx, cfs in cxs.items():
                         for org, spec in cfs.items():
-                            ref_q = q_map[spec['ref_quantity']]
+                            try:
+                                ref_q = q_map[spec['ref_quantity']]
+                            except KeyError:
+                                ref_q = self._canonical_q(spec['ref_quantity'])
                             self.add_characterization(fb, ref_q, query_q, spec['value'], context=cx,
                                                       origin=org)
                 else:
                     for cx, spec in cxs.items():
-                        ref_q = q_map[spec['ref_quantity']]
+                        try:
+                            ref_q = q_map[spec['ref_quantity']]
+                        except KeyError:
+                            ref_q = self._canonical_q(spec['ref_quantity'])
                         self.add_characterization(fb, ref_q, query_q, spec['value'], context=cx,
                                                   origin=origin)

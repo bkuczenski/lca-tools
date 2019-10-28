@@ -6,7 +6,7 @@
 import uuid
 # from collections import defaultdict
 
-from lcatools.interfaces import comp_dir, PropertyExists
+from lcatools.interfaces import comp_dir, check_direction, PropertyExists
 
 from lcatools.fragment_flows import group_ios, FragmentFlow, frag_flow_lcia
 from lcatools.entities import LcEntity, LcFlow
@@ -170,7 +170,7 @@ class LcFragment(LcEntity):
 
         assert flow.entity_type == 'flow'
         self.flow = flow
-        self.direction = direction  # w.r.t. parent
+        self.direction = check_direction(direction)  # w.r.t. parent
 
         if balance_flow:
             self.set_balance_flow()
@@ -879,8 +879,12 @@ class LcFragment(LcEntity):
         :param scenario:
         :return:
         """
-        self._background = False  # a background fragment can't sometimes be foreground
-        self.terminate(self, scenario=scenario)
+        self.unset_background()
+        if self.termination(scenario).is_null:
+            self.terminate(self, scenario=scenario)
+
+    def unset_background(self):
+        self._background = False
 
     def set_background(self):
         for scenario, term in self._terminations.items():

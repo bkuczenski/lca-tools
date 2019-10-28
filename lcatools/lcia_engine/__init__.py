@@ -96,6 +96,10 @@ class LciaDb(Qdb):
                 # print('LciaDb: Adding qty ref %s' % entity)
                 q_masq = QuantityRef(entity.external_ref, self.query, entity.reference_entity, masquerade=entity.origin,
                                      Name=entity['Name'], Indicator=ind)
+
+            for k in entity.properties():  # local only for ref
+                q_masq[k] = entity[k]
+
             # print('LciaDb: Adding masquerade %s' % q_masq)
             self.tm.add_quantity(q_masq)
             assert self.tm.get_canonical(q_masq) is q_masq, 'impostor:%s\noriginal:%s' % (self.tm.get_canonical(q_masq),

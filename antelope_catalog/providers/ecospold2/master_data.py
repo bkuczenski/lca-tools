@@ -20,6 +20,7 @@ class EcoSpoldMasterData(object):
     __master_units = None
     __master_props = None
     __elem = None
+    __inter = None
 
     @property
     def master_units(self):
@@ -50,6 +51,16 @@ class EcoSpoldMasterData(object):
             else:
                 self.__elem = {k.attrib['id']: k for k in o.iterfind('elementaryExchange', namespaces=o.nsmap)}
         return self.__elem
+
+    @property
+    def intermediate_exchanges(self):
+        if self.__inter is None:
+            o = self._read_master('IntermediateExchanges')
+            if o is None:
+                self.__inter = {}
+            else:
+                self.__inter = {k.attrib['id']: k for k in o.iterfind('intermediateExchange', namespaces=o.nsmap)}
+        return self.__inter
 
     def __init__(self, source, internal_prefix='MasterData'):
         self._fs = FileStore(source, internal_prefix=internal_prefix)

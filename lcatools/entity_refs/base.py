@@ -309,16 +309,16 @@ class EntityRef(BaseRef):
         :param force_query:
         :return:
         """
-        if not force_query:
-            # check local first.  return Localitem if present.
-            loc = self._localitem(item)
-            if loc is not None:
-                return loc
-        self._check_query('getitem %s' % item)
-        val = self._query.get_item(self, item)
-        if val is not None and val != '':
-            self._d[item] = val
-            return val
+        # check local first.  return Localitem if present.
+        loc = self._localitem(item)
+        if loc is not None:
+            return loc
+        if force_query:
+            self._check_query('getitem %s' % item)
+            val = self._query.get_item(self, item)
+            if val is not None and val != '':
+                self._d[item] = val
+                return val
         raise KeyError(item)
 
     def __getitem__(self, item):
@@ -336,7 +336,7 @@ class EntityRef(BaseRef):
         :return:
         """
         try:
-            self.get_item(item)
+            self.get_item(item, force_query=False)
         except KeyError:
             return False
         return True

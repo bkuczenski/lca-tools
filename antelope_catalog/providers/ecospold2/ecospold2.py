@@ -541,6 +541,12 @@ class EcospoldV2Archive(LcArchive):
         :param kwargs:
         :return:
         """
+        if ext_ref in self._master.elementary_exchanges:
+            return self._create_flow(self._master.elementary_exchanges[ext_ref])
+
+        if ext_ref in self._master.intermediate_exchanges:
+            return self._create_flow(self._master.intermediate_exchanges[ext_ref])
+
         p_uuid, _ = spold_reference_flow(ext_ref)  # will error if at least one UUID is not present
 
         p = self[p_uuid]

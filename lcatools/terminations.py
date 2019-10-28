@@ -149,6 +149,7 @@ class FlowTermination(object):
                 raise TypeError('Inappropriate termination type: %s' % entity.entity_type)
         self._term = entity  # this must have origin, external_ref, and entity_type, and be operable (if ref)
         self._score_cache = LciaResults(fragment)
+        self._lci = None  # cache LCI results
 
         self.direction = direction
         self.term_flow = term_flow
@@ -422,7 +423,9 @@ class FlowTermination(object):
             for c in self._parent.child_flows:
                 children.add((c.flow.external_ref, c.direction, c.term.term_ref))
             if self.is_bg:
-                iterable = self.term_node.lci(ref_flow=self.term_flow)
+                if self._lci is None:
+                    self._lci = list(self.term_node.lci(self.term_flow))
+                iterable = self._lci
             else:
                 iterable = self.term_node.inventory(ref_flow=self.term_flow, direction=self.direction)
             for x in iterable:

@@ -42,7 +42,10 @@ def convert(quantity, from_unit=None, to=None):
         else:
             inbound = 1.0
     else:
-        inbound = uc_table[from_unit]
+        try:
+            inbound = uc_table[from_unit]
+        except KeyError:
+            raise KeyError('Unknown unit %s for quantity %s' % (from_unit, quantity))
 
     if to is None:
         if quantity.unit() in uc_table:
@@ -51,7 +54,10 @@ def convert(quantity, from_unit=None, to=None):
             outbound = 1.0
 
     else:
-        outbound = uc_table[to]
+        try:
+            outbound = uc_table[to]
+        except KeyError:
+            raise KeyError('Unknown unit %s for quantity %s' % (to, quantity))
 
     return round(outbound / inbound, 12)  # round off to curtail numerical / serialization issues
 

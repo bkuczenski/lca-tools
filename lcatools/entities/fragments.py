@@ -284,6 +284,14 @@ class LcFragment(LcEntity):
         for k in sorted(self._child_flows, key=lambda x: x.uuid):
             yield k
 
+    def children_with_flow(self, flow, direction=None):
+        for k in self._child_flows:
+            if k.flow == flow:
+                if direction is not None:
+                    if k.direction != direction:
+                        continue
+                yield k
+
     @property
     def parent(self):
         return self.reference_entity

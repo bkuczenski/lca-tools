@@ -52,7 +52,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
     _frags_with_flow = defaultdict(set)
     _recursion_check = None
 
-    def _get_canonical(self, quantity):
+    def get_canonical(self, quantity):
         """
         By convention, a foreground archive's Term Manager is the catalog's LCIA engine, which is the Qdb of record
         for the foreground.
@@ -106,7 +106,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
                 kwargs['compartment'] = str(context)
         if ref_quantity is None:
             ref_quantity = 'Number of items'
-        ref_q = self._get_canonical(ref_quantity)
+        ref_q = self.get_canonical(ref_quantity)
         f = new_flow(name, ref_q, **kwargs)
         self._archive.add_entity_and_children(f)
         return f
@@ -153,6 +153,8 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
                 if f.direction != direction:
                     continue
             if reference is False and f.parent is None:
+                continue
+            if reference and f.parent:
                 continue
             yield f
 

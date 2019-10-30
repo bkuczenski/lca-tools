@@ -187,14 +187,18 @@ class NoConversion(Exception):
 
 def try_convert(flowable, rq, qq, context, locale):
 
-    if not qq.is_lcia_method():
+    if hasattr(qq, 'is_lcia_method') and qq.is_lcia_method():
+        pass
+    else:
         try:
             fac = convert(qq, from_unit=rq.unit())
             return QRResult(flowable, rq, qq, context, locale, qq.origin, fac)
         except (KeyError, NoUnitConversionTable):
             pass
 
-    if not rq.is_lcia_method():
+    if hasattr(rq, 'is_lcia_method') and rq.is_lcia_method():
+        pass
+    else:
         try:
             fac = convert(rq, to=qq.unit())
             return QRResult(flowable, rq, qq, context, locale, rq.origin, fac)

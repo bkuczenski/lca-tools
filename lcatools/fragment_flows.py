@@ -209,13 +209,13 @@ class FragmentFlow(object):
 
     def __eq__(self, other):
         """
-        FragmentFlows are equal if they have the same fragment, termination, and magnitude
+        FragmentFlows are equal if they have the same fragment and termination.  Formerly magnitude too but why?
         :param other:
         :return:
         """
         if not isinstance(other, FragmentFlow):
             return False
-        return self.fragment == other.fragment and self.term == other.term  and self.magnitude == other.magnitude
+        return self.fragment == other.fragment and self.term == other.term  # and self.magnitude == other.magnitude
 
     def __hash__(self):
         return hash(self.fragment)

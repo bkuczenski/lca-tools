@@ -29,7 +29,7 @@ from xlsxwriter import Workbook
 import xlrd
 from synonym_dict.lower_dict import LowerDict
 
-
+from lcatools.interfaces import EntityNotFound
 from lcatools.implementations.quantity import convert
 from lcatools.characterizations import DuplicateCharacterizationError
 
@@ -215,7 +215,11 @@ class XlsxArchiveUpdater(object):
                 continue
             rq_spec = rowdata.pop('ref_quantity', None)
             if rq_spec is not None:
-                rq = self._qi.get_canonical(rq_spec)
+                try:
+                    rq = self._qi.get_canonical(rq_spec)
+                except EntityNotFound:
+                    print('%s Skipping record with invalid ref quantity %s' % (rowdata['flow'], rq_spec))
+                    continue
                 if rq != flow.reference_entity:
                     print('%s ref quantity (%s) does not agree with spec %s: skipping cf' % (rowdata['flow'],
                                                                                              flow.reference_entity,

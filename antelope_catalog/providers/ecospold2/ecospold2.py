@@ -97,8 +97,10 @@ class EcospoldV2Archive(LcArchive):
         self._archive = FileStore(self.source, internal_prefix=prefix)
         self._master = EcoSpoldMasterData(self.source)
 
+        ''' # not sure why I did this (preload all elem flows) but now I am taking it out
         for exch in self._master.elementary_exchanges.values():
             self._create_flow(exch)
+        '''
 
         self._linked = linked
         self._process_flow_map = defaultdict(set)
@@ -108,6 +110,10 @@ class EcospoldV2Archive(LcArchive):
     @property
     def master_data(self):
         return self._master
+
+    def load_flows(self):
+        for exch in self._master.elementary_exchanges.values():
+            self._create_flow(exch)
 
     '''
     def fg_proxy(self, proxy):

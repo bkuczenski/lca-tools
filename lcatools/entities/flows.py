@@ -137,6 +137,9 @@ class LcFlow(LcEntity, FlowInterface):
         return quantity.characterize(flowable, self.reference_entity, value, context=context, origin=self.origin,
                                      **kwargs)
 
+    def cf(self, quantity, **kwargs):
+        return quantity.cf(self, **kwargs)
+
     '''
     def profile(self):
         print('%s' % self)

@@ -1,6 +1,7 @@
 from __future__ import print_function, unicode_literals
 import uuid
 
+from synonym_dict import LowerDict
 
 from lcatools.entities.entities import LcEntity
 from lcatools.entity_refs.quantity_ref import QuantityRef, convert
@@ -39,6 +40,14 @@ class LcQuantity(LcEntity):
         self._qi = None
 
     def __setitem__(self, key, value):
+        if key.lower() == 'unitconversion':
+            try:
+                v = LowerDict(**value)
+            except TypeError:
+                print(type(value))
+                print(value)
+                raise
+            value = v
         if key.lower() == 'indicator' and len(value) > 0:
             self._new_fields = ('Indicator', )
             self._is_lcia = True

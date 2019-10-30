@@ -354,12 +354,12 @@ class FlowTermination(object):
         if self.term_flow.reference_entity == self._parent.flow.reference_entity:
             return 1.0
         try:
-            fwd_cf = self.term_flow.reference_entity.cf(self._parent.flow)
+            fwd_cf = self.term_flow.reference_entity.cf(self._parent.flow, dist=3)
         except QuantityRequired:
             fwd_cf = 0.0
         if fwd_cf == 0.0:
             try:
-                rev_cf = self._parent.flow.reference_entity.cf(self.term_flow)
+                rev_cf = self._parent.flow.reference_entity.cf(self.term_flow, dist=3)
             except QuantityRequired:
                 rev_cf = 0.0
             if rev_cf == 0.0:

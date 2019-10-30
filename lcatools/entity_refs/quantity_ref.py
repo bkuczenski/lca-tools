@@ -31,6 +31,8 @@ def convert(quantity, from_unit=None, to=None):
     """
     try:
         uc_table = quantity['UnitConversion']
+        if quantity.unit() not in uc_table:
+            uc_table[quantity.unit()] = 1.0
     except KeyError:
         raise NoUnitConversionTable
 

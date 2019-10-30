@@ -30,6 +30,10 @@ import xlrd
 from synonym_dict.lower_dict import LowerDict
 
 
+from lcatools.implementations.quantity import convert
+from lcatools.characterizations import DuplicateCharacterizationError
+
+
 class XlsxEntityTypeWriter(object):
     _attribs = ('external_ref', 'uuid')
 
@@ -141,7 +145,8 @@ def _check_merge(merge):
 
 class XlsxArchiveUpdater(object):
     """
-    This class uses the contents of a properly formatted XLS file to create or update entities in an archive.
+    This class uses the contents of a properly formatted XLS file (or XLS-file-like object) to create or update
+    entities in an archive.
 
     Uses sheet names that match the archive's "_entity_types" property, so 'flow' and 'quantity' nominally.
 
@@ -157,6 +162,17 @@ class XlsxArchiveUpdater(object):
     Optional columns include 'uuid' and 'origin'
 
     All other columns are assigned as properties.
+
+    FLOW PROPERTIES
+    If there is a sheet called 'flowproperties', then it is interpreted as a list of flow characterizations.  This
+    sheet can have the following columns:
+     - 'flow'
+     - 'ref_quantity' - (optional) if present, used only as a check against the flow's native reference_entity
+     - 'ref_unit' - (optional) a convertible unit in ref_quantity
+     - 'quantity' - the quantity being characterized
+     - 'unit' - (optional) a convertible unit in quantity
+     - 'value' - the characterization factor
+     - 'context' - (optional) context for the characterization
 
     CELL CONTENTS
     Cells are read as strings, except for the following:
@@ -186,17 +202,94 @@ class XlsxArchiveUpdater(object):
         rowdata['entityType'] = etype
         self._ar.entity_from_json(rowdata)
 
-    def _process_sheet(self, etype):
-        try:
-            sh = self._xl.sheet_by_name(etype)
-        except xlrd.XLRDError:
+    def _process_flow_properties(self):
+        fp, headers = self._sheet_accessor('flowproperties')
+        if fp is None:
             return
+
+        for row in range(1, fp.nrows):
+            rowdata = {headers[i]: self._grab_value(k) for i, k in enumerate(fp.row(row))}
+            flow = self._ar[rowdata['flow']]
+            if flow is None:
+                self._print('Skipping unknown flow %s' % rowdata['flow'])
+                continue
+            rq_spec = rowdata.pop('ref_quantity', None)
+            if rq_spec is not None:
+                rq = self._qi.get_canonical(rq_spec)
+                if rq != flow.reference_entity:
+                    print('%s ref quantity (%s) does not agree with spec %s: skipping cf' % (rowdata['flow'],
+                                                                                             flow.reference_entity,
+                                                                                             rq))
+                    continue
+            else:
+                rq = flow.reference_entity
+
+            qq = self._qi.get_canonical(rowdata['quantity'])
+
+            value = rowdata.pop('value', None)
+
+            cx = rowdata.pop('context', None)
+            if cx is not None:
+                # cx = self._ar.tm[cx]
+                raise NotImplementedError('TODO contexts!')
+
+            if value is None:
+                continue
+            try:
+                value = float(value)
+            except (TypeError, ValueError):
+                print('Skipping non-numeric value entry %s' % value)
+                continue
+
+            refunit = rowdata.pop('ref_unit', None)
+            if refunit is not None:
+                value *= convert(rq, to=refunit)
+
+            unit = rowdata.pop('unit', None)
+            if unit is not None:
+                value *= convert(qq, from_unit=unit)
+
+            if self._merge == 'overwrite':
+                flow.characterize(qq, value=value, context=cx, overwrite=True)
+                self._print('Characterizing %s: %g %s / %s' % (flow, value, qq.unit(), rq.unit()))
+            else:
+                try:
+                    flow.characterize(qq, value=value, context=cx)
+                    self._print('Characterizing %s: %g %s / %s' % (flow, value, qq.unit(), rq.unit()))
+                except DuplicateCharacterizationError:
+                    self._print('Deferring to existing CF')
+                    continue
+
+    def _sheet_accessor(self, sheetname):
+        """
+        Returns a 2-tuple of sheet, headers
+        'sheet' must be an "xlrd.Sheet-like" object that implements the following very simple API:
+         sheet.nrows - returns number of rows
+         sheet.row(n) - returns the contents of the nth row in a list of "cell-like" objects
+        'cell-like' object has 2 properties:
+         'ctype' - integer 0=empty, 1=text, 2=number, 3=date, 4=bool, 5=error, 6=debug
+         'value' - contents of the cell
+        'headers' is the contents of the 0th row in a list
+        :param sheetname:
+        :return: sheet, headers
+        """
+        try:
+            sh = self._xl.sheet_by_name(sheetname)
+        except (xlrd.XLRDError, KeyError):
+            return None, None
         try:
             headers = [k.value for k in sh.row(0)]
         except IndexError:
-            self._print('Empty sheet %s' % etype)
+            self._print('Empty sheet %s' % sheetname)
+            return sh, None
+        self._print('\nOpened sheet %s' % sheetname)
+        return sh, headers
+
+    def _process_sheet(self, etype):
+
+        sh, headers = self._sheet_accessor(etype)
+        if sh is None:
             return
-        self._print('Opened sheet %s' % etype)
 
         for row in range(1, sh.nrows):
             rowdata = {headers[i]: self._grab_value(k) for i, k in enumerate(sh.row(row))}
@@ -204,19 +297,30 @@ class XlsxArchiveUpdater(object):
             if ent is None:
                 self._new_entity(etype, rowdata)
             else:
-                rowdata.pop('external_ref')
+                try:
+                    rowdata.pop('external_ref')
+                except KeyError:
+                    continue
                 rowdata.pop('uuid', None)
-                rowdata.pop(ent.reference_field)
+                ref = rowdata.pop(ent.reference_field, None)
+                if self._merge == 'overwrite' and ref is not None:
+                    if isinstance(ref, str) and etype == 'flow':
+                        ref = self._qi.get_canonical(ref)
+                    if ref is not None and ent.reference_entity != ref:
+                        self._print('Updating reference entity %s -> %s' % (ent.reference_entity, ref))
+                        ent[ent.reference_field] = ref
                 for k, v in rowdata.items():
+                    if v is None:
+                        continue
                     if self._merge == 'defer':
                         if ent.has_property(k):
-                            continue
-                        elif v is None:
                             continue
                         else:
                             self._print('Updating %s[%s] -> %s' % (ent.external_ref, k, v))
                             ent[k] = v
                     else:
+                        if ent[k] == v:
+                            continue
                         self._print('Updating %s[%s] -> %s' % (ent.external_ref, k, v))
                         ent[k] = v
 
@@ -225,30 +329,38 @@ class XlsxArchiveUpdater(object):
             return
         print(*args)
 
-    def __init__(self, archive, filename, merge='defer', quiet=True):
+    def __init__(self, archive, xlrd_like, merge='defer', quiet=True):
         """
         Updates entity meta-information from a spreadsheet created from above. external_ref is used as a key;
         if an entity is not found, a new one is created.  'uuid' and reference fields are only used for creation
         of new entities.
-        Note: uses the default sheet names of 'flow', 'quantity', 'process'
+        Note: uses the default sheet names of 'flow' and 'quantity'
+
         :param archive:
-        :param filename:
+        :param xlrd_like: XLRD workbook-like object OR filename of XLS file
         :param merge: ['defer'] - do not overwrite existing properties
                       ['overwrite'] - do overwrite existing properties
         :return:
         """
         self._quiet = quiet
         self._ar = archive
-        self._xl = xlrd.open_workbook(filename)
+        self._qi = archive.make_interface('quantity')
         self._merge = _check_merge(merge)
+        if isinstance(xlrd_like, str) and os.path.exists(xlrd_like):
+            self._xl = xlrd.open_workbook(xlrd_like)
+        else:
+            self._xl = xlrd_like
 
     def apply(self):
-        for etype in self._ar._entity_types:
+        for etype in ('flow', 'quantity'):  # these are the only etypes that are currently handled
             self._process_sheet(etype)
+        self._process_flow_properties()
 
     def __enter__(self):
         """Return self object to use with "with" statement."""
         return self
 
     def __exit__(self, *args):
-        self._xl.release_resources()
+        if hasattr(self._xl, 'release_resources'):
+            self._xl.release_resources()
+        self._xl = None

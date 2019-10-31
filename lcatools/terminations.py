@@ -151,8 +151,8 @@ class FlowTermination(object):
         self._score_cache = LciaResults(fragment)
         self._lci = None  # cache LCI results
 
-        self.direction = direction
         self.term_flow = term_flow
+        self.direction = direction
         self.descend = descend
 
     @property
@@ -186,7 +186,13 @@ class FlowTermination(object):
     @direction.setter
     def direction(self, value):
         if value is None:
-            value = comp_dir(self._parent.direction)
+            # this is wrong: should set the direction by the reference.
+            if self.is_process:
+                rx = self.term_node.reference(self.term_flow)
+                value = rx.direction
+            else:
+                # for fg, user must specify to invert direction. for subfragments, direction is ignored
+                value = comp_dir(self._parent.direction)
         self._direction = check_direction(value)
 
     '''

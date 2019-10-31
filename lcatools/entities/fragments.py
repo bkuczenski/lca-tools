@@ -453,7 +453,7 @@ class LcFragment(LcEntity):
 
     @property
     def cached_ev(self):
-        return self._exchange_values[0] or 1.0
+        return self._exchange_values[0]  # or 1.0  ## Why??? we need to allow zero values
 
     @cached_ev.setter
     def cached_ev(self, value):
@@ -834,16 +834,22 @@ class LcFragment(LcEntity):
 
     def terminate(self, term_node, scenario=None, **kwargs):
         """
-        specify a termination.  background=True: if the flow has a parent, will create a new
+        specify the fragment's termination in a given scenario.
         :param term_node: The thing that terminates the flow
         :param scenario:
+        :param kwargs: term_flow, direction, descend
         :return:
         """
         if isinstance(scenario, tuple) or isinstance(scenario, set):
             raise ScenarioConflict('Set termination must specify single scenario')
-        if scenario in self._terminations:
+        if scenario is not None and scenario in self._terminations:
             if not self._terminations[scenario].is_null:
                 raise CacheAlreadySet('Scenario termination already set. use clear_termination()')
+
+        if scenario is None and term_node in self._terminations:
+            # shortcut: assign an existing scenario to be default
+            self._terminations[None] = self._terminations[term_node]
+            return self._terminations[term_node]
 
         # check for recursive loops
         if term_node.entity_type == 'fragment' and term_node is not self:
@@ -1432,7 +1438,7 @@ def _do_subfragment_traversal(ff, scenario, observed):
     :param observed:
     :return:
     """
-    term = ff.term
+    term = ff.term  # note that we ignore term.direction in subfragment traversal
     node_weight = ff.node_weight
     self = ff.fragment
 

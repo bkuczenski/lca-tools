@@ -168,6 +168,9 @@ class FragmentFlow(object):
         if self.term.is_null:
             term = '--:'
             name = self.fragment['Name']
+        elif self.term.is_context:
+            term = '-= '
+            name = '%s, %s' % (self.term.term_flow['Name'], self.term.term_node.name)
         else:
             term = '-# '
             name = self.term.term_node.name
@@ -307,7 +310,7 @@ def frag_flow_lcia(fragmentflows, quantity_ref, scenario=None, refresh=False, ig
     :param ignore_uncached: [True] whether to allow zero scores for un-cached, un-computable fragments
     :return:
     """
-    result = LciaResult(quantity_ref)
+    result = LciaResult(quantity_ref, scenario=str(scenario))
     for ff in fragmentflows:
         if ff.term.is_null:
             continue

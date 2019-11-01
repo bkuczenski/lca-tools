@@ -132,7 +132,8 @@ class PosNegChart(object):
             ax.legend((self._pos_handle, self._neg_handle), ('Impacts', 'Avoided'))
 
         ax.set_title(qty['Name'])
-        save_plot(filename)
+        if filename != 'none':
+            save_plot(filename)
 
     def _pos_neg_horiz(self, ax, i):
         pass

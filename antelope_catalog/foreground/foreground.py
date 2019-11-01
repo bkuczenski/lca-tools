@@ -236,7 +236,8 @@ class LcForeground(BasicArchive):
         if entity.origin == self.ref and entity.external_ref != entity.uuid:
             self._add_ext_ref_mapping(entity)
 
-        self._add_to_tm(entity, merge_strategy='distinct')
+        #TODO: figure out how to specify which flows should NOT be merged (current: only flows with no context)
+        self._add_to_tm(entity)  # , merge_strategy='distinct')  # DWR!!! need to
 
         if entity.entity_type == 'fragment':
             self._frags_with_flow[entity.flow].add(entity)

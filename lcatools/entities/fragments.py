@@ -673,8 +673,6 @@ class LcFragment(LcEntity):
 
     def set_exchange_value(self, scenario, value):
         """
-        TODO: needs to test whether ev is set-able (i.e. not if balance_flow, not if parent is subfragment)
-
         The exchange value may not be set on a reference fragment UNLESS the termination for the named scenario is
         to foreground- in which case the term's inbound_ev is set instead. (and a term is created if none exists)
         :param scenario:
@@ -687,20 +685,13 @@ class LcFragment(LcEntity):
             raise DependentFragment('Fragment exchange value set during traversal')
         if isinstance(scenario, tuple) or isinstance(scenario, set):
             raise ScenarioConflict('Set EV must specify single scenario')
-        if 0:  # self.reference_entity is None:  ## terminations no longer have inbound evs
-            if scenario in (0, '0', 1, '1', None):
-                self.term.inbound_exchange_value = value
-            elif scenario in self._terminations:
-                self._terminations[scenario].inbound_exchange_value = value
-            else:
-                self.terminate(self, scenario=scenario, inbound_ev=value)
+
+        if scenario == 0 or scenario == '0' or scenario is None:
+            self._exchange_values[0] = value
+        elif scenario == 1 or scenario == '1':
+            self._exchange_values[1] = value
         else:
-            if scenario == 0 or scenario == '0' or scenario is None:
-                self._exchange_values[0] = value
-            elif scenario == 1 or scenario == '1':
-                self._exchange_values[1] = value
-            else:
-                self._exchange_values[scenario] = value
+            self._exchange_values[scenario] = value
 
     @property
     def conserved(self):

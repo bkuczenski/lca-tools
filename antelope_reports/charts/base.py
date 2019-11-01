@@ -44,13 +44,13 @@ def color_range(num, hue, sat=0.5):
         yield colorsys.hsv_to_rgb(next(h), sat, next(v))
 
 
-def hue_from_string(string, base=16):
+def hue_from_string(s, base=16):
     try:
         hue = int(s, base)
     except ValueError:
         base = 36
         hue = int(s, base)
-    return hue / (hue**len(string))
+    return hue / (hue**len(s))
 
 
 

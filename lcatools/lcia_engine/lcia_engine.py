@@ -41,6 +41,8 @@ class LciaEngine(TermManager):
        - dist = 3: .. or any parent
      * quell biogenic CO2 in quantity relation lookups
     """
+    _quell_biogenic = None
+
     def _configure_flowables(self, flowables):
         """
         Setup local flowables database with flows that require special handling. Also loads the flowables file.
@@ -94,9 +96,17 @@ class LciaEngine(TermManager):
         self._fb_by_origin[None] = set(str(k) for k in self._fm.objects)
 
         # difficult problem, this
-        self._quell_biogenic = quell_biogenic_co2
+        self.quell_biogenic_co2 = quell_biogenic_co2
 
         self._factors_for_later = defaultdict(bool)
+
+    @property
+    def quell_biogenic_co2(self):
+        return self._quell_biogenic
+
+    @quell_biogenic_co2.setter
+    def quell_biogenic_co2(self, value):
+        self._quell_biogenic = bool(value)
 
     def save_for_later(self, quantity):
         qc = self.get_canonical(quantity)
@@ -183,7 +193,7 @@ class LciaEngine(TermManager):
 
         Under our scheme, it is a requirement that the flowables list used to initialize the LciaEngine is curated.
 
-        biogenic: if ANY of the flow's terms match the biogenic
+        biogenic: if ANY of the flow's terms match the biogenic regex AND the flow is CO2, set its name
         :param flow:
         :return:
         """

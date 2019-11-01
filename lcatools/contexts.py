@@ -76,7 +76,6 @@ class Context(Compartment):
     If a context has a parent, it inherits the sense of the parent- specifying the opposite sense will raise
     an error.
     """
-    _origins = set()
     _first_origin = None
     entity_type = 'context'
 
@@ -97,6 +96,7 @@ class Context(Compartment):
 
     def __init__(self, *args, sense=None, **kwargs):
         super(Context, self).__init__(*args, **kwargs)
+        self._origins = set()
         self._sense = None
         if sense is not None:
             self.sense = sense

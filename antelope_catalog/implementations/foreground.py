@@ -69,6 +69,9 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         else:
             raise NotForeground('The resource does not contain fragments: %s' % self._archive.ref)
 
+    def context(self, item):
+        return self._archive.tm[item]
+
     def frag(self, string, **kwargs):
         """
         :param string:
@@ -251,3 +254,56 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
                 ch.terminate(self._archive.catalog_ref(process.origin, ex.termination, entity_type='process'))
         fragment.observe(accept_all=True)
         return fragment
+
+    '''# Create or update a fragment from a list of exchanges.
+
+    This could replace extend_process_model 
+    '''
+    def fragment_from_exchanges(self, _xg, parent=None, ref=None):
+        """
+        If parent is None, first generated exchange is reference flow; and subsequent exchanges are children.
+        Else, all generated exchanges are children of the given parent, and if a child flow exists, update it. This
+        obviously fails if a fragment has multiple children with the same flow
+        """
+        if parent is None:
+            x = next(_xg)
+            print('Creating new fragment %s' % ref)
+            parent = self.new_fragment(x.flow, x.direction, value=x.value, units=x.unit, **x.args)
+            parent.observed_ev = parent.cached_ev
+            update = False
+        else:
+            update = True
+
+        for y in _xg:
+            flow = self[y.flow]
+            if flow is None:
+                print('Skipping unknown flow %s' % y.flow)
+                continue
+            if update:
+                try:
+                    c_up = next(parent.children_with_flow(flow, y.direction))
+                    print('Updating %s' % c_up)
+                    v = y.value
+                    if y.unit is not None:
+                        v *= c_up.flow.reference_entity.convert(y.unit)
+
+                    c_up.observed_ev = v
+                    if y.termination is not None:
+                        c_up.clear_termination()
+                        c_up.terminate(y.termination)
+                    continue
+                except StopIteration:
+                    print('No child flow found; creating new %s %s' % (flow, y.direction))
+                    pass
+
+            c = self.new_fragment(flow, y.direction, value=y.value, units=y.unit, parent=parent, **y.args)
+
+            if y.termination is not None:
+                c.terminate(y.termination)
+            c.observed_ev = c.cached_ev
+
+        if parent.external_ref == parent.uuid and ref is not None:
+            self.name_fragment(parent, ref)
+
+        return parent
+

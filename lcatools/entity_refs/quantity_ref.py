@@ -30,6 +30,16 @@ def convert(quantity, from_unit=None, to=None):
     :param to: unit to convert to (default is the reference unit)
     :return: a float indicating how many to_units there are in one from_unit
     """
+
+    if from_unit == to:
+        return 1.0
+    elif from_unit is None:
+        if to.lower() == quantity.unit().lower():
+            return 1.0
+    elif to is None:
+        if from_unit.lower() == quantity.unit().lower():
+            return 1.0
+
     try:
         uc_table = quantity['UnitConversion']
         if quantity.unit() not in uc_table:

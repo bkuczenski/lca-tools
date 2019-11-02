@@ -174,6 +174,8 @@ class FragmentFlow(object):
         else:
             term = '-# '
             name = self.term.term_node.name
+        if len(name) > 80:
+            name = name[:62] + '....' + name[-14:]
         return '%.5s  %10.3g [%6s] %s %s' % (self.fragment.uuid, self.node_weight, self.fragment.direction,
                                              term, name)
 

@@ -581,7 +581,7 @@ class FlowTermination(object):
 
     def __eq__(self, other):
         """
-        Terminations are equal if they are both null, both fg, or if their term_node, term_flow, and direction are equal
+        Terminations are equal if they are both null, both fg, or if term_node, term_flow, direction and descend match
         :param other:
         :return:
         """
@@ -599,7 +599,8 @@ class FlowTermination(object):
             return False
         return (self.term_node.external_ref == other.term_node.external_ref and
                 self.term_flow == other.term_flow and
-                self.direction == other.direction)
+                self.direction == other.direction and
+                self.descend == other.descend)
 
     def __str__(self):
         """

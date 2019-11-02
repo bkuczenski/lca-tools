@@ -37,11 +37,14 @@ def random_color(uuid, sat=0.65, val=0.95, offset=14669):
     return colorsys.hsv_to_rgb(hue, sat, val)
 
 
-def _grab_stages(*results):
+def grab_stages(*results, sort=None):
     stages = set()
     for r in results:
         stages = stages.union(r.keys())
-    return list(stages)
+    if sort is None:
+        return list(stages)
+    else:
+        return sorted(stages, key=sort)
 
 
 def _data_range(data_array):
@@ -128,7 +131,7 @@ class WaterfallChart(object):
         self._style_dict = style_dict or dict()
 
         if stages is None:
-            stages = _grab_stages(*results)
+            stages = grab_stages(*results)
 
         if filename is None:
             filename = 'waterfall_%.3s.eps' % self._q.uuid

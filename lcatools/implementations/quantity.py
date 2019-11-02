@@ -513,6 +513,10 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
 
         fb, rq, cx = self._get_flowable_info(flowable, ref_quantity, context)  # call only for exception handling
         qq = self.get_canonical(query_quantity)
+
+        if qq == rq:  # is?
+            return QRResult(flowable, rq, qq, context, locale, qq.origin, 1.0)
+
         result, mismatch = self._quantity_relation(fb, rq, qq, cx, locale=locale,
                                                    strategy=strategy, allow_proxy=allow_proxy, **kwargs)
         if result is None:

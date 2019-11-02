@@ -133,9 +133,8 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         self._archive.add_entity_and_children(frag)
         return frag
 
-    def name_fragment(self, fragment, name, **kwargs):
-        self._archive.name_fragment(fragment, name)
-        return fragment
+    def name_fragment(self, fragment, name, auto=None, force=None, **kwargs):
+        return self._archive.name_fragment(fragment, name, auto=auto, force=force)
 
     def fragments_with_flow(self, flow, direction=None, reference=None, background=None, **kwargs):
         """
@@ -282,15 +281,19 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
             if update:
                 try:
                     c_up = next(parent.children_with_flow(flow, y.direction))
-                    print('Updating %s' % c_up)
                     v = y.value
                     if y.unit is not None:
                         v *= c_up.flow.reference_entity.convert(y.unit)
 
-                    c_up.observed_ev = v
+                    if c_up.observed_ev != v:
+                        print('Updating %s exchange value %.3f' % (c_up, v))
+
+                        c_up.observed_ev = v
                     if y.termination is not None:
-                        c_up.clear_termination()
-                        c_up.terminate(y.termination)
+                        if y.termination != c_up.term.term_node:
+                            print('Updating %s termination %s' % (c_up, y.termination))
+                            c_up.clear_termination()
+                            c_up.terminate(y.termination)
                     continue
                 except StopIteration:
                     print('No child flow found; creating new %s %s' % (flow, y.direction))

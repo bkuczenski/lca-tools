@@ -250,7 +250,7 @@ class LcForeground(BasicArchive):
         else:
             super(LcForeground, self)._add_children(entity)
 
-    def name_fragment(self, frag, name):
+    def name_fragment(self, frag, name, auto=None, force=None):
         """
         This function is complicated because we have so many dicts:
          _entities maps link to entity
@@ -268,7 +268,17 @@ class LcForeground(BasicArchive):
          * add the name with the new link to the ext_ref_mapping
         :param frag:
         :param name:
-        :return:
+        :param auto: if True, if name is taken, apply an auto-incrementing numeric suffix until a free name is found
+        :param force: if True, if name is taken, de-name the prior fragment and assign the name to the current one.
+         This requires:
+           - first de-naming the prior fragment,
+           - then swapping its _entities entry
+           - then swapping its _uuid_map entry
+           - then swapping its _ents_by_type entry
+           - then removing its duplicate ext_ref_mapping
+           = then proceeding to normally rename the new frag
+         If both auto and force are specified, auto takes precedence.
+        :return: returns the assigned name
         """
         if frag.external_ref == name:
             return  # nothing to do-- fragment is already assigned that name
@@ -278,7 +288,27 @@ class LcForeground(BasicArchive):
                 raise FragmentNotFound(frag)
             raise FragmentMismatch('%s\n%s' % (current, frag))
         if self._ref_to_key(name) is not None:
-            raise ValueError('Name is already taken: "%s"' % name)
+            if auto:
+                inc = 0
+                newname = '%s %02d' % (name, inc)
+                while self._ref_to_key(newname) is not None:
+                    inc += 1
+                    newname = '%s %02d' % (name, inc)
+                name = newname
+            elif force:
+                prior = self._ref_to_key(name)
+                print('Renaming prior %s to %s' % (name, prior.uuid))
+                priorlink = prior.link
+                prior.de_name()
+                self._ext_ref_mapping.pop(name)
+                self._entities[prior.link] = self._entities.pop(priorlink)
+                self._uuid_map[prior.uuid].remove(priorlink)
+                self._uuid_map[prior.uuid].add(prior.link)
+                self._ents_by_type['fragment'].remove(priorlink)
+                self._ents_by_type['fragment'].add(prior.link)
+                assert self._ref_to_key(name) is None
+            else:
+                raise ValueError('Name is already taken: "%s"' % name)
         oldname = frag.link
         frag.external_ref = name  # will raise PropertyExists if already set
         self._add_ext_ref_mapping(frag)
@@ -288,6 +318,8 @@ class LcForeground(BasicArchive):
         self._uuid_map[frag.uuid].add(frag.link)
         self._ents_by_type['fragment'].remove(oldname)
         self._ents_by_type['fragment'].add(frag.link)
+
+        return name
 
     '''
     Save and load the archive

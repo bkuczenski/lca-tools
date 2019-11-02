@@ -210,6 +210,13 @@ class LcFragment(LcEntity):
         else:
             raise PropertyExists('External Ref already set to %s' % self._external_ref)
 
+    def de_name(self):
+        """
+        Remove a fragment's name
+        :return:
+        """
+        self._external_ref = None
+
     def set_debug_threshold(self, level):
         self.__dbg_threshold = level
 
@@ -284,13 +291,16 @@ class LcFragment(LcEntity):
         for k in sorted(self._child_flows, key=lambda x: x.uuid):
             yield k
 
-    def children_with_flow(self, flow, direction=None):
+    def children_with_flow(self, flow, direction=None, recurse=False):
         for k in self._child_flows:
             if k.flow == flow:
                 if direction is not None:
                     if k.direction != direction:
                         continue
                 yield k
+            if recurse:  # depth-first
+                for z in k.children_with_flow(flow, direction, recurse=recurse):
+                    yield z
 
     @property
     def parent(self):

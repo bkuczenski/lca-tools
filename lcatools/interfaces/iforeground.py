@@ -92,12 +92,13 @@ class ForegroundInterface(AbstractQuery):
         return self._perform_query(_interface, 'new_fragment', ForegroundRequired('Foreground access required'),
                                    flow, direction, **kwargs)
 
-    def name_fragment(self, fragment, name, **kwargs):
+    def name_fragment(self, fragment, name, auto=None, force=None, **kwargs):
         """
         Assign a fragment a non-UUID external ref to facilitate its easy retrieval.  I suspect this should be
-        constrained to reference fragments.
+        constrained to reference fragments.  By default, if the requested name is taken, a ValueError is raised
         :param fragment:
-        :param name:
+        :param auto: if True, if name is taken, apply an auto-incrementing numeric suffix until a free name is found
+        :param force: if True, if name is taken, de-name the prior fragment and assign the name to the current one
         :return:
         """
         return self._perform_query(_interface, 'name_fragment', ForegroundRequired('Foreground access required'),

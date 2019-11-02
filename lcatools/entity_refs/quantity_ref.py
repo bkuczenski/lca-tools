@@ -1,4 +1,5 @@
 from .base import EntityRef
+from synonym_dict import LowerDict
 
 
 class NoUnitConversionTable(Exception):
@@ -99,6 +100,10 @@ class QuantityRef(EntityRef):
         return self._is_lcia
 
     def convert(self, from_unit=None, to=None):
+        if not self.has_property('UnitConversion'):
+            uc = LowerDict()
+            uc[self.unit()] = 1.0
+            self['UnitConversion'] = uc
         return convert(self, from_unit, to)
 
     def quantity_terms(self):

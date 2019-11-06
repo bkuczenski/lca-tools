@@ -34,6 +34,13 @@ class MissingReference(Exception):
     pass
 
 
+class MissingContext(Exception):
+    """
+    context cannot be None
+    """
+    pass
+
+
 class Characterization(object):
     """
     A characterization is an affiliation of a flow and a quantity. Characterizations are inherently naively spatialized,
@@ -70,6 +77,8 @@ class Characterization(object):
         self.flowable = str(flow_name)
         self.quantity = query_quantity
         self._ref_q = ref_quantity
+        if context is None:
+            raise MissingContext('%s, %s, %s' % (flow_name, ref_quantity, query_quantity))
         self._context = context
         self._locations = dict()
         self._origin = origin or query_quantity.origin

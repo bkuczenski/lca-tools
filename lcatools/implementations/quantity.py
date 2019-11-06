@@ -31,7 +31,7 @@ class QuantityConversion(object):
     """
     @classmethod
     def null(cls, flowable, rq, qq, context, locale, origin):
-        qrr = QRResult(flowable, rq, qq, context, locale, origin, 0.0)
+        qrr = QRResult(flowable, rq, qq, context or NullContext, locale, origin, 0.0)
         return cls(qrr)
 
     def __init__(self, *args, query=None):
@@ -192,7 +192,7 @@ def try_convert(flowable, rq, qq, context, locale):
     else:
         try:
             fac = convert(qq, from_unit=rq.unit())
-            return QRResult(flowable, rq, qq, context, locale, qq.origin, fac)
+            return QRResult(flowable, rq, qq, context or NullContext, locale, qq.origin, fac)
         except (KeyError, NoUnitConversionTable):
             pass
 
@@ -201,7 +201,7 @@ def try_convert(flowable, rq, qq, context, locale):
     else:
         try:
             fac = convert(rq, to=qq.unit())
-            return QRResult(flowable, rq, qq, context, locale, rq.origin, fac)
+            return QRResult(flowable, rq, qq, context or NullContext, locale, rq.origin, fac)
         except (KeyError, NoUnitConversionTable):
             pass
     raise NoConversion
@@ -442,7 +442,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
                 raise EntityNotFound(qq)
 
         if qq == rq:  # is?
-            return [QRResult(flowable, rq, qq, context, locale, qq.origin, 1.0)], [], []
+            return [QRResult(flowable, rq, qq, context or NullContext, locale, qq.origin, 1.0)], [], []
 
         try:
             return self._quantity_engine(flowable, rq, qq, cx, locale=locale, **kwargs)
@@ -515,7 +515,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         qq = self.get_canonical(query_quantity)
 
         if qq == rq:  # is?
-            return QRResult(flowable, rq, qq, context, locale, qq.origin, 1.0)
+            return QRResult(flowable, rq, qq, context or NullContext, locale, qq.origin, 1.0)
 
         result, mismatch = self._quantity_relation(fb, rq, qq, cx, locale=locale,
                                                    strategy=strategy, allow_proxy=allow_proxy, **kwargs)

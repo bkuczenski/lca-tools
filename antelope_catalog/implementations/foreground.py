@@ -222,6 +222,9 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         self._archive.save(**kwargs)
         return True
 
+    def clear_unit_scores(self, lcia_method=None):
+        self._archive.clear_unit_scores(lcia_method)
+
     def create_process_model(self, process, ref_flow=None, include_elementary=False, terminate=True, **kwargs):
         rx = process.reference(ref_flow)
         frag = self.new_fragment(rx.flow, rx.direction, value=1.0)

@@ -522,6 +522,9 @@ class FlowTermination(object):
         for k, v in self.score_cache_items():
             print('%s' % v)
 
+    def reset_score(self, lcia):
+        self._score_cache.pop(lcia, None)
+
     def clear_score_cache(self):
         self._score_cache.clear()
 

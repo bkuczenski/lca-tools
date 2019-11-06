@@ -385,11 +385,13 @@ class LcForeground(BasicArchive):
             os.makedirs(self._fragment_dir)
         self.save_fragments(save_unit_scores=save_unit_scores)
 
-    def clear_score_caches(self):
+    def clear_unit_scores(self, lcia_method=None):
         for f in self.entities_by_type('fragment'):
             for s, t in f.terminations():
-                t.clear_score_cache()
-
+                if lcia_method is None:
+                    t.clear_score_cache()
+                else:
+                    t.reset_score(lcia_method)
     '''
     Retrieve + display fragments
     '''

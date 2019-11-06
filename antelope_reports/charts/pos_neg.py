@@ -147,7 +147,7 @@ class PosNegChart(object):
         if self._pos_handle is None:
             self._pos_handle = h
         if neg != 0:
-            ax.text(x + 0.5 * self._bw, pos + self._tgap, num_format % pos, ha='center', va='bottom')
+            ax.text(x + 0.5 * self._bw, pos + self._tgap * self._ar_scale, num_format % pos, ha='center', va='bottom')
             x += self._bw
             h = ax.bar(x, neg, bottom=pos, width=0.62 * self._bw, align='center', color=net_color,
                        linewidth=0)

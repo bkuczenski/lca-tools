@@ -64,13 +64,13 @@ class BasicImplementation(object):
         else:
             eref = None
         entity = self.get(external_ref)
-        if entity:
-            if entity is eref:
-                raise NoAccessToEntity(entity.link)
-            if entity.has_property(item):
-                return entity[item]
-            raise KeyError('%s: %s [%s]' % (self.origin, external_ref, item))
-        raise EntityNotFound(external_ref)
+        # if entity:
+        if entity is eref:
+            raise NoAccessToEntity(entity.link)
+        if entity.has_property(item):
+            return entity[item]
+        raise KeyError('%s: %s [%s]' % (self.origin, external_ref, item))
+        # raise EntityNotFound(external_ref)
 
     def get_reference(self, key):
         entity = self._fetch(key)
@@ -113,4 +113,7 @@ class BasicImplementation(object):
             return e
         er_s = external_ref.split('/')
         if self.origin.startswith(er_s[0]):
-            return self._fetch('/'.join(er_s[1:]), **kwargs)
+            e = self._fetch('/'.join(er_s[1:]), **kwargs)
+            if e is not None:
+                return e
+        raise EntityNotFound(external_ref)

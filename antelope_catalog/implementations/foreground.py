@@ -52,6 +52,16 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
     _frags_with_flow = defaultdict(set)
     _recursion_check = None
 
+    '''
+    Add some useful functions from other interfaces to the foreground
+    '''
+    def count(self, entity_type):
+        return self._archive.count_by_type(entity_type)
+
+    def flows(self, **kwargs):
+        for f in self._archive.search('flow', **kwargs):
+            yield f
+
     def get_canonical(self, quantity):
         """
         By convention, a foreground archive's Term Manager is the catalog's LCIA engine, which is the Qdb of record
@@ -61,6 +71,9 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         """
         return self._archive.tm.get_canonical(quantity)
 
+    '''
+    fg implementation begins here
+    '''
     def fragments(self, show_all=False, **kwargs):
         if hasattr(self._archive, 'fragments'):
             # we only want reference fragments by default

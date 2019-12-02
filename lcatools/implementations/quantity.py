@@ -388,10 +388,13 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         :return: flowable, canonical ref_quantity, canonical context or None
         """
         if isinstance(flow, str):
-            f = self.get(flow)  # assume it's a ref
+            try:
+                flow = self.get(flow)  # assume it's a ref
+            except EntityNotFound:
+                pass
 
-            if f is not None:  # lookup succeeded
-                flow = f
+            # if f is not None:  # lookup succeeded
+            #     flow = f
 
         if isinstance(flow, FlowInterface):
             flowable = flow.link

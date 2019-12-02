@@ -29,6 +29,7 @@ class EcoinventDataSourceTest(unittest.TestCase):
             if ref not in cat.references:
                 cat.add_resource(res)
             res.check(cat)
+            res.archive.load_flows()
             ar.append(res.archive)
         cls.ea = tuple(ar)
 

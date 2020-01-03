@@ -70,6 +70,18 @@ class ForegroundInterface(AbstractQuery):
         return self._perform_query(_interface, 'frag', ForegroundRequired('Foreground access required'),
                                    string, many=many, **kwargs)
 
+    def find_term(self, term_ref, origin=None, **kwargs):
+        """
+        Find a termination for the given reference.  Essentially do type and validity checking and return something
+        that can be used as a valid termination.
+        :param term_ref: either an entity, entity ref, or string
+        :param origin: if provided, interpret term_ref as external_ref
+        :param kwargs:
+        :return: either a context, or a process_ref, or a flow_ref, or a fragment or fragment_ref, or None
+        """
+        return self._perform_query(_interface, 'find_term', ForegroundRequired('blah'),
+                                   term_ref, origin=origin, **kwargs)
+
     def new_fragment(self, flow, direction, **kwargs):
         """
         Create a fragment and add it to the foreground.

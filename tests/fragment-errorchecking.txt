@@ -1,0 +1,214 @@
+==========
+Mon Dec 09 11:51:30 -0800 2019
+
+Observed failure: an ecoinvent fragment, after extend_process_model(), gives different results than the un-extended model
+
+--------------------------------------------------
+
+First: gut check: LCIA result:
+nf.term.term_node.show()                                                                                                
+ProcessRef catalog reference (33b9f271-9d77-48b3-866a-97417af02686)
+origin: local.ecoinvent.3.4.apos
+UUID: 33b9f271-9d77-48b3-866a-97417af02686
+   Name: heat production, natural gas, at boiler condensing modulating <100kW
+Comment: NOx and CO emissions derived from measurements under controlled conditions; no adjustment to real operation made due to lack of information. Other emission data from different references.
+[This dataset was already contained in the ecoinvent database version 2. It was not individually updated during the transfer to ecoinvent version 3. Life Cycle Impact Assessment results may still have changed, as they are affected by changes in the supply chain, i.e. in other datasets. This dataset was generated following the ecoinvent quality guidelines for version 2. It may have been subject to central changes described in the ecoinvent version 3 change report (http://www.ecoinvent.org/database/ecoinvent-version-3/reports-of-changes/), and the results of the central updates were reviewed extensively. The changes added e.g. consistent water flows and other information throughout the database. The documentation of this dataset can be found in the ecoinvent reports of version 2, which are still available via the ecoinvent website. The change report linked above covers all central changes that were made during the conversion process.]
+==Local Fields==
+   SpatialScope: RoW
+  TemporalScope: {'begin': '2000-01-01', 'end': '2017-12-31'}
+Classifications: ['EcoSpold01Categories: natural gas/heating systems', 'ISIC rev.4 ecoinvent: 3530:Steam and air conditioning supply']
+
+gwp.do_lcia(nf.term.term_node.lci()).total()                                                                            
+completed 67 iterations
+Out[26]: 0.0703987504333606
+
+--------------------------------------------------
+
+Second: build the fragment and do LCIA again:
+
+In [9]: nf.show_tree()                                                                                                           
+   -<--*   02be9 [       1 MJ] heat, central or small-scale, natural gas
+    [   1 MJ] heat, central or small-scale, natural gas
+       |        Stage: EcoSpold01Categories: natural gas/fuels
+       | -<--B*  1f68e [  0.0251 m3] natural gas, low pressure
+       |        Stage: EcoSpold01Categories: photovoltaic/power plants
+       | -<--B*  52e8c [ 6.22e-06 kWh] electricity, low voltage
+       |        Stage: ISIC rev.4 ecoinvent: 2815:Manufacture of ovens, furnaces and furnace burners
+       | -<--B*  f4f01 [ 6.47e-07 unit] gas boiler
+       |        Stage: ISIC rev.4 ecoinvent: 3510:Electric power generation, transmission and distribution
+       | -<--B*  3616b [ 0.00019 kWh] electricity, low voltage
+       | -<--B*  400f8 [ 3.24e-05 kWh] electricity, low voltage
+       | -<--B*  618e1 [ 0.00156 kWh] electricity, low voltage
+       | -<--B*  8781e [ 0.000137 kWh] electricity, low voltage
+       | -<--B*  c42cd [ 0.000696 kWh] electricity, low voltage
+       | -<--B*  d6499 [ 2.66e-07 kWh] electricity, low voltage
+       | -<--B*  f8f53 [ 9.8e-05 kWh] electricity, low voltage
+       x 
+
+res = nf.fragment_lcia(gwp)
+res.show_components()                                                                                                   
+[lcia.ipcc.2007.traci21] Global Warming Air [kg CO2 eq] [LCIA] kg CO2 eq
+------------------------------------------------------------
+    0.0551 =          1 x     0.0551 02be9           1 [ Input] -#  heat production, natural gas, at boiler condensing modulating <100kW [RoW]
+    0.0125 =     0.0251 x      0.498 1f68e      0.0251 [ Input] -#  market for natural gas, low pressure [RoW]
+   0.00171 =    0.00156 x       1.09 618e1     0.00156 [ Input] -#  market group for electricity, low voltage [RAS]
+  0.000448 =   0.000696 x      0.643 c42cd    0.000696 [ Input] -#  market group for electricity, low voltage [RNA]
+  0.000349 =   6.47e-07 x        539 f4f01    6.47e-07 [ Input] -#  market for gas boiler [GLO]
+  0.000111 =   0.000137 x      0.807 8781e    0.000137 [ Input] -#  market for electricity, low voltage [RU]
+  8.94e-05 =    9.8e-05 x      0.913 f8f53     9.8e-05 [ Input] -#  market group for electricity, low voltage [RAF]
+  8.07e-05 =    0.00019 x      0.425 3616b     0.00019 [ Input] -#  market group for electricity, low voltage [RLA]
+  3.28e-05 =   3.24e-05 x       1.01 400f8    3.24e-05 [ Input] -#  market for electricity, low voltage [AU]
+     1e-06 =   6.22e-06 x      0.161 52e8c    6.22e-06 [ Input] -#  market for electricity, low voltage [NZ]
+  1.88e-07 =   2.66e-07 x      0.709 d6499    2.66e-07 [ Input] -#  market for electricity, low voltage [RoW]
+==========
+    0.0704 [lcia.ipcc.2007.traci21] Global Warming Air [kg CO2 eq] [LCIA]
+
+
+In [28]: res.total()       
+Out[28]: 0.07039875046018598
+(ut[26]: 0.0703987504333606)
+         0...........^
+	 correct to 10 sig figs
+
+--------------------------------------------------
+
+Third: Extend one background process and do it again
+
+
+ng_ex = md.frag('1f68e')
+md.extend_process_model(ng_ex)
+n [21]: nf.show_tree()    
+   -<--*   02be9 [       1 MJ] heat, central or small-scale, natural gas
+    [   1 MJ] heat, central or small-scale, natural gas
+       |        Stage: EcoSpold01Categories: natural gas/fuels
+       | -<--*   1f68e [  0.0251 m3] natural gas, low pressure
+       |  [   1 m3] natural gas, low pressure
+       |     | -<----: 632ff [    0.01 m3] natural gas, low pressure
+       |     |        Stage: ISIC rev.4 ecoinvent: 3520:Manufacture of gas; distribution of gaseous fuels through mains
+       |     | -<--B*  86a6c [       1 m3] natural gas, low pressure
+       |     |        Stage: ISIC rev.4 ecoinvent: 3530:Steam and air conditioning supply
+       |     | -<--B*  d71cc [  0.0078 MJ] heat, central or small-scale, natural gas
+       |     | -<--B*  f312d [ 1.26e-06 MJ] heat, central or small-scale, natural gas
+       |     |        Stage: ISIC rev.4 ecoinvent: 4220:Construction of utility projects
+       |     | -<--B*  7877d [ 1.03e-07 km] pipeline, natural gas, low pressure distribution network
+       |     x 
+       |        Stage: EcoSpold01Categories: photovoltaic/power plants
+       | -<--B*  52e8c [ 6.22e-06 kWh] electricity, low voltage
+       |        Stage: ISIC rev.4 ecoinvent: 2815:Manufacture of ovens, furnaces and furnace burners
+       | -<--B*  f4f01 [ 6.47e-07 unit] gas boiler
+       |        Stage: ISIC rev.4 ecoinvent: 3510:Electric power generation, transmission and distribution
+       | -<--B*  3616b [ 0.00019 kWh] electricity, low voltage
+       | -<--B*  400f8 [ 3.24e-05 kWh] electricity, low voltage
+       | -<--B*  618e1 [ 0.00156 kWh] electricity, low voltage
+       | -<--B*  8781e [ 0.000137 kWh] electricity, low voltage
+       | -<--B*  c42cd [ 0.000696 kWh] electricity, low voltage
+       | -<--B*  d6499 [ 2.66e-07 kWh] electricity, low voltage
+       | -<--B*  f8f53 [ 9.8e-05 kWh] electricity, low voltage
+       x 
+
+
+res2 = nf.fragment_lcia(gwp)
+In [25]: res2.show_components()
+[lcia.ipcc.2007.traci21] Global Warming Air [kg CO2 eq] [LCIA] kg CO2 eq
+------------------------------------------------------------
+    0.0551 =          1 x     0.0551 02be9           1 [ Input] -#  heat production, natural gas, at boiler condensing modulating <100kW [RoW]
+    0.0125 =     0.0251 x      0.498 1f68e      0.0251 [ Input] -#  market for natural gas, low pressure [RoW]
+   0.00886 =     0.0251 x      0.352 86a6c      0.0251 [ Input] -#  natural gas pressure reduction from high to low pressure [RoW]
+   0.00171 =    0.00156 x       1.09 618e1     0.00156 [ Input] -#  market group for electricity, low voltage [RAS]
+  0.000448 =   0.000696 x      0.643 c42cd    0.000696 [ Input] -#  market group for electricity, low voltage [RNA]
+  0.000349 =   6.47e-07 x        539 f4f01    6.47e-07 [ Input] -#  market for gas boiler [GLO]
+  0.000221 =    2.6e-09 x   8.51e+04 7877d     2.6e-09 [ Input] -#  market for pipeline, natural gas, low pressure distribution network [GLO]
+  0.000111 =   0.000137 x      0.807 8781e    0.000137 [ Input] -#  market for electricity, low voltage [RU]
+  8.94e-05 =    9.8e-05 x      0.913 f8f53     9.8e-05 [ Input] -#  market group for electricity, low voltage [RAF]
+  8.07e-05 =    0.00019 x      0.425 3616b     0.00019 [ Input] -#  market group for electricity, low voltage [RLA]
+  3.28e-05 =   3.24e-05 x       1.01 400f8    3.24e-05 [ Input] -#  market for electricity, low voltage [AU]
+  1.51e-05 =   0.000196 x     0.0769 d71cc    0.000196 [ Input] -#  market for heat, central or small-scale, natural gas [RoW]
+     1e-06 =   6.22e-06 x      0.161 52e8c    6.22e-06 [ Input] -#  market for electricity, low voltage [NZ]
+  1.88e-07 =   2.66e-07 x      0.709 d6499    2.66e-07 [ Input] -#  market for electricity, low voltage [RoW]
+  2.32e-09 =   3.17e-08 x      0.073 f312d    3.17e-08 [ Input] -#  market for heat, central or small-scale, natural gas [Europe w....t Switzerland]
+==========
+    0.0795 [lcia.ipcc.2007.traci21] Global Warming Air [kg CO2 eq] [LCIA]
+
+==================================================
+
+SO: where is the difference?
+
+
+Common:
+
+a    0.0551 =          1 x     0.0551 02be9           1 [ Input] -#  heat production, natural gas, at boiler condensing modulating <100kW [RoW]
+b    0.0551 =          1 x     0.0551 02be9           1 [ Input] -#  heat production, natural gas, at boiler condensing modulating <100kW [RoW]
+
+a    0.0125 =     0.0251 x      0.498 1f68e      0.0251 [ Input] -#  market for natural gas, low pressure [RoW]
+b    0.0125 =     0.0251 x      0.498 1f68e      0.0251 [ Input] -#  market for natural gas, low pressure [RoW]
+
+a   0.00171 =    0.00156 x       1.09 618e1     0.00156 [ Input] -#  market group for electricity, low voltage [RAS]
+b   0.00171 =    0.00156 x       1.09 618e1     0.00156 [ Input] -#  market group for electricity, low voltage [RAS]
+
+a  0.000448 =   0.000696 x      0.643 c42cd    0.000696 [ Input] -#  market group for electricity, low voltage [RNA]
+b  0.000448 =   0.000696 x      0.643 c42cd    0.000696 [ Input] -#  market group for electricity, low voltage [RNA]
+
+a  0.000349 =   6.47e-07 x        539 f4f01    6.47e-07 [ Input] -#  market for gas boiler [GLO]
+b  0.000349 =   6.47e-07 x        539 f4f01    6.47e-07 [ Input] -#  market for gas boiler [GLO]
+
+a  0.000111 =   0.000137 x      0.807 8781e    0.000137 [ Input] -#  market for electricity, low voltage [RU]
+b  0.000111 =   0.000137 x      0.807 8781e    0.000137 [ Input] -#  market for electricity, low voltage [RU]
+
+a  8.94e-05 =    9.8e-05 x      0.913 f8f53     9.8e-05 [ Input] -#  market group for electricity, low voltage [RAF]
+b  8.94e-05 =    9.8e-05 x      0.913 f8f53     9.8e-05 [ Input] -#  market group for electricity, low voltage [RAF]
+
+a  8.07e-05 =    0.00019 x      0.425 3616b     0.00019 [ Input] -#  market group for electricity, low voltage [RLA]
+b  8.07e-05 =    0.00019 x      0.425 3616b     0.00019 [ Input] -#  market group for electricity, low voltage [RLA]
+
+a  3.28e-05 =   3.24e-05 x       1.01 400f8    3.24e-05 [ Input] -#  market for electricity, low voltage [AU]
+b  3.28e-05 =   3.24e-05 x       1.01 400f8    3.24e-05 [ Input] -#  market for electricity, low voltage [AU]
+
+a     1e-06 =   6.22e-06 x      0.161 52e8c    6.22e-06 [ Input] -#  market for electricity, low voltage [NZ]
+b     1e-06 =   6.22e-06 x      0.161 52e8c    6.22e-06 [ Input] -#  market for electricity, low voltage [NZ]
+
+a  1.88e-07 =   2.66e-07 x      0.709 d6499    2.66e-07 [ Input] -#  market for electricity, low voltage [RoW]
+b  1.88e-07 =   2.66e-07 x      0.709 d6499    2.66e-07 [ Input] -#  market for electricity, low voltage [RoW]
+
+
+b   0.00886 =     0.0251 x      0.352 86a6c      0.0251 [ Input] -#  natural gas pressure reduction from high to low pressure [RoW]
+
+b  0.000221 =    2.6e-09 x   8.51e+04 7877d     2.6e-09 [ Input] -#  market for pipeline, natural gas, low pressure distribution network [GLO]
+
+b  1.51e-05 =   0.000196 x     0.0769 d71cc    0.000196 [ Input] -#  market for heat, central or small-scale, natural gas [RoW]
+
+b  2.32e-09 =   3.17e-08 x      0.073 f312d    3.17e-08 [ Input] -#  market for heat, central or small-scale, natural gas [Europe w....t Switzerland]
+
+Suspect: it's a cached value that is still being used despite the extension.  That's an implementation error.
+
+Validate: if the extended fragment's cached score equals the sum of components.  Except there's also this weird feedback issue of the cutoff flow- so there could be a 1% or (1/(1-1%)) error
+
+
+Expect this to equal the 0.0125 from the market activity
+gwp.do_lcia(ng_ex.term._unobserved_exchanges()).total() * .0251 + .00909610232                                          
+Out[41]: 0.012377502377000006
+
+(gwp.do_lcia(ng_ex.term._unobserved_exchanges()).total() * .0251 + .00909610232) /0.99                                  
+Out[42]: 0.01250252765353536
+
+ (gwp.do_lcia(ng_ex.term._unobserved_exchanges()).total() * .0251 + .00909610232) *(1/0.99 - 1) + res2_re.total()        
+Out[47]: 0.0703987477179761
+(ut[26]: 0.0703987504333606)
+         0........^
+	 correct to 7 sig figs
+
+So in fact we have both issues: the stale cache is being used-- which obtained when the fragment was de-backgrounded-- and the feedback loop
+
+
+Stale cache fix is easy: just clear score cache when fragment changes background status.
+
+ng_ex.term.clear_score_cache()                                                                                          
+In [44]: res2_re = nf.fragment_lcia(gwp)                                                                                         
+In [45]: res2_re.total()                                                                                                         
+Out[45]: 0.07027372244144076
+
+Feedback loop fix is harder: and in fact I don't even know if it is possible, because  it is not feeding back to the top level.
+One fix would be to make the extended frag a subfragment--- but that is not exactly what is intended by "extend process model"
+What is going on here, exactly? It is running through traverse_fg_node--
+
+Proper solution is to scale up node_weight WITHOUT scaling up magnitude-- cycle through child flows looking for autoconsumption candidates (same flow, comp direction); once they are found, compute a node weight scale and apply it; then omit them from the balance calculation-- scale up local node weight and also ff.node_weight, and then continue- balance computation should be unaffected (or rather, should be still-correct w/r/t/ newly scaled-up node weight.)
+

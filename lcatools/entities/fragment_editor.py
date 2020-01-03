@@ -4,7 +4,24 @@ from lcatools.interfaces import check_direction, comp_dir
 from .fragments import LcFragment, DependentFragment
 
 
-def create_fragment(flow, direction, uuid=None, parent=None, name=None, comment=None, value=None, balance=False,
+def create_fragment(flow, direction, parent=None, **kwargs):
+    """
+    User-facing pass-through function. Identical to internal function except that reference fragment direction is
+    reversed for UX purposes- to give direction with respect to newly created reference fragment (internal direction
+    is always given with respect to parent)
+    :param flow:
+    :param direction:
+    :param parent:
+    :param kwargs: uuid, name, comment, value, balance=False, units, ...
+    :return:
+    """
+    if parent is None:
+        return _create_fragment(flow, comp_dir(direction), parent=parent, **kwargs)
+    else:
+        return _create_fragment(flow, direction, parent=parent, **kwargs)
+
+
+def _create_fragment(flow, direction, uuid=None, parent=None, name=None, comment=None, value=None, balance=False,
                     units=None, **kwargs):
     """
 
@@ -32,14 +49,13 @@ def create_fragment(flow, direction, uuid=None, parent=None, name=None, comment=
         comment = ''
     comment = kwargs.pop('Comment', comment)
     if parent is None:
-        # direction reversed for UX! user inputs direction w.r.t. fragment, not w.r.t. parent
         if value is None:
             value = 1.0
         if uuid is None:
-            frag = LcFragment.new(name, flow, comp_dir(direction), Comment=comment, exchange_value=value,
+            frag = LcFragment.new(name, flow, direction, Comment=comment, exchange_value=value,
                                   **kwargs)
         else:
-            frag = LcFragment(uuid, flow, comp_dir(direction), Comment=comment, exchange_value=value, Name=name,
+            frag = LcFragment(uuid, flow, direction, Comment=comment, exchange_value=value, Name=name,
                               **kwargs)
     else:
         if parent.term.is_null:
@@ -73,27 +89,26 @@ def _transfer_evs(frag, new):
             new.set_exchange_value(scen, frag.exchange_value(scen))
 
 
-def clone_fragment(frag, suffix=' (copy)', comment=None, _parent=None):
+def clone_fragment(frag, suffix=' (copy)', comment=None, _parent=None, origin=None):
     """
     Creates duplicates of the fragment and its children. returns the new reference fragment.
     :param frag:
     :param _parent: used internally
     :param suffix: attached to top level fragment
+    :param origin:
     :param comment: can be used in place of source fragment's comment
     :return:
     """
-    if _parent is None:
-        direction = comp_dir(frag.direction)  # this gets re-reversed in create_fragment
-    else:
-        direction = frag.direction
     if suffix is None:
         suffix = ''
+    if origin is None:
+        origin = frag.origin
     the_comment = comment or frag['Comment']
-    new = create_fragment(parent=_parent,
-                          Name=frag['Name'] + suffix, StageName=frag['StageName'],
-                          flow=frag.flow, direction=direction, comment=the_comment,
-                          value=frag.cached_ev, balance=frag.balance_flow,
-                          background=frag.is_background)
+    new = _create_fragment(parent=_parent, origin=origin,
+                           Name=frag['Name'] + suffix, StageName=frag['StageName'],
+                           flow=frag.flow, direction=frag.direction, comment=the_comment,
+                           value=frag.cached_ev, balance=frag.balance_flow,
+                           background=frag.is_background)
 
     _transfer_evs(frag, new)
 
@@ -106,7 +121,7 @@ def clone_fragment(frag, suffix=' (copy)', comment=None, _parent=None):
                           scenario=t_scen)
 
     for c in frag.child_flows:
-        clone_fragment(c, _parent=new, suffix='')
+        clone_fragment(c, _parent=new, suffix='', origin=origin)
     return new
 
 
@@ -124,9 +139,9 @@ def _fork_fragment(fragment, comment=None):
     :return: the new fragment
     """
     old_parent = fragment.reference_entity
-    subfrag = create_fragment(parent=old_parent, flow=fragment.flow, direction=fragment.direction,
-                              comment=comment, value=fragment.cached_ev,
-                              balance=fragment.balance_flow)
+    subfrag = _create_fragment(parent=old_parent, flow=fragment.flow, direction=fragment.direction,
+                               comment=comment, value=fragment.cached_ev,
+                               balance=fragment.balance_flow, origin=fragment.origin)
     _transfer_evs(fragment, subfrag)
     fragment.clear_evs()
     return subfrag

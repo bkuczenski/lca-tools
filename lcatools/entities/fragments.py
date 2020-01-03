@@ -190,6 +190,16 @@ class LcFragment(LcEntity):
                 except NoCatalog:
                     self._d['StageName'] = ''
 
+
+    def __hash__(self):
+        """
+        Fragments must use UUID as hash because the link is mutable
+        :return:
+        """
+        if self._origin is None:
+            raise AttributeError('Origin not set!')
+        return hash('%s/%s' % (self.origin, self.uuid))
+
     @property
     def external_ref(self):
         if self._external_ref is None:
@@ -1203,6 +1213,8 @@ class LcFragment(LcEntity):
                 stock *= -1
             self.dbg_print('%g inbound-balance' % stock, level=2)
 
+        # TODO: Handle auto-consumption!  test child flows for flow identity and null term; cumulate; scale node_weight
+
         for f in self.child_flows:
             try:
                 # traverse child, collecting conserved value if applicable
@@ -1434,10 +1446,10 @@ def _do_subfragment_traversal(ff, scenario, observed):
      - called from
      - called from
 
-    :param ff:
-    :param scenario:
-    :param observed:
-    :return:
+    :param ff: The FragmentFlow whose subfragment is being traversed
+    :param scenario: to pass to subfragment
+    :param observed: to pass to subfragment
+    :return: ffs [subfragment traversal appended], unit_inv [with reference flow removed], downstream node weight
     """
     term = ff.term  # note that we ignore term.direction in subfragment traversal
     node_weight = ff.node_weight
@@ -1459,6 +1471,7 @@ def _do_subfragment_traversal(ff, scenario, observed):
         for k in unit_inv:
             print('%s' % k.fragment.flow.link)
         raise MissingFlow('Term flow: %s' % term.term_flow.link)
+    self.dbg_print('matched flow %s' % match.fragment.flow.link)
 
     unit_inv.remove(match)
 

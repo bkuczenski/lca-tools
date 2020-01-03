@@ -181,6 +181,11 @@ class LcQuantity(LcEntity):
         return not self.__eq__(other)
 
     def __hash__(self):
+        """
+        This needs to be explicit, even though it is identical to the parent class, because otherwise the type is
+        considered unhashable
+        :return:
+        """
         if self._origin is None:
             raise AttributeError('Origin not set!')
         return hash(self.link)

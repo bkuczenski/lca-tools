@@ -113,6 +113,7 @@ class ForegroundInterface(AbstractQuery):
         :param force: if True, if name is taken, de-name the prior fragment and assign the name to the current one
         :return:
         """
+        print('name_fragment DEPRECATED - use observe()')
         return self._perform_query(_interface, 'name_fragment', ForegroundRequired('Foreground access required'),
                                    fragment, name, **kwargs)
 
@@ -205,19 +206,23 @@ class ForegroundInterface(AbstractQuery):
         """
         return self._perform_query(_interface, 'save', ForegroundRequired('Foreground access required'), **kwargs)
 
-    def observe(self, fragment, exch_value, scenario=None, **kwargs):
+    def observe(self, fragment, exch_value, name=None, scenario=None, **kwargs):
         """
         Observe a fragment's exchange value with respect to its parent activity level.  Only applicable for
         non-balancing fragments whose parents are processes or foreground nodes (child flows of subfragments have
-        their exchange values determined at traversal)
+        their exchange values determined at traversal, as do balancing flows).
+
+        A fragment should be named when it is observed.  This should replace name_fragment. In a completed model, all
+        observable fragments should have names.
         :param fragment:
         :param exch_value:
+        :param name:
         :param scenario:
         :param kwargs:
         :return:
         """
         return self._perform_query(_interface, 'observe', ForegroundRequired('No access to fragment data'),
-                                   fragment, exch_value, scenario=scenario, **kwargs)
+                                   fragment, exch_value, name=name, scenario=scenario, **kwargs)
 
     def set_balance_flow(self, fragment, **kwargs):
         """

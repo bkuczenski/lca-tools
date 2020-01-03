@@ -181,8 +181,12 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         self._archive.add_entity_and_children(frag)
         return frag
 
-    def name_fragment(self, fragment, name, auto=None, force=None, **kwargs):
-        return self._archive.name_fragment(fragment, name, auto=auto, force=force)
+    def observe(self, fragment, exchange_value, name=None, auto=None, force=None, **kwargs):
+        fragment.observed_ev = exchange_value
+        if name is not None:
+            if fragment.external_ref != name:
+                self._archive.name_fragment(fragment, name, auto=auto, force=force)
+        return fragment.link
 
     def fragments_with_flow(self, flow, direction=None, reference=None, background=None, **kwargs):
         """

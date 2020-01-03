@@ -9,6 +9,7 @@ from collections import defaultdict
 
 from ..implementations import ForegroundImplementation
 
+from lcatools.interfaces import PropertyExists
 from lcatools.archives import BasicArchive, EntityExists, BASIC_ENTITY_TYPES
 from lcatools.entities.fragments import LcFragment
 from lcatools.entity_refs import CatalogRef
@@ -250,6 +251,35 @@ class LcForeground(BasicArchive):
         else:
             super(LcForeground, self)._add_children(entity)
 
+    def _rename_mechanics(self, frag, oldname):
+        """
+        This function updates all the various mappings between a fragment and its references,
+        EXCEPT the ext_ref_mapping which is left to outside code because of complexities with sequencing
+
+        This can surely be simplified (currently, renaming a fragment requires calling this twice) but not today.
+
+        :param frag:
+        :param oldname:
+        :return:
+        """
+        self._entities[frag.link] = self._entities.pop(oldname)
+        self._uuid_map[frag.uuid].remove(oldname)
+        self._uuid_map[frag.uuid].add(frag.link)
+        self._ents_by_type['fragment'].remove(oldname)
+        self._ents_by_type['fragment'].add(frag.link)
+
+    def _dename_fragment(self, prior):
+        name = prior.external_ref
+        if name == prior.uuid:
+            return  # nothing to do
+        print('removing name from fragment %s to %s' % (name, prior.uuid))
+        priorlink = prior.link
+        prior.de_name()
+        self._ext_ref_mapping.pop(name)
+
+        self._rename_mechanics(prior, priorlink)
+        assert self._ref_to_key(name) is None
+
     def name_fragment(self, frag, name, auto=None, force=None):
         """
         This function is complicated because we have so many dicts:
@@ -296,28 +326,25 @@ class LcForeground(BasicArchive):
                     newname = '%s %02d' % (name, inc)
                 name = newname
             elif force:
-                prior = self._ref_to_key(name)
-                print('Renaming prior %s to %s' % (name, prior.uuid))
-                priorlink = prior.link
-                prior.de_name()
-                self._ext_ref_mapping.pop(name)
-                self._entities[prior.link] = self._entities.pop(priorlink)
-                self._uuid_map[prior.uuid].remove(priorlink)
-                self._uuid_map[prior.uuid].add(prior.link)
-                self._ents_by_type['fragment'].remove(priorlink)
-                self._ents_by_type['fragment'].add(prior.link)
-                assert self._ref_to_key(name) is None
+                prior = self._entities[self._ref_to_key(name)]
+                assert prior.external_ref == name
+                self._dename_fragment(prior)
             else:
                 raise ValueError('Name is already taken: "%s"' % name)
         oldname = frag.link
-        frag.external_ref = name  # will raise PropertyExists if already set
-        self._add_ext_ref_mapping(frag)
-        self._entities[frag.link] = self._entities.pop(oldname)
+        try:
+            frag.external_ref = name  # will raise PropertyExists if already set
+        except PropertyExists:
+            if force:
+                self._dename_fragment(frag)
+                oldname = frag.link
+                frag.external_ref = name
+            else:
+                raise
 
-        self._uuid_map[frag.uuid].remove(oldname)
-        self._uuid_map[frag.uuid].add(frag.link)
-        self._ents_by_type['fragment'].remove(oldname)
-        self._ents_by_type['fragment'].add(frag.link)
+        self._add_ext_ref_mapping(frag)
+        self._rename_mechanics(frag, oldname)
+        assert self._ref_to_key(name) == frag.link
 
         return name
 

@@ -1,7 +1,7 @@
 from collections import defaultdict
 
 from lcatools.implementations import BasicImplementation
-from lcatools.interfaces import ForegroundInterface, CONTEXT_STATUS_, EntityNotFound  # , comp_dir, BackgroundRequired
+from lcatools.interfaces import ForegroundInterface, CONTEXT_STATUS_, EntityNotFound, UnknownOrigin  # , comp_dir, BackgroundRequired
 
 from lcatools.entities.quantities import new_quantity
 from lcatools.entities.flows import new_flow
@@ -126,6 +126,41 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         f = new_flow(name, ref_q, **kwargs)
         self._archive.add_entity_and_children(f)
         return f
+
+    def find_term(self, term_ref, origin=None, **kwargs):
+        """
+
+        :param term_ref:
+        :param origin:
+        :param kwargs:
+        :return:
+        """
+        if term_ref is None:
+            return
+        if hasattr(term_ref, 'entity_type'):
+            found_ref = term_ref
+        else:
+            # first context
+            cx = self._archive.tm[term_ref]
+            if cx is not None:
+                found_ref = cx
+            else:
+                try:
+                    found_ref = self.get(term_ref)
+                except EntityNotFound:
+                    if origin is None:
+                        try:
+                            origin, external_ref = term_ref.split('/', maxsplit=1)
+                        except ValueError:
+                            raise UnknownOrigin(term_ref)
+
+                        found_ref = self._archive.catalog_ref(origin, external_ref)
+                    else:
+                        found_ref = self._archive.catalog_ref(origin, term_ref)
+
+        if found_ref.entity_type in ('flow', 'process', 'fragment', 'context'):
+            return found_ref
+        raise TypeError('Invalid entity type for termination: %s' % found_ref.entity_type)
 
     def new_fragment(self, flow, direction, **kwargs):
         """
@@ -274,11 +309,17 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
 
     This could replace extend_process_model 
     '''
-    def fragment_from_exchanges(self, _xg, parent=None, ref=None):
+    def fragment_from_exchanges(self, _xg, parent=None, ref=None, set_background=True):
         """
         If parent is None, first generated exchange is reference flow; and subsequent exchanges are children.
         Else, all generated exchanges are children of the given parent, and if a child flow exists, update it. This
         obviously fails if a fragment has multiple children with the same flow
+
+        :param _xg: Generates a list of exchanges or exchange references
+        :param parent:
+        :param ref:
+        :param set_background: [True] whether to regard process-terminated fragments as background fragments
+        :return:
         """
         if parent is None:
             x = next(_xg)
@@ -294,6 +335,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
             if flow is None:
                 print('Skipping unknown flow %s' % y.flow)
                 continue
+            term = self.find_term(y.termination)
             if update:
                 try:
                     c_up = next(parent.children_with_flow(flow, y.direction))
@@ -305,11 +347,13 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
                         print('Updating %s exchange value %.3f' % (c_up, v))
 
                         c_up.observed_ev = v
-                    if y.termination is not None:
-                        if y.termination != c_up.term.term_node:
-                            print('Updating %s termination %s' % (c_up, y.termination))
+                    if term is not None:
+                        if term != c_up.term.term_node:
+                            print('Updating %s termination %s' % (c_up, term))
                             c_up.clear_termination()
-                            c_up.terminate(y.termination)
+                            c_up.terminate(term)
+                            if term.entity_type == 'process' and set_background:
+                                c_up.set_background()
                     continue
                 except StopIteration:
                     print('No child flow found; creating new %s %s' % (flow, y.direction))
@@ -317,8 +361,10 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
 
             c = self.new_fragment(flow, y.direction, value=y.value, units=y.unit, parent=parent, **y.args)
 
-            if y.termination is not None:
-                c.terminate(y.termination)
+            if term is not None:
+                c.terminate(term)
+                if term.entity_type == 'process' and set_background:
+                    c.set_background()
             c.observed_ev = c.cached_ev
 
         if parent.external_ref == parent.uuid and ref is not None:

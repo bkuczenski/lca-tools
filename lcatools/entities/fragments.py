@@ -49,9 +49,9 @@ class DependentFragment(Exception):
 
 
 def _new_evs():
-    d = dict()
+    d = dict()  # should be a LowerDict? should scenario names be case sensitive?
     d[0] = 1.0
-    d[1] = LiterateFloat(0.0)  # w.r.t. parent activity level
+    d[1] = LiterateFloat(0.0)  # w.r.t. parent activity level  ## WTF is a LiterateFloat PPP
     return d
 
 
@@ -132,6 +132,7 @@ class LcFragment(LcEntity):
 
     def __init__(self, the_uuid, flow, direction, parent=None,
                  exchange_value=1.0,
+                 units=None,
                  private=False,
                  balance_flow=False,
                  background=False,
@@ -146,6 +147,7 @@ class LcFragment(LcEntity):
         :param direction:
         :param parent:
         :param exchange_value: auto-set- cached; can only be set once
+        :param units: to convert exchange value, if supplied
         :param private: forces aggregation of subfragments
         :param balance_flow: if true, exch val is always ignored and calculated based on parent
         :param background: if true, fragment only returns LCIA results.
@@ -176,7 +178,7 @@ class LcFragment(LcEntity):
             self.set_balance_flow()
         else:
             if exchange_value is not None:
-                self.cached_ev = exchange_value
+                self.set_exchange_value(0, exchange_value, units=units)
 
         if termination is None:
             self._terminations[None] = FlowTermination.null(self)
@@ -481,7 +483,7 @@ class LcFragment(LcEntity):
             raise CacheAlreadySet('Set Value: %g (new: %g)' % (self.cached_ev, value))
         if value == self.cached_ev:
             return
-        self.set_exchange_value(0, value)
+        self._exchange_values[0] = value
 
     def reset_cache(self):
         """
@@ -505,7 +507,7 @@ class LcFragment(LcEntity):
     @property
     def observed_ev(self):
         ev = self._exchange_values[1]
-        if self.reference_entity is None and ev == 0:
+        if self.reference_entity is None and ev == 0:  # now with named = observed, shouldn't every frag be observed?
             ev = self._exchange_values[0]
         return ev
 
@@ -529,37 +531,39 @@ class LcFragment(LcEntity):
         if self._check_observability(None):
             self._exchange_values[1] = value
 
-    def _observe(self, scenario=None):
+    def _observe(self, scenario=None, value=None, units=None):
         """
         interactive observe engine
         :param scenario:
         :return:
         """
-        if scenario is None:
-            prompt = 'Observed value'
-        else:
-            prompt = 'Scenario value'
-
-        print('%s' % self)
-        print(' Cached EV: %6.4g\n Observed EV: %6.4g [%s]' % (self.cached_ev, self.observed_ev, self.flow.unit()))
-        if scenario is None:
-            string_ev = '%10g' % self.observed_ev
-        else:
-            string_ev = '%10g' % self.exchange_value(scenario)
-            print(' Scenario EV: %s [%s]' % (string_ev,
-                                             self.flow.unit()))
-
-        val = ifinput('%s ("=" to use cached): ' % prompt, string_ev)
-
-        if val != string_ev:
-            if val == '=':
-                new_val = self.cached_ev
-            else:
-                new_val = parse_math(val)
+        if value is None:
             if scenario is None:
-                self.observed_ev = new_val
+                prompt = 'Observed value'
             else:
-                self.set_exchange_value(scenario, new_val)
+                prompt = 'Scenario value'
+
+            print('%s' % self)
+            print(' Cached EV: %6.4g\n Observed EV: %6.4g [%s]' % (self.cached_ev, self.observed_ev, self.flow.unit()))
+            if scenario is None:
+                string_ev = '%10g' % self.observed_ev
+            else:
+                string_ev = '%10g' % self.exchange_value(scenario)
+                print(' Scenario EV: %s [%s]' % (string_ev,
+                                                 self.flow.unit()))
+
+            val = ifinput('%s ("=" to use cached): ' % prompt, string_ev)
+
+            if val != string_ev:
+                if val == '=':
+                    value = self.cached_ev
+                else:
+                    value = parse_math(val)
+
+        if scenario is None:
+            self.set_exchange_value(1, value, units=units)
+        else:
+            self.set_exchange_value(scenario, value, units=units)
 
     def _auto_observe(self, scenario=None):
         if scenario is None:
@@ -567,25 +571,27 @@ class LcFragment(LcEntity):
         else:
             self.set_exchange_value(scenario, self.cached_ev)
 
-    def observe(self, scenario=None, accept_all=False, recurse=True, _traverse=True):
+    def observe(self, value=None, units=None, scenario=None, accept_all=False, recurse=True, _traverse=True):
         """
-        Interactively specify the fragment's observed exchange value-
+        Report the fragment's observed exchange value and assign it a name
         if fragment is a balance flow or if fragment is a child of a subfragment (for the specified scenario), then
          the ev is set during traversal and may not be observed.
 
+        :param value: the observed exchange value (if omitted, and accept_all is False, observe interactively)
+        :param units: optional unit for observed value
         :param scenario:
         :param accept_all: whether to automatically apply the cached EV to the observation
-        :param recurse: whether to observe child fragments
+        :param recurse: whether to observe child fragments. automatically False if a value is supplied
         :param _traverse: internal param. used to only traverse the top-most fragment.
         :return:
         """
         if self._check_observability(scenario=scenario):
-            if accept_all:
+            if accept_all and (value is None):  # ignore
                 self._auto_observe(scenario=scenario)
             else:
-                self._observe(scenario=scenario)
+                self._observe(scenario=scenario, value=value, units=units)
 
-        if recurse:
+        if recurse and (value is None):
             for c in self.child_flows:
                 c.observe(scenario=scenario, accept_all=accept_all, recurse=True, _traverse=False)
 
@@ -691,7 +697,7 @@ class LcFragment(LcEntity):
             return '*'  # ev scenario
         return '%'  # both scenario
 
-    def set_exchange_value(self, scenario, value):
+    def set_exchange_value(self, scenario, value, units=None):
         """
         The exchange value may not be set on a reference fragment UNLESS the termination for the named scenario is
         to foreground- in which case the term's inbound_ev is set instead. (and a term is created if none exists)
@@ -705,6 +711,11 @@ class LcFragment(LcEntity):
             raise DependentFragment('Fragment exchange value set during traversal')
         if isinstance(scenario, tuple) or isinstance(scenario, set):
             raise ScenarioConflict('Set EV must specify single scenario')
+
+        value = float(value)  ## or LiterateFloat?
+
+        if units is not None:
+            value *= self.flow.reference_entity.convert(units)
 
         if scenario == 0 or scenario == '0' or scenario is None:
             self._exchange_values[0] = value

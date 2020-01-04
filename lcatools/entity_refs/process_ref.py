@@ -67,6 +67,9 @@ class ProcessRef(EntityRef):
         try:
             return next(x for x in self.references(flow=flow))
         except StopIteration:
+            print('references:')
+            for x in self.reference_entity:
+                print(x)
             raise KeyError(flow)
 
     def references(self, flow=None):

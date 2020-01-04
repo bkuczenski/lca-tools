@@ -22,7 +22,7 @@ def create_fragment(flow, direction, parent=None, **kwargs):
 
 
 def _create_fragment(flow, direction, uuid=None, parent=None, name=None, comment=None, value=None, balance=False,
-                    units=None, **kwargs):
+                     **kwargs):
     """
 
     :param flow:
@@ -33,7 +33,6 @@ def _create_fragment(flow, direction, uuid=None, parent=None, name=None, comment
     :param comment:
     :param value:
     :param balance:
-    :param units: [None] if both value and unit are non-None, interpret value as given in units and convert
     :param kwargs:
     :return:
     """
@@ -41,9 +40,6 @@ def _create_fragment(flow, direction, uuid=None, parent=None, name=None, comment
     if name is None:
         name = flow['Name']
     name = kwargs.pop('Name', name)
-
-    if value is not None and units is not None:
-        value *= flow.reference_entity.convert(units)
 
     if comment is None:
         comment = ''

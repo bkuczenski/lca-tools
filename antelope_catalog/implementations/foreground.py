@@ -181,9 +181,15 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         self._archive.add_entity_and_children(frag)
         return frag
 
-    def observe(self, fragment, exchange_value, name=None, auto=None, force=None, **kwargs):
-        fragment.observed_ev = exchange_value
-        if name is not None:
+    def name_fragment(self, fragment, name, auto=None, force=None, **kwargs):
+        return self._archive.name_fragment(fragment, name, auto=auto, force=force)
+
+    def observe(self, fragment, exchange_value=None, name=None, scenario=None, units=None, auto=None, force=None,
+                **kwargs):
+        if exchange_value is None:
+            exchange_value = fragment.cached_ev  # do not expose accept_all via the interface; instead allow implicit
+        fragment.observe(scenario=scenario, value=exchange_value, units=units)
+        if name is not None and scenario is None:  #
             if fragment.external_ref != name:
                 self._archive.name_fragment(fragment, name, auto=auto, force=force)
         return fragment.link
@@ -369,10 +375,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
                 c.terminate(term)
                 if term.entity_type == 'process' and set_background:
                     c.set_background()
-            c.observed_ev = c.cached_ev
-
-        if parent.external_ref == parent.uuid and ref is not None:
-            self.name_fragment(parent, ref)
+            self.observe(c, exchange_value=c.cached_ev, name=ref)
 
         return parent
 

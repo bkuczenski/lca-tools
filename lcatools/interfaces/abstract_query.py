@@ -2,6 +2,7 @@
 Root-level catalog interface
 """
 
+from sys import _getframe
 
 class UnknownOrigin(Exception):
     pass
@@ -45,6 +46,14 @@ class AbstractQuery(object):
         if self._dbg:
             print(*args)
 
+    _deprecation_nag = dict()
+
+    def _deprecate(self, msg):
+        mth = _getframe(1).f_code.co_name  # name of calling method -- could use this instead of 2nd position arg in _perform_query
+        if (mth, msg) not in self._deprecation_nag:
+            print('(%s) DEPRECATED %s' % (mth, msg))  # warn- but- only once
+            self._deprecation_nag[mth, msg] = True
+
     '''
     Overridde these methods
     '''
@@ -54,7 +63,7 @@ class AbstractQuery(object):
 
     def _iface(self, itype, **kwargs):
         """
-        Pseudo-abstract method to generate interfaces of the specified type upon demand.  Must be reimplemented
+        Pseudo-abstract method to generate interfaces of the specified type upon demand.  Must be implemented
         :param itype:
         :param kwargs: for use by subclasses
         :return: generate interfaces of the given type

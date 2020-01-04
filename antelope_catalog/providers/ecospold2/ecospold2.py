@@ -101,6 +101,7 @@ class EcospoldV2Archive(LcArchive):
         for exch in self._master.elementary_exchanges.values():
             self._create_flow(exch)
         '''
+        print('Warning: not preloading flows')
 
         self._linked = linked
         self._process_flow_map = defaultdict(set)

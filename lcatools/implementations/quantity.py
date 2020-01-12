@@ -188,7 +188,7 @@ class NoConversion(Exception):
 def try_convert(flowable, rq, qq, context, locale):
 
     if hasattr(qq, 'is_lcia_method') and qq.is_lcia_method():
-        pass
+        raise NoConversion
     else:
         try:
             fac = convert(qq, from_unit=rq.unit())
@@ -197,7 +197,7 @@ def try_convert(flowable, rq, qq, context, locale):
             pass
 
     if hasattr(rq, 'is_lcia_method') and rq.is_lcia_method():
-        pass
+        raise NoConversion
     else:
         try:
             fac = convert(rq, to=qq.unit())
@@ -229,9 +229,9 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
                 if q is None:
                     raise
                 return self._archive.tm.get_canonical(q.external_ref)
-            elif hasattr(quantity, 'entity_type') and quantity.entity_type == 'quantity':
-                self._archive.add_entity_and_children(quantity)
-                return self._archive.tm.get_canonical(quantity)
+#            elif hasattr(quantity, 'entity_type') and quantity.entity_type == 'quantity':
+#                self._archive.add_entity_and_children(quantity)
+#                return self._archive.tm.get_canonical(quantity)
             else:
                 raise
 
@@ -353,12 +353,15 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
             except ConversionReferenceMismatch:
                 qr_mismatch.append(QuantityConversionError(res, rq))
 
+         # suddenly this seems very unwise: why? natural gas in m3 is using its own conversion to stand up for WDP
+        ''' # leaving this OUT- we should only do forward and reverse matching for ref quantity conversion, not qq
         for cf in self._archive.tm.factors_for_flowable(fb, quantity=rq, context=cx, **kwargs):
             res = QuantityConversion(cf.query(locale))
             try:
                 qr_results.append(self._ref_qty_conversion(qq, fb, cx, res, locale).invert())
             except ConversionReferenceMismatch:
                 pass  # qr_mismatch.append(res.invert())  We shouldn't be surprised that there is no reverse conversion
+        '''
 
         # TODO: should we try a last-ditch effort to find factors for flowables using target unit conversion quantities?
         # motivation: cf is in t --> Count; query is between kg and Count; t also has
@@ -490,9 +493,9 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
 
         if len(qr_results) > 1:
             # this is obviously punting
-            if strategy is None or strategy == 'first':
+            if strategy == 'first':
                 best = qr_results[0]
-            elif strategy == 'highest':
+            elif strategy is None or strategy == 'highest':  # highest CF is most conservative
                 val = max(v.value for v in qr_results)
                 best = next(v for v in qr_results if v.value == val)
             elif strategy == 'lowest':
@@ -616,6 +619,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
                                                   dist=dist, **kwargs)
                 if qr is None and len(mis) > 0:
                     res.add_error(x, mis[0])
+                    print('Conversion error %s' % x)
                     if len(mis) > 1:
                         print('omitting mismatches:')
                         for k in mis[1:]:

@@ -321,6 +321,11 @@ class TermManager(object):
         """
         return flow.name, flow.link
 
+    def flows_for_flowable(self, fb):
+        if fb in self._flow_map:
+            for f in self._flow_map[fb]:
+                yield f
+
     def _add_flow_terms(self, flow, merge_strategy=None):
         """
         This process takes in an inbound FlowInterface instance, identifies the flowable(s) that match its terms, and

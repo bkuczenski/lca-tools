@@ -50,7 +50,8 @@ class LciaEngine(TermManager):
         When overriding this function, place the super() call between pre-load and post-load activities.
         :return:
         """
-        fb = self._fm.new_entry('carbon dioxide', '124-38-9')
+        self._fm.new_entry('carbon dioxide', '124-38-9')
+        self._fm.new_entry('Water', '7732-18-5')
         # we store the child object and use it to signify biogenic CO2 to optionally quell
         # this strategy depends on the ability to set a query flow's name-- i.e. FlowInterface
         self._bio_co2 = self._fm.new_entry('carbon dioxide (biotic)', '124-38-9', create_child=True)
@@ -252,6 +253,23 @@ class LciaEngine(TermManager):
         self._qm.merge(dom, add)
         self.import_cfs(second)
 
+    def add_subcontext(self, context, sub, origin=None):
+        """
+
+        :param context: a canonical context
+        :param sub: a new subcompartment
+        :return:
+        """
+        if context is None:
+            return None
+        cx_sub = tuple(context.as_list() + [sub])
+
+        try:
+            cx = self._cm[cx_sub]
+        except KeyError:
+            cx = self.add_context(cx_sub, origin=origin)
+        return cx
+
     def import_cfs(self, quantity):
         """
         Given a quantity, import its CFs into the local database.  Unfortunately this is still going to be slow because
@@ -273,9 +291,15 @@ class LciaEngine(TermManager):
                 fb = self._fm[cf.flowable]
             except KeyError:
                 fb = self._create_flowable(cf.flowable)
-            self.add_quantity(cf.ref_quantity)
+
+            # self.add_quantity(cf.ref_quantity)
 
             cx = self[cf.context]
+
+            # don't characterize "Water" per se-- give it a subcontext
+            if fb == self._fm['Water']:
+                cx = self.add_subcontext(cx, cf.flowable)
+
             self._qassign(qq, fb, cf, context=cx)
         self._factors_for_later[quantity] = True
         print('Imported %d factors for %s' % (count, quantity))
@@ -395,6 +419,12 @@ class LciaEngine(TermManager):
                 yield v
 
     def factors_for_flowable(self, flowable, quantity=None, context=None, **kwargs):
+        try:
+            fb = self._fm[flowable]
+        except KeyError:
+            return
+        if fb == self._fm['Water']:
+            context = self.add_subcontext(context, flowable)
         for k in super(LciaEngine, self).factors_for_flowable(flowable, quantity=quantity, context=context, **kwargs):
             if self._quell_co2(flowable, context):
                 yield QuelledCF.from_cf(k, flowable=self._bio_co2)

@@ -63,7 +63,7 @@ class DetailedLciaResult(object):
         'origin', 'value'
         """
         if exchange.flow.unit() != qrresult.ref.unit() and qrresult.value != 0.0:
-            print('Inconsistent qty\nexch: %s\nqrr:  %s' % (exchange.flow.reference_entity, qrresult))
+            print('%s: Inconsistent qty\nexch: %s\nqrr:  %s' % (self.__class__.__name__, exchange.flow.reference_entity, qrresult))
             #  raise InconsistentQuantity('%s\n%s' % (exchange.flow.reference_entity, qrresult))
         self._exchange = exchange
         self._qr = qrresult
@@ -704,8 +704,11 @@ class LciaResult(object):
 
     def keys(self):
         if self._private:
-            return [None]
-        return self._LciaScores.keys()
+            for k in ():
+                yield k
+        else:
+            for k in self._LciaScores.keys():
+                yield k
 
     def components(self):
         if not self._private:

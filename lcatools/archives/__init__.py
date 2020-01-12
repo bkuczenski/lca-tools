@@ -4,6 +4,7 @@ from .archive_index import index_archive, BasicIndex, LcIndex
 from .term_manager import TermManager
 from .lc_archive import LcArchive, LC_ENTITY_TYPES
 from ..from_json import from_json
+from ..interfaces import UnknownOrigin
 
 import os
 import importlib
@@ -43,7 +44,20 @@ def create_archive(source, ds_type, catalog=None, **kwargs):
         a = archive_from_json(source, catalog=catalog, **kwargs)
     else:
         cls = archive_factory(ds_type)
-        a = cls(source, **kwargs)
+        if ds_type.lower() == 'ecoinventlcia':
+            # this is a GIANT HACK
+            ei_ref = '.'.join(['local', 'ecoinvent', kwargs['version']])
+            try:
+                res = catalog.get_resource(ei_ref, strict=False)
+                res.check(catalog)
+                res.archive.load_flows()
+                ar = res.archive
+            except UnknownOrigin:
+                ar = None
+
+            a = cls(source, ei_archive=ar, **kwargs)
+        else:
+            a = cls(source, **kwargs)
     return a
 
 

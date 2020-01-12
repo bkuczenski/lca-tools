@@ -1,6 +1,12 @@
 """
 The point of the ecoinvent LCIA methods is to ste^H^H^Hadapt the hard work of the Ecoinvent Centre, so as to develop
 LCIA methods and results for ecoinvent LCI that match their own results.
+
+2020-01-11
+WARNING: this assumes mass as reference quantity by default, which leads to obvious quantity conversion errors for
+non-mass-reference indicators like land occupation.
+
+Solution requires access to Ecoinvent metadata in order to determine the reference quantities for flows.
 """
 
 from __future__ import print_function, unicode_literals
@@ -55,12 +61,13 @@ class EcoinventLcia(BasicArchive):
 
         self._xl_rows = self._sheet_to_rows(b)
 
-    def __init__(self, source, ref=None, mass_quantity=None,
+    def __init__(self, source, ei_archive=None, ref=None, mass_quantity=None,
                  version=EI_LCIA_VERSION, ns_uuid=EI_LCIA_NSUUID, static=True, **kwargs):
         """
         EI_LCIA_VERSION default is presently 3.1 for the spreadsheet named 'LCIA implementation v3.1 2014_08_13.xlsx'
 
         :param source:
+        :param ei_archive: required to determine reference quantities for flows
         :param ref: hard-coded 'local.ecoinvent.[EI_LCIA_VERSION].lcia'; specify at instantiation to override
         :param mass_quantity:
         :param version: default is '3.1'
@@ -75,10 +82,13 @@ class EcoinventLcia(BasicArchive):
         self._xl_rows = []
         self._version = version
         self._wb = None
+        if ei_archive is None:
+            print('Warning: no ecoinvent archive! Non-mass methods will be broken!')
+        self._ei_archive = ei_archive
 
-        mass = mass_quantity or LcQuantity.new('Mass', self._create_unit('kg')[0])
-        self.add(mass)
-        self._mass = mass
+        # mass = mass_quantity or LcQuantity.new('Mass', self._create_unit('kg')[0])
+        # self.add(mass)
+        # self._mass = mass
 
     @property
     def _xls(self):
@@ -161,5 +171,7 @@ class EcoinventLcia(BasicArchive):
                 print('Skipping row %s' % row)
                 continue
             cx = self.tm.add_context((row['compartment'], row['subcompartment']), origin=self.ref)
-            self.tm.add_characterization(row['name'], self._mass, q, v, context=cx, origin=self.ref)
+            fb = row['name']
+            f = next(self._ei_archive.tm.flows_for_flowable(fb))
+            self.tm.add_characterization(row['name'], f.reference_entity, q, v, context=cx, origin=self.ref)
         self.check_counter()

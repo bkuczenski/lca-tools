@@ -427,7 +427,7 @@ class FlowTermination(object):
             children = set()
             children.add((self.term_flow.external_ref, self.direction, None))
             for c in self._parent.child_flows:
-                children.add((c.flow.external_ref, c.direction, c.term.term_ref))
+                children.add((c.flow.external_ref, c.direction))
             if self.is_bg:
                 if self._lci is None:
                     self._lci = list(self.term_node.lci(self.term_flow))
@@ -435,7 +435,7 @@ class FlowTermination(object):
             else:
                 iterable = self.term_node.inventory(ref_flow=self.term_flow, direction=self.direction)
             for x in iterable:
-                if (x.flow.external_ref, x.direction, x.term_ref) not in children:
+                if (x.flow.external_ref, x.direction) not in children:
                     yield x
 
     def compute_unit_score(self, quantity_ref, **kwargs):

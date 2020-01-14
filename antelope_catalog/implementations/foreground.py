@@ -191,6 +191,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         fragment.observe(scenario=scenario, value=exchange_value, units=units)
         if name is not None and scenario is None:  #
             if fragment.external_ref != name:
+                print('Naming fragment %s -> %s' % (fragment.external_ref, name))
                 self._archive.name_fragment(fragment, name, auto=auto, force=force)
         return fragment.link
 
@@ -375,7 +376,9 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
                 c.terminate(term)
                 if term.entity_type == 'process' and set_background:
                     c.set_background()
-            self.observe(c, exchange_value=c.cached_ev, name=ref)
+            self.observe(c, exchange_value=c.cached_ev)
+
+        self.observe(parent, name=ref)
 
         return parent
 

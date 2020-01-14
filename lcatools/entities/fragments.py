@@ -659,6 +659,8 @@ class LcFragment(LcEntity):
         :param observed:
         :return:
         """
+        if scenario is not None:
+            observed = True
         match = self._match_scenario_ev(scenario)
         if match is None:
             if observed:
@@ -1075,6 +1077,20 @@ class LcFragment(LcEntity):
         fragmentflows = self.traverse(scenario=scenario, observed=observed)
         return frag_flow_lcia(fragmentflows, quantity_ref, scenario=scenario, refresh=refresh, **kwargs)
 
+    def activity(self, scenario=None, observed=True):
+        """
+        Reports a list of node activities of direct descendants only
+        :param scenario:
+        :param observed:
+        :return:
+        """
+        top = self.top()
+
+        ffs = top.traverse(scenario=scenario, observed=observed)
+
+        act = [k for k in ffs if k.fragment.top() is top]
+        return act
+
     def inventory(self, scenario=None, scale=1.0, observed=False):
         """
         Converts unit inventory into a set of exchanges for easy display
@@ -1162,6 +1178,8 @@ class LcFragment(LcEntity):
     def traverse(self, scenario=None, observed=False):
         if isinstance(scenario, tuple) or isinstance(scenario, list):
             scenario = set(scenario)
+        if scenario is not None:
+            observed = True
         ffs, _ = self._traverse_node(1.0, scenario, observed=observed)
         return ffs
 

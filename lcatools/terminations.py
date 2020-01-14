@@ -461,7 +461,10 @@ class FlowTermination(object):
             elif self.is_bg:
                 # need bg_lcia method for FragmentRefs
                 # this is probably not currently supported
-                return self.term_node.bg_lcia(lcia_qty=quantity_ref, ref_flow=self.term_flow.external_ref, **kwargs)
+                # return self.term_node.bg_lcia(lcia_qty=quantity_ref, ref_flow=self.term_flow.external_ref, **kwargs)
+                # instead- just do fragment_lcia
+                print('Warning: ignoring spurious background setting for subfrag:\n%s\n%s' % (self._parent, self.term_node))
+                return LciaResult(quantity_ref)
 
             else:
                 assert self.is_fg

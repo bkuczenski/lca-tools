@@ -64,10 +64,10 @@ class LcFlow(LcEntity, FlowInterface):
             return query.get_canonical(self.reference_entity)
         return None
 
-    def unit(self):
-        return super(LcFlow, self).unit()
-
     '''
+    def unit(self):
+        return super(LcFlow, self).unit()  # totally useless
+
     def set_local_unit(self, local_unit):
         """
         Controls the display of numeric data regarding the flow.

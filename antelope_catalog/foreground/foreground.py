@@ -407,7 +407,7 @@ class LcForeground(BasicArchive):
                 os.remove(os.path.join(self._fragment_dir, leftover))
 
     def save(self, save_unit_scores=False):
-        self.write_to_file(self._archive_file, gzip=False, characterizations=True, values=True, domesticate=True)
+        self.write_to_file(self._archive_file, gzip=False, characterizations=True, values=True, domesticate=False)
         if not os.path.isdir(self._fragment_dir):
             os.makedirs(self._fragment_dir)
         self.save_fragments(save_unit_scores=save_unit_scores)

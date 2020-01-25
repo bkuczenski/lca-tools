@@ -172,6 +172,10 @@ class QuantityConversionError(object):
         return self._qrr.context
 
     @property
+    def locale(self):
+        return self._qrr.locale
+
+    @property
     def value(self):
         return self._qrr.value
 
@@ -280,7 +284,8 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
             # zero look for conversions
             try:
                 qr_result = try_convert(flowable, ref_quantity, found_ref, compartment, locale)
-                return res.add_result(qr_result)
+                res.add_result(qr_result)
+                return res
             except NoConversion:
                 pass
 
@@ -353,15 +358,16 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
             except ConversionReferenceMismatch:
                 qr_mismatch.append(QuantityConversionError(res, rq))
 
-         # suddenly this seems very unwise: why? natural gas in m3 is using its own conversion to stand up for WDP
         ''' # leaving this OUT- we should only do forward and reverse matching for ref quantity conversion, not qq
+        Leaving it back in because it breaks a unit test
+        '''
         for cf in self._archive.tm.factors_for_flowable(fb, quantity=rq, context=cx, **kwargs):
             res = QuantityConversion(cf.query(locale))
             try:
                 qr_results.append(self._ref_qty_conversion(qq, fb, cx, res, locale).invert())
             except ConversionReferenceMismatch:
                 pass  # qr_mismatch.append(res.invert())  We shouldn't be surprised that there is no reverse conversion
-        '''
+        ##'''
 
         # TODO: should we try a last-ditch effort to find factors for flowables using target unit conversion quantities?
         # motivation: cf is in t --> Count; query is between kg and Count; t also has
@@ -403,6 +409,11 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
             flowable = flow.link
             if ref_quantity is None:
                 ref_quantity = flow.reference_entity
+                if ref_quantity is None:
+                    print('a FlowInterface? %s\n%s' % (flow, flow.__class__.__name__))
+                    print('No ref quantity? %s' % flow.link)
+
+
             if context is None:
                 context = flow.context
         else:

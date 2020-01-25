@@ -1,3 +1,8 @@
+"""
+Change Log
+2020-01-21: Bump count of flowables to 4005 bc of Ecoinvent synonym fix
+"""
+
 import unittest
 
 from .. import LciaDb
@@ -12,7 +17,7 @@ class LciaEngineTest(unittest.TestCase):
 
     def test_0_init(self):
         self.assertEqual(len([x for x in self.lcia.query.contexts()]), 36)
-        self.assertEqual(len([x for x in self.lcia.query.flowables()]), 4004)
+        self.assertEqual(len([x for x in self.lcia.query.flowables()]), 4005)
         self.assertEqual(len([x for x in self.lcia.query.quantities()]), 25)
         self.assertEqual(len(self.lcia.tm._q_dict), 3)
 

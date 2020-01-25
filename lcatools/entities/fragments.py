@@ -85,6 +85,7 @@ class LcFragment(LcEntity):
             parent = fg[j['parent']]
         flow = fg[j['flow']]
         if flow is None:
+            print('Flow %s not found in foreground %s' % (j['flow'], fg.ref))
             flow = LcFlow(j['flow'], Name=j['tags']['Name'], Compartment=['Intermediate Flows', 'Fragments'])
             fg.add(flow)
         frag = cls(j['entityId'], flow, j['direction'], origin=fg.ref, parent=parent,
@@ -139,6 +140,7 @@ class LcFragment(LcEntity):
                  termination=None,
                  term_flow=None,
                  external_ref=None,
+                 observe=None,
                  **kwargs):
         """
         Required params:
@@ -151,6 +153,7 @@ class LcFragment(LcEntity):
         :param private: forces aggregation of subfragments
         :param balance_flow: if true, exch val is always ignored and calculated based on parent
         :param background: if true, fragment only returns LCIA results.
+        :param observe: [None] if True, assign observed_ev to match cached_ev
         :param kwargs:
         """
 
@@ -179,6 +182,8 @@ class LcFragment(LcEntity):
         else:
             if exchange_value is not None:
                 self.set_exchange_value(0, exchange_value, units=units)
+            if observe:
+                self.observed_ev = self.cached_ev
 
         if termination is None:
             self._terminations[None] = FlowTermination.null(self)
@@ -364,9 +369,14 @@ class LcFragment(LcEntity):
     def serialize(self, save_unit_scores=False, domesticate=True, **kwargs):
         j = super(LcFragment, self).serialize(domesticate=True, **kwargs)  # once you save a fragment, it's yours
 
+        if self.flow.origin == self.origin:
+            f_e_r = self.flow.external_ref
+        else:
+            f_e_r = self.flow.link
+
         j.update({
             'entityId': self.uuid,
-            'flow': self.flow.external_ref,
+            'flow': f_e_r,
             'direction': self.direction,
             'isPrivate': self._private,
             'isBackground': self._background,
@@ -942,7 +952,7 @@ class LcFragment(LcEntity):
             return self._terminations[match]
         # if None in self._terminations.keys():  # this should be superfluous, as match will be None
         #     return self._terminations[None]
-        raise ScenarioConflict('No match found for %s' % scenario)
+        raise ScenarioConflict('This should never happen - No match found for %s' % scenario)
 
     def terminations(self):
         return self._terminations.items()

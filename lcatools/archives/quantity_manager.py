@@ -124,7 +124,14 @@ class QuantityManager(SynonymDict):
         try:
             self.add_or_update_entry(new_q, merge=True, create_child=True)
         except QuantityUnitMismatch:
-            self.add_or_update_entry(new_q, merge=False, prune=True)
+            # want to print a warning
+            # if we get QuantityUnitMismatch, then that means we didn't get a MergeError
+            me = self.match_entry(*new_q.terms)
+            print('!! Warning: new quantity %s [%s] has unit conflict with existing quantity %s [%s] ' % (new_q,
+                                                                                                          new_q.unit,
+                                                                                                          me, me.unit))
+            pe = self.add_or_update_entry(new_q, merge=False, prune=True)
+            print('   Added pruned quantity %s [%s]' % (pe.name, pe.unit))
 
     def add_synonym(self, term, syn):
         super(QuantityManager, self).add_synonym(term, syn)

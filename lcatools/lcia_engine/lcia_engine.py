@@ -292,7 +292,7 @@ class LciaEngine(TermManager):
             except KeyError:
                 fb = self._create_flowable(cf.flowable)
 
-            # self.add_quantity(cf.ref_quantity)
+            self.add_quantity(cf.ref_quantity)  # this may lead to the creation of non-converting quantities if units mismatch
 
             cx = self[cf.context]
 

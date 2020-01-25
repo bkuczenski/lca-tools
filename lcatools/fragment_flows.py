@@ -215,12 +215,14 @@ class FragmentFlow(object):
     def __eq__(self, other):
         """
         FragmentFlows are equal if they have the same fragment and termination.  Formerly magnitude too but why?
+        answer why: because if not, then two traversals from two different scenarios can appear equal
+        answer why not: because of LciaResult issues, presumably- let's put this on the list for later
         :param other:
         :return:
         """
         if not isinstance(other, FragmentFlow):
             return False
-        return self.fragment == other.fragment and self.term == other.term  # and self.magnitude == other.magnitude
+        return self.fragment == other.fragment and self.term == other.term  # and self.node_weight == other.node_weight
 
     def __hash__(self):
         return hash(self.fragment)

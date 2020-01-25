@@ -141,12 +141,11 @@ class CLookup(object):
             if found(results):
                 return results
 
-        if dist > 2 and item is not None:
-            while item.parent is not None:
-                item = item.parent
-                results += self._context_origin(item, origin)
-                if found(results):
-                    return results
+        while dist > 2 and item is not None:
+            item = item.parent
+            results += self._context_origin(item, origin)
+            if found(results):
+                return results
 
         return results
 

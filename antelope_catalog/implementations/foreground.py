@@ -108,6 +108,41 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         self._archive.add(q)
         return q
 
+    def add_or_retrieve(self, external_ref, reference, name, group=None, strict=False, **kwargs):
+        """
+        Gets a flow with the given external_ref, and creates it if it doesn't exist from the given spec.
+
+        Note that the full spec is mandatory so it could be done by tuple.  With strict=False, an entity will be
+        returned if it exists.
+        :param external_ref:
+        :param reference: a string, either a unit or known quantity
+        :param name: the object's name
+        :param group: used as context for flow
+        :param strict: [False] if True it will raise a TypeError (ref) or ValueError (name) if the entity does not match
+        the spec.
+        :return:
+        """
+        try:
+            t = self.get(external_ref)
+            if strict:
+                if t.entity_type == 'flow':
+                    if t.reference_entity != self.get_canonical(reference):
+                        raise TypeError("ref quantity (%s) doesn't match supplied (%s)" % (t.reference_entity, reference))
+                elif t.entity_type == 'quantity':
+                    if t.unit() != reference:
+                        raise TypeError("ref unit (%s) doesn't match supplied (%s)" % (t.unit(), reference))
+                if t['Name'] != name:
+                    raise ValueError("Name (%s) doesn't match supplied(%s)" % (t['Name'], name))
+            return t
+
+        except EntityNotFound:
+            try:
+                return self.new_flow(name, ref_quantity=reference, external_ref=external_ref, context=group, **kwargs)
+            except EntityNotFound:
+                return self.new_quantity(name, ref_unit=reference, external_ref=external_ref, group=group, **kwargs)
+
+
+
     def new_flow(self, name, ref_quantity=None, context=None, **kwargs):
         """
 
@@ -185,7 +220,9 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         return self._archive.name_fragment(fragment, name, auto=auto, force=force)
 
     def observe(self, fragment, exchange_value=None, name=None, scenario=None, units=None, auto=None, force=None,
-                **kwargs):
+                accept_all=None, **kwargs):
+        if accept_all is not None:
+            print('%s: cannot "accept all"' % fragment)
         if exchange_value is None:
             exchange_value = fragment.cached_ev  # do not expose accept_all via the interface; instead allow implicit
         fragment.observe(scenario=scenario, value=exchange_value, units=units)
@@ -272,6 +309,11 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         :param fragment:
         :return:
         """
+        if isinstance(fragment, str):
+            try:
+                fragment = self.get(fragment)
+            except EntityNotFound:
+                return False
         self._archive.delete_fragment(fragment)
         for c in fragment.child_flows:
             self.delete_fragment(c)

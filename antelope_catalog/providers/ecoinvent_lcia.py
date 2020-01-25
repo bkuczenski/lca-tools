@@ -173,5 +173,8 @@ class EcoinventLcia(BasicArchive):
             cx = self.tm.add_context((row['compartment'], row['subcompartment']), origin=self.ref)
             fb = row['name']
             f = next(self._ei_archive.tm.flows_for_flowable(fb))
+            if self[f.reference_entity.external_ref] is None:
+                self.add_entity_and_children(f.reference_entity)
             self.tm.add_characterization(row['name'], f.reference_entity, q, v, context=cx, origin=self.ref)
+
         self.check_counter()

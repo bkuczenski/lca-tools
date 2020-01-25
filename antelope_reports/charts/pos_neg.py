@@ -24,11 +24,36 @@ mpl.rcParams['axes.xmargin'] = 0
 mpl.rcParams['axes.ymargin'] = 0
 
 
-class PosNegChart(object):
-    """
-    A PosNeg Chart draws the sum of forward and avoided burdens for each result object, together on the same
-    axes, with an annotated net total.
-    """
+class _PosNegAxes(object):
+
+    def __init__(self, ax, size, qty, span, bar_width=0.28, autorange=False, color=None, fontsize=10):
+
+        self._fontsize = fontsize
+
+        self._ax = ax
+        self._size = size
+        self._qty = qty
+
+        self._color = color or random_color(qty.uuid)
+
+        x, y = span  # to confirm it's a 2-tuple
+        self._span = x, y
+        self._bw = bar_width
+
+        self._pos_handle = None
+        self._neg_handle = None  # for legend
+
+        if autorange:
+            a = AutoRange(self._span[1] - self._span[0])
+            self._ar_scale = a.scale
+            self._unit = a.adj_unit(qty.unit())
+        else:
+            self._ar_scale = 1.0
+            self._unit = qty.unit()
+
+        ylim = [x, y + .065 * (y - x)]  # push out the top limit
+        self._ax.set_ylim([k * self._ar_scale for k in ylim])
+
 
     @property
     def _tgap(self):
@@ -36,10 +61,69 @@ class PosNegChart(object):
         Useful only for vertical bars.  We want to add 3pt, which is 1/18in.  span / size" = x / 1/18"
         :return:
         """
-        return (self._span[1] - self._span[0]) / (self._size * 18)
+        return (self._span[1] - self._span[0]) * self._ar_scale / (self._size * 18)
 
-    def __init__(self, *args, color=None, horiz=False, size=4, aspect=0.4, bar_width=0.28, filename=None,
-                 num_format='%3.2g', autorange=False, legend=True):
+    def draw_pos_neg(self, x, pos, neg, num_format):
+
+        pos *= self._ar_scale
+        neg *= self._ar_scale
+
+        h = self._ax.bar(x, pos, align='center', width=0.85 * self._bw, color=self._color)
+        if self._pos_handle is None:
+            self._pos_handle = h
+        if neg != 0:
+            self._ax.text(x + 0.5 * self._bw, pos + self._tgap, num_format % pos, ha='center', va='bottom',
+                          fontsize=self._fontsize)
+            x += self._bw
+            h = self._ax.bar(x, neg, bottom=pos, width=0.62 * self._bw, align='center', color=net_color,
+                       linewidth=0)
+            if self._neg_handle is None:
+                self._neg_handle = h
+            # edge line
+            self._ax.plot([x, x - self._bw], [pos, pos], color=(0.3, 0.3, 0.3), zorder=-1, linewidth=0.5)
+
+            x += self._bw
+            tot = pos + neg
+            self._ax.plot([x, x], [0, tot], color='k', marker='_')
+            self._ax.text(x, 0.5 * tot, num_format % tot, ha='center', va='center',
+                          bbox=dict(boxstyle='square,pad=0.025', fc='w', ec='none'),
+                          fontsize=self._fontsize)
+            self._ax.plot([x, x + self._bw], [0, 0], linewidth=0)
+
+            # edge line
+            self._ax.plot([x, x - self._bw], [tot, tot], color=(0.3, 0.3, 0.3), zorder=-1, linewidth=0.5)
+        else:
+            self._ax.text(x, pos, '%3.2g' % pos,
+                          fontsize=self._fontsize)
+
+    def finish(self, legend=True):
+
+        self._ax.spines['top'].set_visible(False)
+        self._ax.spines['bottom'].set_visible(False)
+        self._ax.spines['left'].set_visible(True)
+        self._ax.spines['left'].set_linewidth(2)
+        self._ax.spines['right'].set_visible(False)
+
+        self._ax.plot(self._ax.get_xlim(), [0, 0], 'k', linewidth=2, zorder=-1)
+        # open_ylims(self._ax, margin=0.05)  # this issue has supposedly been fixed?
+        self._ax.set_ylabel(self._unit,
+                            fontsize=self._fontsize)
+
+        if legend and self._neg_handle is not None:
+            self._ax.legend((self._pos_handle, self._neg_handle), ('Impacts', 'Avoided'))
+
+        self._ax.set_title(self._qty['ShortName'], fontsize=self._fontsize + 2)
+
+
+
+class PosNegChart(object):
+    """
+    A PosNeg Chart draws the sum of forward and avoided burdens for each result object, together on the same
+    axes, with an annotated net total.
+    """
+
+    def __init__(self, *args, horiz=False, size=4, aspect=0.4, bar_width=0.28, filename=None,
+                 num_format='%3.2g', legend=True, **kwargs):
         """
         aspect reports the aspect ratio of a single chart.  aspect + bar_width together determine the aspect
         ratio of multi-arg charts.
@@ -52,25 +136,14 @@ class PosNegChart(object):
         :param bar_width:
         :param filename:
         :param num_format:
+        :param kwargs: color, autorange, fontsize...
         :param autorange:
         """
-        self._bw = bar_width
-        self._size = size
-
-        qty = args[0].quantity
-        self._color = color or random_color(qty.uuid)
-
-        if filename is None:
-            filename = 'pos_neg_%.3s.eps' % qty.uuid
-
         self._pos = []
         self._neg = []
         self._idx = []
 
-        self._pos_handle = None
-        self._neg_handle = None  # for legend
-
-        ptr = 0.0
+        ptr = bar_width
         for i, arg in enumerate(args):
             _pos = 0.0
             _neg = 0.0
@@ -90,80 +163,96 @@ class PosNegChart(object):
 
             ptr += (1 - 2 * bar_width)
 
-        self._span = [min(self._neg), max(self._pos)]
-
-        if autorange:
-            a = AutoRange(self._span[1] - self._span[0])
-            self._ar_scale = a.scale
-            self._unit = a.adj_unit(qty.unit())
-        else:
-            self._ar_scale = 1.0
-            self._unit = qty.unit()
+        span = [min(self._neg), max(self._pos)]
 
         cross = size * aspect * (ptr + bar_width)
         if horiz:
-            fig = plt.figure(figsize=[self._size, cross])
+            fig = plt.figure(figsize=[size, cross])
         else:
-            fig = plt.figure(figsize=[cross, self._size])
+            fig = plt.figure(figsize=[cross, size])
 
         ax = fig.add_axes([0, 0, 1.0, 1.0])
 
+        qty = args[0].quantity
+
+        if filename is None:
+            filename = 'pos_neg_%.3s.eps' % qty.uuid
+
+        self._pna = _PosNegAxes(ax, size, qty, span, bar_width=bar_width, **kwargs)
+
         for i, arg in enumerate(args):
             if horiz:
-                self._pos_neg_horiz(ax, i)
+                raise NotImplementedError
+                # self._pos_neg_horiz(ax, i)
             else:
-                self._pos_neg_vert(ax, i, num_format=num_format)
-                standard_labels(ax, [arg.scenario for arg in args], ticks=self._idx, rotate=False, width=22)
+                self._pna.draw_pos_neg(self._idx[i], self._pos[i], self._neg[i], num_format=num_format)
 
-                ax.spines['top'].set_visible(False)
-                ax.spines['bottom'].set_visible(False)
-                ax.spines['left'].set_visible(True)
-                ax.spines['left'].set_linewidth(2)
-                ax.spines['right'].set_visible(False)
+        standard_labels(ax, [arg.scenario for arg in args], ticks=self._idx, rotate=False, width=22)
+        self._pna.finish(legend=legend)
 
-        if horiz:
-            pass
-        else:
-            ax.plot(ax.get_xlim(), [0, 0], 'k', linewidth=2, zorder=-1)
-            open_ylims(ax, margin=0.05)
-            ax.set_ylabel(self._unit)
-
-        if legend and self._neg_handle is not None:
-            ax.legend((self._pos_handle, self._neg_handle), ('Impacts', 'Avoided'))
-
-        ax.set_title(qty['Name'])
         if filename != 'none':
             save_plot(filename)
 
-    def _pos_neg_horiz(self, ax, i):
-        pass
 
-    def _pos_neg_vert(self, ax, i, num_format='%3.2g'):
-        pos = self._pos[i] * self._ar_scale
-        neg = self._neg[i] * self._ar_scale
-        x = self._idx[i]
+class PosNegCompare(object):
+    def __init__(self, *args, size=4, aspect=0.4, bar_width=0.28, filename=None,
+                 num_format='%3.2g', legend=False, **kwargs):
+        """
+        A slightly different version, where different results are assumed to have different quantities and each
+        is drawn on its own axes, but the spans of all axes are set to match the maximal pos/neg ratio (so the
+        horiz axes should align)
+        :param args:
+        :param size:
+        :param aspect:
+        :param bar_width:
+        :param filename:
+        :param num_format:
+        :param kwargs: autorange, fontsize
+        :param legend:
+        """
+        self._pos = []
+        self._neg = []
+        _ratios = []
 
-        h = ax.bar(x, pos, align='center', width=0.85 * self._bw, color=self._color)
-        if self._pos_handle is None:
-            self._pos_handle = h
-        if neg != 0:
-            ax.text(x + 0.5 * self._bw, pos + self._tgap * self._ar_scale, num_format % pos, ha='center', va='bottom')
-            x += self._bw
-            h = ax.bar(x, neg, bottom=pos, width=0.62 * self._bw, align='center', color=net_color,
-                       linewidth=0)
-            if self._neg_handle is None:
-                self._neg_handle = h
-            # edge line
-            ax.plot([x, x - self._bw], [pos, pos], color=(0.3, 0.3, 0.3), zorder=-1, linewidth=0.5)
+        for i, arg in enumerate(args):
+            _pos = 0.0
+            _neg = 0.0
+            for c in arg.keys():
+                val = arg[c].cumulative_result
+                if val > 0:
+                    _pos += val
+                else:
+                    _neg += val
 
-            x += self._bw
-            tot = pos + neg
-            ax.plot([x, x], [0, tot], color='k', marker='_')
-            ax.text(x, 0.5 * tot, num_format % tot, ha='center', va='center',
-                    bbox=dict(boxstyle='square,pad=0.02', fc='w', ec='none'))
-            ax.plot([x, x + self._bw], [0, 0], linewidth=0)
+            self._pos.append(_pos)
+            self._neg.append(_neg)
+            _ratios.append( -1 * (_pos + _neg) / _pos)
 
-            # edge line
-            ax.plot([x, x - self._bw], [tot, tot], color=(0.3, 0.3, 0.3), zorder=-1, linewidth=0.5)
-        else:
-            ax.text(x, pos, '%3.2g' % pos)
+        print(_ratios)
+        max_ratio = max(_ratios)
+
+        n = len(args)
+        cross = size * aspect * n * 1.4
+
+        fig = plt.figure(figsize=[cross, size])
+
+        self._pna = []
+
+        for i, arg in enumerate(args):
+            ax = fig.add_axes([i/n, 0, 0.8/n, 1.0])
+            qty = arg.quantity
+
+            span = (-1 * max_ratio * self._pos[i], self._pos[i])
+            print(span)
+
+            self._pna.append(_PosNegAxes(ax, size, qty, span, bar_width=bar_width, **kwargs))
+            self._pna[i].draw_pos_neg(1, self._pos[i], self._neg[i], num_format=num_format)
+
+            self._pna[i].finish(legend=legend)
+            ax.set_xticks([])
+            ax.set_yticks([])
+
+        if filename is None:
+            filename = 'pos_neg_compare.eps'
+        if filename != 'none':
+            save_plot(filename)

@@ -260,10 +260,9 @@ class WaterfallChart(object):
         :return:
         """
         num_ax = len(self._d)
-        num_steps = len(stages)
+        num_steps = sum(sum([k != 0 for k in j]) for j in self._d)  # len(stages)
         height = num_ax * (self._size * aspect * num_steps) + (num_ax - 1) * panel_sep
 
-        _ax_hgt = self._size * aspect * num_steps / height
         _gap_hgt = panel_sep / height
 
         fig = plt.figure(figsize=[self._size, height])
@@ -272,14 +271,25 @@ class WaterfallChart(object):
         _mn = _mx = 0.0
         axes = []
         for i in range(num_ax):
+
+            data = [k for k in self._d[i] if k != 0]
+            stgs = [stages[j] for j, k in enumerate(self._d[i]) if k != 0]
+
+            _ax_hgt = self._size * aspect * len(data) / height
             bottom = top - _ax_hgt
             ax = fig.add_axes([0.0, bottom, 1.0, _ax_hgt])
             axes.append(ax)
-            self._waterfall_horiz(ax, self._d[i], styles, **kwargs)
-            ax.set_yticklabels(stages)
+            self._waterfall_horiz(ax, data, styles, **kwargs)
+            ax.set_yticklabels(stgs)
+
+
+            # add an indicator unit notation to the rightmost tick label
             xticklabels = [_i.get_text() for _i in ax.get_xticklabels()]
-            xticklabels[-1] += ' %s' % self._unit
+            xticks = ax.get_xticks()
+            bgst = next(_i for _i in range(len(xticks)) if xticks(_i) == max(xticks))
+            xticklabels[bgst] += ' %s' % self._unit
             ax.set_xticklabels(xticklabels)
+
 
             xlim = ax.get_xlim()
             if xlim[0] < _mn:
@@ -301,6 +311,8 @@ class WaterfallChart(object):
 
         for ax in axes:
             ax.set_xlim([_mn, _mx])
+            # ax.set_xticks(ax.get_xticks() + [_mx])
+            # ax.set_xticklabels(ax.get_xticklabels() + [str(self._unit)])
         return fig
 
     def _waterfall_horiz(self, ax, data, styles, num_format='%3.2g', bar_width=0.85):

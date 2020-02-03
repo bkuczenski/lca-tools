@@ -101,6 +101,8 @@ class SynonymSet(object):
                 if any(t == other for t in self._children) and len(other) > 0:
                     raise DuplicateChild('Child members match existing child')
             self._children.add(other)
+            if self._name is None:
+                self._name = other.name
         else:
             raise TypeError('Argument is not a synonym set (type %s)' % type(other))
 

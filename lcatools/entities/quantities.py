@@ -160,7 +160,7 @@ class LcQuantity(LcEntity):
 
     @property
     def _name(self):
-        n = '%s [%s]' % (self._d['Name'], self.reference_entity.unitstring)
+        n = '%s [%s]' % (self._d['Name'].replace('\n', '|'), self.reference_entity.unitstring)
         if self.is_lcia_method():
             return '%s [LCIA]' % n
         return n

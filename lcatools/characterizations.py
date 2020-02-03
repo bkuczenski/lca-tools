@@ -134,6 +134,14 @@ class Characterization(object):
         else:
             return self._locations
 
+    @property
+    def _sval(self):
+        if isinstance(self.value, str):
+            return '%s' % self.value.replace('\n', '|')
+        elif self.value is None:
+            return ' --   '
+        return '%6.3g' % self.value
+
     @value.setter
     def value(self, val):
         self._locations['GLO'] = val
@@ -170,8 +178,12 @@ class Characterization(object):
         if key in self._locations:
             if self._locations[key] == value:
                 return  # just skip if they are the same
-            raise DuplicateCharacterizationError('Characterization value already present! %s = %g (incoming %g)' %
-                                                 (key, self._locations[key], value))
+            if isinstance(self._locations[key], str):
+                pval = '%s (incoming: %s)' % (self._locations[key], value)
+            else:
+                pval = '%g (incoming: %s)' % (self._locations[key], value)
+            raise DuplicateCharacterizationError('%s: Characterization value already present! %s = %s\n%s' %
+                                                 (self.quantity, key, pval, self.flowable))
         self._locations[key] = value
 
     def update_values(self, **kwargs):
@@ -217,35 +229,37 @@ class Characterization(object):
     def __str__(self):
         if self.is_null:
             return '%s has %s %s' % (self.flowable, self.quantity, self.quantity.reference_entity)
-        return '%s [%s / %s] %s: %s (%s)' % ('\n'.join(['%6.3g [%s]' % (v, k) for k, v in self._locations.items()]),
+        scs = []
+        for k, v in self._locations.items():
+            if isinstance(v, str):
+                scs.append("'%s' [%s]" % (v, k))
+            else:
+                scs.append('%6.3g [%s]' % (v, k))
+
+        return '%s [%s / %s] %s: %s (%s)' % ('\n'.join(scs),
                                              self.quantity.unit(), self.ref_quantity.unit(), self.flowable, self.context,
-                                             self.quantity['Name'])
+                                             self.quantity.name)
 
     def __repr__(self):
         if self.is_null:
-            return '%s(%s, %s, %s, %s: null)' % (self.__class__.__name__, self.flowable,
-                                                 self.ref_quantity.unit(), self.quantity.unit(), self.context)
+            return '%s(%s, %s, %s: null (%s))' % (self.__class__.__name__, self.flowable,
+                                                 self.ref_quantity.unit(), self.context, self.quantity.unit())
         if len(self._locations) > 1:
-            val = '%6.3g (+%d)' % (self.value, len(self._locations) - 1)
+            val = '%s (+%d)' % (self._sval, len(self._locations) - 1)
         else:
-            val = '%6.3g' % self.value
-        return '%s(%s, %s, %s, %s: %s)' % (self.__class__.__name__, self.flowable,
-                                           self.ref_quantity.unit(), self.quantity.unit(),
-                                           self.context, val)
+            val = '%s' % self._sval
+        return '%s(%s, %s, %s: %s (%s))' % (self.__class__.__name__, self.flowable,
+                                           self.ref_quantity.unit(),
+                                           self.context, val, self.quantity.unit())
 
     def q_view(self):
         if self.quantity is self.ref_quantity:
             ref = '(*)'
         else:
             ref = ' | '
-        if self.value is not None:
-            return '%6.3g %16.16s == %s%s%s' % (self.value, self.quantity.unit(),
-                                                self.ref_quantity.unit(), ref,
-                                                self.quantity)
-        else:
-            return '%6s %16.16s == %s%s%s' % (' ', self.quantity.unit(),
-                                              self.ref_quantity.unit(), ref,
-                                              self.quantity)
+        return '%25.25s [%s / %s]%s%s' % (self._sval, self.quantity.unit(),
+                                          self.ref_quantity.unit(), ref,
+                                          self.quantity.name)
 
     '''
     def tupleize(self):

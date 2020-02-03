@@ -234,7 +234,11 @@ class TermManager(object):
         if fb in self._fq_map:
             self._print('Adding terms to existing flowable %s' % fb)
         else:
-            self._print('Adding new flowable %s' % fb)
+            try:
+                self._print('Adding new flowable %s' % fb)
+            except TypeError:
+                print('Failed to create flowable for %s (%s)' % (name, syns))
+                raise
             self._fq_map[fb] = set()
         return fb
 
@@ -384,7 +388,13 @@ class TermManager(object):
         :return: the Flowable object to which the flow's terms have been added
         """
         if hasattr(flow, 'reference_entity') and flow.reference_entity is not None:
-            self.add_quantity(flow.reference_entity)  # ensure exists
+            if isinstance(flow.reference_entity, str):
+                try:
+                    self.get_canonical(flow.reference_entity)
+                except EntityNotFound:
+                    raise ValueError('unrecognized quantity spec %s ' % flow.reference_entity)
+            else:
+                self.add_quantity(flow.reference_entity)  # ensure exists
         cx = self._check_context(flow)
         if cx is NullContext:
             merge_strategy = 'distinct'  # keep distinct terms for null-context flows

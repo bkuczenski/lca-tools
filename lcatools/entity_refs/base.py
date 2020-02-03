@@ -119,7 +119,7 @@ class BaseRef(object):
         """
         if self.has_property('Name'):
             addl = self._addl
-            name = self['Name']
+            name = self['Name'].replace('\n', '|')
             if len(addl) > 0:
                 name += ' [%s]' % addl
             return name

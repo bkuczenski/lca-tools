@@ -10,7 +10,7 @@ class NotSupported(Exception):
     pass
 
 
-cas_regex = re.compile('^0*([0-9]{2,6})\W?([0-9]{2})\W?([0-9])$')
+cas_regex = re.compile('^0*([0-9]{2,6})(\W?)([0-9]{2})\\2([0-9])$')
 
 
 class InvalidCasNumber(Exception):
@@ -37,7 +37,8 @@ def _validate_string_input(cas):
     match = cas_regex.match(cas)
     if match is None:
         raise InvalidCasNumber('String does not match regex')
-    return match.groups()
+    groups = match.groups()  # added a new group; need to filter it out
+    return tuple(groups[k] for k in (0, 2, 3))
 
 
 def _validate_tuple_input(tup):

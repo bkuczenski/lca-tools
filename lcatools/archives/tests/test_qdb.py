@@ -47,7 +47,8 @@ class QdbTestCase(BasicEntityTest):
                 # 'energy' (unspecified) and 'emissive coolness' respectively
                 with self.assertRaises(EntityNotFound):
                     self._qdb.query.get_canonical(k.external_ref)
-                self.assertIs(self._qdb.query.get_canonical(k), k)
+                self._qdb.add_entity_and_children(k)  # we commented out as foolhardy the code that auto-adds quantities in get_canonical
+                self.assertIs(self._qdb.query.get_canonical(k.external_ref), k)
             else:
                 qc = self._qdb.query.get_canonical(k)
                 self.assertEqual(qc.origin, 'local.qdb')

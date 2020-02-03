@@ -57,7 +57,8 @@ class LciaDb(Qdb):
 
     def _ensure_valid_refs(self, entity):
         if entity.origin is None:
-            raise AttributeError('Origin not set! %s' % entity)
+            entity.origin = self.ref
+            # raise AttributeError('Origin not set! %s' % entity)
         super(LciaDb, self)._ensure_valid_refs(entity)
 
     '''

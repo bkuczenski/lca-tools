@@ -5,7 +5,11 @@ Entity object API:
   entity.entity_type --> string used for groupung
   entity.external_ref --> lookup name
   entity.origin --> one-time settable parameter, set by the entity store
-  entity.validate() --> must return True
+  entity.validate() --> must return True [for valid entities and False for invalid ones]
+  entity.name --> printable name
+
+Optional:
+  entity.uuid --? used for entity retrieval
 
 """
 from __future__ import print_function, unicode_literals
@@ -272,6 +276,9 @@ class EntityStore(object):
         self._catalog_names[ref].add(source)
         if ref == self.ref and self.source is None and rewrite:
             self._source = source
+
+    def add_new_source(self, new_ref, new_source):
+        self._add_name(new_ref, new_source, rewrite=False)
 
     @property
     def source(self):

@@ -105,6 +105,10 @@ class FlowInterface(object):
         """
         return self._context
 
+    @context.setter
+    def context(self, value):
+        self._catch_context('Context', value)
+
     def match(self, other):
         """
         Re-implement flow match method

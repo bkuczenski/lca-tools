@@ -174,7 +174,7 @@ class BasicArchive(EntityStore):
 
     def add(self, entity):
         self._add(entity, entity.external_ref)
-        if entity.uuid is not None:  # BasicArchives: allow UUID to retrieve entity as well, if defined
+        if hasattr(entity, 'uuid') and entity.uuid is not None:  # BasicArchives: allow UUID to retrieve entity as well, if defined
             self._entities[entity.uuid] = entity
 
         self._add_to_tm(entity)

@@ -49,7 +49,7 @@ class QuantityConversion(object):
     def flatten(self, origin=None):
         if origin is None:
             origin = self._results[0].origin
-        return QRResult(self.flowable, self.ref, self.query, self.context, self.locale, origin)
+        return QRResult(self.flowable, self.ref, self.query, self.context, self.locale, origin, self.value)
 
     def add_result(self, qrr):
         if isinstance(qrr, QRResult):
@@ -64,6 +64,10 @@ class QuantityConversion(object):
             self._results.append(qrr)
         else:
             raise TypeError('Must supply a QRResult')
+
+    @property
+    def qualitative(self):
+        return isinstance(self.value, str)
 
     @property
     def query(self):
@@ -128,6 +132,8 @@ class QuantityConversion(object):
     def value(self):
         val = 1.0
         for res in self._results:
+            if isinstance(res.value, str):
+                return res.value  # qualitative value
             val *= res.value
         return val
 
@@ -135,6 +141,9 @@ class QuantityConversion(object):
         return self._results[item]
 
     def __str__(self):
+        if self.qualitative:
+            return '%s [context %s] %s: %s [%s] (%s)' % (self.flowable, self.context, self.query, self.value,
+                                                         self._results[-1].locale, self._results[-1].origin)
         conv = ' x '.join(['%g %s/%s' % (res.value, res.query.unit(), res.ref.unit()) for res in self._results])
         return '%s [context %s]: 1 %s x %s [%s] (%s)' % (self.flowable, self.context,
                                                          self.ref.unit(), conv, self._results[-1].locale,

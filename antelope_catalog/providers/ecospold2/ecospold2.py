@@ -614,7 +614,7 @@ class EcospoldV2Archive(LcArchive):
 
         return results
 
-    def _load_all(self, exchanges=True):
+    def _load_all(self, exchanges=True, bailout=None):
         now = time()
         count = 0
         for p_u, r_set in self._process_flow_map.items():
@@ -623,6 +623,10 @@ class EcospoldV2Archive(LcArchive):
             count += 1
             if count % 100 == 0:
                 print(' Loaded %d processes (t=%.2f s)' % (count, time()-now))
+            if bailout is not None:
+                if count > bailout:
+                    print('Bailing out...')
+                    break
 
         print(' Loaded %d processes (t=%.2f s)' % (count, time() - now))
         self.check_counter()

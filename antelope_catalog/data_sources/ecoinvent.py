@@ -12,7 +12,7 @@ ECOINVENT_SYS_MODELS = ('apos', 'conseq', 'cutoff', 'undefined')
 MODELMAP = {
     'apos': ('apos',),
     'conseq': ('consequential', 'consequential_longterm'),
-    'cutoff': ('cutoff',),
+    'cutoff': ('cutoff', 'cut-off'),
     'undefined': ('undefined', )
 }
 

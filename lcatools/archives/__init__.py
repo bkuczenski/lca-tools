@@ -50,7 +50,8 @@ def create_archive(source, ds_type, catalog=None, **kwargs):
             try:
                 res = catalog.get_resource(ei_ref, strict=False)
                 res.check(catalog)
-                res.archive.load_flows()
+                if hasattr(res.archive, 'load_flows'):
+                    res.archive.load_flows()
                 ar = res.archive
             except UnknownOrigin:
                 ar = None

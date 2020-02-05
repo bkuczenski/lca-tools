@@ -35,7 +35,7 @@ class QuantityConversion(object):
         return cls(qrr)
 
     def __init__(self, *args, query=None):
-        self._query = query
+        self._query = query  # this is just a stub to give ref conversion machinery something to grab hold of
         self._results = []
         for arg in args:
             self.add_result(arg)
@@ -47,6 +47,8 @@ class QuantityConversion(object):
         return inv_qrr
 
     def flatten(self, origin=None):
+        if len(self._results) == 0:
+            return self
         if origin is None:
             origin = self._results[0].origin
         return QRResult(self.flowable, self.ref, self.query, self.context, self.locale, origin, self.value)
@@ -186,7 +188,7 @@ class QuantityConversionError(object):
 
     @property
     def value(self):
-        return self._qrr.value
+        return None
 
     def __repr__(self):
         return '%s(%s/%s [%s] %g %s/%s || %s)' % (self.__class__.__name__, self.flowable, self.context,
@@ -276,58 +278,57 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         return self._archive.tm.add_characterization(flowable, rq, qq, value, context=context, location=location,
                                                      origin=origin, **kwargs)
 
-    def _ref_qty_conversion(self, ref_quantity, flowable, compartment, res, locale):
+    def _ref_qty_conversion(self, target_quantity, flowable, compartment, conv, locale, _reverse=True):
         """
         Transforms a CF into a quantity conversion with the proper ref quantity. Does it recursively! watch with terror.
-        :param ref_quantity:
+        :param target_quantity: conversion target
         :param flowable:
         :param compartment:
-        :param res: a QRResult
+        :param conv: An existing QuantityConversion chain, whose ref we must turn into target_quantity
         :param locale:
-        :return:
+        :return: the incoming conv, augmented
         """
-        if ref_quantity is None:
+        if target_quantity is None:
             raise ConversionReferenceMismatch('Cannot convert to None')
-        found_ref = self.get_canonical(res.ref)  # this is still necessary because CFs are stored with native ref quantities
-        if found_ref != ref_quantity:
+        found_quantity = self.get_canonical(conv.ref)  # this is still necessary because CFs are stored with native ref quantities
+        if found_quantity != target_quantity:
             # zero look for conversions
             try:
-                qr_result = try_convert(flowable, ref_quantity, found_ref, compartment, locale)
-                res.add_result(qr_result)
-                return res
+                qr_result = try_convert(flowable, target_quantity, found_quantity, compartment, locale)
+                conv.add_result(qr_result)
+                return conv
             except NoConversion:
                 pass
 
             # first look for forward matches
-            cfs_fwd = [cf for cf in self._archive.tm.factors_for_flowable(flowable, quantity=found_ref,
+            cfs_fwd = [cf for cf in self._archive.tm.factors_for_flowable(flowable, quantity=found_quantity,
                                                                           context=compartment, dist=3)
-                       if not res.seen(cf.ref_quantity)]
+                       if not conv.seen(cf.ref_quantity)]
             for cf in cfs_fwd:
-                new_res = QuantityConversion(*res.results)
-                new_res.add_result(cf.query(locale))
+                new_conv = QuantityConversion(*conv.results)
+                new_conv.add_result(cf.query(locale))
                 try:
-                    return self._ref_qty_conversion(ref_quantity, flowable, compartment, new_res, locale)
+                    return self._ref_qty_conversion(target_quantity, flowable, compartment, new_conv, locale,
+                                                    _reverse=_reverse)
                 except ConversionReferenceMismatch:
                     continue
 
-            # then look for reverse matches
-            cfs_rev = [cf for cf in self._archive.tm.factors_for_flowable(flowable, quantity=ref_quantity,
-                                                                          context=compartment, dist=3)
-                       if not res.seen(cf.quantity)]
-            for cf in cfs_rev:
-                if self.get_canonical(cf.ref_quantity) != found_ref:
-                    continue
-                new_res = QuantityConversion(*res.results)
-                new_res.add_inverted_result(cf.query(locale))
-                try:
-                    return self._ref_qty_conversion(ref_quantity, flowable, compartment, new_res, locale)
-                except ConversionReferenceMismatch:
-                    continue
+            # then look for reverse matches... but... only once
+            if _reverse:
+                new_conv = QuantityConversion(*conv.results)
+                rev_conv = self._ref_qty_conversion(found_quantity, flowable, compartment,
+                                                    QuantityConversion(query=target_quantity), locale,
+                                                    _reverse=False)
+
+                for res in rev_conv.invert().results:
+                    new_conv.add_result(res)
+                if new_conv.ref == target_quantity:
+                    return new_conv
 
             raise ConversionReferenceMismatch('Flow %s\nfrom %s\nto %s' % (flowable,
-                                                                           res.query,
-                                                                           ref_quantity))
-        return res
+                                                                           conv.ref,
+                                                                           target_quantity))
+        return conv
 
     def _quantity_engine(self, fb, rq, qq, cx, locale='GLO',
                          **kwargs):
@@ -348,17 +349,22 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
 
         """
         # TODO: port qdb functionality: detect unity conversions; quell biogenic co2; integrate convert()
-        # first- check to see if the query quantity can be converted to the ref quantity directly:
-        if qq is not None and rq is not None:
-            try:
-                qr_result = try_convert(fb, rq, qq, cx, locale)
-                return [qr_result], [], []
-            except NoConversion:
-                pass
 
         qr_results = []
         qr_mismatch = []
         qr_geog = []
+
+        # if we are not doing LCIA, jump straight to unit conversion
+        if qq is not None:
+            if not qq.is_lcia_method():
+                res = QuantityConversion(query=qq)
+                try:
+                    qr_results.append(self._ref_qty_conversion(rq, fb, cx, res, locale))
+                except ConversionReferenceMismatch:
+                    res.add_result(QRResult(fb, qq, qq, cx, locale, qq.origin, 1.0))
+                    qr_mismatch.append(QuantityConversionError(res, rq))
+
+                return qr_results, qr_mismatch, qr_geog
 
         for cf in self._archive.tm.factors_for_flowable(fb, quantity=qq, context=cx, **kwargs):
             res = QuantityConversion(cf.query(locale))
@@ -369,7 +375,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
 
         ''' # leaving this OUT- we should only do forward and reverse matching for ref quantity conversion, not qq
         Leaving it back in because it breaks a unit test
-        '''
+        and backing it out again because of minor _ref_qty_conversion refactor
         for cf in self._archive.tm.factors_for_flowable(fb, quantity=rq, context=cx, **kwargs):
             res = QuantityConversion(cf.query(locale))
             try:
@@ -378,10 +384,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
                 pass  # qr_mismatch.append(res.invert())  We shouldn't be surprised that there is no reverse conversion
         ##'''
 
-        # TODO: should we try a last-ditch effort to find factors for flowables using target unit conversion quantities?
-        # motivation: cf is in t --> Count; query is between kg and Count; t also has
-
-        if len(qr_results + qr_geog + qr_mismatch) == 0:
+        if len(qr_results + qr_mismatch) == 0:
             raise NoFactorsFound
 
         if len(qr_results) > 1:

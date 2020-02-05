@@ -456,7 +456,8 @@ class EntityStore(object):
             print(*args)
 
     def __str__(self):
-        s = '%s with %d entities at %s' % (self.__class__.__name__, len(self._entities), self.source)
+        count = sum(len(v) for v in self._ents_by_type.values())
+        s = '%s with %d entities at %s' % (self.__class__.__name__, count, self.source)
         if self._upstream is not None:
             s += ' [upstream %s]' % self._upstream.__class__.__name__
         return s

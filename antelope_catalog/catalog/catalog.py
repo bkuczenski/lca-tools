@@ -473,6 +473,10 @@ class LcCatalog(object):
         source = self._find_single_source(origin, interface, source=source)
         return self._index_source(source, priority, force=force)
 
+    def cache_ref(self, origin, interface=None, source=None, static=False):
+        source = self._find_single_source(origin, interface, source=source)
+        self.create_source_cache(source, static=static)
+
     def create_source_cache(self, source, static=False):
         """
         Creates a cache of the named source's current contents, to speed up access to commonly used entities.

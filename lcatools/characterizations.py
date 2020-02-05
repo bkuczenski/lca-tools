@@ -73,6 +73,7 @@ class Characterization(object):
         """
         assert ref_quantity.entity_type == 'quantity', "'ref_quantity' must be an LcQuantity"
         assert query_quantity.entity_type == 'quantity', "'query_quantity' must be an LcQuantity"
+        assert ref_quantity.is_lcia_method() is False, "'ref_quantity' cannot be an LCIA method"
 
         self.flowable = str(flow_name)
         self.quantity = query_quantity

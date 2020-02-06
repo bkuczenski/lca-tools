@@ -122,10 +122,10 @@ class AntelopeV1Client(BasicArchive):
         if self._fetched_all[entity_type]:
             for k, v in sorted(self._cached[endp].items()):
                 if entity_type == 'flowproperty':
-                    if v.is_lcia_method():
+                    if v.is_lcia_method:
                         continue
                 elif entity_type == 'lciamethod':
-                    if not v.is_lcia_method():
+                    if not v.is_lcia_method:
                         continue
                 yield v
         else:

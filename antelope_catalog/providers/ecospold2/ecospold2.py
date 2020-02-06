@@ -574,7 +574,7 @@ class EcospoldV2Archive(LcArchive):
         :return: a dict of quantity uuid to score
         """
         if quantities is None:
-            quantities = [l for l in self.entities_by_type('quantity') if l.is_lcia_method()]
+            quantities = [l for l in self.entities_by_type('quantity') if l.is_lcia_method]
 
         import time
         start_time = time.time()

@@ -27,7 +27,7 @@ class QuantitiesTest(unittest.TestCase):
         self.assertEqual(self.gwp.entity_type, 'quantity')
 
     def test_is_lcia_method(self):
-        self.assertTrue(self.gwp.is_lcia_method())
+        self.assertTrue(self.gwp.is_lcia_method)
 
     def test_convert(self):
         mass = self.I[mass_uuid]

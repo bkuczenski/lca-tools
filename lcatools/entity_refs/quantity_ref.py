@@ -91,7 +91,7 @@ class QuantityRef(EntityRef):
 
     @property
     def _addl(self):
-        if self.is_lcia_method():
+        if self.is_lcia_method:
             return '%s] [LCIA' % self.unit()
         return self.unit()
 
@@ -106,6 +106,7 @@ class QuantityRef(EntityRef):
             j['Indicator'] = self.get_item('Indicator')
         return j
 
+    @property
     def is_lcia_method(self):
         return self._is_lcia
 

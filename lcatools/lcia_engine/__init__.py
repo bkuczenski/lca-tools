@@ -84,7 +84,7 @@ class LciaDb(Qdb):
 
     def _add_to_tm(self, entity, merge_strategy=None):
         if entity.entity_type == 'quantity':
-            if entity.is_lcia_method():
+            if entity.is_lcia_method:
                 ind = entity['Indicator']
             else:
                 ind = None

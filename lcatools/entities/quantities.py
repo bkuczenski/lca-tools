@@ -96,6 +96,7 @@ class LcQuantity(LcEntity):
     def _make_ref_ref(self, query):
         return self.reference_entity
 
+    @property
     def is_lcia_method(self):
         return self._is_lcia
 
@@ -161,7 +162,7 @@ class LcQuantity(LcEntity):
     @property
     def _name(self):
         n = '%s [%s]' % (self._d['Name'].replace('\n', '|'), self.reference_entity.unitstring)
-        if self.is_lcia_method():
+        if self.is_lcia_method:
             return '%s [LCIA]' % n
         return n
 

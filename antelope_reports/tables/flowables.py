@@ -46,7 +46,7 @@ class FlowablesGrid(BaseTableOutput):
                     if self._criterion(exchange.flow):
                         yield exchange
             elif flow_collection.entity_type == 'quantity':
-                if flow_collection.is_lcia_method():
+                if flow_collection.is_lcia_method:
                     if self._qdb.is_known(flow_collection):
                         for cf in self._qdb.factors(flow_collection):
                             if self._criterion(cf.flow):

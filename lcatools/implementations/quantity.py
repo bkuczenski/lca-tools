@@ -202,7 +202,7 @@ class NoConversion(Exception):
 
 def try_convert(flowable, rq, qq, context, locale):
 
-    if hasattr(qq, 'is_lcia_method') and qq.is_lcia_method():
+    if hasattr(qq, 'is_lcia_method') and qq.is_lcia_method:
         raise NoConversion
     else:
         try:
@@ -211,7 +211,7 @@ def try_convert(flowable, rq, qq, context, locale):
         except (KeyError, NoUnitConversionTable):
             pass
 
-    if hasattr(rq, 'is_lcia_method') and rq.is_lcia_method():
+    if hasattr(rq, 'is_lcia_method') and rq.is_lcia_method:
         raise NoConversion
     else:
         try:
@@ -356,7 +356,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
 
         # if we are not doing LCIA, jump straight to unit conversion
         if qq is not None:
-            if not qq.is_lcia_method():
+            if not qq.is_lcia_method:
                 res = QuantityConversion(query=qq)
                 try:
                     qr_results.append(self._ref_qty_conversion(rq, fb, cx, res, locale))

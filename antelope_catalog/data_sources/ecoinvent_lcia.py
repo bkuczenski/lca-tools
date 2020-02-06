@@ -5,7 +5,8 @@ import os
 EI_LCIA_SPREADSHEETS = {
     '3.1': 'LCIA implementation v3.1 2014_08_13.xlsx',
     '3.4': 'LCIA_implementation_3.4.xlsx',
-    '3.5': 'LCIA_implementation_3.5.xlsx'
+    '3.5': 'LCIA_implementation_3.5.xlsx',
+    '3.6': 'LCIA_implementation_3.6.xlsx',
 }
 
 

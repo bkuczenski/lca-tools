@@ -4,7 +4,7 @@ can also be upgraded to an LciaEngine, which extends the synonymization strategy
 """
 from .basic import BasicImplementation
 from ..characterizations import QRResult
-from ..interfaces import QuantityInterface, NoFactorsFound, ConversionReferenceMismatch, FlowableMismatch, EntityNotFound
+from ..interfaces import QuantityInterface, NoFactorsFound, ConversionReferenceMismatch, EntityNotFound  # , FlowableMismatch
 from ..contexts import NullContext
 from ..lcia_results import LciaResult
 from ..entity_refs import FlowInterface, convert, NoUnitConversionTable
@@ -348,7 +348,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
          qr_mismatch: conversions from query quantity to a different quantity that could not be further converted
 
         """
-        # TODO: port qdb functionality: detect unity conversions; quell biogenic co2; integrate convert()
+        # TODO: port qdb functionality: detect unity conversions; quell biogenic co2; integrate convert() -- DONE??
 
         qr_results = []
         qr_mismatch = []

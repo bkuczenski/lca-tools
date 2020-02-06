@@ -26,6 +26,31 @@ EI_LCIA_NSUUID = '46802ca5-8b25-398c-af10-2376adaa4623'  # use the same value fo
 Ecoinvent_Indicators = os.path.join(os.path.dirname(__file__), 'data',
                                     'list_of_methods_and_indicators_ecoinvent_v3.2.xlsx')
 
+EI_LCIA_ERRORS = {
+    ('ReCiPe Midpoint (E) (obsolete)', 'water depletion', 'WDP', 
+     'Water, unspecified natural origin', 'natural resource', 'in water'): {None: 1.0}, 
+    ('ReCiPe Midpoint (E) w/o LT (obsolete)', 'water depletion w/o LT', 'WDP w/o LT', 
+     'Water, unspecified natural origin', 'natural resource', 'in water'): {None: 1.0},
+    ('ReCiPe Midpoint (H) (obsolete)', 'water depletion', 'WDP', 
+     'Water, unspecified natural origin', 'natural resource', 'in water'): {None: 1.0},
+    ('ReCiPe Midpoint (H) w/o LT (obsolete)', 'water depletion w/o LT', 'WDP w/o LT', 
+     'Water, unspecified natural origin', 'natural resource', 'in water'): {None: 1.0},
+    ('ReCiPe Midpoint (I) (obsolete)', 'water depletion', 'WDP', 
+     'Water, unspecified natural origin', 'natural resource', 'in water'): {None: 1.0},
+    ('ReCiPe Midpoint (E)', 'water depletion', 'WDP',
+     'Water, unspecified natural origin', 'natural resource', 'in water'): {None: 1.0},
+    ('ReCiPe Midpoint (E) w/o LT', 'water depletion w/o LT', 'WDP w/o LT',
+     'Water, unspecified natural origin', 'natural resource', 'in water'): {None: 1.0},
+    ('ReCiPe Midpoint (H)', 'water depletion', 'WDP',
+     'Water, unspecified natural origin', 'natural resource', 'in water'): {None: 1.0},
+    ('ReCiPe Midpoint (H) w/o LT', 'water depletion w/o LT', 'WDP w/o LT',
+     'Water, unspecified natural origin', 'natural resource', 'in water'): {None: 1.0},
+    ('ReCiPe Midpoint (I)', 'water depletion', 'WDP',
+     'Water, unspecified natural origin', 'natural resource', 'in water'): {None: 1.0},
+}
+
+
+_EI_LCIA_ERR_FLOWS = set(k[3] for k in EI_LCIA_ERRORS.keys())  # some minimal optimization
 
 class EcoinventLcia(BasicArchive):
     """
@@ -102,6 +127,10 @@ class EcoinventLcia(BasicArchive):
     def _quantity_key(row):
         return ', '.join([row[k] for k in ('method', 'category', 'indicator')])
 
+    @staticmethod
+    def _error_key(row):
+        return tuple(row[k] for k in ('method', 'category', 'indicator', 'name', 'compartment', 'subcompartment'))
+
     @property
     def _value_tag(self):
         return 'CF %s' % self._version
@@ -159,6 +188,17 @@ class EcoinventLcia(BasicArchive):
                 return row['Known issue']
         return row[self._value_tag]
 
+    def _check_row(self, row):
+        if row['name'] in _EI_LCIA_ERR_FLOWS:
+            k = self._error_key(row)
+            if k in EI_LCIA_ERRORS:
+                err = EI_LCIA_ERRORS[k]
+                if self._version in err:
+                    return err[self._version]
+                elif None in err:
+                    return err[None]
+        return self._get_value(row)
+
     def _load_all(self):
         self._create_all_quantities()
         if len(self._xl_rows) == 0:
@@ -166,7 +206,7 @@ class EcoinventLcia(BasicArchive):
         for row in self._xl_rows:
             q = self._create_quantity(row)
             try:
-                v = self._get_value(row)  # LiterateFloat(self._get_value(row), **row)
+                v = self._check_row(row)  # LiterateFloat(self._get_value(row), **row)
             except ValueError:
                 print('Skipping row %s' % row)
                 continue

@@ -932,6 +932,9 @@ class LcFragment(LcEntity):
             self.terminate(self, scenario=scenario)
 
     def unset_background(self):
+        if self._background is True:
+            for term in self._terminations.values():
+                term.clear_score_cache()
         self._background = False
 
     def set_background(self):

@@ -36,7 +36,7 @@ def weigh_lcia_results(quantity, *args, weight=None):
     return result
 
 
-class LcaModelBuilder(object):
+class LcaModelRunner(object):
     _agg = None
     _seen_stages = None
     _fmt = '%.10e'

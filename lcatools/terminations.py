@@ -96,7 +96,7 @@ class FlowTermination(object):
 
         direction = j.pop('direction', None)
         descend = j.pop('descend', True)
-        term = cls(fragment, term_node, direction=direction, term_flow=term_flow, descend=descend)
+        term = cls(fragment, term_node, _direction=direction, term_flow=term_flow, descend=descend)
         if 'scoreCache' in j.keys():
             term._deserialize_score_cache(fg, j['scoreCache'], scenario)
         return term
@@ -117,7 +117,7 @@ class FlowTermination(object):
     def null(cls, fragment):
         return cls(fragment, None)
 
-    def __init__(self, fragment, entity, direction=None, term_flow=None, descend=True, inbound_ev=None):
+    def __init__(self, fragment, entity, _direction=None, term_flow=None, descend=True, inbound_ev=None):
         """
         reference can be None, an entity or a catalog_ref.  It only must have origin, external_ref, and entity_type.
         To use an exchange, use FlowTermination.from_exchange()
@@ -128,9 +128,11 @@ class FlowTermination(object):
          * context - to represent the fragment's flow (or term_flow, still supported) as emission
          * flow or flow ref - no longer supported.  Supply context instead.
 
+        The term's direction is detected at the time of creation.
+
         :param fragment:
         :param entity:
-        :param direction:
+        :param _direction: Should not be used externally- only if term is generated from_json
         :param term_flow: optional flow to match on termination inventory or LCIA.  If flow and term_flow have
         different reference quantities, quantity conversion is performed during traversal
         :param descend:
@@ -152,7 +154,7 @@ class FlowTermination(object):
         self._lci = None  # cache LCI results
 
         self.term_flow = term_flow
-        self.direction = direction
+        self.direction = _direction
         self.descend = descend
 
     @property
@@ -186,12 +188,12 @@ class FlowTermination(object):
     @direction.setter
     def direction(self, value):
         if value is None:
-            # this is wrong: should set the direction by the reference.
+            # this is the default: should set the direction by the reference.  Only non-none if from_json
             if self.is_process:
                 rx = self.term_node.reference(self.term_flow)
                 value = rx.direction
             else:
-                # for fg, user must specify to invert direction. for subfragments, direction is ignored
+                # for fg, invert direction doesn't make sense. for subfragments, direction is ignored
                 value = comp_dir(self._parent.direction)
         self._direction = check_direction(value)
 
@@ -384,6 +386,13 @@ class FlowTermination(object):
 
     @property
     def inbound_exchange_value(self):
+        """
+        This is only used for correcting fragment-term direction mismatches.
+        This needs to be tested!
+        :return:
+        """
+        if self.direction == self._parent.direction:
+            return -1.0
         return 1.0
 
     @inbound_exchange_value.setter
@@ -433,7 +442,7 @@ class FlowTermination(object):
                     self._lci = list(self.term_node.lci(self.term_flow))
                 iterable = self._lci
             else:
-                iterable = self.term_node.inventory(ref_flow=self.term_flow, direction=self.direction)
+                iterable = self.term_node.inventory(ref_flow=self.term_flow)
             for x in iterable:
                 if (x.flow.external_ref, x.direction) not in children:
                     yield x
@@ -491,7 +500,8 @@ class FlowTermination(object):
             else:
                 res = self.term_node.fg_lcia(quantity_ref, ref_flow=self.term_flow.external_ref, **kwargs)
                 print('terminations.compute_unit_score UNTESTED for private fg archives!')
-                # res.set_scale(self.inbound_exchange_value)
+
+        res.scale_result(self.inbound_exchange_value)
         return res
 
     def score_cache(self, quantity=None, ignore_uncached=False, refresh=False, **kwargs):

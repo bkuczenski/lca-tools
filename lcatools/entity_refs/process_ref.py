@@ -121,8 +121,11 @@ class ProcessRef(EntityRef):
             yield x.make_ref(self._query)
 
     def exchange_values(self, flow, direction=None, termination=None, reference=None, **kwargs):
-        if not isinstance(flow, str) and not isinstance(flow, int):
-            flow = flow.external_ref
+        if hasattr(flow, 'entity_type'):
+            if flow.entity_type == 'exchange':
+                flow = flow.flow.external_ref
+            elif flow.entity_type == 'flow':
+                flow = flow.external_ref
         for x in  self._query.exchange_values(self.external_ref, flow, direction,
                                               termination=termination, reference=reference, **kwargs):
             yield x.make_ref(self._query)
@@ -148,6 +151,8 @@ class ProcessRef(EntityRef):
     support process
     '''
     def reference_value(self, flow=None):
+        if flow is None:
+            flow = self.reference().flow
         return sum(x.value for x in self.exchange_values(flow, reference=True))
 
     def get_exchange(self, key):

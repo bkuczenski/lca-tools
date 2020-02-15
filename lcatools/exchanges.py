@@ -271,6 +271,10 @@ class Exchange(object):
     def signature_fields(cls):
         return ['process', 'flow', 'direction', 'termination']
 
+    @property
+    def args(self):
+        return {'comment': self.comment}
+
 
 class ExchangeValue(Exchange):
     """

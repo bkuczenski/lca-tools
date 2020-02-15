@@ -491,11 +491,11 @@ class LciaResult(object):
     def scale(self):
         return self._scale
 
-    def set_scale(self, scale):
+    def scale_result(self, scale):
         """
         why is this a function?
         """
-        self._scale = scale
+        self._scale *= scale
 
     def _match_key(self, item):
         """
@@ -886,7 +886,7 @@ class LciaResults(dict):
 
     def __setitem__(self, key, value):
         assert isinstance(value, LciaResult)
-        value.set_scale(self._scale)
+        value.scale_result(self._scale)
         super(LciaResults, self).__setitem__(key, value)
         if key not in self._indices:
             self._indices.append(key)
@@ -908,7 +908,7 @@ class LciaResults(dict):
             return
         self._scale = factor
         for k in self._indices:
-            self[k].set_scale(factor)
+            self[k].scale_result(factor)
 
     def show(self):
         print('LCIA Results\n%s\n%s' % (self.entity, '-' * 60))
@@ -916,7 +916,7 @@ class LciaResults(dict):
             print('%60s: %10.4g' % ('scale', self._scale))
         for i, q in enumerate(self._indices):
             r = self[q]
-            r.set_scale(self._scale)
+            r.scale_result(self._scale)
             print('[%2d] %.3s  %10.5g %s' % (i, q, r.total(), r.quantity))
 
     def apply_weighting(self, weights, quantity, **kwargs):

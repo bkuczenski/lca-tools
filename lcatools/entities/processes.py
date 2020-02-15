@@ -330,7 +330,7 @@ class LcProcess(LcEntity):
             return False
         return True
 
-    def inventory(self, ref_flow=None, direction=None):
+    def inventory(self, ref_flow=None):
         """
         generate a process's exchanges.  If no reference is supplied, generate unallocated exchanges, including all
         reference exchanges.  If a reference is supplied AND the process is allocated with respect to that reference,
@@ -339,16 +339,12 @@ class LcProcess(LcEntity):
         the reference itself).  Reference must be a flow or exchange found in the process's reference entity.
 
         :param ref_flow:
-        :param direction: could help with finding reference
         :return:
         """
         if ref_flow is None:
             ref_exch = None
         else:
-            try:
-                ref_exch = self.find_exchange(ref_flow, direction=direction)
-            except MultipleReferencesFound:
-                ref_exch = self.find_exchange(ref_flow, direction=direction, reference=True)
+            ref_exch = self.find_exchange(ref_flow, reference=True)
         for i in self._exchanges.values():
             if ref_exch is None:
                 # generate unallocated exchanges

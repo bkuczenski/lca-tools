@@ -112,8 +112,7 @@ def clone_fragment(frag, suffix=' (copy)', comment=None, _parent=None, origin=No
         if term.term_node is frag:
             new.to_foreground(scenario=t_scen)
         else:
-            new.terminate(term.term_node, term_flow=term.term_flow, direction=term.direction,
-                          descend=term.descend, inbound_ev=term.inbound_exchange_value,
+            new.terminate(term.term_node, term_flow=term.term_flow, descend=term.descend,
                           scenario=t_scen)
 
     for c in frag.child_flows:
@@ -436,7 +435,7 @@ def set_child_exchanges(fragment, scenario=None, reset_cache=False):
     if len(children) == 0:
         return
 
-    for x in term.term_node.inventory(ref_flow=term.term_flow, direction=term.direction):
+    for x in term.term_node.inventory(ref_flow=term.term_flow):
         if x.value is None:
             fragment.dbg_print('skipping None-valued exchange: %s' % x)
             continue

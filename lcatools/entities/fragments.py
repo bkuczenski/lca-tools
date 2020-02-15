@@ -308,11 +308,14 @@ class LcFragment(LcEntity):
         for k in sorted(self._child_flows, key=lambda x: x.uuid):
             yield k
 
-    def children_with_flow(self, flow, direction=None, recurse=False):
+    def children_with_flow(self, flow, direction=None, termination=None, recurse=False):
         for k in self._child_flows:
             if k.flow == flow:
                 if direction is not None:
                     if k.direction != direction:
+                        continue
+                if termination is not None:
+                    if k.term.term_node != termination:
                         continue
                 yield k
             if recurse:  # depth-first
@@ -715,6 +718,7 @@ class LcFragment(LcEntity):
         to foreground- in which case the term's inbound_ev is set instead. (and a term is created if none exists)
         :param scenario:
         :param value:
+        :param units: unit string, if value is to be converted from non-reference units
         :return:
         """
         if value is None:
@@ -866,14 +870,17 @@ class LcFragment(LcEntity):
     Terminations and related functions
     '''
 
-    def terminate(self, term_node, scenario=None, **kwargs):
+    def terminate(self, term_node, scenario=None, direction=None, **kwargs):
         """
         specify the fragment's termination in a given scenario.
         :param term_node: The thing that terminates the flow
         :param scenario:
-        :param kwargs: term_flow, direction, descend
+        :param direction: outmoded option (can still use _direction if kluge is needed)
+        :param kwargs: term_flow, descend
         :return:
         """
+        if direction is not None:
+            raise NotImplementedError('Flow Termination Directions are not supposed to be specified by hand')
         if isinstance(scenario, tuple) or isinstance(scenario, set):
             raise ScenarioConflict('Set termination must specify single scenario')
         if scenario is not None and scenario in self._terminations:
@@ -1411,10 +1418,9 @@ class LcFragment(LcEntity):
         if self.reference_entity is None:
             node_weight = upstream_nw
         else:
-            if term.is_null:
-                node_weight = magnitude
-            else:
-                node_weight = magnitude * term.node_weight_multiplier
+            node_weight = magnitude
+
+        node_weight *= term.node_weight_multiplier
 
         self.dbg_print('magnitude: %g node_weight: %g' % (magnitude, node_weight))
 

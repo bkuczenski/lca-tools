@@ -231,14 +231,64 @@ class FragmentFlow(object):
         pass
 
 
-def group_ios(parent, ffs, include_ref_flow=True):
+def group_ios(parent, ffs, include_ref_flow=True, passthru_threshold=0.33):
     """
     Utility function for dealing with a traversal result (list of FragmentFlows)
     Creates a list of cutoff flows from the inputs and outputs from a fragment traversal.
-    ios is a list of FragmentFlows
+    ios is a list of FragmentFlows.
+
+    Pass-Thru Flows and Autoconsumption
+
+    There is a challenge in dealing a fragment whose inventory contains the fragment's own reference flow.  The two
+    broad interpretations of this are that the substance is "passing through" the fragment, or that the fragment
+    induces further consumption of its reference flow or demand for its own service.  Both approaches are logical in
+    different circumstances, and it is difficult to tell the difference in certain cases.
+
+    There are eight cases: whether the flow directions are complementary or cumulative, whether the flow grows or
+    shrinks, whether the reference direction is input or output.  Pictorially, with <== and <-- indicating larger and
+    smaller flows respectively; * representing the reference fragment; --: representing the child flows
+
+    A.1.a  <== *--: <--   augmentation?             B.1.  ==> *--: <--  cumulating sink; NONSENSICAL
+        b  <-= *--  <--   autoconsumption?
+
+    A.2.   <-- *--: <==   depletion / yield loss    B.2.  --> *--: <==  cumulating sink; NONSENSICAL
+                          induced load NONSENSICAL
+
+    A.3.a  ==> *--: -->   depletion / yield loss?   B.3.  <== *--: -->  cumulating source; NONSENSICAL
+        b  -=> *--  -->   induced self-load? (probably nonsensical)
+
+    A.4.   --> *--: ==>   augmentation              B.4.  <-- *--: ==>  cumulating source; NONSENSICAL
+                          autoconsumption NONSENSICAL
+
+    In all the (B) cases where the two flows are oppositely directed, the driven fragment multiplies its own effect, and
+    these fragment designs are considered nonsensical and are not allowed.
+
+    In cases A.2 and A.4, autoconsumption is nonsensical because it would require the induced amount to be modeled as
+    the reference flow, but the induced amount cannot be induced by itself.  So these are automatically interpreted as
+    pass-through.
+
+    In cases A.1 and A.3 however, either could apply:
+
+    A.1.a A component is supplied after being further assembled
+    A.1.b grid power / pipeline service consumes its own output in delivering its service
+
+    A.3.a A recycling stream is purified of contaminants
+    A.3.b A treatment process generates some of its own waste for treatment (??) maybe nonsensical but we allow it
+
+    In these cases, helpless to divine the modeler's intent, we apply a threshold.  If the induced amount is below this
+    threshold as a fraction of the reference flow, it will be taken as an autoconsumption process-- the induced flow
+    will be subsumed into the reference flow, reducing its magnitude.
+
+    If the induced amount exceeds this threshold, the process will be taken to be an augmentation / depletion pass-
+    through process.  The threshold is set to 0.33, just because it seems safe to assume that an induced load will not
+    exceed 33% of the direct load, or that a process will not augment or deplete its own flow by 3x.
+
+    As a reminder, if you need to model such a process, it is easy to do- just give the input and output distinct flows!
+
     :param parent: the node generating the cutoffs
     :param ffs: a list of fragment flows resulting from a traversal of the parent
     :param include_ref_flow: [True] whether to include the reference fragment and adjust for autoconsumption
+    :param passthru_threshold: [0.33] smaller than this is treated as autoconsumption / induced load
     :return: [list of grouped IO flows], [list of internal non-null flows]
     """
     out = defaultdict(float)
@@ -267,24 +317,32 @@ def group_ios(parent, ffs, include_ref_flow=True):
             else:
                 auto_dirn = 'Input'
             """
-            Default is autoconsumption, which is fine as long as 
-             (a) directions are complementary [meaning equal since ref flow dirn is w.r.t. parent] and 
-             (b) magnitude of autoconsumption is smaller
+            If the directions are cumulating, we raise an error- bad fragment design. 
+            
+            If directions are complementary [meaning equal since ref flow dirn is w.r.t. parent], this means the 
+            reference outflow is an inventory inflow, or the reference inflow is an inventory outflow.
+            
+            We apply a threshold, where if the induced flow is below the threshold w.r.t. the ref flow, autoconsumption
+            is applied.
             """
-            if auto_dirn == ref_frag.direction:
-                if abs(val) < ref_mag:
+            if auto_dirn == ref_frag.direction:  # equality here means complementary flows - direction is w.r.t. parent
+                # case A here
+                if abs(val) < (passthru_threshold * ref_mag):
+                    # A.1.b and A.3.b
                     ref_frag.dbg_print('autoconsumption %g %g' % (val, ref_mag))
-                    # autoconsumption, the direction sense of the autoconsumed flow should switch
+                    # autoconsumption, the inventory flow is subsumed by the ref_flow; direction sense should reverse
                     if auto_dirn == 'Output':
                         out[ref_frag.flow] += ref_mag
                     else:
                         out[ref_frag.flow] -= ref_mag
 
                 else:
+                    # A.1.a, A.3.a, A.2, A.4
                     ref_frag.dbg_print('pass thru no effect %g %g' % (val, ref_mag))
                     # pass-thru: pre-initialize external with the reference flow, having the opposite direction
                     external.append(FragmentFlow.cutoff(parent, ref_frag.flow, comp_dir(auto_dirn), ref_mag))
             else:
+                # all case B
                 ref_frag.dbg_print('cumulation! %g %g' % (val, ref_mag))
                 # cumulation: the directions are both the same... should they be accumulated?  not handled
                 raise CumulatingFlows('%s' % parent)

@@ -513,6 +513,8 @@ class LcForeground(BasicArchive):
         :param frag:
         :return:
         """
+        if frag.reference_entity is not None:
+            frag.unset_parent()
         self._entities.pop(frag.link)
         self._ents_by_type['fragment'].remove(frag.link)
         self._counter['fragment'] -= 1

@@ -364,7 +364,7 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
                     res.add_result(QRResult(fb, qq, qq, cx, locale, qq.origin, 1.0))
                     qr_mismatch.append(QuantityConversionError(res, rq))
 
-                return qr_results, qr_mismatch, qr_geog
+                return qr_results, qr_geog, qr_mismatch
 
         for cf in self._archive.tm.factors_for_flowable(fb, quantity=qq, context=cx, **kwargs):
             res = QuantityConversion(cf.query(locale))
@@ -550,16 +550,21 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
                                                    strategy=strategy, allow_proxy=allow_proxy, **kwargs)
         if result is None:
             if len(mismatch) > 0:
+                '''
                 for k in mismatch:
                     print('Conversion failure: Flowable: %s\nfrom: %s %s\nto: %s %s' % (fb, k.fail, k.fail.link,
                                                                                         rq, rq.link))
+                '''
+
                 raise ConversionReferenceMismatch
+
             else:
                 raise AssertionError('Something went wrong')
         return result
 
     def cf(self, flow, quantity, ref_quantity=None, context=None, locale='GLO', **kwargs):
         """
+        Should Always return a number and catch errors
         :param flow:
         :param quantity:
         :param ref_quantity: [None] taken from flow.reference_entity if flow is entity or locally known external_ref
@@ -568,8 +573,11 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
         :param kwargs: allow_proxy [False], strategy ['first'] -> passed to quantity_relation
         :return: the value of the QRResult found by the quantity_relation
         """
-        qr = self.quantity_relation(flow, ref_quantity, quantity, context=context, locale=locale, **kwargs)
-        return qr.value
+        try:
+            qr = self.quantity_relation(flow, ref_quantity, quantity, context=context, locale=locale, **kwargs)
+            return qr.value
+        except ConversionReferenceMismatch:
+            return 0.0
 
     def flat_qr(self, flow, quantity, ref_quantity=None, context=None, locale='GLO', **kwargs):
         val = self.quantity_relation(flow, ref_quantity, quantity, context, locale=locale, **kwargs)

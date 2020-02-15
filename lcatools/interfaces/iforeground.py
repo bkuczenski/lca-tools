@@ -252,20 +252,20 @@ class ForegroundInterface(AbstractQuery):
         return self._perform_query(_interface, 'unset_balance_flow', ForegroundRequired('Foreground access required'),
                                    fragment, **kwargs)
 
-    def create_process_model(self, process, ref_flow=None, include_elementary=False, terminate=True, **kwargs):
+    def create_process_model(self, process, ref_flow=None, include_context=False, terminate=True, **kwargs):
         """
         Create a fragment from a process_ref.  If process has only one reference exchange, it will be used automatically.
         By default, a child fragment is created for each exchange not terminated to context, and exchanges terminated
         to nodes are so terminated in the fragment.
         :param process:
         :param ref_flow: specify which exchange to use as a reference
-        :param include_elementary: [False] if true, create subfragments terminating to context for elementary flows.
+        :param include_context: [False] if true, create subfragments terminating to context for elementary flows.
          otherwise leaves them unspecified (fragment LCIA includes unobserved exchanges)
         :param terminate: [True] if false, create all flows as cutoff flows.
         :param kwargs:
         :return:
         """
         return self._perform_query(_interface, 'create_process_model', ForegroundRequired('Foreground access required'),
-                                   process, ref_flow=ref_flow, include_elementary=include_elementary,
+                                   process, ref_flow=ref_flow, include_context=include_context,
                                    terminate=terminate,
                                    **kwargs)

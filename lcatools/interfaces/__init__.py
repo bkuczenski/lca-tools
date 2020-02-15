@@ -85,6 +85,17 @@ def local_ref(source, prefix=None):
     return '.'.join([prefix, xf])
 
 
+def q_node_activity(fg):
+    """
+    A reference quantity for dimensionless node activity. This should be part of Qdb reference quantities (but isn't)
+    :param fg:
+    :return:
+    """
+    try:
+        return fg.get_canonical('node activity')
+    except EntityNotFound:
+        fg.new_quantity('Node Activity', ref_unit='activity', external_ref='node activity', comment='MFA metric')
+        return fg.get_canonical('node activity')
 
 
 """
@@ -108,3 +119,5 @@ CONTEXT_STATUS_ = 'new'  # 'compat': context = flow['Compartment']; 'new': conte
 # Containers of information about linked exchanges.  Direction is given with respect to the termination.
 ExteriorFlow = namedtuple('ExteriorFlow', ('origin', 'flow', 'direction', 'termination'))
 ProductFlow = namedtuple('ProductFlow', ('origin', 'flow', 'direction', 'termination', 'component_id'))
+
+EntitySpec = namedtuple('EntitySpec', ('link', 'ref', 'name', 'group'), defaults=(None,))

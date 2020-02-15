@@ -1,15 +1,19 @@
 from collections import defaultdict
 
 from lcatools.implementations import BasicImplementation
-from lcatools.interfaces import ForegroundInterface, CONTEXT_STATUS_, EntityNotFound, UnknownOrigin  # , comp_dir, BackgroundRequired
+from lcatools.interfaces import ForegroundInterface, CONTEXT_STATUS_, EntityNotFound, UnknownOrigin, comp_dir  # , BackgroundRequired
 
 from lcatools.entities.quantities import new_quantity
 from lcatools.entities.flows import new_flow
 from lcatools.entities.fragments import InvalidParentChild
-from lcatools.entities.fragment_editor import create_fragment, clone_fragment, interpose, _fork_fragment
+from lcatools.entities.fragment_editor import create_fragment, clone_fragment, _fork_fragment  # interpose,
 
 
 class NotForeground(Exception):
+    pass
+
+
+class UnknownRefQuantity(Exception):
     pass
 
 
@@ -118,8 +122,8 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         :param reference: a string, either a unit or known quantity
         :param name: the object's name
         :param group: used as context for flow
-        :param strict: [False] if True it will raise a TypeError (ref) or ValueError (name) if the entity does not match
-        the spec.
+        :param strict: [False] if True it will raise a TypeError (ref) or ValueError (name) if an entity exists but
+        does not match the spec.
         :return:
         """
         try:
@@ -138,7 +142,8 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         except EntityNotFound:
             try:
                 return self.new_flow(name, ref_quantity=reference, external_ref=external_ref, context=group, **kwargs)
-            except EntityNotFound:
+            except UnknownRefQuantity:
+                # assume reference is a unit string specification
                 return self.new_quantity(name, ref_unit=reference, external_ref=external_ref, group=group, **kwargs)
 
 
@@ -157,7 +162,10 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
                 kwargs['compartment'] = str(context)
         if ref_quantity is None:
             ref_quantity = 'Number of items'
-        ref_q = self.get_canonical(ref_quantity)
+        try:
+            ref_q = self.get_canonical(ref_quantity)
+        except EntityNotFound:
+            raise UnknownRefQuantity(ref_quantity)
         f = new_flow(name, ref_q, **kwargs)
         self._archive.add_entity_and_children(f)
         return f
@@ -326,13 +334,19 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
     def clear_unit_scores(self, lcia_method=None):
         self._archive.clear_unit_scores(lcia_method)
 
-    def create_process_model(self, process, ref_flow=None, include_elementary=False, terminate=True, **kwargs):
+    def create_process_model(self, process, ref_flow=None, include_context=False, terminate=True, multi_flow=False):
         rx = process.reference(ref_flow)
-        frag = self.new_fragment(rx.flow, rx.direction, value=1.0)
+        if process.reference_value(ref_flow) < 0:  # put in to handle Ecoinvent treatment processes
+            dirn = comp_dir(rx.direction)
+        else:
+            dirn = rx.direction
+        frag = self.new_fragment(rx.flow, dirn, value=1.0)
         frag.terminate(process)
-        self.extend_process_model(frag, include_elementary=include_elementary, terminate=terminate, **kwargs)
+        self.fragment_from_exchanges(process.inventory(rx), parent=frag,
+                                     include_context=include_context, multi_flow=multi_flow)
         return frag
 
+    '''
     def extend_process_model(self, fragment, include_elementary=False, terminate=True, **kwargs):
         """
         "Build out" a fragment, creating child flows from its terminal node's intermediate flows
@@ -354,44 +368,79 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
             if ex.type in ('cutoff', 'self'):
                 continue
             if terminate:
-                ch.terminate(self._archive.catalog_ref(process.origin, ex.termination, entity_type='process'))
+                ch.terminate(self._archive.catalog_ref(process.origin, ex.termination, entity_type='process'),
+                             term_flow=ex.flow)
         fragment.observe(accept_all=True)
         return fragment
+    '''
 
     '''# Create or update a fragment from a list of exchanges.
 
-    This could replace extend_process_model 
+    This needs to be an interface method.
     '''
-    def fragment_from_exchanges(self, _xg, parent=None, ref=None, set_background=True):
+    def fragment_from_exchanges(self, _xg, parent=None, ref=None,
+                                set_background=True,
+                                include_context=False,
+                                multi_flow=False):
         """
         If parent is None, first generated exchange is reference flow; and subsequent exchanges are children.
-        Else, all generated exchanges are children of the given parent, and if a child flow exists, update it. This
-        obviously fails if a fragment has multiple children with the same flow
+        Else, all generated exchanges are children of the given parent, and if a child flow exists, update it.
+
+        We can take two approaches: in the simple view, the child flow is unique, and the termination can be updated
+        by a subsequent specification.  This obviously fails if a fragment has multiple children with the same flow--
+        as is in fact the case with ecoinvent.  So for that case we just need to match on termination as well; but
+        that means a termination cannot get updated automatically through this process.
+
+        This is all tricky if we expect it to work with both ExchangeRefs and actual exchanges (which, obviously, we
+        should) because: ExchangeRefs may have only a string for process and flow, but Exchanges will have entities
+        for each.  We need to get(flow_ref) and find_term(term_ref) but we can simply use flow entities and catalog
+        refs if we have process.origin.  For now we will just swiss-army-knife it.
 
         :param _xg: Generates a list of exchanges or exchange references
-        :param parent:
-        :param ref:
+        :param parent: if None, create parent from first exchange
+        :param ref: if parent is created, assign it a name (if parent is non-None, ref is ignored
         :param set_background: [True] whether to regard process-terminated fragments as background fragments
+        :param include_context: [False] whether to model context-terminated flows as child fragments
+        :param multi_flow: [False] if True, child flows are matched on flow, direction, and termination
         :return:
         """
         if parent is None:
             x = next(_xg)
-            print('Creating new fragment %s' % ref)
             parent = self.new_fragment(x.flow, x.direction, value=x.value, units=x.unit, **x.args)
-            parent.observed_ev = parent.cached_ev
+            if ref is None:
+                print('Creating new fragment %s (%s)' % (x.process.name, parent.uuid))
+            else:
+                print('Creating new fragment %s' % ref)
+                self.observe(parent, name=ref)
             update = False
         else:
             update = True
 
         for y in _xg:
-            flow = self[y.flow]
-            if flow is None:
-                print('Skipping unknown flow %s' % y.flow)
+            if hasattr(y.flow, 'entity_type') and y.flow.entity_type == 'flow':
+                flow = y.flow
+            else:
+                flow = self[y.flow]
+                if flow is None:
+                    print('Skipping unknown flow %s' % y.flow)
+                    continue
+            if hasattr(y.process, 'origin'):
+                term = self.find_term(y.termination, origin=y.process.origin)
+            else:
+                term = self.find_term(y.termination)
+            if term.entity_type == 'context' and include_context is False:
                 continue
-            term = self.find_term(y.termination)
+            if term == y.process:
+                term = None  # don't terminate self-term
             if update:
                 try:
-                    c_up = next(parent.children_with_flow(flow, y.direction))
+                    if multi_flow:
+                        c_up = next(parent.children_with_flow(flow, direction=y.direction, termination=term,
+                                                              recurse=False))
+                    else:
+                        c_up = next(parent.children_with_flow(flow, direction=y.direction, recurse=False))
+
+                    # update value
                     v = y.value
                     if y.unit is not None:
                         v *= c_up.flow.reference_entity.convert(y.unit)
@@ -400,6 +449,10 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
                         print('Updating %s exchange value %.3f' % (c_up, v))
 
                         c_up.observed_ev = v
+                    if multi_flow:
+                        continue  # cannot update terms in the multi-flow case
+
+                    # set term
                     if term is not None:
                         if term != c_up.term.term_node:
                             print('Updating %s termination %s' % (c_up, term))
@@ -415,12 +468,10 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
             c = self.new_fragment(flow, y.direction, value=y.value, units=y.unit, parent=parent, **y.args)
 
             if term is not None:
-                c.terminate(term)
+                c.terminate(term, term_flow=flow)
                 if term.entity_type == 'process' and set_background:
                     c.set_background()
-            self.observe(c, exchange_value=c.cached_ev)
-
-        self.observe(parent, name=ref)
+            self.observe(c)  # use cached implicitly via fg interface
 
         return parent
 

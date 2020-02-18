@@ -108,12 +108,25 @@ class CatalogRef(BaseRef):
     def name(self):
         return self._name
 
+    def quantity_terms(self):
+        """
+        Code repetition! for subclass purity
+        :return:
+        """
+        yield self.name
+        yield str(self)  # this is the same as above for entities, but includes origin for refs
+        yield self.external_ref  # do we definitely want this?  will squash versions together
+        if self.uuid is not None:
+            yield self.uuid
+        if self.origin is not None:
+            yield self.link
+
     def validate(self):
         """
         Always returns true in order to add to an archive. this should probably be fixed.
         :return:
         """
-        return True
+        return False
 
     @property
     def entity_type(self):
@@ -123,9 +136,19 @@ class CatalogRef(BaseRef):
 
     def unit(self):
         if self.entity_type == 'quantity':
-            if 'Indicator' in self._d:
-                return self._d['Indicator']
-            return 'None'
+            if self.has_property('Indicator'):
+                return self['Indicator']
+            return None
         elif self.entity_type == 'flow':
-            return 'None'
+            return None
         raise AttributeError('This entity does not have a unit')
+
+    @property
+    def is_lcia_method(self):
+        if self.entity_type == 'quantity':
+            if self.has_property('Indicator'):
+                return True
+        return False
+
+    def cf(self, *args, **kwargs):
+        return 0.0

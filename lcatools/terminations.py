@@ -87,7 +87,10 @@ class FlowTermination(object):
         if 'context' in j:
             term_node = fg.tm[j['context']]
         else:
-            external_ref = j['externalId']
+            try:
+                external_ref = j['externalId']
+            except KeyError:
+                external_ref = j['entityId']
             # handle term_node
             if origin == fg.ref:
                 term_node = fg[external_ref]
@@ -178,18 +181,24 @@ class FlowTermination(object):
         else:
             # TODO: check to see if supplied term flow is valid / can be a reference flow for term
             self._term_flow = term_flow
-        if self.node_weight_multiplier == 0:
+        if self.valid and self.node_weight_multiplier == 0:
             print('Warning: 0 node weight multiplier for term of %s' % self._parent.external_ref)
 
     @property
     def direction(self):
         return self._direction
 
+    @property
+    def valid(self):
+        if self.is_null:
+            return False
+        return self.term_node.validate()
+
     @direction.setter
     def direction(self, value):
         if value is None:
             # this is the default: should set the direction by the reference.  Only non-none if from_json
-            if self.is_process:
+            if self.is_process and self.valid:
                 rx = self.term_node.reference(self.term_flow)
                 value = rx.direction
             else:
@@ -359,6 +368,8 @@ class FlowTermination(object):
         problem is, the term doesn't know its own scenario
         :return: float = amount in term_flow ref qty that corresponds to a unit of fragment flow's ref qty
         """
+        if not self.valid:
+            return 0.0
         if self.term_flow.reference_entity == self._parent.flow.reference_entity:
             return 1.0
         try:

@@ -27,10 +27,11 @@ class QuantitySynonyms(SynonymSet):
             return False
         if not hasattr(quantity, 'unit'):
             return False
-        if not isinstance(quantity.unit(), str):
-            return False
-        if self.unit is not None and quantity.unit() != self.unit:
-            raise QuantityUnitMismatch('incoming %s (set %s)' % (quantity.unit(), self.unit))
+        if quantity.unit() is not None:  # allow unit=None quantities to merge with existing quantities
+            if not isinstance(quantity.unit(), str):
+                return False
+            if self.unit is not None and quantity.unit() != self.unit:
+                raise QuantityUnitMismatch('incoming %s (set %s)' % (quantity.unit(), self.unit))
         return True
 
     def __init__(self, *args, quantity=None, unit=None, **kwargs):
@@ -69,7 +70,7 @@ class QuantitySynonyms(SynonymSet):
     def add_child(self, other, force=False):
         if not isinstance(other, QuantitySynonyms):
             raise TypeError('Child set is not a Quantity synonym set (%s)' % type(other))
-        if other.unit != self.unit:
+        if other.unit is not None and other.unit != self.unit:
             raise QuantityUnitMismatch('incoming %s (canonical %s)' % (other.unit, self._quantity.unit()))
         if self._quantity is None:
             self.quantity = other.quantity

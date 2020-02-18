@@ -9,7 +9,7 @@ from collections import defaultdict
 
 from ..implementations import ForegroundImplementation
 
-from lcatools.interfaces import PropertyExists
+from lcatools.interfaces import PropertyExists, UnknownOrigin
 from lcatools.archives import BasicArchive, EntityExists, BASIC_ENTITY_TYPES
 from lcatools.entities.fragments import LcFragment
 from lcatools.entity_refs import CatalogRef
@@ -94,6 +94,8 @@ class LcForeground(BasicArchive):
 
     def _add_ext_ref_mapping(self, entity):
         if entity.external_ref in self._ext_ref_mapping:
+            if entity == self[entity.external_ref]:
+                return  # skip it
             raise EntityExists('External Ref %s already refers to %s' % (entity.external_ref, self[entity.external_ref]))
         self._ext_ref_mapping[entity.external_ref] = entity.link
 
@@ -159,7 +161,7 @@ class LcForeground(BasicArchive):
         for k in self.entities_by_type('fragment'):
             k._origin = origin
 
-    def catalog_ref(self, origin, external_ref, entity_type=None):
+    def catalog_ref(self, origin, external_ref, entity_type=None, **kwargs):
         """
         TODO: make foreground-generated CatalogRefs lazy-loading. This mainly requires removing the expectation of a
         locally-defined reference entity, and properly implementing and using a reference-retrieval process in the
@@ -170,9 +172,11 @@ class LcForeground(BasicArchive):
         :return:
         """
         # TODO: catalog.fetch is costly because it loads the entire target object
-        ref = self._catalog.fetch(origin, external_ref)
-        if ref is None:
-            ref = CatalogRef(origin, external_ref, entity_type=entity_type)
+        try:
+            q = self._catalog.query(origin)
+            ref = q.get(external_ref)
+        except UnknownOrigin:
+            ref = CatalogRef(origin, external_ref, entity_type=entity_type, **kwargs)
         return ref
 
     def _flow_ref_from_json(self, e, external_ref):
@@ -182,14 +186,24 @@ class LcForeground(BasicArchive):
         except KeyError:
             c = e.pop('characterizations')
             ref_qty_uu = next(cf['quantity'] for cf in c if 'isReference' in cf and cf['isReference'] is True)
-        return CatalogRef.from_query(external_ref, self._catalog.query(origin), 'flow', self[ref_qty_uu], **e)
+        ref_qty = self[ref_qty_uu]
+        try:
+            q = self._catalog.query(origin)
+            ref = CatalogRef.from_query(external_ref, q, 'flow', ref_qty, **e)
+        except UnknownOrigin:
+            name = e.pop('Name', None) or 'unnamed flow %s' % origin
+            ref = self.make_interface('foreground').add_or_retrieve(external_ref, ref_qty, name, **e)
+        return ref
 
     def _qty_ref_from_json(self, e, external_ref):
         origin = e.pop('origin')
-        unitstring = e.pop('referenceUnit')
-        q = self._catalog.query(origin)
-        ref = CatalogRef.from_query(external_ref, q, 'quantity', unitstring, **e)
-        return q.get_canonical(ref)
+        try:
+            q = self._catalog.query(origin)
+            unitstring = e.pop('referenceUnit')
+            ref = CatalogRef.from_query(external_ref, q, 'quantity', unitstring, **e)
+            return q.get_canonical(ref)  # ???
+        except UnknownOrigin:
+            return CatalogRef(origin, external_ref, entity_type='quantity', **e)
 
     def _make_entity(self, e, etype, ext_ref):
         if e['origin'] != self.ref:

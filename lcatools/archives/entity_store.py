@@ -524,23 +524,23 @@ class EntityStore(object):
         if entity.entity_type not in self._entity_types:
             raise TypeError('Entity type %s not valid!' % entity.entity_type)
 
-        if entity.validate():
-            if not (self._quiet or quiet):
-                print('Adding %s entity with %s: %s' % (entity.entity_type, key, entity['Name']))
-            if entity.origin is None:
-                # TODO: uncomment / enforce this
-                # assert self._ref_to_key(entity.external_ref) == key, 'entity uuid must match origin repository key!'
-                entity.origin = self.ref
-            self._entities[key] = entity
-            if self._ns_uuid is not None:  # ensure UUID3s work even if custom UUIDs are specified
-                nsuuid = self._ref_to_uuid(entity.external_ref)
-                if nsuuid is not None and nsuuid not in self._entities:
-                    self._entities[nsuuid] = entity
-            self._counter[entity.entity_type] += 1
-            self._ents_by_type[entity.entity_type].add(key)  # it's not ok to change an entity's type
+        if entity.is_entity:
+            if not entity.validate():
+                raise ValueError('Entity fails validation: %s' % repr(entity))
 
-        else:
-            raise ValueError('Entity fails validation: %s' % repr(entity))
+        if not (self._quiet or quiet):
+            print('Adding %s entity with %s: %s' % (entity.entity_type, key, entity['Name']))
+        if entity.origin is None:
+            # TODO: uncomment / enforce this
+            # assert self._ref_to_key(entity.external_ref) == key, 'entity uuid must match origin repository key!'
+            entity.origin = self.ref
+        self._entities[key] = entity
+        if self._ns_uuid is not None:  # ensure UUID3s work even if custom UUIDs are specified
+            nsuuid = self._ref_to_uuid(entity.external_ref)
+            if nsuuid is not None and nsuuid not in self._entities:
+                self._entities[nsuuid] = entity
+        self._counter[entity.entity_type] += 1
+        self._ents_by_type[entity.entity_type].add(key)  # it's not ok to change an entity's type
 
     def check_counter(self, entity_type=None):
         if entity_type is None:

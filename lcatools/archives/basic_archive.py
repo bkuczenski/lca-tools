@@ -8,6 +8,7 @@ from ..implementations import BasicImplementation, IndexImplementation, Quantity
 from lcatools.interfaces import BasicQuery, EntityNotFound
 from lcatools.entities import LcQuantity, LcUnit, LcFlow
 from lcatools.entity_refs import FlowInterface
+from lcatools.characterizations import DuplicateCharacterizationError
 
 from lcatools import from_json, to_json
 
@@ -61,6 +62,8 @@ class BasicArchive(EntityStore):
     _entity_types = BASIC_ENTITY_TYPES
 
     _drop_fields = defaultdict(list)  # dict mapping entity type to fields that should be omitted from serialization
+
+    _skip_msg = set()
 
     @classmethod
     def from_file(cls, filename, ref=None, **init_args):
@@ -208,7 +211,7 @@ class BasicArchive(EntityStore):
         # return cx
 
     def _add_children(self, entity):
-        if entity.entity_type == 'quantity':
+        if entity.entity_type == 'quantity' and entity.is_entity:
             # reset unit strings- units are such a hack
             if isinstance(entity.reference_entity, LcUnit):
                 entity.reference_entity._external_ref = entity.reference_entity.unitstring
@@ -272,7 +275,13 @@ class BasicArchive(EntityStore):
                 if c['isReference'] is True:
                     continue
             v = None
-            q = self.tm.get_canonical(c['quantity'])  # this is required because of foreground; _process_from_json unaffected
+            try:
+                q = self.tm.get_canonical(c['quantity'])  # this is required because of foreground; _process_from_json unaffected
+            except EntityNotFound:
+                if c['quantity'] not in self._skip_msg:
+                    print('skipping unrecognized quantity %s' % c['quantity'])
+                    self._skip_msg.add(c['quantity'])
+                continue
             if q is None:
                 continue
                 # import json
@@ -282,7 +291,10 @@ class BasicArchive(EntityStore):
                 # raise KeyError
             if 'value' in c:
                 v = c['value']
-            self._add_char(flow, q, v)
+            try:
+                self._add_char(flow, q, v)
+            except DuplicateCharacterizationError:
+                print('Skipping duplicate CF %3.6g %s %s' % (v, q, flow))
 
     def _make_entity(self, e, etype, ext_ref):
         if etype == 'quantity':

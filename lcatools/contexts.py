@@ -83,6 +83,14 @@ class Context(Compartment):
     def origin(self):
         return self._first_origin
 
+    @staticmethod
+    def validate():
+        """
+        Need this for termination checking
+        :return:
+        """
+        return True
+
     @property
     def fullname(self):
         if self._first_origin is None:

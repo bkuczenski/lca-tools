@@ -428,7 +428,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
                 term = self.find_term(y.termination, origin=y.process.origin)
             else:
                 term = self.find_term(y.termination)
-            if term.entity_type == 'context' and include_context is False:
+            if term is not None and term.entity_type == 'context' and include_context is False:
                 continue
             if term == y.process:
                 term = None  # don't terminate self-term

@@ -104,3 +104,20 @@ def build_study_foreground(study, lca, study_container='Study Container', logist
     return frag, log
 
 
+def scenario_knobs(knobs, scenarios):
+    """
+    Apply parameter values to a set of "knobs" (fragment names) to define scenarios.
+    :param knobs: mapping of fragment names (external_ref) to fragments
+    :param scenarios: mapping of scenario names to knob: value mappings (dict of dicts)
+    :return: None
+    """
+    for k, vd in scenarios.items():
+
+        for i, v in vd.items():
+            if i in knobs:
+                knobs[i].observe(v, scenario=k)
+            elif v is True:
+                # valid setting at runtime; nothing to do here
+                continue
+            else:
+                print('%s: Skipping unknown scenario key %s=%g' % (k, i, v))

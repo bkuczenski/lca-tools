@@ -4,9 +4,9 @@ This is the dynamically-generated study used for running results
 CONCEPT: This module / package provides tools to "automagically" build a multi-tiered LCA model that has at its core
 an MFA model.  The basic structure of the model is as follows:
 
-#-0-...      Study container. Terminated to logistics fragment. Mapping MFA flows to life cycle routes that generate impacts.
-  #-0-...    Logistics container. Terminated to activity fragment container. Mapping logistics flows to terminal fragments
-    #-0-...  Foreground Activity container. Terminates observed LCA model to various foreground activities, and drive
+#-0-...      Study container (X). Terminated to logistics fragment. Mapping MFA flows to life cycle routes that generate impacts.
+  #-0-...    Logistics container (Y). Terminated to activity fragment container. Mapping logistics flows to terminal fragments
+    #-0-...  Foreground Activity container (A or a_c). Terminates observed LCA model to various foreground activities, and drive
       |      logistics and market routes in the outer containers
       #- LCA models generated from observational data, generating no impacts and producing balance flows and logistics flows
          accessed by scenarios supplied to the activity container
@@ -43,11 +43,12 @@ def build_study_foreground(study, lca, study_container='Study Container', logist
     The next-level fragment
     processor activity models
     :param study: a foreground to contain the dynamic study
-    :param lca: an LcaModel, having both an observational fg and a persistent models
-    :param study_container:
-    :param logistics_container:
-    :param product_flow_map:
-    :param logistics_map:
+    :param lca: an LcaModel, having both an observational foreground (fg) and a persistent modeling foreground (models)
+    :param study_container: Name (external_ref) of the study container fragment X
+    :param logistics_container: Name (external_ref) of the logistics container fragment Y
+    :param route_map: see .markets.make_routes()
+    :param product_flow_map: maps (fg) flows to market mixes of routes
+    :param logistics_map: maps (fg) flows to transport processes
     :return: X and Y, the study overall and the logistics map
     """
     if product_flow_map is None:

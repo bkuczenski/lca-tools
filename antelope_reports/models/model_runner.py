@@ -1,7 +1,7 @@
 import csv
 
 from collections import defaultdict
-from pandas import DataFrame
+from pandas import DataFrame, MultiIndex
 
 from lcatools.lcia_results import LciaResult
 
@@ -224,13 +224,10 @@ class LcaModelRunner(object):
         :param filename:
         :return:
         """
-        dt.loc[:, 'Units'] = [q['Indicator'] for q in self.quantities]
-
         if column_order is None:
-            ord_columns = ['Units'] + [k for k in dt.columns if k != 'Units']
+            ord_columns = list(dt.columns)
         else:
-            ord_columns = ['Units'] + \
-                          [k for k in column_order if k in dt.columns]
+            ord_columns = [k for k in column_order if k in dt.columns]
             ord_columns += [k for k in dt.columns if k not in ord_columns]
 
         dto = dt[ord_columns].transpose()
@@ -242,7 +239,8 @@ class LcaModelRunner(object):
     def scenario_detatil_tbl(self, scenario, filename=None, column_order=None):
         dt = DataFrame(({k.entity: self._format(k.cumulative_result)
                          for k in self.result(scenario, l).aggregate(key=self._agg).components()}
-                        for l in self.quantities), index=[q['Name'] for q in self.quantities])
+                        for l in self.quantities), index=MultiIndex.from_tuples((q['Name'], q['Indicator'])
+                                                                                for q in self.quantities))
         return self._finish_dt_output(dt, column_order, filename)
 
     def scenario_summary_tbl(self, filename=None, column_order=None):
@@ -250,7 +248,7 @@ class LcaModelRunner(object):
             column_order = self.scenarios
         dt = DataFrame(({k: self._format(self.result(k, l).total()) for k in column_order}
                         for l in self.quantities),
-                       index=[q['Name'] for q in self.quantities])
+                       index=MultiIndex.from_tuples((q['Name'], q['Indicator']) for q in self.quantities))
         return self._finish_dt_output(dt, column_order, filename)
 
     '''

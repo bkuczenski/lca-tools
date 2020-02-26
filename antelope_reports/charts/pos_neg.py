@@ -7,8 +7,10 @@ bar ends at the net result, which is annotated.
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
+from pandas import DataFrame, MultiIndex
 
-from .base import save_plot, net_color, open_ylims, standard_labels
+
+from .base import save_plot, net_color, standard_labels  # open_ylims,
 from .waterfall import random_color
 from lcatools.autorange import AutoRange
 
@@ -114,6 +116,13 @@ class _PosNegAxes(object):
 
         self._ax.set_title(self._qty['ShortName'], fontsize=self._fontsize + 2)
 
+    @property
+    def name(self):
+        return self._qty['Name']
+
+    @property
+    def unit(self):
+        return self._unit
 
 
 class PosNegChart(object):
@@ -207,6 +216,7 @@ class PosNegCompare(object):
         :param bar_width:
         :param filename:
         :param num_format:
+        :param csv_file: [None] if non-None, write a summary table to a csv file
         :param kwargs: autorange, fontsize
         :param legend:
         """
@@ -256,3 +266,25 @@ class PosNegCompare(object):
             filename = 'pos_neg_compare.eps'
         if filename != 'none':
             save_plot(filename)
+
+    @property
+    def dataframe(self):
+        df = DataFrame((self._table_entry(k) for k in range(len(self._pna))),
+                       index=[k.name for k in self._pna])
+        mc = MultiIndex.from_tuples(((' ', 'Unit'), ('Total Incurred', 'Impacts'), ('Total Avoided', 'Impacts'),
+                                     (' ', 'Net Total')))
+        df.columns = mc
+        return df
+
+    def _table_entry(self, index):
+        """
+
+        :param index:
+        :return:
+        """
+        p = self._pos[index]
+        n = self._neg[index]
+        return {'Unit': self._pna[index].unit,
+                'Total Incurred Impact': '%3.2g' % p,
+                'Total Avoided Impact': '%3.2g' % n,
+                'Net Total': '%3.2g' % (p+n)}

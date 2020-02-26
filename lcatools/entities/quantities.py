@@ -12,9 +12,13 @@ class QuantityAlreadyConfigured(Exception):
 
 
 def new_quantity(name, ref_unit, external_ref=None, **kwargs):
+    entity_uuid = kwargs.pop('entity_uuid', None)
+    if entity_uuid is None:
+        entity_uuid = kwargs.pop('uuid', None)
     if external_ref is None:
-        return LcQuantity.new(name, ref_unit, **kwargs)
-    return LcQuantity(external_ref, Name=name, ReferenceUnit=LcUnit(ref_unit), **kwargs)
+        if entity_uuid is None:
+            return LcQuantity.new(name, ref_unit, **kwargs)
+    return LcQuantity(external_ref, Name=name, ReferenceUnit=LcUnit(ref_unit), entity_uuid=entity_uuid, **kwargs)
 
 
 class LcQuantity(LcEntity):

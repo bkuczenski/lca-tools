@@ -88,14 +88,17 @@ class LcaModel(LcaModelInterface):
 
     def _make_activity_container(self):
         f_u = self.functional_unit
-        a_c = self.fg.new_fragment(f_u, 'Output')
+        a_c = self.fg.new_fragment(f_u, 'Output', knobs=dict())
         self.fg.observe(a_c, name=self._ac)
         return a_c
+
+    def _check_activity_container(self):
+        return self.fg.get(self._ac)
 
     @property
     def activity_container(self):
         try:
-            return self.fg.get(self._ac)
+            return self._check_activity_container()
         except EntityNotFound:
             return self._make_activity_container()
 
@@ -108,9 +111,12 @@ class LcaModel(LcaModelInterface):
 
     def add_knob(self, knob, fragment):
         a = self.activity_container
-        if not a.has_property('knobs'):
-            a['knobs'] = dict()
+        print('Adding knob %s -> %s' % (knob, fragment.name))
         a['knobs'][knob] = fragment.uuid
+
+    def has_knob(self, knob):
+        a = self.activity_container
+        return knob in a['knobs']
 
     def logistics_summary(self, sc_frag):
         log_ref = logistics_summary_ref(sc_frag)

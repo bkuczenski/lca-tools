@@ -951,6 +951,9 @@ class LcFragment(LcEntity):
             if not term.is_null:
                 if term.term_node.entity_type == 'fragment':
                     raise ScenarioConflict('Cannot bg: Terminated to fragment in Scenario %s' % scenario)
+        if self._background is False:
+            for term in self._terminations.values():
+                term.clear_score_cache()
         self._background = True
 
     def term_from_json(self, catalog, scenario, j):

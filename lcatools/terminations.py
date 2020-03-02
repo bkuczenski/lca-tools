@@ -470,11 +470,12 @@ class FlowTermination(object):
         :return:
         """
         if self.is_frag:
+            '''
             if self.is_subfrag:
-                if self.descend:
-                    return LciaResult(quantity_ref)  # null result for subfragments that are explicitly followed
-                else:
+                if not self.descend:
                     raise SubFragmentAggregation  # to be caught
+
+            #
 
             # either is_fg (no impact) or is_bg or term_is_bg (both equiv)
 
@@ -494,6 +495,8 @@ class FlowTermination(object):
                 # in the post-Context-Refactor world, foreground frags have no impact
                 #raise UnCachedScore('fragment: %s\nquantity: %s' % (self._parent, quantity_ref))
                 return LciaResult(quantity_ref)
+            '''
+            return LciaResult(quantity_ref)
 
         try:
             if self.is_context:
@@ -517,15 +520,24 @@ class FlowTermination(object):
 
     def score_cache(self, quantity=None, ignore_uncached=False, refresh=False, **kwargs):
         """
+        only process-terminations are cached
 
         :param quantity:
         :param ignore_uncached:
-        :param refresh: If True, re-compute unit score even if it is already present in the cache
+        :param refresh: If True, re-compute unit score even if it is already present in the cache. This fails on
+        multi-instance fragments by causing the
         :param kwargs:
         :return:
         """
         if quantity is None:
             return self._score_cache
+
+        if self.is_frag:
+            if self.is_subfrag:
+                if not self.descend:
+                    raise SubFragmentAggregation  # to be caught- subfrag needs to be queried w/scenario
+            return LciaResult(quantity)  # otherwise, subfragment terminations have no impacts
+
         if quantity in self._score_cache and refresh is False:
             return self._score_cache[quantity]
         else:

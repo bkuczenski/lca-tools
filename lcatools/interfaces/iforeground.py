@@ -252,20 +252,30 @@ class ForegroundInterface(AbstractQuery):
         return self._perform_query(_interface, 'unset_balance_flow', ForegroundRequired('Foreground access required'),
                                    fragment, **kwargs)
 
-    def create_process_model(self, process, ref_flow=None, include_context=False, terminate=True, **kwargs):
+    def create_process_model(self, process, ref_flow=None, set_background=True, **kwargs):
         """
         Create a fragment from a process_ref.  If process has only one reference exchange, it will be used automatically.
         By default, a child fragment is created for each exchange not terminated to context, and exchanges terminated
         to nodes are so terminated in the fragment.
         :param process:
         :param ref_flow: specify which exchange to use as a reference
-        :param include_context: [False] if true, create subfragments terminating to context for elementary flows.
-         otherwise leaves them unspecified (fragment LCIA includes unobserved exchanges)
-        :param terminate: [True] if false, create all flows as cutoff flows.
+        :param set_background: [True] whether to terminate the node to background
         :param kwargs:
         :return:
         """
         return self._perform_query(_interface, 'create_process_model', ForegroundRequired('Foreground access required'),
-                                   process, ref_flow=ref_flow, include_context=include_context,
-                                   terminate=terminate,
-                                   **kwargs)
+                                   process, ref_flow=ref_flow, **kwargs)
+
+    def fragment_from_exchanges(self, exchanges, parent=None, include_context=False, multi_flow=False, **kwargs):
+        """
+
+        :param exchanges:
+        :param parent: if parent is None, the first exchange is taken to be a reference fragment
+        :param include_context: [False] if true, create subfragments terminating to context for elementary flows.
+         otherwise leaves them unspecified (fragment LCIA includes unobserved exchanges)
+        :param multi_flow:
+        :param kwargs:
+        :return:
+        """
+        return self._perform_query(_interface, 'fragment_from_exchanges', parent=parent, include_context=include_context, 
+                                   multi_flow=multi_flow, **kwargs)

@@ -334,7 +334,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
     def clear_unit_scores(self, lcia_method=None):
         self._archive.clear_unit_scores(lcia_method)
 
-    def create_process_model(self, process, ref_flow=None, include_context=False, terminate=True, multi_flow=False):
+    def create_process_model(self, process, ref_flow=None, set_background=True, **kwargs):
         rx = process.reference(ref_flow)
         if process.reference_value(ref_flow) < 0:  # put in to handle Ecoinvent treatment processes
             dirn = comp_dir(rx.direction)
@@ -342,9 +342,22 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
             dirn = rx.direction
         frag = self.new_fragment(rx.flow, dirn, value=1.0)
         frag.terminate(process)
-        self.fragment_from_exchanges(process.inventory(rx), parent=frag,
-                                     include_context=include_context, multi_flow=multi_flow)
+        if set_background:
+            frag.set_background()
+        # self.fragment_from_exchanges(process.inventory(rx), parent=frag,
+        #                              include_context=include_context, multi_flow=multi_flow)
         return frag
+
+    def extend_process(self, fragment, scenario=None, **kwargs):
+        term = fragment.termination(scenario)
+        if not term.is_process:
+            raise TypeError('Termination is not to process')
+        fragment.unset_background()
+        process = term.term_node
+        self.fragment_from_exchanges(process.inventory(ref_flow=term.term_flow), parent=fragment, scenario=scenario,
+                                     **kwargs)
+
+
 
     '''
     def extend_process_model(self, fragment, include_elementary=False, terminate=True, **kwargs):
@@ -378,7 +391,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
 
     This needs to be an interface method.
     '''
-    def fragment_from_exchanges(self, _xg, parent=None, ref=None,
+    def fragment_from_exchanges(self, _xg, parent=None, ref=None, scenario=None,
                                 set_background=True,
                                 include_context=False,
                                 multi_flow=False):
@@ -434,6 +447,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
                 term = None  # don't terminate self-term
             if update:
                 try:
+                    # TODO: children_with_flow needs to be scenario aware
                     if multi_flow:
                         c_up = next(parent.children_with_flow(flow, direction=y.direction, termination=term,
                                                               recurse=False))
@@ -445,10 +459,10 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
                     if y.unit is not None:
                         v *= c_up.flow.reference_entity.convert(y.unit)
 
-                    if c_up.observed_ev != v:
+                    if c_up.exchange_value(scenario) != v:
                         print('Updating %s exchange value %.3f' % (c_up, v))
 
-                        c_up.observed_ev = v
+                        self.observe(c_up, exchange_value=v, scenario=scenario)
                     if multi_flow:
                         continue  # cannot update terms in the multi-flow case
 
@@ -456,8 +470,8 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
                     if term is not None:
                         if term != c_up.term.term_node:
                             print('Updating %s termination %s' % (c_up, term))
-                            c_up.clear_termination()
-                            c_up.terminate(term)
+                            c_up.clear_termination(scenario)
+                            c_up.terminate(term, scenario=scenario)
                             if term.entity_type == 'process' and set_background:
                                 c_up.set_background()
                     continue
@@ -468,7 +482,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
             c = self.new_fragment(flow, y.direction, value=y.value, units=y.unit, parent=parent, **y.args)
 
             if term is not None:
-                c.terminate(term, term_flow=flow)
+                c.terminate(term, term_flow=flow, scenario=scenario)
                 if term.entity_type == 'process' and set_background:
                     c.set_background()
             self.observe(c)  # use cached implicitly via fg interface

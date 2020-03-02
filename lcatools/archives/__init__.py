@@ -48,7 +48,7 @@ def create_archive(source, ds_type, catalog=None, **kwargs):
             # this is a GIANT HACK
             ei_ref = '.'.join(['local', 'ecoinvent', kwargs['version']])
             try:
-                res = catalog.get_resource(ei_ref, strict=False)
+                res = catalog.get_resource(ei_ref, iface='inventory', strict=False)
                 res.check(catalog)
                 if hasattr(res.archive, 'load_flows'):
                     res.archive.load_flows()

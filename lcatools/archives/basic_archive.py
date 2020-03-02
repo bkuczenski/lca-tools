@@ -413,7 +413,7 @@ class BasicArchive(EntityStore):
             elif isinstance(tag, str):
                 return tag
             else:
-                return ' '.join([_recurse_expand_subtag(t) for t in tag])
+                return '\n'.join([_recurse_expand_subtag(t) for t in tag])
         keep = True
         for k, v in kwargs.items():
             if not entity.has_property(k):
@@ -421,7 +421,8 @@ class BasicArchive(EntityStore):
             if isinstance(v, str):
                 v = [v]
             for vv in v:
-                keep = keep and bool(re.search(vv, _recurse_expand_subtag(entity[k]), flags=re.IGNORECASE))
+                keep = keep and bool(re.search(vv, _recurse_expand_subtag(entity[k]),
+                                               flags=(re.IGNORECASE|re.MULTILINE)))
         return keep
 
     def search(self, etype=None, upstream=False, **kwargs):

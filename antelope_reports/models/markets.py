@@ -118,7 +118,7 @@ def build_market_mix(fg, parent, models, p_map, freight=False):
             if freight:
                 flow = term
             else:
-                flow = term.flow
+                flow = parent.flow
             if v is None:
                 c = fg.new_fragment(flow, sense, parent=parent, balance=True)
             else:
@@ -128,7 +128,7 @@ def build_market_mix(fg, parent, models, p_map, freight=False):
             if freight:
                 # don't terminate freight flows
                 continue
-            c.terminate(term)
+            c.terminate(term, term_flow = term.flow)
             if term.external_ref == 'frag-t_waste':
                 c.term.descend = False
                 c['StageName'] = 'Waste to Landfill'

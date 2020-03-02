@@ -150,9 +150,11 @@ class LcFragment(LcEntity):
         :param parent:
         :param exchange_value: auto-set- cached; can only be set once
         :param units: to convert exchange value, if supplied
-        :param private: forces aggregation of subfragments
+        :param private: forces aggregation of subfragments (not currently used)
         :param balance_flow: if true, exch val is always ignored and calculated based on parent
         :param background: if true, fragment only returns LCIA results.
+        :param termination: specify the fragment's default termination
+        :param term_flow: specify the term_flow (ignored if termination is None)
         :param observe: [None] if True, assign observed_ev to match cached_ev
         :param kwargs:
         """

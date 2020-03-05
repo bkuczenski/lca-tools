@@ -341,7 +341,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         else:
             dirn = rx.direction
         frag = self.new_fragment(rx.flow, dirn, value=1.0)
-        frag.terminate(process)
+        frag.terminate(process, term_flow=rx.flow)
         if set_background:
             frag.set_background()
         # self.fragment_from_exchanges(process.inventory(rx), parent=frag,

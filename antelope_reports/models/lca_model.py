@@ -106,13 +106,13 @@ class LcaModel(LcaModelInterface):
     def knobs(self):
         a = self.activity_container
         knobs_map = a['knobs']
-        knobs = {k: self._fg[v] for k, v in knobs_map.items()}
+        knobs = {k: (self._fg[v] or self._models[v]) for k, v in knobs_map.items()}
         return knobs
 
     def add_knob(self, knob, fragment):
         a = self.activity_container
         print('Adding knob %s -> %s' % (knob, fragment.name))
-        a['knobs'][knob] = fragment.uuid
+        a['knobs'][knob] = fragment.uuid  # we use the uuid so it will serialize-- this
 
     def has_knob(self, knob):
         a = self.activity_container

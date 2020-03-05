@@ -425,9 +425,8 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
                     print('a FlowInterface? %s\n%s' % (flow, flow.__class__.__name__))
                     print('No ref quantity? %s' % flow.link)
 
-
             if context is None:
-                context = flow.context
+                context = flow.context or None
         else:
             if hasattr(flow, 'link'):
                 flowable = flow.link

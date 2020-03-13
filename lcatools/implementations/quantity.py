@@ -85,13 +85,16 @@ class QuantityConversion(object):
 
     @property
     def flowable(self):
+        if len(self._results) == 0:
+            return None
         return self._results[0].flowable
 
     @property
     def context(self):
-        if self._results[0].context is None:
-            return NullContext
-        return self._results[0].context
+        if len(self._results) > 0:
+            if self._results[0].context is not None:
+                return self._results[0].context
+        return NullContext
 
     @property
     def locale(self):
@@ -649,11 +652,12 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
                                                   dist=dist, **kwargs)
                 if qr is None and len(mis) > 0:
                     res.add_error(x, mis[0])
-                    print('Conversion error %s' % x)
-                    if len(mis) > 1:
-                        print('omitting mismatches:')
-                        for k in mis[1:]:
-                            print(k)
+                    if q.is_lcia_method:
+                        print('Conversion error %s' % x)
+                        if len(mis) > 1:
+                            print('omitting mismatches:')
+                            for k in mis[1:]:
+                                print(k)
                 elif qr.value == 0:
                     res.add_zero(x, qr)
                 else:

@@ -236,7 +236,11 @@ class PosNegCompare(object):
 
             self._pos.append(_pos)
             self._neg.append(_neg)
-            _ratios.append( -1 * (_pos + _neg) / _pos)
+
+            if _pos + _neg < 0:
+                _ratios.append( -1 * (_pos + _neg) / _pos)
+            else:
+                _ratios.append(0)
 
         print(_ratios)
         max_ratio = max(_ratios)

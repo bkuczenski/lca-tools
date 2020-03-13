@@ -146,8 +146,6 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
                 # assume reference is a unit string specification
                 return self.new_quantity(name, ref_unit=reference, external_ref=external_ref, group=group, **kwargs)
 
-
-
     def new_flow(self, name, ref_quantity=None, context=None, **kwargs):
         """
 

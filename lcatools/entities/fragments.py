@@ -479,8 +479,9 @@ class LcFragment(LcEntity):
             prefix += '    | '
             for c in sorted(children, key=lambda x: (x['StageName'], not x.term.is_null,
                                                      x.term.is_bg or x.term.term_is_bg)):
-                if observed and c.exchange_value(scenario, observed=observed) == 0:
-                    continue
+                if not c.balance_flow:
+                    if observed and c.exchange_value(scenario, observed=observed) == 0:
+                        continue
                 if c['StageName'] != latest_stage:
                     latest_stage = c['StageName']
                     print('   %s %5s Stage: %s' % (prefix, ' ', latest_stage))

@@ -436,8 +436,8 @@ class LcForeground(BasicArchive):
     '''
     Retrieve + display fragments
     '''
-    def _fragments(self, background=None):
-        for f in self.entities_by_type('fragment'):
+    def _fragments(self, background=None, **kwargs):
+        for f in self.search('fragment', **kwargs):
             if f.reference_entity is None:
                 if background is None or f.is_background == background:
                     yield f
@@ -452,15 +452,16 @@ class LcForeground(BasicArchive):
             for j in self._show_frag_children(k, level, show=show):
                 yield j
 
-    def fragments(self, *args, show_all=False, background=None, show=False):
+    def fragments(self, *args, show_all=False, background=None, show=False, **kwargs):
         """
         :param : optional first param is filter string-- note: filters only on reference fragments!
         :param show_all: show child fragments as well as reference fragments
         :param background: [None] if True or False, show fragments whose background status is as specified
         :param show: [False] if true, print the fragments instead of returning them
+        :param kwargs: search parameters
         :return:
         """
-        for f in sorted([x for x in self._fragments(background=background)], key=lambda x: x.is_background):
+        for f in sorted([x for x in self._fragments(background=background, **kwargs)], key=lambda x: x.is_background):
             if len(args) != 0:
                 if not bool(re.search(args[0], str(f), flags=re.IGNORECASE)):
                     continue

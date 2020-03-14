@@ -286,7 +286,7 @@ class WaterfallChart(object):
             # add an indicator unit notation to the rightmost tick label
             xticklabels = [_i.get_text() for _i in ax.get_xticklabels()]
             xticks = ax.get_xticks()
-            bgst = next(_i for _i in range(len(xticks)) if xticks(_i) == max(xticks))
+            bgst = next(_i for _i in range(len(xticks)) if xticks[_i] == max(xticks))
             xticklabels[bgst] += ' %s' % self._unit
             ax.set_xticklabels(xticklabels)
 

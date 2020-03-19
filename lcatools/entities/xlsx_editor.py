@@ -148,7 +148,8 @@ class XlsxArchiveUpdater(object):
     This class uses the contents of a properly formatted XLS file (or XLS-file-like object) to create or update
     entities in an archive.
 
-    Uses sheet names that match the archive's "_entity_types" property, so 'flow' and 'quantity' nominally.
+    Uses sheet names that match the archive's "_entity_types" property, so 'flow' and 'quantity' nominally.  'flows' 
+    and 'quantities' also work.
 
     Each sheet must be in strict tabular format, with the first row being headers and each subsequent row being one
     entity.
@@ -264,6 +265,9 @@ class XlsxArchiveUpdater(object):
                     self._print('Deferring to existing CF')
                     continue
 
+    _vn = {'flow': 'flows',
+           'quantity': 'quantities'}
+
     def _sheet_accessor(self, sheetname):
         """
         Returns a 2-tuple of sheet, headers
@@ -277,9 +281,12 @@ class XlsxArchiveUpdater(object):
         :param sheetname:
         :return: sheet, headers
         """
-        try:
+        if sheetname in self._xl.sheet_names():
             sh = self._xl.sheet_by_name(sheetname)
-        except (xlrd.XLRDError, KeyError):
+        elif self._vn[sheetname] in self._xl.sheet_names():
+            sheetname = self._vn[sheetname]
+            sh = self._xl.sheet_by_name(sheetname)
+        else:
             return None, None
         try:
             headers = [k.value for k in sh.row(0)]
@@ -356,7 +363,7 @@ class XlsxArchiveUpdater(object):
             self._xl = xlrd_like
 
     def apply(self):
-        for etype in ('flow', 'quantity'):  # these are the only etypes that are currently handled
+        for etype in ('quantity', 'flow'):  # these are the only types that are currently handled
             self._process_sheet(etype)
         self._process_flow_properties()
 

@@ -123,7 +123,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         :param name: the object's name
         :param group: used as context for flow
         :param strict: [False] if True it will raise a TypeError (ref) or ValueError (name) if an entity exists but
-        does not match the spec.
+        does not match the spec.  n.b. I think I should check the reference entity even if strict is False but.. nah
         :return:
         """
         try:
@@ -203,10 +203,11 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
             return found_ref
         raise TypeError('Invalid entity type for termination: %s' % found_ref.entity_type)
 
-    def new_fragment(self, flow, direction, **kwargs):
+    def new_fragment(self, flow, direction, external_ref=None, **kwargs):
         """
         :param flow:
         :param direction:
+        :param external_ref: if provided, observe and name the fragment after creation
         :param kwargs: uuid=None, parent=None, comment=None, value=None, units=None, balance=False;
           **kwargs passed to LcFragment
         :return:
@@ -220,6 +221,8 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
             flow = f
         frag = create_fragment(flow, direction, origin=self.origin, **kwargs)
         self._archive.add_entity_and_children(frag)
+        if external_ref is not None:
+            self.observe(frag, name=external_ref)
         return frag
 
     def name_fragment(self, fragment, name, auto=None, force=None, **kwargs):
@@ -338,7 +341,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
             dirn = comp_dir(rx.direction)
         else:
             dirn = rx.direction
-        frag = self.new_fragment(rx.flow, dirn, value=1.0)
+        frag = self.new_fragment(rx.flow, dirn, value=1.0, **kwargs)
         frag.terminate(process, term_flow=rx.flow)
         if set_background:
             frag.set_background()
@@ -417,7 +420,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         """
         if parent is None:
             x = next(_xg)
-            parent = self.new_fragment(x.flow, x.direction, value=x.value, units=x.unit, **x.args)
+            parent = self.new_fragment(x.flow, x.direction, value=x.value, units=x.unit, Name=str(x.process), **x.args)
             if ref is None:
                 print('Creating new fragment %s (%s)' % (x.process.name, parent.uuid))
             else:
@@ -480,10 +483,9 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
             c = self.new_fragment(flow, y.direction, value=y.value, units=y.unit, parent=parent, **y.args)
 
             if term is not None:
-                c.terminate(term, term_flow=flow, scenario=scenario)
+                c.terminate(term, scenario=scenario)
                 if term.entity_type == 'process' and set_background:
                     c.set_background()
             self.observe(c)  # use cached implicitly via fg interface
 
         return parent
-

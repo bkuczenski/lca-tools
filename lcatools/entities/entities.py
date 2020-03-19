@@ -63,7 +63,7 @@ class LcEntity(object):
         if origin is not None:
             self.origin = origin
 
-        self._d['Name'] = ''
+        self._d['Name'] = self._external_ref
         self._d['Comment'] = ''
 
         self._query_ref = None  # memoize this

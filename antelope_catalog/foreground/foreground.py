@@ -171,7 +171,6 @@ class LcForeground(BasicArchive):
         :param entity_type:
         :return:
         """
-        # TODO: catalog.fetch is costly because it loads the entire target object
         try:
             q = self._catalog.query(origin)
             ref = q.get(external_ref)
@@ -213,16 +212,6 @@ class LcForeground(BasicArchive):
                 return self._qty_ref_from_json(e, ext_ref)
         return super(LcForeground, self)._make_entity(e, etype, ext_ref)
 
-    def _ensure_valid_refs(self, entity):
-        if entity.is_entity and entity.origin != self.ref:
-            entity = entity.make_ref(self._catalog.query(entity.origin))  # only store foreign entities as refs
-            '''
-            entity.show()
-            print('my ref: %s' % self.ref)
-            raise NonLocalEntity(entity)
-            '''
-        super(LcForeground, self)._ensure_valid_refs(entity)
-
     def add(self, entity):
         """
         Reimplement base add to (1) use link instead of external_ref, (2) merge instead of raising a key error.
@@ -232,6 +221,8 @@ class LcForeground(BasicArchive):
         """
         if entity.origin is None:
             entity.origin = self.ref  # have to do this now in order to have the link properly defined
+        elif entity.is_entity and entity.origin != self.ref:
+            entity = self.catalog_ref(entity.origin, entity.external_ref, entity_type=entity.entity_type)
         try:
             self._add(entity, entity.link)
         except EntityExists:

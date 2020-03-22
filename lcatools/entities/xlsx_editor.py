@@ -143,7 +143,7 @@ def _check_merge(merge):
     raise ValueError('Invalid merge strategy: %s' % merge)
 
 
-class XlsxArchiveUpdater(object):
+class XlsxUpdater(object):
     """
     This class uses the contents of a properly formatted XLS file (or XLS-file-like object) to create or update
     entities in an archive.
@@ -186,22 +186,49 @@ class XlsxArchiveUpdater(object):
       * "defer": (default) If an entity exists and has a property already defined, defer to the existing property
       * "overwrite": Any non-null incoming property is assigned to the entity, overwriting any existing value.
     """
+    def __init__(self, xlrd_like, merge='defer', quiet=True):
+        """
+        Updates entity meta-information from a spreadsheet created from above. external_ref is used as a key;
+        if an entity is not found, a new one is created.  'uuid' and reference fields are only used for creation
+        of new entities.
+        Note: uses the default sheet names of 'flow' and 'quantity'
+
+        :param xlrd_like: XLRD workbook-like object OR filename of XLS file
+        :param merge: ['defer'] - do not overwrite existing properties
+                      ['overwrite'] - do overwrite existing properties
+        :return:
+        """
+        self._quiet = quiet
+        self._merge = _check_merge(merge)
+        if isinstance(xlrd_like, str) and os.path.exists(xlrd_like):
+            self._xl = xlrd.open_workbook(xlrd_like)
+        else:
+            self._xl = xlrd_like
+
+    @property
+    def ar(self):
+        return NotImplemented
+
+    @property
+    def qi(self):
+        return NotImplemented
+
+    def _new_entity(self, etype, rowdata):
+        raise NotImplementedError
+
+    def apply(self):
+        raise NotImplementedError
+
     def _grab_value(self, cell):
         value = cell.value
         if isinstance(value, str):
             if value.startswith('*'):
                 value = eval(value[1:])
             elif value.startswith('!'):
-                value = self._ar[value[1:]]
+                value = self.ar[value[1:]]
             elif value == '':
                 value = None
         return value
-
-    def _new_entity(self, etype, rowdata):
-        rowdata['externalId'] = rowdata.pop('external_ref')
-        rowdata['entityId'] = rowdata.pop('uuid', None)
-        rowdata['entityType'] = etype
-        self._ar.entity_from_json(rowdata)
 
     def _process_flow_properties(self):
         fp, headers = self._sheet_accessor('flowproperties')
@@ -210,14 +237,14 @@ class XlsxArchiveUpdater(object):
 
         for row in range(1, fp.nrows):
             rowdata = {headers[i]: self._grab_value(k) for i, k in enumerate(fp.row(row))}
-            flow = self._ar[rowdata['flow']]
+            flow = self.ar[rowdata['flow']]
             if flow is None:
                 self._print('Skipping unknown flow %s' % rowdata['flow'])
                 continue
             rq_spec = rowdata.pop('ref_quantity', None)
             if rq_spec is not None:
                 try:
-                    rq = self._qi.get_canonical(rq_spec)
+                    rq = self.qi.get_canonical(rq_spec)
                 except EntityNotFound:
                     print('%s Skipping record with invalid ref quantity %s' % (rowdata['flow'], rq_spec))
                     continue
@@ -229,7 +256,7 @@ class XlsxArchiveUpdater(object):
             else:
                 rq = flow.reference_entity
 
-            qq = self._qi.get_canonical(rowdata['quantity'])
+            qq = self.qi.get_canonical(rowdata['quantity'])
 
             value = rowdata.pop('value', None)
 
@@ -304,7 +331,7 @@ class XlsxArchiveUpdater(object):
 
         for row in range(1, sh.nrows):
             rowdata = {headers[i]: self._grab_value(k) for i, k in enumerate(sh.row(row))}
-            ent = self._ar[rowdata['external_ref']]
+            ent = self.ar[rowdata['external_ref']]
             if ent is None:
                 self._new_entity(etype, rowdata)
             else:
@@ -316,7 +343,7 @@ class XlsxArchiveUpdater(object):
                 ref = rowdata.pop(ent.reference_field, None)
                 if self._merge == 'overwrite' and ref is not None:
                     if isinstance(ref, str) and etype == 'flow':
-                        ref = self._qi.get_canonical(ref)
+                        ref = self.qi.get_canonical(ref)
                     if ref is not None and ent.reference_entity != ref:
                         self._print('Updating reference entity %s -> %s' % (ent.reference_entity, ref))
                         ent[ent.reference_field] = ref
@@ -340,6 +367,17 @@ class XlsxArchiveUpdater(object):
             return
         print(*args)
 
+    def __enter__(self):
+        """Return self object to use with "with" statement."""
+        return self
+
+    def __exit__(self, *args):
+        if hasattr(self._xl, 'release_resources'):
+            self._xl.release_resources()
+        self._xl = None
+
+
+class XlsxArchiveUpdater(XlsxUpdater):
     def __init__(self, archive, xlrd_like, merge='defer', quiet=True):
         """
         Updates entity meta-information from a spreadsheet created from above. external_ref is used as a key;
@@ -353,25 +391,25 @@ class XlsxArchiveUpdater(object):
                       ['overwrite'] - do overwrite existing properties
         :return:
         """
-        self._quiet = quiet
         self._ar = archive
         self._qi = archive.make_interface('quantity')
-        self._merge = _check_merge(merge)
-        if isinstance(xlrd_like, str) and os.path.exists(xlrd_like):
-            self._xl = xlrd.open_workbook(xlrd_like)
-        else:
-            self._xl = xlrd_like
+        super(XlsxArchiveUpdater, self).__init__(xlrd_like, merge=merge, quiet=quiet)
+
+    @property
+    def ar(self):
+        return self._ar
+
+    @property
+    def qi(self):
+        return self._qi
+
+    def _new_entity(self, etype, rowdata):
+        rowdata['externalId'] = rowdata.pop('external_ref')
+        rowdata['entityId'] = rowdata.pop('uuid', None)
+        rowdata['entityType'] = etype
+        self._ar.entity_from_json(rowdata)
 
     def apply(self):
         for etype in ('quantity', 'flow'):  # these are the only types that are currently handled
             self._process_sheet(etype)
         self._process_flow_properties()
-
-    def __enter__(self):
-        """Return self object to use with "with" statement."""
-        return self
-
-    def __exit__(self, *args):
-        if hasattr(self._xl, 'release_resources'):
-            self._xl.release_resources()
-        self._xl = None

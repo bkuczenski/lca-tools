@@ -1,6 +1,10 @@
 from .base import EntityRef
 
 
+class MultipleReferences(Exception):
+    pass
+
+
 class ProcessRef(EntityRef):
     """
     Processes can lookup:
@@ -61,11 +65,14 @@ class ProcessRef(EntityRef):
         :param flow:
         :return:
         """
+        if flow is None:
+            if len(self.reference_entity) > 1:
+                raise MultipleReferences('You must specify a reference flow')
         if hasattr(flow, 'entity_type'):
             if flow.entity_type == 'exchange':
                 flow = flow.flow
         try:
-            return next(x for x in self.references(flow=flow))
+            return next(self.references(flow=flow))
         except StopIteration:
             print('references:')
             for x in self.reference_entity:

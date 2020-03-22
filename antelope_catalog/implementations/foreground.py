@@ -166,7 +166,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
             raise UnknownRefQuantity(ref_quantity)
         f = new_flow(name, ref_q, **kwargs)
         self._archive.add_entity_and_children(f)
-        return f
+        return self.get(f.link)
 
     def find_term(self, term_ref, origin=None, **kwargs):
         """

@@ -132,6 +132,9 @@ class LcQuantity(LcEntity):
         """
         return self._qi.cf(flow, self, locale=locale, **kwargs)
 
+    def characterize(self, flowable, ref_quantity, value, **kwargs):
+        return self._qi.characterize(flowable, ref_quantity, self, value, **kwargs)
+
     def factors(self, flowable=None, context=None, **kwargs):
         return self._qi.factors(self, flowable=flowable, context=context, **kwargs)
 

@@ -32,7 +32,7 @@ from lcatools.archives import REF_QTYS
 from lcatools.lcia_engine import LciaDb, DEFAULT_CONTEXTS, DEFAULT_FLOWABLES
 
 
-from lcatools.interfaces import local_ref, EntityNotFound
+from lcatools.interfaces import local_ref, EntityNotFound, UnknownOrigin
 from ..catalog_query import CatalogQuery, INTERFACE_TYPES
 from .lc_resolver import LcCatalogResolver
 from ..lc_resource import LcResource, download_file
@@ -622,7 +622,14 @@ class LcCatalog(object):
         :return:
         """
 
-        next(self._resolver.resolve(origin, strict=strict))  # raises UnknownOrigin
+        try:
+            next(self._resolver.resolve(origin, strict=strict))
+        except UnknownOrigin:
+            if strict:
+                raise
+            origin = '.'.join(['foreground', origin])
+            next(self._resolver.resolve(origin, strict=strict))
+
         if refresh or (origin not in self._queries):
             self._queries[origin] = CatalogQuery(origin, catalog=self, **kwargs)
         return self._queries[origin]
@@ -637,6 +644,9 @@ class LcCatalog(object):
         if external_ref is None:
             origin, external_ref = origin.split('/', maxsplit=1)
         for i in self.gen_interfaces(origin):
+            if i.lookup(external_ref):
+                return i.origin
+        for i in self.gen_interfaces('.'.join(['foreground', origin])):
             if i.lookup(external_ref):
                 return i.origin
         raise EntityNotFound('%s/%s' % (origin, external_ref))

@@ -1,4 +1,65 @@
 ==========
+Tue Mar 24 12:40:00 -0700 2020
+
+Thorny issue with flowables once again.  There are a few interacting problems. In random order:
+
+ * my senses of get() and __getitem__ are reversed from convention.  get() is supposed to silently return None; __getitem__ is supposed to raise KeyError.  Instead, they are pooposite.  This is a BIG problem.
+
+ * Catalog can find references to objects in other foregrounds, but foreground implementations cannot
+
+ * Model Updater generates new flows with add_or_retrieve, which uses BasicImplementation.get() and falls back to new_flow on EntityNotFound-- generating context-free flows in the local foreground
+
+ * add_flow is programmed to trim flow terms with "distinct" when adding flows that have no context
+
+ * 'foreground.model/carbon dioxide' becomes a distinct flowable from 'carbon dioxide' and doesn't show up in LCIA
+
+The question is: how do we want the model designer to express the fact that the flow should be treated as elementary?
+
+First thought is to be via specifying term_flow-- but that is surprisingly thorny.  term_flow has to be an actual flow, not a flowable, and yet there is no way to guarantee that a flow even exists with a given flowable name, and it does NOT seem like a good idea to synthesize another new flow at that point.
+
+ONE ALTERNATIVE is to exclude the expectation that 'just-in-time' flows should be elementary.  We've been trying to get away without an explicit flows table but it doesn't seem operable.
+
+The working solution- one which requires no code changes-- is to require elementary flows to be listed explicitly with contexts on a flows sheet, thereby avoiding the 'distinct' trap and enabling people to name flows carefully to have them properly detected (and mitigate challenges with local flowables list maintenance).
+
+Tue 2020-03-24 13:40:32 -0700
+
+worked like a charm
+
+Tue 2020-03-24 19:01:12 -0700
+
+Since it's me, and Antelope, and Qdb, it wouldn't be a project without desperate technical issues at the 11th hour.
+
+In this case it is the water depletion LCIA method, and the same issue as above, but confounded.
+
+First, some history / motivation
+Because of the flowable-specificity of the Qdb, resource indicators like water depletion are hard because 'water' is water regardless of where it's from. Or at least, that's true if it's identical to the 'water' flowable.
+
+So to enable an LCIA method to characterize water differently from different sources (geographies/locales are already supported) I created a mechanism where, if a CF is being added and the flowable is identically 'water' (is lcia_engine._fm['water']), then it creates a subcontext with the specific flowable name AS the context, and stores the CF there.  Then, it does the same modification on factors_for_flowable if the flowable id's as 'water' but is distinct from water.
+
+The idea behind this is that lookups will find the flowable-specific context.  This doesn't account for all the other ways I expect the system to account for slop, however.
+
+First, the number one problem is that this scheme is only enacted in import_cfs() which is used to load LCIA Methods from elsewhere-- it doesn't apply when the characterize() method is used.  Now it probably should, but that is tricky because characterize() uses add_characterization() which is not overridden in the LciaEngine subclass.  import_cfs() uses _qassign directly and does not pass through add_characterization.  That is an easy fix-- we can make a patch_cx method that is a noop in TermManager.  But ugly as hell.
+
+But the bigger problem is that the non-subclassed context goes uncharacterized, so 'water' flows that are not specifically characterized will come up empty. That is what's happening now.  'Water, blue' identifies as 'water' because the CAS Number is supplied, but it's characterized via add_characterization so it doesn't get munged.  And its context (for purposes of streamlining) was assigned as 'resources' so it becomes 'resources -> flow-Water, Blue'
+
+Tue 2020-03-24 23:38:26 -0700
+
+OK, for stupidness reasons I am switching back to using flow.name instead of flow.link in LcFlow.characterize() and FlowRef.characterize().  I know I chose flow.link deliberately, back in the days of the EPA project... looking back to May 30 I was quite forceful in my assertion that only flow.link should be used for both setting and retrieving characterizations.  so how did I get to be using flow.name for EVERYTHING?
+
+Well, it's not everything-- in fact, I use flow.link pretty well in a number of cases.. there are two exceptions--
+1- do_lcia uses x.flow.name, but that is the only time '.name' appears in that file
+2- SERIALIZING qdicts uses str(fb) which works out to fb.name where name is whatever was the first thing defined in the flowable.
+3- There are also various times when I self-consciously rename flowables (e.g. for non-fossil CO2 handling) which will cause any assumptions / hopes that I can somehow "ensure" a flowable's name is also a link will not be upheld.
+
+To be sure, this doesn't really matter too much because the whole point of the term manager was to make synonymous terms "just work"-- it really becomes a problem because I am now encoding the flowable string as a context to handle the water problem-- which is actually important because e.g. we now quite stridently want to exclude 'water, turbine use, unspecified natural origin' from water footprinting, and this mechanism is allowing us to do it.
+
+But if we switch to using links in do_lcia (and maintain using links in characterize()), then the serialized flowables will no longer work, I'm almost sure.. let's find out.
+
+
+
+
+
+==========
 Fri Oct 25 09:41:27 -0700 2019
 
 Moving right along.. yesterday we took 60% out of the computation time for LCIA, mainly by reshuffling the quantity interface to avoid redundant argument processing, but also by tracking down a design flaw in _canonical_q that was requiring str(qty) [which requires at least two get_item() calls for refs] to be called ALL THE TIME... I spent an embarrassingly long time to bring about 15 SLOC changes that were in retrospect very simple (see 646e859) (but the restructuring, which did most of the work, was dfa7f95)

@@ -3,7 +3,7 @@ import re
 import os
 
 from lcatools.archives.term_manager import TermManager, NoFQEntry
-from lcatools.contexts import Context
+from lcatools.contexts import Context, NullContext
 from .quelled_cf import QuelledCF
 from .clookup import CLookup, SCLookup
 
@@ -253,7 +253,7 @@ class LciaEngine(TermManager):
         self._qm.merge(dom, add)
         self.import_cfs(second)
 
-    def add_subcontext(self, context, sub, origin=None):
+    def add_subcontext(self, context, prefix, sub, origin=None):
         """
 
         :param context: a canonical context
@@ -262,7 +262,7 @@ class LciaEngine(TermManager):
         """
         if context is None:
             return None
-        cx_sub = tuple(context.as_list() + [sub])
+        cx_sub = tuple(context.as_list() + ['%s-%s' % (prefix, sub)])
 
         try:
             cx = self._cm[cx_sub]
@@ -296,10 +296,6 @@ class LciaEngine(TermManager):
 
             cx = self[cf.context]
 
-            # don't characterize "Water" per se-- give it a subcontext
-            if fb == self._fm['Water']:
-                cx = self.add_subcontext(cx, cf.flowable)
-
             self._qassign(qq, fb, cf, context=cx)
         self._factors_for_later[quantity] = True
         print('Imported %d factors for %s' % (count, quantity))
@@ -314,7 +310,11 @@ class LciaEngine(TermManager):
         except NoFQEntry:
             return None
         # cfs = ql._context_origin(cx, origin=origin)
-        cfs = ql.find(cx, dist=0, origin=origin)  # sliiiiightly slower but much better readability
+        if fb == self._fm['water']:
+            dist = 1  # need to look for subcompartments
+        else:
+            dist = 0
+        cfs = ql.find(cx, dist=dist, origin=origin)  # sliiiiightly slower but much better readability
         if len(cfs) > 0:
             if len(cfs) > 1:  # can only happen if qq's origin is None ??
                 try:
@@ -340,6 +340,10 @@ class LciaEngine(TermManager):
             raise
 
     def _qassign(self, qq, fb, new_cf, context=None):
+        # don't characterize "Water" per se-- give it a subcontext
+        if context is not NullContext and fb is self._fm['Water']:
+            context = self.add_subcontext(context, 'flow', new_cf.flowable)
+
         super(LciaEngine, self)._qassign(qq, fb, new_cf, context)
         self._origins.add(new_cf.origin)
 
@@ -424,7 +428,7 @@ class LciaEngine(TermManager):
         except KeyError:
             return
         if fb == self._fm['Water']:
-            context = self.add_subcontext(context, flowable)
+            context = self.add_subcontext(context, 'flow', flowable)
         for k in super(LciaEngine, self).factors_for_flowable(flowable, quantity=quantity, context=context, **kwargs):
             if self._quell_co2(flowable, context):
                 yield QuelledCF.from_cf(k, flowable=self._bio_co2)

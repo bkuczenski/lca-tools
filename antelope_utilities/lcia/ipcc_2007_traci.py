@@ -55,7 +55,7 @@ def generate_ipcc_2007_traci21(source, target):
 
     print(str(q))
 
-    T.export_quantity(target, q, domesticate=True)
+    T.export_quantity(q, target, domesticate=True)
 
 
 if __name__ == '__main__':

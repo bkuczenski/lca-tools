@@ -133,7 +133,7 @@ class LcFlow(LcEntity, FlowInterface):
     def characterize(self, quantity, value, context=None, **kwargs):
         if context is None:
             context = self.context
-        flowable = self.link
+        flowable = self.name
         return quantity.characterize(flowable, self.reference_entity, value, context=context, origin=self.origin,
                                      **kwargs)
 

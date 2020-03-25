@@ -192,7 +192,7 @@ class SCLookup(CLookup):
             key = value.context
         if key in self._dict and len(self._dict[key]) > 0:
             existing = list(self._dict[key])[0]
-            if existing == value:
+            if existing.value == value.value:
                 return
             print('Collision with context: %s' % repr(key))
             print(repr(value))

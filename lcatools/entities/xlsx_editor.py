@@ -219,6 +219,9 @@ class XlsxUpdater(object):
     def apply(self):
         raise NotImplementedError
 
+    def get_context(self, cx):
+        return NotImplemented
+
     def _grab_value(self, cell):
         value = cell.value
         if isinstance(value, str):
@@ -262,8 +265,8 @@ class XlsxUpdater(object):
 
             cx = rowdata.pop('context', None)
             if cx is not None:
-                # cx = self._ar.tm[cx]
-                raise NotImplementedError('TODO contexts!')
+                cx = self.get_context(cx)
+                # raise NotImplementedError('TODO contexts!')
 
             if value is None:
                 continue
@@ -413,3 +416,6 @@ class XlsxArchiveUpdater(XlsxUpdater):
         for etype in ('quantity', 'flow'):  # these are the only types that are currently handled
             self._process_sheet(etype)
         self._process_flow_properties()
+
+    def get_context(self, cx):
+        return self.ar.tm[cx]

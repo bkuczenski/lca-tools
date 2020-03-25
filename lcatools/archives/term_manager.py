@@ -442,15 +442,15 @@ class TermManager(object):
         cf = self._find_exact_cf(qq, fb, cx, origin)
 
         if cf is None:
-            # create our new Characterization with the supplied info
-            new_cf = Characterization(fb, rq, qq, context=cx, origin=origin)
+            # create our new Characterization with the provided flowable, not the detected flowable
+            new_cf = Characterization(flowable, rq, qq, context=cx, origin=origin)
             if isinstance(value, dict):
                 new_cf.update_values(**value)
             else:
                 new_cf.add_value(value, location=location)
 
             # add our new CF to the lookup tree
-            self._qassign(qq, fb, new_cf)
+            self._qassign(qq, fb, new_cf, context=cx)
 
             return new_cf
         else:

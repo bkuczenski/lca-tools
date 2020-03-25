@@ -99,8 +99,9 @@ class FlowRef(EntityRef, FlowInterface):
     def characterize(self, quantity, value, context=None, **kwargs):
         if context is None:
             context = self.context
-        flowable = self.link
-        return self._query.characterize(flowable, self.reference_entity, quantity, value, context=context, **kwargs)
+        flowable = self.name
+        return self._query.characterize(flowable, self.reference_entity, quantity, value, context=context,
+                                        origin=self.origin, **kwargs)
 
     '''
     def cf(self, query_quantity, locale='GLO', **kwargs):

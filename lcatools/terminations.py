@@ -437,7 +437,7 @@ class FlowTermination(object):
         :return:
         """
         if self.is_context:
-            x = ExchangeValue(self._parent, self.term_flow, self.direction, termination=self.term_node,
+            x = ExchangeValue(self._parent, self.term_flow, self._parent.direction, termination=self.term_node,
                               value=self.node_weight_multiplier)
             yield x
         elif self.is_frag:  # fragments can have unobserved exchanges too! (CAN THEY?)

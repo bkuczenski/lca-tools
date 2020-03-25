@@ -59,6 +59,22 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
     '''
     Add some useful functions from other interfaces to the foreground
     '''
+    def get(self, external_ref, **kwargs):
+        """
+        The special characteristic of a foreground is its access to the catalog-- so-- use it
+        :param external_ref:
+        :param kwargs:
+        :return:
+        """
+        e = self._fetch(external_ref, **kwargs)
+        if e is not None:
+            return e
+        try:
+            origin, external_ref = external_ref.split('/', maxsplit=1)
+        except ValueError:
+            origin = 'foreground'
+        return self._archive.catalog_ref(origin, external_ref)
+
     def count(self, entity_type):
         return self._archive.count_by_type(entity_type)
 
@@ -186,18 +202,20 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
             if cx is not None:
                 found_ref = cx
             else:
-                try:
-                    found_ref = self.get(term_ref)
+                found_ref = self.get(term_ref)
+                ''' # this is now internal to get()
                 except EntityNotFound:
                     if origin is None:
                         try:
                             origin, external_ref = term_ref.split('/', maxsplit=1)
                         except ValueError:
-                            raise UnknownOrigin(term_ref)
+                            origin = 'foreground'
+                            external_ref = term_ref
 
                         found_ref = self._archive.catalog_ref(origin, external_ref)
                     else:
                         found_ref = self._archive.catalog_ref(origin, term_ref)
+                '''
 
         if found_ref.entity_type in ('flow', 'process', 'fragment', 'context'):
             return found_ref

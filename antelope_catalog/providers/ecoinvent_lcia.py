@@ -107,13 +107,14 @@ class EcoinventLcia(BasicArchive):
         self._xl_rows = []
         self._version = version
         self._wb = None
+        self._ei_archive = ei_archive
         if ei_archive is None:
             print('Warning: no ecoinvent archive! Non-mass methods will be broken!')
-        self._ei_archive = ei_archive
-
-        # mass = mass_quantity or LcQuantity.new('Mass', self._create_unit('kg')[0])
-        # self.add(mass)
-        # self._mass = mass
+            mass = mass_quantity or LcQuantity.new('Mass', self._create_unit('kg')[0])
+            self.add(mass)
+            self._mass = mass
+        else:
+            self._mass = None
 
     @property
     def _xls(self):
@@ -212,13 +213,18 @@ class EcoinventLcia(BasicArchive):
                 continue
             cx = self.tm.add_context((row['compartment'], row['subcompartment']), origin=self.ref)
             fb = row['name']
-            try:
-                f = next(self._ei_archive.tm.flows_for_flowable(fb))
-            except StopIteration:
-                print('Unable to find a flow for flowable "%s" -- skipping' % fb)
-                # raise KeyError
-            if self[f.reference_entity.external_ref] is None:
-                self.add_entity_and_children(f.reference_entity)
-            self.tm.add_characterization(row['name'], f.reference_entity, q, v, context=cx, origin=self.ref)
+            if self._ei_archive is not None:
+                try:
+                    f = next(self._ei_archive.tm.flows_for_flowable(fb))
+                    ref_q = f.reference_entity
+                    if self[ref_q.external_ref] is None:
+                        self.add_entity_and_children(ref_q)
+                except StopIteration:
+                    print('Unable to find a flow for flowable "%s" -- skipping' % fb)
+                    continue
+                    # raise KeyError
+            else:
+                ref_q = self._mass
+            self.tm.add_characterization(row['name'], ref_q, q, v, context=cx, origin=self.ref)
 
         self.check_counter()

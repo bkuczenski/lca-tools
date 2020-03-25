@@ -59,7 +59,7 @@ Wed 2020-03-25 00:24:17 -0700
 
 And, indeed, it fails.
 
-Just as a reminder-- using the "name" was a problem because in the EPA project we had hundreds of parts with names like "nut, hex"- these parts had distinct external_refs but not distinct names. But of course external_ref is not part of a flowable.  (why not?) (ans: because they are not portable. In the immediate case, the external_refs for flows in ecoinvent are UUIDs, but the flowable names in the ecoinvent LCIA implementation are english names.  Remember, flowables don't *have* external_refs since they're not entities.
+Just as a reminder-- using the "name" was a problem because in the EPA project we had hundreds of parts with names like "nut, hex"- these parts had distinct external_refs but not distinct names. But of course external_ref is not part of a flowable.  (why not?) (ans: flowables don't *have* external_refs since they're not entities!)  In the immediate case, the external_refs for flows in ecoinvent are UUIDs, but the flowable names in the ecoinvent LCIA implementation are english names.
 
 Really the only reason this is a problem is because of the janky water subcontexting.
 That's not even true.

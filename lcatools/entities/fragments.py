@@ -166,7 +166,6 @@ class LcFragment(LcEntity):
         self._background = background
         self._is_balance = False
         self._child_flows = set()
-        self._terminations = dict()
 
         super(LcFragment, self).__init__('fragment', external_ref, entity_uuid=the_uuid, **kwargs)
         if self._external_ref == self._uuid:
@@ -179,6 +178,9 @@ class LcFragment(LcEntity):
         self.flow = flow
         self.direction = check_direction(direction)  # w.r.t. parent
 
+        self._terminations = dict()
+        self._terminations[None] = FlowTermination.null(self)
+
         if balance_flow:
             self.set_balance_flow()
         else:
@@ -188,7 +190,6 @@ class LcFragment(LcEntity):
                 self.observed_ev = self.cached_ev
 
         if termination is None:
-            self._terminations[None] = FlowTermination.null(self)
             if 'StageName' not in self._d:
                 self._d['StageName'] = ''
         else:
@@ -733,7 +734,7 @@ class LcFragment(LcEntity):
 
         value = float(value)  ## or LiterateFloat?
 
-        if units is not None:
+        if units is not None and len(units) > 0:
             value *= self.flow.reference_entity.convert(units)
 
         if scenario == 0 or scenario == '0' or scenario is None:

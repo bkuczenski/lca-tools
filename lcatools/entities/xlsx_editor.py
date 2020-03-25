@@ -240,8 +240,9 @@ class XlsxUpdater(object):
 
         for row in range(1, fp.nrows):
             rowdata = {headers[i]: self._grab_value(k) for i, k in enumerate(fp.row(row))}
-            flow = self.ar[rowdata['flow']]
-            if flow is None:
+            try:
+                flow = self.ar.get(rowdata['flow'])
+            except EntityNotFound:
                 self._print('Skipping unknown flow %s' % rowdata['flow'])
                 continue
             rq_spec = rowdata.pop('ref_quantity', None)

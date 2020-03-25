@@ -301,7 +301,7 @@ class EntityRef(BaseRef):
             return False
         return True
 
-    def get_item(self, item, force_query=False):
+    def get_item(self, item, force_query=True):
         """
 
         This keeps generating recursion errors. Let's think it through.
@@ -309,7 +309,7 @@ class EntityRef(BaseRef):
          - if not, need to check remotely by running the query.
          - the query retrieves the entity and asks has_property
            -- which causes recursion error if the query actually gets the entity_ref
-           -- so has_property has to not trigger an additional query call, and only asks locally.
+           --- attempted solution with NoAccessToEntity exception in BasicImplementation
          - fine. So when do we raise a key error?
         :param item:
         :param force_query:
@@ -342,7 +342,7 @@ class EntityRef(BaseRef):
         :return:
         """
         try:
-            self.get_item(item, force_query=False)
+            self.get_item(item)
         except KeyError:
             return False
         return True

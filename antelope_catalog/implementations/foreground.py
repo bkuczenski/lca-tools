@@ -231,9 +231,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         :return:
         """
         if isinstance(flow, str):
-            f = self.__getitem__(flow)
-            if f is None:
-                raise EntityNotFound(flow)
+            f = self.get(flow)
             if f.entity_type != 'flow':
                 raise TypeError('%s is not a flow' % flow)
             flow = f

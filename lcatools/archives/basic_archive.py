@@ -474,11 +474,11 @@ class BasicArchive(EntityStore):
 
         return j
 
-    def export_quantity(self, quantity, filename, domesticate=True, values=True, gzip=False):
+    def export_quantities(self, filename, *quantities, domesticate=True, values=True, gzip=False):
         """
 
-        :param quantity:
         :param filename:
+        :param quantities: positional args are quantities to serialize
         :param domesticate: [True- new archive becomes reference]  if False, the qty source origin will remain canonical
         :param values: [True- new archive stores cfs] if False the export will only include flowable+context lists
         :param gzip: [False] whether to gzip the file
@@ -487,7 +487,7 @@ class BasicArchive(EntityStore):
         j = super(BasicArchive, self).serialize()
         j['dataSourceType'] = 'BasicArchive'
         j['dataSource'] = filename
-        j['termManager'], qq, rq = self.tm.serialize(self.ref, quantity, values=values)
+        j['termManager'], qq, rq = self.tm.serialize(self.ref, *quantities, values=values)
         qs = [self[u] for u in rq]
         for ref in qq:
             q = self[ref]

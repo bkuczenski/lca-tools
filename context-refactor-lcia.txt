@@ -55,6 +55,21 @@ To be sure, this doesn't really matter too much because the whole point of the t
 
 But if we switch to using links in do_lcia (and maintain using links in characterize()), then the serialized flowables will no longer work, I'm almost sure.. let's find out.
 
+Wed 2020-03-25 00:24:17 -0700
+
+And, indeed, it fails.
+
+Just as a reminder-- using the "name" was a problem because in the EPA project we had hundreds of parts with names like "nut, hex"- these parts had distinct external_refs but not distinct names. But of course external_ref is not part of a flowable.  (why not?) (ans: because they are not portable. In the immediate case, the external_refs for flows in ecoinvent are UUIDs, but the flowable names in the ecoinvent LCIA implementation are english names.  Remember, flowables don't *have* external_refs since they're not entities.
+
+Really the only reason this is a problem is because of the janky water subcontexting.
+That's not even true.
+
+anyway, we can't solve this problem right now. Let's get google out the door and then do some revisioning later.
+
+
+
+
+
 
 
 

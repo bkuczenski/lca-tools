@@ -357,8 +357,6 @@ class LcFragment(LcEntity):
                 evs["0"] = v
             elif isinstance(k, int):
                 evs[str(k)] = v
-            elif isinstance(k, tuple):
-                evs['____'.join(k)] = v  # warning! ____ is now a special secret scenario delimiter
             else:
                 evs[k] = v
         return evs
@@ -641,6 +639,15 @@ class LcFragment(LcEntity):
         scenarios -= {0, 1, None}
         for k in sorted(scenarios):
             yield k
+
+    def clear_scenarios(self, terminations=True):
+        sc = [k for k in self._exchange_values.keys() if k not in (0, 1)]
+        for s in sc:
+            self._exchange_values.pop(s)
+        if terminations:
+            sc = [k for k in self._terminations.keys() if k is not None]
+            for s in sc:
+                self._terminations.pop(s)
 
     def _match_scenario_ev(self, scenario):
         if isinstance(scenario, set):

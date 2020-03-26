@@ -351,6 +351,10 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
     def clear_unit_scores(self, lcia_method=None):
         self._archive.clear_unit_scores(lcia_method)
 
+    def clear_scenarios(self, terminations=True):
+        for f in self._archive.entities_by_type('fragment'):
+            f.clear_scenarios(terminations=terminations)
+
     def create_process_model(self, process, ref_flow=None, set_background=True, **kwargs):
         rx = process.reference(ref_flow)
         if process.reference_value(ref_flow) < 0:  # put in to handle Ecoinvent treatment processes

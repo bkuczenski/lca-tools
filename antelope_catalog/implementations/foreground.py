@@ -202,7 +202,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
             if cx is not None:
                 found_ref = cx
             else:
-                found_ref = self.get(term_ref)
+                found_ref = self.get('/'.join(filter(None, (origin, term_ref))))
                 ''' # this is now internal to get()
                 except EntityNotFound:
                     if origin is None:

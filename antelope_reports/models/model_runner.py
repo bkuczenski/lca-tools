@@ -236,19 +236,26 @@ class LcaModelRunner(object):
 
         return dto
 
-    def scenario_detatil_tbl(self, scenario, filename=None, column_order=None):
+    @property
+    def _qty_tuples(self):
+        for q in self.quantities:
+            if q.has_property('ShortName'):
+                yield q['ShortName'], q['Indicator'], q.unit()
+            else:
+                yield q['Name'], q['Indicator'], q.unit()
+
+    def scenario_detail_tbl(self, scenario, filename=None, column_order=None):
         dt = DataFrame(({k.entity: self._format(k.cumulative_result)
                          for k in self.result(scenario, l).aggregate(key=self._agg).components()}
-                        for l in self.quantities), index=MultiIndex.from_tuples((q['Name'], q['Indicator'])
-                                                                                for q in self.quantities))
+                        for l in self.quantities), index=MultiIndex.from_tuples(self._qty_tuples))
         return self._finish_dt_output(dt, column_order, filename)
 
     def scenario_summary_tbl(self, filename=None, column_order=None):
         if column_order is None:
-            column_order = self.scenarios
+            column_order = list(self.scenarios)
         dt = DataFrame(({k: self._format(self.result(k, l).total()) for k in column_order}
                         for l in self.quantities),
-                       index=MultiIndex.from_tuples((q['Name'], q['Indicator']) for q in self.quantities))
+                       index=MultiIndex.from_tuples(self._qty_tuples))
         return self._finish_dt_output(dt, column_order, filename)
 
     '''

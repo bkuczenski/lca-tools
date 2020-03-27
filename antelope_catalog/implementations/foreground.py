@@ -1,5 +1,3 @@
-from collections import defaultdict
-
 from lcatools.implementations import BasicImplementation
 from lcatools.interfaces import ForegroundInterface, CONTEXT_STATUS_, EntityNotFound, UnknownOrigin, comp_dir  # , BackgroundRequired
 
@@ -52,9 +50,13 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
      - exchange value
      - termination
     """
-    _count = 0
-    _frags_with_flow = defaultdict(set)
-    _recursion_check = None
+    #_count = 0
+    #_frags_with_flow = defaultdict(set)  # we actually want this to be shared among
+    #_recursion_check = None
+
+    def __init__(self, *args, **kwargs):
+        super(ForegroundImplementation, self).__init__(*args, **kwargs)
+        self._observations = []
 
     '''
     Add some useful functions from other interfaces to the foreground
@@ -255,7 +257,14 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
             if fragment.external_ref != name:
                 print('Naming fragment %s -> %s' % (fragment.external_ref, name))
                 self._archive.name_fragment(fragment, name, auto=auto, force=force)
+        if fragment not in self._observations:
+            self._observations.append(fragment)
         return fragment.link
+
+    @property
+    def observed_flows(self):
+        for k in self._observations:
+            yield k
 
     def fragments_with_flow(self, flow, direction=None, reference=None, background=None, **kwargs):
         """
@@ -492,7 +501,8 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
                         if term != c_up.term.term_node:
                             print('Updating %s termination %s' % (c_up, term))
                             c_up.clear_termination(scenario)
-                            c_up.terminate(term, scenario=scenario)
+                            if term.entity_type == 'fragment':
+                                c_up.terminate(term, scenario=scenario)
                             if term.entity_type == 'process' and set_background:
                                 c_up.set_background()
                     continue

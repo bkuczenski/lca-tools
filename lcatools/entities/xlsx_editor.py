@@ -210,6 +210,10 @@ class XlsxUpdater(object):
         return NotImplemented
 
     @property
+    def origin(self):
+        return NotImplemented
+
+    @property
     def qi(self):
         return NotImplemented
 
@@ -286,7 +290,7 @@ class XlsxUpdater(object):
                 value *= convert(qq, from_unit=unit)
 
             if self._merge == 'overwrite':
-                flow.characterize(qq, value=value, context=cx, overwrite=True)
+                flow.characterize(qq, value=value, context=cx, overwrite=True, origin=self.origin)
                 self._print('Characterizing %s: %g %s / %s' % (flow, value, qq.unit(), rq.unit()))
             else:
                 try:
@@ -354,17 +358,13 @@ class XlsxUpdater(object):
                 for k, v in rowdata.items():
                     if v is None:
                         continue
-                    if self._merge == 'defer':
-                        if ent.has_property(k):
+                    if ent.has_property(k):
+                        if self._merge == 'defer':
                             continue
-                        else:
-                            self._print('Updating %s[%s] -> %s' % (ent.external_ref, k, v))
-                            ent[k] = v
-                    else:
-                        if ent[k] == v:
+                        elif ent[k] == v:
                             continue
-                        self._print('Updating %s[%s] -> %s' % (ent.external_ref, k, v))
-                        ent[k] = v
+                    self._print('Updating %s[%s] -> %s' % (ent.external_ref, k, v))
+                    ent[k] = v
 
     def _print(self, *args):
         if self._quiet:
@@ -402,6 +402,10 @@ class XlsxArchiveUpdater(XlsxUpdater):
     @property
     def ar(self):
         return self._ar
+
+    @property
+    def origin(self):
+        return self.ar.ref
 
     @property
     def qi(self):

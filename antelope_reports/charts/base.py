@@ -45,13 +45,8 @@ def color_range(num, hue, sat=0.5):
 
 
 def hue_from_string(s, base=16):
-    try:
-        hue = int(s, base)
-    except ValueError:
-        base = 36
-        hue = int(s, base)
-    return hue / (hue**len(s))
-
+    hue = int(s, base)
+    return hue / (base**len(s))
 
 
 def _label_bar(patch, value=None, label=None, valueformat='%4.3g', labelformat='%s'):

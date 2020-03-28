@@ -250,15 +250,21 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
                 accept_all=None, **kwargs):
         if accept_all is not None:
             print('%s: cannot "accept all"' % fragment)
-        if exchange_value is None:
-            exchange_value = fragment.cached_ev  # do not expose accept_all via the interface; instead allow implicit
-        fragment.observe(scenario=scenario, value=exchange_value, units=units)
         if name is not None and scenario is None:  #
             if fragment.external_ref != name:
                 print('Naming fragment %s -> %s' % (fragment.external_ref, name))
                 self._archive.name_fragment(fragment, name, auto=auto, force=force)
-        if fragment not in self._observations:
-            self._observations.append(fragment)
+        if fragment.observable(scenario):
+            if fragment not in self._observations:
+                self._observations.append(fragment)
+            if exchange_value is None:
+                exchange_value = fragment.cached_ev  # do not expose accept_all via the interface; instead allow implicit
+            fragment.observe(scenario=scenario, value=exchange_value, units=units)
+        else:
+            if exchange_value is not None:
+                print('Note: Ignoring exchange value %g for unobservable fragment %s [%s]' % (exchange_value,
+                                                                                              fragment.external_ref,
+                                                                                              scenario))
         return fragment.link
 
     @property

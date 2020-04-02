@@ -171,50 +171,81 @@ class LcaModelRunner(object):
         return self._fmt % result
 
     results_headings = ['scenario', 'stage', 'method', 'category', 'indicator', 'result', 'units']
+    components_headings = ['scenario', 'stage', 'node', 'node_weight', 'ref_units', 'method', 'category', 'indicator', 'ind_units', 'unit_score']
 
     # tabular for all: accept *args as result items, go through them one by one
-    def results_to_csv(self, filename, scenarios=None, include_total=False):
+    def results_to_csv(self, filename, scenarios=None, components=False, **kwargs):
         if scenarios is None:
             scenarios = sorted(self.scenarios)
         else:
             known = list(self.scenarios)
             scenarios = list(filter(lambda x: x in known, scenarios))
+        if components:
+            headings = self.components_headings
+            agg = self._gen_component_entries
+        else:
+            headings = self.results_headings
+            agg = self._gen_aggregated_lcia_rows
         with open(filename, 'w') as fp:
-            cvf = csv.DictWriter(fp, self.results_headings, quoting=csv.QUOTE_NONNUMERIC, lineterminator='\n')
+            cvf = csv.DictWriter(fp, headings, quoting=csv.QUOTE_NONNUMERIC, lineterminator='\n')
             cvf.writeheader()
+
             for q in self.quantities:
                 for scenario in scenarios:
-                    res = self._results[scenario, q]
+                    for k in agg(scenario, q, **kwargs):
+                        cvf.writerow(k)
 
-                    try:
-                        method = q['method']
-                    except KeyError:
-                        method = ''
-                    try:
-                        category = q['category']
-                    except KeyError:
-                        category = q.name
-                    indicator = q['indicator']
-                    for c in sorted(res.aggregate(key=self._agg).components(), key=lambda x: x.entity):
-                        stage = c.entity
-                        result = c.cumulative_result
-                        d = {'scenario': str(scenario),
-                             'stage': stage,
-                             'method': method,
-                             'category': category,
-                             'indicator': indicator,
-                             'result': self._format(result)
-                             }
-                        cvf.writerow(d)
-                    if include_total:
-                        d = {'scenario': str(scenario),
-                             'stage': 'Net Total',
-                             'method': method,
-                             'category': category,
-                             'indicator': indicator,
-                             'result': self._format(res.total())
-                             }
-                        cvf.writerow(d)
+    @staticmethod
+    def _gen_row(q, k):
+        k['method'] = q.get('method') or ''
+        k['category'] = q.get('category') or q.name
+        k['indicator'] = q['indicator']
+        k['units'] = q.unit()
+        return k
+
+    def _gen_aggregated_lcia_rows(self, scenario, q, include_total=False):
+        res = self._results[scenario, q]
+        for c in sorted(res.aggregate(key=self._agg).components(), key=lambda x: x.entity):
+            stage = c.entity
+            result = c.cumulative_result
+            yield self._gen_row(q, {
+                'scenario': str(scenario),
+                'stage': stage,
+                'result': self._format(result)
+            })
+        if include_total:
+            yield self._gen_row(q, {
+                'scenario': str(scenario),
+                'stage': 'Net Total',
+                'result': self._format(res.total())
+                 })
+
+    def _gen_component_entries(self, scenario, q, _rec=None, include_total=False, expand=False):
+        if _rec is None:
+            _rec = self._results[scenario, q]
+        if include_total:
+            yield self._gen_row(q, {
+                'scenario': scenario,
+                'node': 'Net Total',
+                'node_weight': self._format(_rec.scale),
+                'ref_units': 'scale',
+                'unit_score': self._format(_rec.total() / _rec.scale)
+            })
+        for c in sorted(_rec.components(), key=self._agg):
+            if expand and not c.static:
+                # recurse
+                for y in self._gen_component_entries(q, scenario, _rec=c, expand=expand,
+                                                     include_total=False): # don't print subtotals in recursion
+                    yield y
+            else:
+                yield self._gen_row(q, {
+                    'scenario': scenario,
+                    'node': c.entity.name,
+                    'stage': self._agg(c),
+                    'node_weight': self._format(c.node_weight),  # every component MUST be a summary because agg scores don't show up in traversals
+                    'ref_units': c.entity.ref_unit,
+                    'unit_score': self._format(c.unit_score)  #
+                })
 
     def _finish_dt_output(self, dt, column_order, filename):
         """

@@ -317,6 +317,8 @@ class AggregateLciaScore(object):
     The Aggregate score is constructed either from individual LCIA Details (exchange value x characterization factor)
     or from summary results
     """
+    static = True
+
     def __init__(self, lc_result, entity):
         self.entity = entity
         self._lc = lc_result

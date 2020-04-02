@@ -164,20 +164,21 @@ class FragmentFlow(object):
         self.node_weight *= x
         self.magnitude *= x
 
-    def __str__(self):
+    @property
+    def name(self):
         if self.term.is_null:
-            term = '--:'
             name = self.fragment['Name']
         elif self.term.is_context:
-            term = '-= '
             name = '%s, %s' % (self.term.term_flow['Name'], self.term.term_node.name)
         else:
-            term = '-# '
             name = self.term.term_node.name
         if len(name) > 80:
             name = name[:62] + '....' + name[-14:]
+        return name
+
+    def __str__(self):
         return '%.5s  %10.3g [%6s] %s %s' % (self.fragment.uuid, self.node_weight, self.fragment.direction,
-                                             term, name)
+                                             self.term, self.name)
 
     def __add__(self, other):
         if isinstance(other, FragmentFlow):
@@ -229,6 +230,10 @@ class FragmentFlow(object):
 
     def to_antelope(self, fragmentID, stageID):
         pass
+
+    @property
+    def ref_unit(self):
+        return self.fragment.flow.unit()
 
 
 def group_ios(parent, ffs, include_ref_flow=True, passthru_threshold=0.33):

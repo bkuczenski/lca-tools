@@ -26,7 +26,7 @@ from .markets import make_routes, build_market_mix
 
 
 def build_study_foreground(study, lca, study_container='Study Container', logistics_container='Logistics Container',
-                           route_map=None, product_flow_map=None, logistics_map=None):
+                           route_map=None, product_flow_map=None, logistics_map=None, strict=True):
     """
     The study foreground consists of three nested container fragments, each of which implements one stage of LCA
     computation.
@@ -64,7 +64,7 @@ def build_study_foreground(study, lca, study_container='Study Container', logist
 
     # build node balance flows
     for tup in lca.lca_entities:
-        lca.fg.add_or_retrieve(*tup, strict=True)
+        lca.fg.add_or_retrieve(*tup, strict=strict)
 
     # build functional unit
     f_u = lca.functional_unit

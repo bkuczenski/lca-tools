@@ -223,6 +223,9 @@ class XlsxUpdater(object):
     def apply(self):
         raise NotImplementedError
 
+    def get_flow(self, flow):
+        return NotImplemented
+
     def get_context(self, cx):
         return NotImplemented
 
@@ -245,7 +248,7 @@ class XlsxUpdater(object):
         for row in range(1, fp.nrows):
             rowdata = {headers[i]: self._grab_value(k) for i, k in enumerate(fp.row(row))}
             try:
-                flow = self.ar.get(rowdata['flow'])
+                flow = self.get_flow(rowdata['flow'])
             except EntityNotFound:
                 self._print('Skipping unknown flow %s' % rowdata['flow'])
                 continue
@@ -421,6 +424,9 @@ class XlsxArchiveUpdater(XlsxUpdater):
         for etype in ('quantity', 'flow'):  # these are the only types that are currently handled
             self._process_sheet(etype)
         self._process_flow_properties()
+
+    def get_flow(self, flow):
+        return self.ar.get(flow)
 
     def get_context(self, cx):
         return self.ar.tm[cx]

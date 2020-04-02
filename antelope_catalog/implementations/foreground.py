@@ -61,9 +61,10 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
     '''
     Add some useful functions from other interfaces to the foreground
     '''
-    def get(self, external_ref, **kwargs):
+    def get_local(self, external_ref, **kwargs):
         """
         The special characteristic of a foreground is its access to the catalog-- so-- use it
+        lookup locally; fallback to catalog query- should make origin a kwarg
         :param external_ref:
         :param kwargs:
         :return:
@@ -204,7 +205,7 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
             if cx is not None:
                 found_ref = cx
             else:
-                found_ref = self.get('/'.join(filter(None, (origin, term_ref))))
+                found_ref = self.get_local('/'.join(filter(None, (origin, term_ref))))
                 ''' # this is now internal to get()
                 except EntityNotFound:
                     if origin is None:
@@ -233,7 +234,10 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
         :return:
         """
         if isinstance(flow, str):
-            f = self.get(flow)
+            try:
+                f = self.get(flow)
+            except EntityNotFound:
+                f = self.get_local(flow)
             if f.entity_type != 'flow':
                 raise TypeError('%s is not a flow' % flow)
             flow = f

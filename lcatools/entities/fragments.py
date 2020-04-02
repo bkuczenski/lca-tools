@@ -174,7 +174,7 @@ class LcFragment(LcEntity):
         if parent is not None:
             self.set_parent(parent)
 
-        assert flow.entity_type == 'flow'
+        assert flow.entity_type == 'flow', '%s %s' % (flow.entity_type, flow.link)
         self.flow = flow
         self.direction = check_direction(direction)  # w.r.t. parent
 

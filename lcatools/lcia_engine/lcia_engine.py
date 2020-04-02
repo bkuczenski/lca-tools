@@ -304,17 +304,15 @@ class LciaEngine(TermManager):
         if hasattr(self._factors_for_later[qq], 'factors'):
             self.import_cfs(self._factors_for_later.pop(qq))
 
-    def _find_exact_cf(self, qq, fb, cx, origin):
+    def _find_exact_cf(self, qq, fb, cx, origin, flowable):
         try:
             ql = self._qlookup(qq, fb)
         except NoFQEntry:
             return None
         # cfs = ql._context_origin(cx, origin=origin)
         if fb == self._fm['water']:
-            dist = 1  # need to look for subcompartments
-        else:
-            dist = 0
-        cfs = ql.find(cx, dist=dist, origin=origin)  # sliiiiightly slower but much better readability
+            cx = self.add_subcontext(cx, 'flow', flowable)
+        cfs = ql.find(cx, dist=0, origin=origin)  # sliiiiightly slower but much better readability
         if len(cfs) > 0:
             if len(cfs) > 1:  # can only happen if qq's origin is None ??
                 try:

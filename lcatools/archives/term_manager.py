@@ -439,7 +439,7 @@ class TermManager(object):
         except KeyError:
             qq = self.add_quantity(query_quantity)
 
-        cf = self._find_exact_cf(qq, fb, cx, origin)
+        cf = self._find_exact_cf(qq, fb, cx, origin, flowable)
 
         if cf is None:
             # create our new Characterization with the provided flowable, not the detected flowable
@@ -464,7 +464,7 @@ class TermManager(object):
     '''
     Info Retrieval
     '''
-    def _find_exact_cf(self, qq, fb, cx, origin):
+    def _find_exact_cf(self, qq, fb, cx, origin, flowable):
         """
         The purpose of this function is to retrieve an exact CF if one exists.
         WHY does this not take rq into account??
@@ -474,6 +474,7 @@ class TermManager(object):
         :param fb:
         :param cx:
         :param origin:
+        :param flowable: using this in subclass
         :return:
         """
         try:

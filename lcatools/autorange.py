@@ -51,6 +51,9 @@ class AutoRange(object):
         :param rng:
         """
         self._range = abs(rng)
+        if self._range == 0:
+            print('Warning: autorange initialized with 0 range; using 1')
+            self._range = 1
         self._shift = 0
         self._set_shift()
 

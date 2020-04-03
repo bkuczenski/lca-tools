@@ -290,7 +290,15 @@ class LciaEngine(TermManager):
             try:
                 fb = self._fm[cf.flowable]
             except KeyError:
-                fb = self._create_flowable(cf.flowable)
+                if cf.flowable.find('/') > 0:
+                    # split origin off if the flowable is a link
+                    fb_extref = cf.flowable.split('/', maxsplit=1)[1]
+                    try:
+                        fb = self._fm[fb_extref]
+                    except KeyError:
+                        fb = self._create_flowable(cf.flowable)
+                else:
+                    fb = self._create_flowable(cf.flowable)
 
             self.add_quantity(cf.ref_quantity)  # this may lead to the creation of non-converting quantities if units mismatch
 

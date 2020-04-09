@@ -786,6 +786,8 @@ class LcFragment(LcEntity):
         A balance flow balances its own reference quantity.
         :return:
         """
+        if self.reference_entity is None:
+            raise InvalidParentChild('Reference flow cannot be a balance flow')
         if self.is_balance is False:
             self.reference_entity.set_conserved_quantity(self)
             self._is_balance = True

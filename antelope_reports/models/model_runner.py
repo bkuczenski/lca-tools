@@ -170,22 +170,36 @@ class LcaModelRunner(object):
             return result
         return self._fmt % result
 
+    def _csv_formatter(self, style):
+        """
+        Specifies how the rows should be constructed for the CSV result writer.
+        Designed to be subclassed so that mix-ins can provide new output styles.  The proper way to do this is to
+        define a method named '_csv_format_%s' % style which returns: (header_list, row_generator)
+        The row_generator method should take as argument (scenario, quantity, **kwargs) and yield a dict whose keys are
+        a subset of header_list and whose values are written into the file.
+
+        Note: in practice it takes a lot of gymnastics to be able to take advantage of this (e.g. to debug /alter csv
+        reports without exiting the session.
+        :param style:
+        :return:
+        """
+        st_name = '_csv_format_%s' % style
+        if hasattr(self, st_name):
+            return getattr(self, st_name)()
+        return self.results_headings, self._gen_aggregated_lcia_rows
+
     results_headings = ['scenario', 'stage', 'method', 'category', 'indicator', 'result', 'units']
-    components_headings = ['scenario', 'stage', 'node', 'node_weight', 'ref_units', 'method', 'category', 'indicator', 'ind_units', 'unit_score']
 
     # tabular for all: accept *args as result items, go through them one by one
-    def results_to_csv(self, filename, scenarios=None, components=False, **kwargs):
+    def results_to_csv(self, filename, scenarios=None, style=None, **kwargs):
         if scenarios is None:
             scenarios = sorted(self.scenarios)
         else:
             known = list(self.scenarios)
             scenarios = list(filter(lambda x: x in known, scenarios))
-        if components:
-            headings = self.components_headings
-            agg = self._gen_component_entries
-        else:
-            headings = self.results_headings
-            agg = self._gen_aggregated_lcia_rows
+
+        headings, agg = self._csv_formatter(style)
+
         with open(filename, 'w') as fp:
             cvf = csv.DictWriter(fp, headings, quoting=csv.QUOTE_NONNUMERIC, lineterminator='\n')
             cvf.writeheader()
@@ -219,33 +233,6 @@ class LcaModelRunner(object):
                 'stage': 'Net Total',
                 'result': self._format(res.total())
                  })
-
-    def _gen_component_entries(self, scenario, q, _rec=None, include_total=False, expand=False):
-        if _rec is None:
-            _rec = self._results[scenario, q]
-        if include_total:
-            yield self._gen_row(q, {
-                'scenario': scenario,
-                'node': 'Net Total',
-                'node_weight': self._format(_rec.scale),
-                'ref_units': 'scale',
-                'unit_score': self._format(_rec.total() / _rec.scale)
-            })
-        for c in sorted(_rec.components(), key=self._agg):
-            if expand and not c.static:
-                # recurse
-                for y in self._gen_component_entries(q, scenario, _rec=c, expand=expand,
-                                                     include_total=False): # don't print subtotals in recursion
-                    yield y
-            else:
-                yield self._gen_row(q, {
-                    'scenario': scenario,
-                    'node': c.entity.name,
-                    'stage': self._agg(c),
-                    'node_weight': self._format(c.node_weight),  # every component MUST be a summary because agg scores don't show up in traversals
-                    'ref_units': c.entity.ref_unit,
-                    'unit_score': self._format(c.unit_score)  #
-                })
 
     def _finish_dt_output(self, dt, column_order, filename):
         """

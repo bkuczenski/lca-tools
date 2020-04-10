@@ -267,12 +267,12 @@ class SummaryLciaResult(object):
         if self.static:
             if other.static:
                 # either the node weights or the unit scores must be equal
-                if self.node_weight == other.node_weight:
-                    _node_weight = self._node_weight
-                    unit_score = self._static_value + other.unit_score
-                elif self.unit_score == other.unit_score:
+                if self.unit_score == other.unit_score:  # make node weights add preferentially
                     unit_score = self.unit_score
                     _node_weight = self._node_weight + (other.node_weight / self._lc.scale)
+                elif self.node_weight == other.node_weight:
+                    _node_weight = self._node_weight
+                    unit_score = self._static_value + other.unit_score
                 else:
                     raise InconsistentScores('These summaries do not add together:\n%s\n%s' % (self, other))
             else:

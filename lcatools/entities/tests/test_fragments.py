@@ -117,6 +117,7 @@ fp = new_flow('A private flow', 'price')
 a1_vol = 10
 a1_mj_in = 19
 a1_addl = 0.88
+a1_addl_obs = 0.76
 # a1 scenarios
 a1_mj_optimistic = a1_mj_in * 0.75
 a1_surplus_addl = 1.11
@@ -148,21 +149,24 @@ class FragmentTests(unittest.TestCase):
         :return:
         """
         cls.a1 = new_fragment(f1, 'Output', Name='A Production Process')
-        cls.a2 = new_fragment(f3, 'Output', value=a2_kwh, units='kWh', Name='A conserving energy conversion process')
+        cls.a2 = new_fragment(f3, 'Output', value=a2_kwh, units='kWh', Name='A conserving energy conversion process', observe=True)
         cls.af = new_fragment(f4, 'Output', Name='A fuel supply process')
         cls.aa = new_fragment(f7, 'Output', Name='An auto-consumption process')
 
         afg = new_fragment(f4, 'Input', parent=cls.af, balance=True, Name='Internal fuel supply')
         afg.to_foreground()  # in the wild, this would be terminated and not show up as an IO-- fg emulates that
 
-        new_fragment(f2, 'Input', parent=cls.a1, value=a1_vol)
-        a3 = new_fragment(f3, 'Input', parent=cls.a1, value=a1_mj_in)
+        new_fragment(f2, 'Input', parent=cls.a1, value=a1_vol)  # not observed
+        a3 = new_fragment(f3, 'Input', parent=cls.a1, value=a1_mj_in, observe=True)
         a3.set_exchange_value('optimistic', a1_mj_optimistic)
         a3.terminate(cls.a2, descend=False)
 
         new_fragment(f7, 'Input', parent=a3)
         new_fragment(f5, 'Input', parent=cls.a1, balance=True).terminate(cls.af, term_flow=f4)  # to be run negated
-        new_fragment(f4, 'Input', parent=cls.a1, value=a1_addl).set_exchange_value('surplus', a1_surplus_addl)
+        aq = new_fragment(f4, 'Input', parent=cls.a1, value=a1_addl)
+        aq.observe(value=a1_addl_obs)
+        aq.observe(a1_surplus_addl, scenario='surplus')
+
 
         '''a1
            -<--O   70a01 [       1 kg] A Production Process
@@ -202,8 +206,8 @@ class FragmentTests(unittest.TestCase):
         '''
         # make an alternate energy supply fragment to test scenario terminations
         cls.a2_alt = new_fragment(f3, 'Output', Name='An alternate energy conversion process')
-        new_fragment(f4, 'Input', parent=cls.a2_alt, value=a2_alt_fuel)
-        new_fragment(f8, 'Input', parent=cls.a2_alt, value=a2_alt_tx)
+        new_fragment(f4, 'Input', parent=cls.a2_alt, value=a2_alt_fuel, observe=True)
+        new_fragment(f8, 'Input', parent=cls.a2_alt, value=a2_alt_tx, observe=True)
         '''a2_alt
            -<--O   db333 [       1 MJ] An alternate energy conversion process
             [   1 unit] An alternate energy conversion process
@@ -217,8 +221,8 @@ class FragmentTests(unittest.TestCase):
 
         a3.terminate(cls.a2_alt, scenario='improvement', descend=True)
 
-        new_fragment(f5, 'Input', parent=cls.aa, value=aa_in)
-        ac = new_fragment(f3, 'Input', value=aa_mj_in, parent=cls.aa)
+        new_fragment(f5, 'Input', parent=cls.aa, value=aa_in, observe=True)
+        ac = new_fragment(f3, 'Input', value=aa_mj_in, parent=cls.aa, observe=True)
         new_fragment(f4, 'Output', parent=cls.aa, balance=True).terminate(cls.af)  # to be run in reverse
         ac.terminate(cls.a2)
         ac.terminate(cls.a2, scenario='nondescend', descend=False)  # to be run in reverse
@@ -323,14 +327,15 @@ class FragmentTests(unittest.TestCase):
         a2 is auto-observed to apply cached values as observed values throughout.
         :return:
         """
-        ff1 = self.a1.traverse()
-        ff1o = self.a1.traverse(observed=True)
-        ff2 = self.a2.traverse()
-        ff2o = self.a2.traverse(observed=True)
+        ff1 = self.a1.inventory()
+        ff1o = self.a1.inventory(observed=True)
+        ff2 = self.a2.inventory()
+        ff2o = self.a2.inventory(observed=True)
         self.assertEqual(ff2, ff2o)
         self.assertNotEqual(ff1, ff1o)
-        fbal = next(f for f in ff1o if f.fragment is self.a1.balance_flow)
-        self.assertEqual(fbal.magnitude, self.a1.exchange_value())  # balance flow should get full amount
+        ff1t = self.a1.traverse(observed=True)
+        fbal = next(f for f in ff1t if f.fragment is self.a1.balance_flow)
+        self.assertEqual(fbal.magnitude, self.a1.exchange_value() - a1_addl_obs)
 
     def test_scenarios_detection(self):
         self.assertSetEqual({k for k in self.a1.scenarios()}, {'surplus', 'optimistic', 'improvement', 'efficiency'})
@@ -455,7 +460,7 @@ class FragmentTests(unittest.TestCase):
         :return:
         """
         self.assertNotIn('moriarty', [k for k in self.a1.scenarios()])
-        ffs = self.a1.traverse()
+        ffs = self.a1.traverse(observed=True)
         ffs_m = self.a1.traverse('moriarty')
         self.assertEqual(ffs, ffs_m)
 
@@ -471,7 +476,7 @@ class FragmentTests(unittest.TestCase):
         ff_o_e = self.a1.traverse({'optimistic', 'efficiency'})
         expected_item = (a1_mj_optimistic / self.a2.exchange_value()) * (a2_eff_private * a2_item)
         self._check_fragmentflows(ff_o_e, f7, 'Input', expected_item)
-        self._check_fragmentflows(ff_o_e, f5, 'Input', 1-a1_addl)
+        self._check_fragmentflows(ff_o_e, f5, 'Input', 1-a1_addl_obs)
 
         ff_o_s_e = self.a1.traverse({'optimistic', 'surplus', 'efficiency'})
         self._check_fragmentflows(ff_o_s_e, f7, 'Input', expected_item)

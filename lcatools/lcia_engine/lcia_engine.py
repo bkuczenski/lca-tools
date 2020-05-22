@@ -50,6 +50,9 @@ class LciaEngine(TermManager):
         When overriding this function, place the super() call between pre-load and post-load activities.
         :return:
         """
+        # FlowablesDict-- mainly to upsample CAS numbers for matching
+        self._fm = FlowablesDict()
+
         self._fm.new_entry('carbon dioxide', '124-38-9')
         self._fm.new_entry('Water', '7732-18-5')
         # we store the child object and use it to signify biogenic CO2 to optionally quell
@@ -84,8 +87,7 @@ class LciaEngine(TermManager):
             flowables = DEFAULT_FLOWABLES
         super(LciaEngine, self).__init__(contexts=contexts, flowables=None, quantities=quantities, **kwargs)
 
-        # override flowables manager with FlowablesDict-- mainly to upsample CAS numbers for matching
-        self._fm = FlowablesDict()
+        # override flowables manager
         self._configure_flowables(flowables)
 
         # the CF lookup: allow hierarchical traversal over compartments [or, um, use a graph db..]

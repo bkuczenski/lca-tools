@@ -321,7 +321,7 @@ class XlsxUpdater(object):
         """
         if sheetname in self._xl.sheet_names():
             sh = self._xl.sheet_by_name(sheetname)
-        elif self._vn[sheetname] in self._xl.sheet_names():
+        elif sheetname in self._vn and self._vn[sheetname] in self._xl.sheet_names():
             sheetname = self._vn[sheetname]
             sh = self._xl.sheet_by_name(sheetname)
         else:

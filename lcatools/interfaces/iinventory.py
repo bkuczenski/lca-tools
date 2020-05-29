@@ -14,7 +14,9 @@ class ExchangeRef(object):
     Codifies the information required to define an exchange.  The supplied information could be either object or
     reference/link; it isn't specified.
     """
-    def __init__(self, process, flow, direction, value=0, unit=None, termination=None, **kwargs):
+    is_reference = False
+
+    def __init__(self, process, flow, direction, value=0, unit=None, termination=None, reference=None, **kwargs):
         """
 
         :param process:
@@ -36,6 +38,8 @@ class ExchangeRef(object):
         self._unit = unit
         self._term = termination
         self.args = kwargs
+        if reference is not None:
+            self.is_reference = bool(reference)
 
     @property
     def process(self):

@@ -303,6 +303,9 @@ class FragmentTests(unittest.TestCase):
     def test_unobserved_traversal(self):
         """
         A simple unobserved traversal should just result in cached evs for observable flows, properly computed balance
+        Note: these tests rely on the behavior that LcFragment.traverse() by default uses cached (not observed) EVs
+        This contrasts with traversal via the foreground interface, which uses observed EVs by default
+
         :return:
         """
         ffuobs = [ff for ff in self.a1.traverse() if ff.fragment.reference_entity is self.a1]
@@ -325,6 +328,9 @@ class FragmentTests(unittest.TestCase):
         An unobserved traversal should use the cached values (i.e. defined at creation) whereas an observed traversal
         should use the modeler's observed values, which default to zero.  Fragment a1 is not observed whereas fragment
         a2 is auto-observed to apply cached values as observed values throughout.
+        Note: these tests rely on the behavior that LcFragment.traverse() by default uses cached (not observed) EVs
+        This contrasts with traversal via the foreground interface, which uses observed EVs by default
+
         :return:
         """
         ff1 = self.a1.inventory()

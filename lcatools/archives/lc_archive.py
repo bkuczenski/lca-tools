@@ -6,7 +6,7 @@ from __future__ import print_function, unicode_literals
 
 
 from ..entities import LcProcess
-from ..implementations import InventoryImplementation, BackgroundImplementation, LcConfigureImplementation
+from ..implementations import ExchangeImplementation, BackgroundImplementation, LcConfigureImplementation
 from .basic_archive import BasicArchive, BASIC_ENTITY_TYPES
 from lcatools.interfaces import LcQuery
 
@@ -29,7 +29,7 @@ class LcArchive(BasicArchive):
 
     def make_interface(self, iface):
         if iface == 'inventory':
-            return InventoryImplementation(self)
+            return ExchangeImplementation(self)
         elif iface == 'background':
             return BackgroundImplementation(self)
         elif iface == 'configure':

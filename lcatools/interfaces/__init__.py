@@ -8,12 +8,14 @@ resource of some kind.  The interfaces must be instantiated in order to be used.
 from .abstract_query import UnknownOrigin, PrivateArchive, EntityNotFound
 
 from .iconfigure import ConfigureInterface
-from .iinventory import InventoryInterface, InventoryRequired, ExchangeRef
+from .iexchange import ExchangeInterface, ExchangeRequired, ExchangeRef
 from .iindex import IndexInterface, IndexRequired, directions, comp_dir, check_direction, valid_sense
 from .ibackground import BackgroundInterface, BackgroundRequired
 from .iquantity import QuantityInterface, QuantityRequired, NoFactorsFound, ConversionReferenceMismatch, FlowableMismatch
 
 from .iforeground import ForegroundInterface, ForegroundRequired
+
+from .flow_interface import FlowInterface
 
 from os.path import splitext
 
@@ -28,7 +30,7 @@ class PropertyExists(Exception):
 Query classes
 '''
 
-class BasicQuery(IndexInterface, InventoryInterface, QuantityInterface):
+class BasicQuery(IndexInterface, ExchangeInterface, QuantityInterface):
     def __init__(self, archive, debug=False):
         self._archive = archive
         self._dbg = debug

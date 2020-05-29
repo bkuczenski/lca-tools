@@ -5,7 +5,7 @@ import uuid
 
 from collections import defaultdict
 
-from ..interfaces import InventoryRequired
+from ..interfaces import ExchangeRequired
 
 from lcatools.entities.entities import LcEntity
 from lcatools.exchanges import Exchange, ExchangeValue, DuplicateExchangeError, AmbiguousReferenceError
@@ -54,7 +54,7 @@ class RxRef(object):
         self._hash = hash((process_ref, flow.external_ref, direction, None))
         self._comment = comment
         # self._is_alloc = process.is_allocated(self)
-        self._cached_value = None
+        self._cached_value = None  # this is currently unused and should be unsupported
 
     @property
     def process(self):
@@ -96,7 +96,7 @@ class RxRef(object):
                 return None
         return self._cached_value
         '''
-        raise InventoryRequired("Let's go back to being cautious about this")
+        raise ExchangeRequired("Let's go back to being cautious about this")
 
     @property
     def termination(self):

@@ -1,8 +1,8 @@
 from .basic import BasicImplementation
-from ..interfaces import InventoryInterface
+from ..interfaces import ExchangeInterface
 
 
-class InventoryImplementation(BasicImplementation, InventoryInterface):
+class ExchangeImplementation(BasicImplementation, ExchangeInterface):
     """
     This provides access to detailed exchange values and computes the exchange relation.
     Creates no additional requirements on the archive.

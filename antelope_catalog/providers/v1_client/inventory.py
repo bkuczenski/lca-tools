@@ -1,6 +1,6 @@
 from math import isclose
 
-from lcatools.implementations import InventoryImplementation
+from lcatools.implementations import ExchangeImplementation
 from lcatools.interfaces import EntityNotFound
 
 from lcatools.exchanges import ExchangeValue
@@ -27,7 +27,7 @@ class FragmentFlowProxy(object):
         return '%s %s' % (self.external_ref, self.entity_type)
 
 
-class AntelopeInventoryImplementation(InventoryImplementation):
+class AntelopeInventoryImplementation(ExchangeImplementation):
     """
     Overrides the default implementation to handle the AntelopeV1 case
     """

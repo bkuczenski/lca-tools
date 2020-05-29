@@ -4,10 +4,10 @@ can also be upgraded to an LciaEngine, which extends the synonymization strategy
 """
 from .basic import BasicImplementation
 from ..characterizations import QRResult
-from ..interfaces import QuantityInterface, NoFactorsFound, ConversionReferenceMismatch, EntityNotFound  # , FlowableMismatch
+from ..interfaces import QuantityInterface, NoFactorsFound, ConversionReferenceMismatch, EntityNotFound, FlowInterface
 from ..contexts import NullContext
 from ..lcia_results import LciaResult
-from ..entity_refs import FlowInterface, convert, NoUnitConversionTable
+from ..entity_refs import convert, NoUnitConversionTable
 
 
 class RefQuantityRequired(Exception):

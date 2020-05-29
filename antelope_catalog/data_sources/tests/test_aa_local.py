@@ -18,6 +18,7 @@ import json
 
 from ..local import CATALOG_ROOT, RESOURCES_CONFIG
 from ...catalog import LcCatalog
+from ...catalog_query import zap_inventory
 
 resource_dir = os.path.join(CATALOG_ROOT, 'resources')
 
@@ -99,6 +100,7 @@ class LocalCatalog(unittest.TestCase):
         for k, s in self._configs.items():
             for ref in s.references:
                 for iface in s.interfaces(ref):
+                    iface = zap_inventory(iface, warn=False)
                     res = self._cat.get_resource(ref, iface, strict=True)
                     print(res)
                     res.check(self._cat)

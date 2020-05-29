@@ -12,6 +12,7 @@ def zap_inventory(interface, warn=False):
     if interface == 'inventory':
         if warn:
             print('# # # # # # # # # **** Warning: use exchange over inventory ***** # # # # # # # # #')
+            raise AttributeError
         return 'exchange'
     return interface
 

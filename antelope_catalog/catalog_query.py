@@ -93,7 +93,7 @@ class CatalogQuery(IndexInterface, BackgroundInterface, ExchangeInterface, Quant
         :return:
         """
         if eid not in self._entity_cache:
-            entity = self._perform_query(None, 'get', EntityNotFound('%s/%s' % (self.origin, eid)), eid,
+            entity = self._perform_query(None, 'get', EntityNotFound, eid,
                                          **kwargs)
             self._entity_cache[eid] = self.make_ref(entity)
         return self._entity_cache[eid]

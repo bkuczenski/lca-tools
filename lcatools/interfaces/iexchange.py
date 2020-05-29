@@ -108,7 +108,7 @@ class ExchangeInterface(AbstractQuery):
         :return:
         """
         return self._perform_query(_interface, 'exchanges',
-                                   ExchangeRequired('No access to exchange data'), process, **kwargs)
+                                   ExchangeRequired, process, **kwargs)
 
     def exchange_values(self, process, flow, direction=None, termination=None, reference=None, **kwargs):
         """
@@ -121,7 +121,7 @@ class ExchangeInterface(AbstractQuery):
         :return:
         """
         return self._perform_query(_interface, 'exchange_values',
-                                   ExchangeRequired('No access to exchange data'),
+                                   ExchangeRequired,
                                    process, flow, direction=direction, termination=termination, reference=reference,
                                    **kwargs)
 
@@ -148,7 +148,7 @@ class ExchangeInterface(AbstractQuery):
         :param scenario: used only for fragments
         :return:
         """
-        return self._perform_query(_interface, 'inventory', ExchangeRequired('No access to exchange data'),
+        return self._perform_query(_interface, 'inventory', ExchangeRequired,
                                    process, ref_flow=ref_flow, scenario=scenario, **kwargs)
 
     def exchange_relation(self, process, ref_flow, exch_flow, direction, termination=None, **kwargs):
@@ -162,7 +162,7 @@ class ExchangeInterface(AbstractQuery):
         :param termination:
         :return:
         """
-        return self._perform_query(_interface, 'exchange_relation', ExchangeRequired('No access to exchange data'),
+        return self._perform_query(_interface, 'exchange_relation', ExchangeRequired,
                                    process, ref_flow, exch_flow, direction, termination=termination, **kwargs)
 
     def lcia(self, process, ref_flow, quantity_ref, **kwargs):
@@ -174,7 +174,7 @@ class ExchangeInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'lcia', ExchangeRequired('No access to exchange data'),
+        return self._perform_query(_interface, 'lcia', ExchangeRequired,
                                    process, ref_flow, quantity_ref, **kwargs)
 
     def traverse(self, fragment, scenario=None, **kwargs):
@@ -185,7 +185,7 @@ class ExchangeInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'traverse', ExchangeRequired('No access to fragment data'),
+        return self._perform_query(_interface, 'traverse', ExchangeRequired,
                                    fragment, scenario, **kwargs)
 
     def fragment_lcia(self, fragment, quantity_ref, scenario=None, **kwargs):
@@ -198,5 +198,5 @@ class ExchangeInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'fragment_lcia', ExchangeRequired('No access to fragment data'),
+        return self._perform_query(_interface, 'fragment_lcia', ExchangeRequired,
                                    fragment, quantity_ref, scenario, **kwargs)

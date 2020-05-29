@@ -20,7 +20,7 @@ class ConfigureInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'check_config', ConfigRequired('Configuration Interface required'),
+        return self._perform_query(_interface, 'check_config', ConfigRequired,
                                    config, c_args, **kwargs)
 
     def add_terms(self, term_type, *terms, **kwargs):
@@ -60,7 +60,7 @@ class ConfigureInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'set_reference', ConfigRequired('Configuration Interface required'),
+        return self._perform_query(_interface, 'set_reference', ConfigRequired,
                                    process_ref, flow_ref, direction, **kwargs)
 
     def unset_reference(self, process_ref, flow_ref, direction=None, **kwargs):
@@ -73,7 +73,7 @@ class ConfigureInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'unset_reference', ConfigRequired('Configuration Interface required'),
+        return self._perform_query(_interface, 'unset_reference', ConfigRequired,
                                    process_ref, flow_ref, direction, **kwargs)
 
     def characterize_flow(self, flow_ref, quantity_ref, value, location='GLO', **kwargs):
@@ -88,7 +88,7 @@ class ConfigureInterface(AbstractQuery):
         :return:
         """
         return self._perform_query(_interface, 'characterize_flow',
-                                   ConfigRequired('Configuration Interface required'),
+                                   ConfigRequired,
                                    flow_ref, quantity_ref, value, location, **kwargs)
 
     def allocate_by_quantity(self, process_ref, quantity_ref, **kwargs):
@@ -100,5 +100,5 @@ class ConfigureInterface(AbstractQuery):
         :return:
         """
         return self._perform_query(_interface, 'allocate_by_quantity',
-                                   ConfigRequired('Configuration Interface required'),
+                                   ConfigRequired,
                                    process_ref, quantity_ref, **kwargs)

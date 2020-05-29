@@ -69,7 +69,7 @@ class IndexInterface(AbstractQuery):
         :param kwargs:
         :return: int
         """
-        return self._perform_query(_interface, 'count', IndexRequired('Index access required'), entity_type, **kwargs)
+        return self._perform_query(_interface, 'count', IndexRequired, entity_type, **kwargs)
 
     def processes(self, **kwargs):
         """
@@ -77,7 +77,7 @@ class IndexInterface(AbstractQuery):
         :param kwargs: keyword search
         :return:
         """
-        for i in self._perform_query(_interface, 'processes', IndexRequired('Index access required'), **kwargs):
+        for i in self._perform_query(_interface, 'processes', IndexRequired, **kwargs):
             yield self.make_ref(i)
 
     def flows(self, **kwargs):
@@ -86,7 +86,7 @@ class IndexInterface(AbstractQuery):
         :param kwargs: keyword search
         :return:
         """
-        for i in self._perform_query(_interface, 'flows', IndexRequired('Index access required'), **kwargs):
+        for i in self._perform_query(_interface, 'flows', IndexRequired, **kwargs):
             yield self.make_ref(i)
 
     def synonyms(self, item, **kwargs):
@@ -95,7 +95,7 @@ class IndexInterface(AbstractQuery):
         :param item:
         :return: list of strings
         """
-        return self._perform_query(_interface, 'synonyms', IndexRequired('Index interface required'), item,
+        return self._perform_query(_interface, 'synonyms', IndexRequired, item,
                                    ** kwargs)
 
     def flowables(self, **kwargs):
@@ -104,7 +104,7 @@ class IndexInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'flowables', IndexRequired('Index interface required'),
+        return self._perform_query(_interface, 'flowables', IndexRequired,
                                    ** kwargs)
 
     def contexts(self, **kwargs):
@@ -113,7 +113,7 @@ class IndexInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'contexts', IndexRequired('Index interface required'),
+        return self._perform_query(_interface, 'contexts', IndexRequired,
                                    ** kwargs)
 
     def get_context(self, term, **kwargs):
@@ -123,7 +123,7 @@ class IndexInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'get_context', IndexRequired('Index interface required'),
+        return self._perform_query(_interface, 'get_context', IndexRequired,
                                    term, ** kwargs)
 
     def quantities(self, **kwargs):
@@ -132,7 +132,7 @@ class IndexInterface(AbstractQuery):
         :param kwargs: keyword search
         :return:
         """
-        for i in self._perform_query(_interface, 'quantities', IndexRequired('Index access required'), **kwargs):
+        for i in self._perform_query(_interface, 'quantities', IndexRequired, **kwargs):
             yield self.make_ref(i)
 
     def lcia_methods(self, **kwargs):
@@ -156,7 +156,7 @@ class IndexInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'unmatched_flows', IndexRequired('Index interface required'),
+        return self._perform_query(_interface, 'unmatched_flows', IndexRequired,
                                    flows, **kwargs)
 
     def terminate(self, flow, direction=None, **kwargs):
@@ -166,7 +166,7 @@ class IndexInterface(AbstractQuery):
         :param direction: if omitted, return all processes having the given flow as reference, regardless of direction
         :return:
         """
-        for i in self._perform_query(_interface, 'terminate', IndexRequired('Index access required'),
+        for i in self._perform_query(_interface, 'terminate', IndexRequired,
                                      flow, direction=direction, **kwargs):
             yield self.make_ref(i)
 

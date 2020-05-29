@@ -48,7 +48,7 @@ class BackgroundInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'check_bg', BackgroundRequired('Background required'),
+        return self._perform_query(_interface, 'check_bg', BackgroundRequired,
                                    reset=reset, **kwargs)
 
     def foreground_flows(self, search=None, **kwargs):
@@ -59,7 +59,7 @@ class BackgroundInterface(AbstractQuery):
         :param search:
         :return: ProductFlows (should be ref-ized somehow)
         """
-        return self._perform_query(_interface, 'foreground_flows', BackgroundRequired('No knowledge of background'),
+        return self._perform_query(_interface, 'foreground_flows', BackgroundRequired,
                                    search=search, **kwargs)
 
     def background_flows(self, search=None, **kwargs):
@@ -70,7 +70,7 @@ class BackgroundInterface(AbstractQuery):
         :param search:
         :return: ProductFlows (should be ref-ized somehow)
         """
-        return self._perform_query(_interface, 'background_flows', BackgroundRequired('No knowledge of background'),
+        return self._perform_query(_interface, 'background_flows', BackgroundRequired,
                                    search=search, **kwargs)
 
     def exterior_flows(self, direction=None, search=None, **kwargs):
@@ -82,7 +82,7 @@ class BackgroundInterface(AbstractQuery):
         :param search:
         :return: ExteriorFlows
         """
-        return self._perform_query(_interface, 'exterior_flows', BackgroundRequired('No knowledge of background'),
+        return self._perform_query(_interface, 'exterior_flows', BackgroundRequired,
                                    search=search, **kwargs)
 
     def cutoffs(self, direction=None, search=None, **kwargs):
@@ -106,7 +106,7 @@ class BackgroundInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'consumers', BackgroundRequired('Background matrix required'),
+        return self._perform_query(_interface, 'consumers', BackgroundRequired,
                                    process, ref_flow=ref_flow, **kwargs)
 
     def dependencies(self, process, ref_flow=None, **kwargs):
@@ -117,7 +117,7 @@ class BackgroundInterface(AbstractQuery):
         :param ref_flow:
         :return:
         """
-        return self._perform_query(_interface, 'dependencies', BackgroundRequired('No knowledge of background'),
+        return self._perform_query(_interface, 'dependencies', BackgroundRequired,
                                    process, ref_flow=ref_flow, **kwargs)
 
     def emissions(self, process, ref_flow=None, **kwargs):
@@ -128,7 +128,7 @@ class BackgroundInterface(AbstractQuery):
         :param ref_flow:
         :return:
         """
-        return self._perform_query(_interface, 'emissions', BackgroundRequired('No knowledge of background'),
+        return self._perform_query(_interface, 'emissions', BackgroundRequired,
                                    process, ref_flow=ref_flow, **kwargs)
 
     def foreground(self, process, ref_flow=None, **kwargs):
@@ -140,7 +140,7 @@ class BackgroundInterface(AbstractQuery):
         :param ref_flow:
         :return:
         """
-        return self._perform_query(_interface, 'foreground', BackgroundRequired('No knowledge of background'),
+        return self._perform_query(_interface, 'foreground', BackgroundRequired,
                                    process, ref_flow=ref_flow, **kwargs)
 
     def is_in_scc(self, process, ref_flow=None, **kwargs):
@@ -151,7 +151,7 @@ class BackgroundInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'is_in_scc', BackgroundRequired('No knowledge of background'),
+        return self._perform_query(_interface, 'is_in_scc', BackgroundRequired,
                                    process, ref_flow=ref_flow, **kwargs)
 
     def is_in_background(self, process, ref_flow=None, **kwargs):
@@ -162,7 +162,7 @@ class BackgroundInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'is_in_background', BackgroundRequired('No knowledge of background'),
+        return self._perform_query(_interface, 'is_in_background', BackgroundRequired,
                                    process, ref_flow=ref_flow, **kwargs)
 
     def ad(self, process, ref_flow=None, **kwargs):
@@ -172,7 +172,7 @@ class BackgroundInterface(AbstractQuery):
         :param ref_flow:
         :return:
         """
-        return self._perform_query(_interface, 'ad', BackgroundRequired('No knowledge of background'),
+        return self._perform_query(_interface, 'ad', BackgroundRequired,
                                    process, ref_flow=ref_flow, **kwargs)
 
     def bf(self, process, ref_flow=None, **kwargs):
@@ -182,7 +182,7 @@ class BackgroundInterface(AbstractQuery):
         :param ref_flow:
         :return:
         """
-        return self._perform_query(_interface, 'bf', BackgroundRequired('No knowledge of background'),
+        return self._perform_query(_interface, 'bf', BackgroundRequired,
                                    process, ref_flow=ref_flow, **kwargs)
 
     def lci(self, process, ref_flow=None, **kwargs):
@@ -192,7 +192,7 @@ class BackgroundInterface(AbstractQuery):
         :param ref_flow:
         :return:
         """
-        return self._perform_query(_interface, 'lci', BackgroundRequired('No knowledge of background'),
+        return self._perform_query(_interface, 'lci', BackgroundRequired,
                                    process, ref_flow=ref_flow, **kwargs)
 
     def bg_lcia(self, process, query_qty, ref_flow=None, **kwargs):
@@ -205,5 +205,5 @@ class BackgroundInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'bg_lcia', BackgroundRequired('No knowledge of background'),
+        return self._perform_query(_interface, 'bg_lcia', BackgroundRequired,
                                    process, query_qty, ref_flow=ref_flow, **kwargs)

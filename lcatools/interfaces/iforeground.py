@@ -34,7 +34,7 @@ class ForegroundInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'new_quantity', ForegroundRequired('Foreground access required'),
+        return self._perform_query(_interface, 'new_quantity', ForegroundRequired,
                                    name, ref_unit=ref_unit, **kwargs)
 
     def new_flow(self, name, ref_quantity=None, context=None, **kwargs):
@@ -46,14 +46,14 @@ class ForegroundInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'new_flow', ForegroundRequired('Foreground access required'),
+        return self._perform_query(_interface, 'new_flow', ForegroundRequired,
                                    name, ref_quantity=ref_quantity, context=context,
                                    **kwargs)
 
     def fragments(self, show_all=False, **kwargs):
         if show_all:
             raise ValueError('Cannot retrieve non-parent fragments via interface')
-        for i in self._perform_query(_interface, 'fragments', ForegroundRequired('Foreground access required'),
+        for i in self._perform_query(_interface, 'fragments', ForegroundRequired,
                                      **kwargs):
             yield self.make_ref(i)
 
@@ -67,7 +67,7 @@ class ForegroundInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'frag', ForegroundRequired('Foreground access required'),
+        return self._perform_query(_interface, 'frag', ForegroundRequired,
                                    string, many=many, **kwargs)
 
     def find_term(self, term_ref, origin=None, **kwargs):
@@ -79,7 +79,7 @@ class ForegroundInterface(AbstractQuery):
         :param kwargs:
         :return: either a context, or a process_ref, or a flow_ref, or a fragment or fragment_ref, or None
         """
-        return self._perform_query(_interface, 'find_term', ForegroundRequired('blah'),
+        return self._perform_query(_interface, 'find_term', ForegroundRequired,
                                    term_ref, origin=origin, **kwargs)
 
     def new_fragment(self, flow, direction, **kwargs):
@@ -101,7 +101,7 @@ class ForegroundInterface(AbstractQuery):
         :param kwargs: uuid=None, parent=None, comment=None, value=None, balance=False; **kwargs passed to LcFragment
         :return: the fragment? or a fragment ref? <== should only be used in the event of a non-local foreground
         """
-        return self._perform_query(_interface, 'new_fragment', ForegroundRequired('Foreground access required'),
+        return self._perform_query(_interface, 'new_fragment', ForegroundRequired,
                                    flow, direction, **kwargs)
 
     def name_fragment(self, fragment, name, auto=None, force=None, **kwargs):
@@ -114,7 +114,7 @@ class ForegroundInterface(AbstractQuery):
         :return:
         """
         self._deprecate('use observe()')
-        return self._perform_query(_interface, 'name_fragment', ForegroundRequired('Foreground access required'),
+        return self._perform_query(_interface, 'name_fragment', ForegroundRequired,
                                    fragment, name, **kwargs)
 
     def fragments_with_flow(self, flow, direction=None, reference=None, background=None, **kwargs):
@@ -128,7 +128,7 @@ class ForegroundInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'fragments_with_flow', ForegroundRequired('Foreground access required'),
+        return self._perform_query(_interface, 'fragments_with_flow', ForegroundRequired,
                                    flow, direction=direction, reference=reference, background=background, **kwargs)
 
     '''
@@ -162,7 +162,7 @@ class ForegroundInterface(AbstractQuery):
                        comment (override existing Comment if present; applied to all)
         :return:
         """
-        return self._perform_query(_interface, 'clone_fragment', ForegroundRequired('Foreground access required'),
+        return self._perform_query(_interface, 'clone_fragment', ForegroundRequired,
                                    frag, **kwargs)
 
     def split_subfragment(self, fragment, replacement=None, **kwargs):
@@ -183,7 +183,7 @@ class ForegroundInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'split_subfragment', ForegroundRequired('Foreground access required'),
+        return self._perform_query(_interface, 'split_subfragment', ForegroundRequired,
                                    fragment, replacement=replacement, **kwargs)
 
     def delete_fragment(self, fragment, **kwargs):
@@ -195,7 +195,7 @@ class ForegroundInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'delete_fragment', ForegroundRequired('Foreground access required'),
+        return self._perform_query(_interface, 'delete_fragment', ForegroundRequired,
                                    fragment, **kwargs)
 
     def save(self, **kwargs):
@@ -204,7 +204,7 @@ class ForegroundInterface(AbstractQuery):
         :param kwargs: save_unit_scores [False]: whether to save cached LCIA results (for background fragments only)
         :return:
         """
-        return self._perform_query(_interface, 'save', ForegroundRequired('Foreground access required'), **kwargs)
+        return self._perform_query(_interface, 'save', ForegroundRequired, **kwargs)
 
     def observe(self, fragment, exchange_value=None, name=None, scenario=None, **kwargs):
         """
@@ -226,7 +226,7 @@ class ForegroundInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'observe', ForegroundRequired('No access to fragment data'),
+        return self._perform_query(_interface, 'observe', ForegroundRequired,
                                    fragment, exchange_value, name=name, scenario=scenario, **kwargs)
 
     def set_balance_flow(self, fragment, **kwargs):
@@ -238,7 +238,7 @@ class ForegroundInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'set_balance_flow', ForegroundRequired('Foreground access required'),
+        return self._perform_query(_interface, 'set_balance_flow', ForegroundRequired,
                                    fragment, **kwargs)
 
     def unset_balance_flow(self, fragment, **kwargs):
@@ -249,7 +249,7 @@ class ForegroundInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'unset_balance_flow', ForegroundRequired('Foreground access required'),
+        return self._perform_query(_interface, 'unset_balance_flow', ForegroundRequired,
                                    fragment, **kwargs)
 
     def create_process_model(self, process, ref_flow=None, set_background=True, **kwargs):
@@ -263,7 +263,7 @@ class ForegroundInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'create_process_model', ForegroundRequired('Foreground access required'),
+        return self._perform_query(_interface, 'create_process_model', ForegroundRequired,
                                    process, ref_flow=ref_flow, **kwargs)
 
     def fragment_from_exchanges(self, exchanges, parent=None, include_context=False, multi_flow=False, **kwargs):
@@ -277,5 +277,5 @@ class ForegroundInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'fragment_from_exchanges', parent=parent, include_context=include_context, 
+        return self._perform_query(_interface, 'fragment_from_exchanges', ForegroundRequired, parent=parent, include_context=include_context,
                                    multi_flow=multi_flow, **kwargs)

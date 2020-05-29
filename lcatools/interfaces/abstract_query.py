@@ -138,7 +138,7 @@ class AbstractQuery(object):
         :param kwargs:
         :return:
         """
-        return self._perform_query('basic', 'get', EntityNotFound('%s/%s' % (self.origin, eid)), eid,
+        return self._perform_query('basic', 'get', EntityNotFound, eid,
                                    **kwargs)
 
     def get_item(self, external_ref, item):
@@ -153,16 +153,16 @@ class AbstractQuery(object):
         else:
             err_str = external_ref
 
-        return self._perform_query('basic', 'get_item', EntityNotFound('%s/%s' % (self.origin, err_str)),
+        return self._perform_query('basic', 'get_item', EntityNotFound,
                                    external_ref, item)
 
     def get_uuid(self, external_ref):
-        return self._perform_query('basic', 'get_uuid', EntityNotFound('%s/%s' % (self.origin, external_ref)),
+        return self._perform_query('basic', 'get_uuid', EntityNotFound,
                                    external_ref)
 
 '''# maybe we don't need these?!
     def get_reference(self, external_ref):
-        return self._perform_query(None, 'get_reference', EntityNotFound('%s/%s' % (self.origin, external_ref)),
+        return self._perform_query(None, 'get_reference', EntityNotFound,
                                    external_ref)
 
 '''

@@ -80,7 +80,7 @@ class QuantityInterface(AbstractQuery):
         :return: quantity CatalogRef
         """
         return self.make_ref(self._perform_query(_interface, 'get_canonical',
-                                                 QuantityRequired('Quantity interface required'),
+                                                 QuantityRequired,
                                                  quantity, **kwargs))
 
     def profile(self, flow, **kwargs):
@@ -89,7 +89,7 @@ class QuantityInterface(AbstractQuery):
         :param flow:
         :return:
         """
-        return self._perform_query(_interface, 'profile', QuantityRequired('Must have quantity interface'),
+        return self._perform_query(_interface, 'profile', QuantityRequired,
                                    flow, **kwargs)
 
     def characterize(self, flowable, ref_quantity, query_quantity, value, context=None, location='GLO', **kwargs):
@@ -105,7 +105,7 @@ class QuantityInterface(AbstractQuery):
         :param kwargs: overwrite=False, origin=query_quantity.origin, others?
         :return:
         """
-        return self._perform_query(_interface, 'characterize', QuantityRequired('Quantity interface required'),
+        return self._perform_query(_interface, 'characterize', QuantityRequired,
                                    flowable, ref_quantity, query_quantity, value,
                                    context=context, location=location, **kwargs)
 
@@ -119,7 +119,7 @@ class QuantityInterface(AbstractQuery):
         :param context:
         :return: a generator of Characterizations
         """
-        return self._perform_query(_interface, 'factors', QuantityRequired('Quantity interface required'),
+        return self._perform_query(_interface, 'factors', QuantityRequired,
                                    quantity, flowable=flowable, context=context, **kwargs)
 
     def cf(self, flow, quantity, ref_quantity=None, context=None, locale='GLO', strategy=None, **kwargs):
@@ -134,7 +134,7 @@ class QuantityInterface(AbstractQuery):
         :param kwargs:
         :return: a float
         """
-        return self._perform_query(_interface, 'cf', QuantityRequired('Quantity interface required'), flow, quantity,
+        return self._perform_query(_interface, 'cf', QuantityRequired, flow, quantity,
                                    ref_quantity=ref_quantity, context=context, locale=locale, strategy=strategy,
                                    **kwargs)
 
@@ -150,7 +150,7 @@ class QuantityInterface(AbstractQuery):
         :param locale: ['GLO']
         :return:
         """
-        return self._perform_query(_interface, 'quantity_relation', QuantityRequired('Quantity interface required'),
+        return self._perform_query(_interface, 'quantity_relation', QuantityRequired,
                                    flowable, ref_quantity, query_quantity, context, locale=locale, **kwargs)
 
     def do_lcia(self, quantity, inventory, locale='GLO', **kwargs):
@@ -163,5 +163,5 @@ class QuantityInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'do_lcia', QuantityRequired('Quantity interface required'),
+        return self._perform_query(_interface, 'do_lcia', QuantityRequired,
                                    quantity, inventory, locale=locale, **kwargs)

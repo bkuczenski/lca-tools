@@ -165,3 +165,17 @@ class QuantityInterface(AbstractQuery):
         """
         return self._perform_query(_interface, 'do_lcia', QuantityRequired,
                                    quantity, inventory, locale=locale, **kwargs)
+
+
+    def fragment_lcia(self, fragment, quantity_ref, scenario=None, **kwargs):
+        """
+        Perform fragment LCIA by first traversing the fragment to determine node weights, and then combining with
+        unit scores.
+        :param fragment:
+        :param quantity_ref:
+        :param scenario:
+        :param kwargs:
+        :return:
+        """
+        return self._perform_query(_interface, 'fragment_lcia', QuantityRequired,
+                                   fragment, quantity_ref, scenario, **kwargs)

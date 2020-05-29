@@ -81,7 +81,3 @@ class ExchangeImplementation(BasicImplementation, ExchangeInterface):
     def traverse(self, fragment, scenario=None, **kwargs):
         frag = self._archive.retrieve_or_fetch_entity(fragment)
         return frag.top().traverse(scenario, observed=True)
-
-    def fragment_lcia(self, fragment, quantity_ref, scenario=None, refresh=False, **kwargs):
-        frag = self._archive.retrieve_or_fetch_entity(fragment)
-        return frag.top().fragment_lcia(quantity_ref, scenario=scenario, refresh=refresh, **kwargs)

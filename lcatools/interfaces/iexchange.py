@@ -187,16 +187,3 @@ class ExchangeInterface(AbstractQuery):
         """
         return self._perform_query(_interface, 'traverse', ExchangeRequired,
                                    fragment, scenario, **kwargs)
-
-    def fragment_lcia(self, fragment, quantity_ref, scenario=None, **kwargs):
-        """
-        Perform fragment LCIA by first traversing the fragment to determine node weights, and then combining with
-        unit scores.
-        :param fragment:
-        :param quantity_ref:
-        :param scenario:
-        :param kwargs:
-        :return:
-        """
-        return self._perform_query(_interface, 'fragment_lcia', ExchangeRequired,
-                                   fragment, quantity_ref, scenario, **kwargs)

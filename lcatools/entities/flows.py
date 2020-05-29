@@ -3,7 +3,7 @@ import uuid
 
 from .entities import LcEntity
 # from lcatools.entities.quantities import LcQuantity
-from lcatools.entity_refs import FlowInterface
+from lcatools.interfaces.flow_interface import FlowInterface
 from lcatools.interfaces import CONTEXT_STATUS_
 
 

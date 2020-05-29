@@ -6,8 +6,7 @@ Change Log
 import unittest
 
 from .. import LciaDb
-from lcatools.entities import LcQuantity
-from lcatools.entity_refs.flow_interface import DummyFlow
+from lcatools.entities import LcQuantity, DummyFlow
 
 
 class LciaEngineTest(unittest.TestCase):

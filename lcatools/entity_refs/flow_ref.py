@@ -1,6 +1,6 @@
 from .base import EntityRef
 
-from .flow_interface import FlowInterface
+from lcatools.interfaces.flow_interface import FlowInterface
 
 
 '''

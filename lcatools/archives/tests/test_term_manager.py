@@ -1,6 +1,5 @@
 from ..term_manager import TermManager, QuantityConflict
-from lcatools.entity_refs.flow_interface import DummyFlow
-from lcatools.entities import LcQuantity
+from lcatools.entities import LcQuantity, DummyFlow
 from lcatools.contexts import Context
 import unittest
 

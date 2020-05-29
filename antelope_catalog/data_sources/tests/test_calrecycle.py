@@ -14,7 +14,7 @@ from ..local import CATALOG_ROOT, RESOURCES_CONFIG, check_enabled
 from ..calrecycle_lca import CalRecycleConfig
 from requests import ConnectionError as requestsConnectionError
 
-_debug = True
+_debug = False
 
 if __name__ == '__main__':
     _run_calrecycle = check_enabled('calrecycle')

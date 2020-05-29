@@ -14,6 +14,15 @@ class FlowInterface(object):
     _filt = str.maketrans('\u00b4\u00a0\u2032', "' '", '')  # filter name strings to pull out problematic unicode
 
     @property
+    def reference_entity(self):
+        """
+        Must have a .unit property that returns a string,
+        should have .entity_type property that returns 'quantity'
+        :return:
+        """
+        return NotImplemented
+
+    @property
     def link(self):
         return NotImplemented
 
@@ -71,12 +80,8 @@ class FlowInterface(object):
             self.__flowable = SynonymSet()
         return self.__flowable
 
-    @property
-    def reference_entity(self):
-        return NotImplemented
-
     def unit(self):
-        return self.reference_entity.unit()
+        return self.reference_entity.unit
 
     @property
     def name(self):
@@ -111,7 +116,7 @@ class FlowInterface(object):
 
     def match(self, other):
         """
-        Re-implement flow match method
+        match if any synonyms match
         :param other:
         :return:
         """
@@ -124,40 +129,3 @@ class FlowInterface(object):
         if isinstance(other, str):
             return other in self._flowable
         return any([t in self._flowable for t in other.synonyms])
-
-
-class DummyFlow(FlowInterface):
-
-    class DummyQuantity(object):
-        name = 'Dummy Quantity'
-        origin = 'local.dummy'
-        entity_type = 'quantity'
-        external_ref = 'dummy'
-        uuid = None
-        is_entity = False
-
-        def __getitem__(self, key):
-            return 'Dummy Property'
-
-        @property
-        def link(self):
-            return '%s/%s' % (self.origin, self.external_ref)
-
-        @staticmethod
-        def unit():
-            return 'd'
-
-        def quantity_terms(self):
-            yield self.name
-            yield self.external_ref
-            yield self.link
-
-    _reference_entity = DummyQuantity()
-
-    @property
-    def link(self):
-        return 'local.dummy/flow'
-
-    @property
-    def reference_entity(self):
-        return self._reference_entity

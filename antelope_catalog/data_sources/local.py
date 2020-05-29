@@ -96,7 +96,7 @@ RESOURCES_CONFIG_LOCAL = {
     'calrecycle': {
         'source': CalRecycleConfig,
         'data_root': '/data/GitHub/CalRecycle/LCA_Data/',
-        'enable_test': True
+        'enable_test': False
     },
     'ecoinvent_lcia': {
         'source': EcoinventLciaConfig,

@@ -74,8 +74,9 @@ class QuantityInterface(AbstractQuery):
     """
     def get_canonical(self, quantity, **kwargs):
         """
-        Retrieve a canonical quantity based on a synonym or other distinguishable term.  In future this should be
-        expanded to flows and contexts.
+        Retrieve a canonical quantity based on a synonym or other distinguishable term.  Canonical quantities
+        include standard concepts like "mass" that have a semantic scope that is broader than LCA, and also reference
+        versions of LCIA methods such as CML2001 / GWP-100
         :param quantity: external_id of quantity
         :return: quantity CatalogRef
         """
@@ -85,7 +86,7 @@ class QuantityInterface(AbstractQuery):
 
     def profile(self, flow, **kwargs):
         """
-        Generate characterizations for the named flow or flowable, with the reference quantity noted
+        Generate characterizations for the named flow or flowable, with the reference quantity noted in each case
         :param flow:
         :return:
         """

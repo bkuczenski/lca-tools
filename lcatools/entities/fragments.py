@@ -400,7 +400,7 @@ class LcFragment(LcEntity):
         :return:
         """
         if self.reference_entity is None:
-            return '%4g %s' % (self.cached_ev, self.flow.unit())
+            return '%4g %s' % (self.cached_ev, self.flow.unit)
         return self.term.unit
 
     def __str__(self):
@@ -468,7 +468,7 @@ class LcFragment(LcEntity):
                                                         delim[0],
                                                         self._mod(scenario),
                                                         self.exchange_value(scenario, observed=observed) or 0.0,
-                                                        self.flow.unit(),
+                                                        self.flow.unit,
                                                         delim[1],
                                                         self['Name']))
         # print fragment reference
@@ -559,13 +559,13 @@ class LcFragment(LcEntity):
                 prompt = 'Scenario value'
 
             print('%s' % self)
-            print(' Cached EV: %6.4g\n Observed EV: %6.4g [%s]' % (self.cached_ev, self.observed_ev, self.flow.unit()))
+            print(' Cached EV: %6.4g\n Observed EV: %6.4g [%s]' % (self.cached_ev, self.observed_ev, self.flow.unit))
             if scenario is None:
                 string_ev = '%10g' % self.observed_ev
             else:
                 string_ev = '%10g' % self.exchange_value(scenario)
                 print(' Scenario EV: %s [%s]' % (string_ev,
-                                                 self.flow.unit()))
+                                                 self.flow.unit))
 
             val = ifinput('%s ("=" to use cached): ' % prompt, string_ev)
 

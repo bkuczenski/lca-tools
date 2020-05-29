@@ -152,8 +152,8 @@ class ForegroundImplementation(BasicImplementation, ForegroundInterface):
                     if t.reference_entity != self.get_canonical(reference):
                         raise TypeError("ref quantity (%s) doesn't match supplied (%s)" % (t.reference_entity, reference))
                 elif t.entity_type == 'quantity':
-                    if t.unit() != reference:
-                        raise TypeError("ref unit (%s) doesn't match supplied (%s)" % (t.unit(), reference))
+                    if t.unit != reference:
+                        raise TypeError("ref unit (%s) doesn't match supplied (%s)" % (t.unit, reference))
                 if t['Name'] != name:
                     raise ValueError("Name (%s) doesn't match supplied(%s)" % (t['Name'], name))
             return t

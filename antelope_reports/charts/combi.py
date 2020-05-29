@@ -210,7 +210,7 @@ def stack_bar_figure(results, stages, hues=None, color_dict=None, legend=False):
     if hues is None:
         hues = [None] * len(results)
 
-    units = [r.quantity.unit() for r in results]
+    units = [r.quantity.unit for r in results]
 
     # prepare data, determine figure height
     height = 0
@@ -338,12 +338,12 @@ def scenario_compare_figure(results, stages, hues=None, scenarios=None, savefile
 
         if scenarios is None:
             series = results[n].contrib_query(stages)
-            stack_bars(ax, [series], hue, [quantity.unit()],
+            stack_bars(ax, [series], hue, [quantity.unit],
                        title=quantity['Name'], subtitle=quantity['Indicator'])
 
         else:
             series = [r[n].contrib_query(stages) for r in results]
-            units = [r[n].quantity.unit() for r in results]
+            units = [r[n].quantity.unit for r in results]
 
             stack_bars(ax, series, hue, units, labels=scenarios,
                        title=quantity['Name'], subtitle=quantity['Indicator'])

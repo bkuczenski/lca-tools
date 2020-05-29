@@ -77,7 +77,7 @@ class RxRef(object):
 
     @property
     def unit(self):
-        return self._flow_ref.unit()
+        return self._flow_ref.unit
 
     @property
     def comment(self):
@@ -144,7 +144,7 @@ class RxRef(object):
 
     def __str__(self):
         ref = '(*)'
-        return '%6.6s: %s [%s %s] %s' % (self.direction, ref, self._value_string, self.flow.unit(), self.flow)
+        return '%6.6s: %s [%s %s] %s' % (self.direction, ref, self._value_string, self.flow.unit, self.flow)
 
 
 class LcProcess(LcEntity):

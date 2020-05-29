@@ -75,7 +75,7 @@ def fragment_header(frag):
 
 def fragment_fu(frag, scenario=None):
     s = '{\\large %s: %g %s %s}\\\\[8pt]\n%s\n' % (comp_dir(frag.direction), frag.exchange_value(scenario),
-        frag.flow.unit(),
+        frag.flow.unit,
         frag.flow['Name'], frag['Comment'])
     return tex_sanitize(s)
 
@@ -87,7 +87,7 @@ def fragment_inventory(fragment, scenario=None):
         inventory += '\n{\\small\n\\begin{tabular}{rccl}\n'
         for x in exchs:
             inventory += tex_sanitize('%6s & %6.3g & %s & %s\\\\\n' % (x.direction,
-                                                                       x.value, x.flow.unit(), x.flow['Name']))
+                                                                       x.value, x.flow.unit, x.flow['Name']))
         inventory += '\\end{tabular}\n}\n'
 
     return inventory
@@ -399,7 +399,7 @@ xs        """
         if not first:
             arrows += '\n\\bput(1.18){\\parbox{2cm}{\\centering %s \\scriptsize %.3g %s}}' % (mag_mod,
                                                                                               node_weight,
-                                                                                              fragment.flow.unit())
+                                                                                              fragment.flow.unit)
 
         children = [c for c in fragment.child_flows]
         if 1:  # node_weight != 0 or scenario is None:
@@ -551,7 +551,7 @@ xs        """
 
         chart += '%s \n ' % TAB_LF
         for j in results:
-            chart += ' &  %s ' % j.quantity.unit()
+            chart += ' &  %s ' % j.quantity.unit
 
         chart += '%s \\hline\n' % TAB_LF
 

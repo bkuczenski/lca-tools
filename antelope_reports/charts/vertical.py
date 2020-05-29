@@ -167,7 +167,7 @@ def spread_scenario_compare(ax, results, stages, colors=None, scenarios=None, re
     if scenarios is None:
         scenarios = ['S%d' % (i+1) for i, _ in enumerate(results)]
 
-    unit = list(set([(r.quantity['Indicator'], r.quantity.unit()) for r in results]))
+    unit = list(set([(r.quantity['Indicator'], r.quantity.unit) for r in results]))
     if len(unit) > 1:
         print('Warning: multiple units found in result sets!!')
 

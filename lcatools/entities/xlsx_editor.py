@@ -294,11 +294,11 @@ class XlsxUpdater(object):
 
             if self._merge == 'overwrite':
                 flow.characterize(qq, value=value, context=cx, overwrite=True, origin=self.origin)
-                self._print('Characterizing %s: %g %s / %s' % (flow, value, qq.unit(), rq.unit()))
+                self._print('Characterizing %s: %g %s / %s' % (flow, value, qq.unit, rq.unit))
             else:
                 try:
                     flow.characterize(qq, value=value, context=cx)
-                    self._print('Characterizing %s: %g %s / %s' % (flow, value, qq.unit(), rq.unit()))
+                    self._print('Characterizing %s: %g %s / %s' % (flow, value, qq.unit, rq.unit))
                 except DuplicateCharacterizationError:
                     self._print('Deferring to existing CF')
                     continue

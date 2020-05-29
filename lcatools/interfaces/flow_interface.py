@@ -80,6 +80,7 @@ class FlowInterface(object):
             self.__flowable = SynonymSet()
         return self.__flowable
 
+    @property
     def unit(self):
         return self.reference_entity.unit
 

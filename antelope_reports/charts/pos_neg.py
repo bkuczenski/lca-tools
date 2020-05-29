@@ -48,10 +48,10 @@ class _PosNegAxes(object):
         if autorange:
             a = AutoRange(self._span[1] - self._span[0])
             self._ar_scale = a.scale
-            self._unit = a.adj_unit(qty.unit())
+            self._unit = a.adj_unit(qty.unit)
         else:
             self._ar_scale = 1.0
-            self._unit = qty.unit()
+            self._unit = qty.unit
 
         ylim = [x, y + .065 * (y - x)]  # push out the top limit
         self._ax.set_ylim([k * self._ar_scale for k in ylim])

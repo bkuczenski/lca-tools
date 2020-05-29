@@ -37,7 +37,7 @@ class QuantitiesTest(unittest.TestCase):
     def test_convert_missing_refunit(self):
         q = self.I.make_interface('quantity').get_canonical('electric energy')
         self.assertTrue(q.has_property('UnitConversion'))
-        self.assertNotIn(q.unit(), q['UnitConversion'])
+        self.assertNotIn(q.unit, q['UnitConversion'])
         self.assertEqual(q.convert(), 1.0)
         self.assertEqual(q.convert(to='MJ'), 3.6)
 

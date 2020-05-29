@@ -238,28 +238,28 @@ class Characterization(object):
                 scs.append('%6.3g [%s]' % (v, k))
 
         return '%s [%s / %s] %s: %s (%s)' % ('\n'.join(scs),
-                                             self.quantity.unit(), self.ref_quantity.unit(), self.flowable, self.context,
+                                             self.quantity.unit, self.ref_quantity.unit, self.flowable, self.context,
                                              self.quantity.name)
 
     def __repr__(self):
         if self.is_null:
             return '%s(%s, %s, %s: null (%s))' % (self.__class__.__name__, self.flowable,
-                                                 self.ref_quantity.unit(), self.context, self.quantity.unit())
+                                                 self.ref_quantity.unit, self.context, self.quantity.unit)
         if len(self._locations) > 1:
             val = '%s (+%d)' % (self._sval, len(self._locations) - 1)
         else:
             val = '%s' % self._sval
         return '%s(%s, %s, %s: %s (%s))' % (self.__class__.__name__, self.flowable,
-                                           self.ref_quantity.unit(),
-                                           self.context, val, self.quantity.unit())
+                                           self.ref_quantity.unit,
+                                           self.context, val, self.quantity.unit)
 
     def q_view(self):
         if self.quantity is self.ref_quantity:
             ref = '(*)'
         else:
             ref = ' | '
-        return '%25.25s [%s / %s]%s%s' % (self._sval, self.quantity.unit(),
-                                          self.ref_quantity.unit(), ref,
+        return '%25.25s [%s / %s]%s%s' % (self._sval, self.quantity.unit,
+                                          self.ref_quantity.unit, ref,
                                           self.quantity.name)
 
     '''

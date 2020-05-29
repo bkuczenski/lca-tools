@@ -25,8 +25,8 @@ class DummyFlow(FlowInterface):
         def link(self):
             return '%s/%s' % (self.origin, self.external_ref)
 
-        @staticmethod
-        def unit():
+        @property
+        def unit(self):
             return 'd'
 
         def quantity_terms(self):

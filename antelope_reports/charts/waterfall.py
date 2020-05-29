@@ -152,8 +152,8 @@ class WaterfallChart(object):
             scenarios.append(res.scenario)
             data, net = res.contrib_new(*stages, autorange=autorange)
             ar_scale.append(res.autorange)
-            ar_units.append(res.unit())
-            self._unit = res.unit()  # only need to correct this if autounits are not all the same
+            ar_units.append(res.unit)
+            self._unit = res.unit  # only need to correct this if autounits are not all the same
 
             _span = _data_range([data])
             if abs(net) * 1e8 > (_span[1] - _span[0]):

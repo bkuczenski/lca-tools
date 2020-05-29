@@ -149,9 +149,9 @@ class QuantityConversion(object):
         if self.qualitative:
             return '%s [context %s] %s: %s [%s] (%s)' % (self.flowable, self.context, self.query, self.value,
                                                          self._results[-1].locale, self._results[-1].origin)
-        conv = ' x '.join(['%g %s/%s' % (res.value, res.query.unit(), res.ref.unit()) for res in self._results])
+        conv = ' x '.join(['%g %s/%s' % (res.value, res.query.unit, res.ref.unit) for res in self._results])
         return '%s [context %s]: 1 %s x %s [%s] (%s)' % (self.flowable, self.context,
-                                                         self.ref.unit(), conv, self._results[-1].locale,
+                                                         self.ref.unit, conv, self._results[-1].locale,
                                                          self._results[-1].origin)
 
     def __repr__(self):
@@ -196,7 +196,7 @@ class QuantityConversionError(object):
     def __repr__(self):
         return '%s(%s/%s [%s] %g %s/%s || %s)' % (self.__class__.__name__, self.flowable, self.context,
                                                   self._qrr.origin,
-                                                  self._qrr.value, self.query.unit(), self._qrr.ref.unit(), self.ref.link)
+                                                  self._qrr.value, self.query.unit, self._qrr.ref.unit, self.ref.link)
 
 
 class NoConversion(Exception):
@@ -209,7 +209,7 @@ def try_convert(flowable, rq, qq, context, locale):
         raise NoConversion
     else:
         try:
-            fac = convert(qq, from_unit=rq.unit())
+            fac = convert(qq, from_unit=rq.unit)
             return QRResult(flowable, rq, qq, context or NullContext, locale, qq.origin, fac)
         except (KeyError, NoUnitConversionTable):
             pass
@@ -218,7 +218,7 @@ def try_convert(flowable, rq, qq, context, locale):
         raise NoConversion
     else:
         try:
-            fac = convert(rq, to=qq.unit())
+            fac = convert(rq, to=qq.unit)
             return QRResult(flowable, rq, qq, context or NullContext, locale, rq.origin, fac)
         except (KeyError, NoUnitConversionTable):
             pass

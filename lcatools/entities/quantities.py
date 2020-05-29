@@ -40,7 +40,7 @@ class LcQuantity(LcEntity):
         self._is_lcia = False
         super(LcQuantity, self).__init__('quantity', external_ref, **kwargs)
         if not self.has_property('UnitConversion'):
-            self._d['UnitConversion'] = {self.unit(): 1.0}
+            self._d['UnitConversion'] = {self.unit: 1.0}
         self._qi = None
 
     def __setitem__(self, key, value):
@@ -94,6 +94,7 @@ class LcQuantity(LcEntity):
         else:
             raise QuantityAlreadyConfigured(self)
 
+    @property
     def unit(self):
         return self.reference_entity.unitstring
 

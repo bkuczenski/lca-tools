@@ -32,7 +32,7 @@ class ExchangeRef(object):
         self._val = value
         if unit is None:
             if hasattr(self._flow, 'unit'):
-                unit = self._flow.unit()
+                unit = self._flow.unit
             else:
                 unit = ''
         self._unit = unit

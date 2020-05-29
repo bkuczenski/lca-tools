@@ -175,22 +175,22 @@ class OpenLcaJsonLdArchive(LcArchive):
         try:
             v_unit = ex['unit']['name']
         except KeyError:
-            print('%s: %d No unit! using default %s' % (p.external_ref, ex['internalId'], fp.unit()))
-            v_unit = fp.unit()
+            print('%s: %d No unit! using default %s' % (p.external_ref, ex['internalId'], fp.unit))
+            v_unit = fp.unit
 
-        if v_unit != fp.unit():
+        if v_unit != fp.unit:
             oldval = value
             value *= fp.convert(from_unit=v_unit)
-            self._print('%s: Unit Conversion exch: %g %s to native: %g %s' % (p.uuid, oldval, v_unit, value, fp.unit()))
+            self._print('%s: Unit Conversion exch: %g %s to native: %g %s' % (p.uuid, oldval, v_unit, value, fp.unit))
 
         if fp != flow.reference_entity:
             print('%s:\n%s flow reference quantity does not match\n%s exchange f.p. Conversion Required' %
                   (p.external_ref,
                    flow.reference_entity.external_ref,
                    fp.external_ref))
-            print('From %g %s' % (value, fp.unit()))
+            print('From %g %s' % (value, fp.unit))
             value /= fp.cf(flow)  # TODO: account for locale?  ## is this even right?
-            print('To %g %s' % (value, flow.unit()))
+            print('To %g %s' % (value, flow.unit))
 
         is_ref = ex.pop('quantitativeReference', False)
         if is_ref:

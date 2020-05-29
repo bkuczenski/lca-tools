@@ -62,7 +62,7 @@ class DetailedLciaResult(object):
         :param qrresult: meets the QRResult spec: has properties 'flowable', 'ref', 'query', 'context', 'locale',
         'origin', 'value'
         """
-        if exchange.flow.unit() != qrresult.ref.unit() and qrresult.value != 0.0:
+        if exchange.flow.unit != qrresult.ref.unit and qrresult.value != 0.0:
             print('%s: Inconsistent qty\nexch: %s\nqrr:  %s' % (self.__class__.__name__, exchange.flow.reference_entity, qrresult))
             #  raise InconsistentQuantity('%s\n%s' % (exchange.flow.reference_entity, qrresult))
         self._exchange = exchange
@@ -483,11 +483,12 @@ class LciaResult(object):
         else:
             return self._autorange.scale
 
+    @property
     def unit(self):
         if self._autorange is not None:
-            return self._autorange.adj_unit(self.quantity.unit())
+            return self._autorange.adj_unit(self.quantity.unit)
         else:
-            return self.quantity.unit()
+            return self.quantity.unit
 
     @property
     def scale(self):
@@ -723,7 +724,7 @@ class LciaResult(object):
         return [k.entity for k in self._LciaScores.values()]
 
     def _header(self):
-        print('%s %s' % (self.quantity, self.unit()))
+        print('%s %s' % (self.quantity, self.unit))
         if self._autorange:
             self.set_autorange()  # update AutoRange object
             print('Auto-ranging: x %g' % self.autorange)

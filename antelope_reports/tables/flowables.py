@@ -78,7 +78,7 @@ class FlowablesGrid(BaseTableOutput):
         :return:
         """
         name, _ = self._qdb.parse_flow(flow)
-        return '[%s] %s' % (flow.unit(), self._qdb.f_name(name))
+        return '[%s] %s' % (flow.unit, self._qdb.f_name(name))
 
     def _extract_data_from_item(self, objects):
         """

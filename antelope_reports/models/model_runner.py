@@ -214,7 +214,7 @@ class LcaModelRunner(object):
         k['method'] = q.get('method') or ''
         k['category'] = q.get('category') or q.name
         k['indicator'] = q['indicator']
-        k['units'] = q.unit()
+        k['units'] = q.unit
         return k
 
     def _gen_aggregated_lcia_rows(self, scenario, q, include_total=False):
@@ -258,9 +258,9 @@ class LcaModelRunner(object):
     def _qty_tuples(self):
         for q in self.quantities:
             if q.has_property('ShortName'):
-                yield q['ShortName'], q['Indicator'], q.unit()
+                yield q['ShortName'], q['Indicator'], q.unit
             else:
-                yield q['Name'], q['Indicator'], q.unit()
+                yield q['Name'], q['Indicator'], q.unit
 
     def scenario_detail_tbl(self, scenario, filename=None, column_order=None):
         dt = DataFrame(({k.entity: self._format(k.cumulative_result)

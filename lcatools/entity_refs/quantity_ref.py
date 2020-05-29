@@ -34,22 +34,22 @@ def convert(quantity, from_unit=None, to=None):
     if from_unit == to:
         return 1.0
     elif from_unit is None:
-        if to.lower() == quantity.unit().lower():
+        if to.lower() == quantity.unit.lower():
             return 1.0
     elif to is None:
-        if from_unit.lower() == quantity.unit().lower():
+        if from_unit.lower() == quantity.unit.lower():
             return 1.0
 
     try:
         uc_table = quantity['UnitConversion']
-        if quantity.unit() not in uc_table:
-            uc_table[quantity.unit()] = 1.0
+        if quantity.unit not in uc_table:
+            uc_table[quantity.unit] = 1.0
     except KeyError:
         raise NoUnitConversionTable
 
     if from_unit is None:
-        if quantity.unit() in uc_table:
-            inbound = uc_table[quantity.unit()]
+        if quantity.unit in uc_table:
+            inbound = uc_table[quantity.unit]
         else:
             inbound = 1.0
     else:
@@ -59,8 +59,8 @@ def convert(quantity, from_unit=None, to=None):
             raise KeyError('Unknown unit %s for quantity %s' % (from_unit, quantity))
 
     if to is None:
-        if quantity.unit() in uc_table:
-            outbound = uc_table[quantity.unit()]
+        if quantity.unit in uc_table:
+            outbound = uc_table[quantity.unit]
         else:
             outbound = 1.0
 
@@ -84,6 +84,7 @@ class QuantityRef(EntityRef):
         super(QuantityRef, self).__init__(*args, **kwargs)
         self._is_lcia = 'Indicator' in self._d  # must be specified at instantiation
 
+    @property
     def unit(self):
         if isinstance(self.reference_entity, str):
             return self.reference_entity
@@ -92,8 +93,8 @@ class QuantityRef(EntityRef):
     @property
     def _addl(self):
         if self.is_lcia_method:
-            return '%s] [LCIA' % self.unit()
-        return self.unit()
+            return '%s] [LCIA' % self.unit
+        return self.unit
 
     @property
     def name(self):
@@ -101,7 +102,7 @@ class QuantityRef(EntityRef):
 
     def serialize(self, **kwargs):
         j = super(QuantityRef, self).serialize(**kwargs)
-        j['referenceUnit'] = self.unit()
+        j['referenceUnit'] = self.unit
         if self._is_lcia:
             j['Indicator'] = self.get_item('Indicator')
         return j
@@ -113,7 +114,7 @@ class QuantityRef(EntityRef):
     def convert(self, from_unit=None, to=None):
         if not self.has_property('UnitConversion'):
             uc = LowerDict()
-            uc[self.unit()] = 1.0
+            uc[self.unit] = 1.0
             self['UnitConversion'] = uc
         return convert(self, from_unit, to)
 

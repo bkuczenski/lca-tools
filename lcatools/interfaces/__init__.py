@@ -8,7 +8,7 @@ resource of some kind.  The interfaces must be instantiated in order to be used.
 from .abstract_query import UnknownOrigin, PrivateArchive, EntityNotFound
 
 from .iconfigure import ConfigureInterface
-from .iexchange import ExchangeInterface, ExchangeRequired, ExchangeRef
+from .iexchange import ExchangeInterface, ExchangeRequired
 from .iindex import IndexInterface, IndexRequired, directions, comp_dir, check_direction, valid_sense
 from .ibackground import BackgroundInterface, BackgroundRequired
 from .iquantity import QuantityInterface, QuantityRequired, NoFactorsFound, ConversionReferenceMismatch, FlowableMismatch

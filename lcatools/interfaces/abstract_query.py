@@ -2,8 +2,6 @@
 Root-level catalog interface
 """
 
-from sys import _getframe
-
 class UnknownOrigin(Exception):
     pass
 
@@ -46,14 +44,6 @@ class AbstractQuery(object):
         if self._dbg:
             print(*args)
 
-    _deprecation_nag = dict()
-
-    def _deprecate(self, msg):
-        mth = _getframe(1).f_code.co_name  # name of calling method -- could use this instead of 2nd position arg in _perform_query
-        if (mth, msg) not in self._deprecation_nag:
-            print('(%s) DEPRECATED %s' % (mth, msg))  # warn- but- only once
-            self._deprecation_nag[mth, msg] = True
-
     '''
     Overridde these methods
     '''
@@ -64,7 +54,7 @@ class AbstractQuery(object):
     def _iface(self, itype, **kwargs):
         """
         Pseudo-abstract method to generate interfaces of the specified type upon demand.  Must be implemented
-        :param itype:
+        :param itype: 'basic', 'index', 'exchange' (nee 'inventory'), 'quantity', 'background', 'foreground'
         :param kwargs: for use by subclasses
         :return: generate interfaces of the given type
         """
@@ -99,14 +89,14 @@ class AbstractQuery(object):
                 try:
                     self._debug('Attempting %s query on iface %s' % (attrname, iface))
                     result = getattr(iface, attrname)(*args, **kwargs)
-                except exc.__class__:
+                except exc:  # allow nonimplementations to pass silently
                     continue
                 if result is not None:
                     return result
         except NotImplementedError:
             pass
 
-        raise exc
+        raise exc('itype %s required for attribute %s | %s' % (itype, attrname, args))
 
     def make_ref(self, entity):
         if entity is None:
@@ -135,7 +125,7 @@ class AbstractQuery(object):
     def validate(self):
         if self._validated is None:
             try:
-                self._perform_query(None, 'validate', ValidationError)
+                self._perform_query('basic', 'validate', ValidationError)
                 self._validated = True
             except ValidationError:
                 self._validated = False
@@ -148,7 +138,7 @@ class AbstractQuery(object):
         :param kwargs:
         :return:
         """
-        return self._perform_query(None, 'get', EntityNotFound('%s/%s' % (self.origin, eid)), eid,
+        return self._perform_query('basic', 'get', EntityNotFound('%s/%s' % (self.origin, eid)), eid,
                                    **kwargs)
 
     def get_item(self, external_ref, item):
@@ -163,11 +153,11 @@ class AbstractQuery(object):
         else:
             err_str = external_ref
 
-        return self._perform_query(None, 'get_item', EntityNotFound('%s/%s' % (self.origin, err_str)),
+        return self._perform_query('basic', 'get_item', EntityNotFound('%s/%s' % (self.origin, err_str)),
                                    external_ref, item)
 
     def get_uuid(self, external_ref):
-        return self._perform_query(None, 'get_uuid', EntityNotFound('%s/%s' % (self.origin, external_ref)),
+        return self._perform_query('basic', 'get_uuid', EntityNotFound('%s/%s' % (self.origin, external_ref)),
                                    external_ref)
 
 '''# maybe we don't need these?!

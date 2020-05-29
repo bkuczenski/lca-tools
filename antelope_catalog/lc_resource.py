@@ -7,7 +7,7 @@ import hashlib
 from lcatools.archives import InterfaceError, index_archive, update_archive, create_archive
 
 from .foreground import LcForeground
-from .catalog_query import INTERFACE_TYPES, NoCatalog
+from .catalog_query import INTERFACE_TYPES, NoCatalog, zap_inventory
 
 # from .providers import create_archive
 
@@ -183,6 +183,7 @@ class LcResource(object):
             pass
 
     def add_interface(self, iface):
+        iface = zap_inventory(iface)  # don't warn when interpreting resource specifications
         if iface in INTERFACE_TYPES:
             self._interfaces.add(iface)
 

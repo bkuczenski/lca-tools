@@ -95,7 +95,7 @@ class AntelopeV1Client(BasicArchive):
     def make_interface(self, iface):
         if iface == 'index':
             return AntelopeIndexImplementation(self)
-        elif iface == 'inventory':
+        elif iface == 'inventory' or iface == 'exchange':
             return AntelopeInventoryImplementation(self)
         elif iface == 'quantity':
             return AntelopeQuantityImplementation(self)

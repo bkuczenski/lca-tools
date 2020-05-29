@@ -5,8 +5,15 @@ Query Interface -- used to operate catalog refs
 from lcatools.interfaces import (IndexInterface, BackgroundInterface, ExchangeInterface, QuantityInterface,
                                  ForegroundInterface, EntityNotFound, IndexRequired, PropertyExists)
 
-INTERFACE_TYPES = {'basic', 'index', 'inventory', 'background', 'quantity', 'foreground'}
+INTERFACE_TYPES = {'basic', 'index', 'exchange', 'background', 'quantity', 'foreground'}
 READONLY_INTERFACE_TYPES = {'basic', 'index', 'inventory', 'background', 'quantity'}
+
+def zap_inventory(interface, warn=False):
+    if interface == 'inventory':
+        if warn:
+            print('# # # # # # # # # **** Warning: use exchange over inventory ***** # # # # # # # # #')
+        return 'exchange'
+    return interface
 
 
 class NoCatalog(Exception):

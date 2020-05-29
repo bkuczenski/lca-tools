@@ -33,7 +33,7 @@ from lcatools.lcia_engine import LciaDb, DEFAULT_CONTEXTS, DEFAULT_FLOWABLES
 
 
 from lcatools.interfaces import local_ref, EntityNotFound, UnknownOrigin
-from ..catalog_query import CatalogQuery, INTERFACE_TYPES
+from ..catalog_query import CatalogQuery, INTERFACE_TYPES, zap_inventory
 from .lc_resolver import LcCatalogResolver
 from ..lc_resource import LcResource, download_file
 # from lcatools.flowdb.compartments import REFERENCE_INT  # reference intermediate flows
@@ -394,9 +394,11 @@ class LcCatalog(object):
         """
         if name in self._nicknames:
             return self._resolver.get_resource(source=self._nicknames[name], strict=strict)
+        iface = zap_inventory(iface, warn=True)  # warn when requesting the wrong interface
         return self._resolver.get_resource(ref=name, iface=iface, source=source, strict=strict)
 
     def get_archive(self, ref, interface=None, strict=False):
+        interface = zap_inventory(interface, warn=True)
         if interface in INTERFACE_TYPES:
             rc = self.get_resource(ref, iface=interface, strict=strict)
         else:

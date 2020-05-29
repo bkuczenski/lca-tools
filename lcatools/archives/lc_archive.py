@@ -28,7 +28,7 @@ class LcArchive(BasicArchive):
         return LcQuery(self)
 
     def make_interface(self, iface):
-        if iface == 'inventory':
+        if iface == 'inventory' or iface == 'exchange':
             return ExchangeImplementation(self)
         elif iface == 'background':
             return BackgroundImplementation(self)

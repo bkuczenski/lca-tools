@@ -89,18 +89,6 @@ class ExchangeInterface(AbstractQuery):
         return self._perform_query(_interface, 'exchange_relation', ExchangeRequired,
                                    process, ref_flow, exch_flow, direction, termination=termination, **kwargs)
 
-    def lcia(self, process, ref_flow, quantity_ref, **kwargs):
-        """
-        Perform process foreground LCIA for the given quantity reference.
-        :param process:
-        :param ref_flow:
-        :param quantity_ref:
-        :param kwargs:
-        :return:
-        """
-        return self._perform_query(_interface, 'lcia', ExchangeRequired,
-                                   process, ref_flow, quantity_ref, **kwargs)
-
     def traverse(self, fragment, scenario=None, **kwargs):
         """
         Traverse the fragment (observed) according to the scenario specification and return a list of FragmentFlows

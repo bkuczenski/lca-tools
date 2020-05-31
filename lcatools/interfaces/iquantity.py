@@ -76,9 +76,9 @@ class QuantityInterface(AbstractQuery):
         """
         Retrieve a canonical quantity based on a synonym or other distinguishable term.  Canonical quantities
         include standard concepts like "mass" that have a semantic scope that is broader than LCA, and also reference
-        versions of LCIA methods such as CML2001 / GWP-100
+        versions of LCIA methods such as CML2001 / GWP-100. It is up to the implementation to canonicalize these.
         :param quantity: external_id of quantity
-        :return: quantity CatalogRef
+        :return: QuantityRef
         """
         return self.make_ref(self._perform_query(_interface, 'get_canonical',
                                                  QuantityRequired,
@@ -88,7 +88,7 @@ class QuantityInterface(AbstractQuery):
         """
         Generate characterizations for the named flow or flowable, with the reference quantity noted in each case
         :param flow:
-        :return:
+        :return: list of characterizations
         """
         return self._perform_query(_interface, 'profile', QuantityRequired,
                                    flow, **kwargs)
@@ -104,7 +104,7 @@ class QuantityInterface(AbstractQuery):
         :param context: string
         :param location: string, ignored if value is dict
         :param kwargs: overwrite=False, origin=query_quantity.origin, others?
-        :return:
+        :return: new or updated characterization
         """
         return self._perform_query(_interface, 'characterize', QuantityRequired,
                                    flowable, ref_quantity, query_quantity, value,
@@ -149,7 +149,7 @@ class QuantityInterface(AbstractQuery):
         :param query_quantity:
         :param context:
         :param locale: ['GLO']
-        :return:
+        :return: a QrResult
         """
         return self._perform_query(_interface, 'quantity_relation', QuantityRequired,
                                    flowable, ref_quantity, query_quantity, context, locale=locale, **kwargs)
@@ -162,11 +162,24 @@ class QuantityInterface(AbstractQuery):
         :param inventory:
         :param locale:
         :param kwargs:
-        :return:
+        :return: an LciaResult whose components are processes encountered in the inventory
         """
         return self._perform_query(_interface, 'do_lcia', QuantityRequired,
                                    quantity, inventory, locale=locale, **kwargs)
 
+    def lcia(self, process, ref_flow, quantity_ref, **kwargs):
+        """
+        Perform process foreground LCIA for the given quantity reference.  Included for compatibility with antelope v1.
+        In this query, the inventory is computed remotely; whereas with quantity.do_lcia() inventory knowledge is
+        required
+        :param process:
+        :param ref_flow:
+        :param quantity_ref:
+        :param kwargs:
+        :return: an LciaResult whose components are flows
+        """
+        return self._perform_query(_interface, 'lcia', QuantityRequired,
+                                   process, ref_flow, quantity_ref, **kwargs)
 
     def fragment_lcia(self, fragment, quantity_ref, scenario=None, **kwargs):
         """
@@ -176,7 +189,7 @@ class QuantityInterface(AbstractQuery):
         :param quantity_ref:
         :param scenario:
         :param kwargs:
-        :return:
+        :return: an LciaResult whose components are FragmentFlows
         """
         return self._perform_query(_interface, 'fragment_lcia', QuantityRequired,
                                    fragment, quantity_ref, scenario, **kwargs)

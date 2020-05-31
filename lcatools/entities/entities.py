@@ -4,7 +4,7 @@ import uuid
 from itertools import chain
 from numbers import Number
 from lcatools.entity_refs import CatalogRef
-from lcatools.interfaces import PropertyExists
+from lcatools.interfaces import EntityInterface, PropertyExists
 
 from synonym_dict import LowerDict
 
@@ -30,7 +30,7 @@ class EntityMergeError(Exception):
     pass
 
 
-class LcEntity(object):
+class LcEntity(EntityInterface):
     """
     All LC entities behave like dicts, but they all have some common properties, defined here.
     """

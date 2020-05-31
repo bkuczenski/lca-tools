@@ -162,6 +162,16 @@ class AntelopeV1Client(BasicArchive):
             self._endpoints[endpoint] = j
         return j
 
+    def get_stage_name(self, stage_id):
+        stgs = self.get_endpoint('stages')
+        stage_id = int(stage_id)
+        if stgs[stage_id - 1]['fragmentStageID'] == stage_id:
+            return stgs[stage_id - 1]['name']
+        try:
+            return next(j['name'] for j in stgs if j['fragmentStageID'] == stage_id)
+        except StopIteration:
+            raise ValueError('Unknown fragment stage ID %d' % stage_id)
+
     def _ref_to_key(self, key):
         return key
 

@@ -1,17 +1,13 @@
 from synonym_dict import SynonymSet
 
 
-class FlowInterface(object):
+class EntityInterface(object):
     """
-    An abstract class that establishes common functionality for OBSERVATIONS OF FLOWS.  A Flow consists of:
-     - a reference quantity with a fixed unit
-     - a flowable (a list of synonyms for the flowable substnce being described)
-     - a context (a hierarchical list of strings designating the flows 'compartment' or category)
+    The very most basic characteristics of entities and entity refs
     """
-    _context = ()
-    _context_set_level = 0
-
-    _filt = str.maketrans('\u00b4\u00a0\u2032', "' '", '')  # filter name strings to pull out problematic unicode
+    @property
+    def entity_type(self):
+        return NotImplemented
 
     @property
     def reference_entity(self):
@@ -24,7 +20,40 @@ class FlowInterface(object):
 
     @property
     def link(self):
+        """
+        Must return a resolvable unique ID, nominally 'origin/external_ref'
+        :return:
+        """
         return NotImplemented
+
+    @property
+    def is_entity(self):
+        """
+        Used to distinguish between entities and catalog refs (which answer False)
+        :return: True for LcEntity subclasses
+        """
+        return False
+
+    def make_ref(self, query):
+        """
+        if is_entity is true, entity must return a ref made from the provided query
+        :param query:
+        :return:
+        """
+        return NotImplemented
+
+
+class FlowInterface(EntityInterface):
+    """
+    An abstract class that establishes common functionality for OBSERVATIONS OF FLOWS.  A Flow consists of:
+     - a reference quantity with a fixed unit
+     - a flowable (a list of synonyms for the flowable substnce being described)
+     - a context (a hierarchical list of strings designating the flows 'compartment' or category)
+    """
+    _context = ()
+    _context_set_level = 0
+
+    _filt = str.maketrans('\u00b4\u00a0\u2032', "' '", '')  # filter name strings to pull out problematic unicode
 
     def _catch_context(self, key, value):
         """

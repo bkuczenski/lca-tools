@@ -666,6 +666,19 @@ class QuantityImplementation(BasicImplementation, QuantityInterface):
                 res.add_cutoff(x)
         return res
 
+    def lcia(self, process, ref_flow, quantity_ref, **kwargs):
+        """
+        Implementation of foreground LCIA -- moved from LcCatalog
+        :param process:
+        :param ref_flow:
+        :param quantity_ref:
+        :param kwargs:
+        :return:
+        """
+        p = self._archive.retrieve_or_fetch_entity(process)
+        return quantity_ref.do_lcia(p.inventory(ref_flow=ref_flow),
+                                    locale=p['SpatialScope'])
+
     def fragment_lcia(self, fragment, quantity_ref, scenario=None, refresh=False, **kwargs):
         frag = self._archive.retrieve_or_fetch_entity(fragment)
         return frag.top().fragment_lcia(quantity_ref, scenario=scenario, refresh=refresh, **kwargs)

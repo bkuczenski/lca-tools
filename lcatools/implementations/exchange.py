@@ -65,19 +65,6 @@ class ExchangeImplementation(BasicImplementation, ExchangeInterface):
             x = p.get_exchange(hash((p.external_ref, exch_flow, direction, termination)))
             return x[norm]
 
-    def lcia(self, process, ref_flow, quantity_ref, **kwargs):
-        """
-        Implementation of foreground LCIA -- moved from LcCatalog
-        :param process:
-        :param ref_flow:
-        :param quantity_ref:
-        :param kwargs:
-        :return:
-        """
-        p = self._archive.retrieve_or_fetch_entity(process)
-        return quantity_ref.do_lcia(p.inventory(ref_flow=ref_flow),
-                                    locale=p['SpatialScope'])
-
     def traverse(self, fragment, scenario=None, **kwargs):
         frag = self._archive.retrieve_or_fetch_entity(fragment)
         return frag.top().traverse(scenario, observed=True)

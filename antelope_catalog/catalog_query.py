@@ -92,7 +92,7 @@ class CatalogQuery(IndexInterface, BackgroundInterface, ExchangeInterface, Quant
         :return:
         """
         for k in self._iface(itype, strict=strict):
-            print('%s' % k)
+            yield k
 
     def get(self, eid, **kwargs):
         """

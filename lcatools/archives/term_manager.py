@@ -414,7 +414,7 @@ class TermManager(object):
         :param overwrite: whether to overwrite an existing value if it already exists (ignored if value is a dict)
         :param location: ['GLO'] (ignored if value is a dict)
         :param origin: (optional; origin of value; defaults to quantity.origin)
-        :return:
+        :return: created or updated characterization
         """
         if origin is None:
             origin = query_quantity.origin

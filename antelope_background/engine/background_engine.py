@@ -10,7 +10,6 @@ import sys  # for recursion limit
 import re  # for product_flows search
 
 import numpy as np
-import scipy as sp
 from scipy.sparse import csc_matrix, csr_matrix
 
 from lcatools.interfaces import comp_dir
@@ -332,7 +331,7 @@ class BackgroundEngine(object):
 
     def compute_lci(self, product_flow, **kwargs):
         if self.is_in_background(product_flow):
-            num_ad = sp.array([[self.tstack.bg_dict(product_flow.index), 0, 1.0]])
+            num_ad = np.array([[self.tstack.bg_dict(product_flow.index), 0, 1.0]])
             ad = self.construct_sparse(num_ad, self.tstack.ndim, 1)
             x, bx = self.compute_bg_lci(ad, **kwargs)
             return bx
@@ -386,7 +385,7 @@ class BackgroundEngine(object):
         """
         if self._b_matrix is not None:
             raise ValueError('B matrix already specified!')
-        num_bg = sp.array([[co.emission.index, self.tstack.bg_dict(co.parent.index), co.value]
+        num_bg = np.array([[co.emission.index, self.tstack.bg_dict(co.parent.index), co.value]
                            for co in self._bg_emission])
         self._b_matrix = self.construct_sparse(num_bg, self.mdim, self.tstack.ndim)
 
@@ -398,7 +397,7 @@ class BackgroundEngine(object):
 
     def _construct_a_matrix(self):
         ndim = self.tstack.ndim
-        num_bg = sp.array([[self.tstack.bg_dict(i.term.index), self.tstack.bg_dict(i.parent.index), i.value]
+        num_bg = np.array([[self.tstack.bg_dict(i.term.index), self.tstack.bg_dict(i.parent.index), i.value]
                            for i in self._interior])
         self._a_matrix = self.construct_sparse(num_bg, ndim, ndim)
 
@@ -506,9 +505,9 @@ class BackgroundEngine(object):
                 if co.parent.index in _fg_dict:
                     bf_exch.append(co)
 
-        num_af = sp.array([[fg_dict(i.term.index), fg_dict(i.parent.index), i.value] for i in af_exch])
-        num_ad = sp.array([[self.tstack.bg_dict(i.term.index), fg_dict(i.parent.index), i.value] for i in ad_exch])
-        num_bf = sp.array([[co.emission.index, fg_dict(co.parent.index), co.value] for co in bf_exch])
+        num_af = np.array([[fg_dict(i.term.index), fg_dict(i.parent.index), i.value] for i in af_exch])
+        num_ad = np.array([[self.tstack.bg_dict(i.term.index), fg_dict(i.parent.index), i.value] for i in ad_exch])
+        num_bf = np.array([[co.emission.index, fg_dict(co.parent.index), co.value] for co in bf_exch])
         ndim = self.tstack.ndim
         _af = self.construct_sparse(num_af, pdim, pdim)
         _ad = self.construct_sparse(num_ad, ndim, pdim)
@@ -549,7 +548,7 @@ class BackgroundEngine(object):
 
         # self.make_foreground()
 
-    def add_all_ref_products(self, multi_term='abort', default_allocation=None, net_coproducts=False, prefer=None):
+    def add_all_ref_products(self, multi_term='abort', default_allocation=None, prefer=None):
         if self._all_added:
             return
         if prefer is not None:
@@ -558,11 +557,11 @@ class BackgroundEngine(object):
             for x in p.references():
                 j = self.check_product_flow(x.flow, p)
                 if j is None:
-                    self._add_ref_product(x.flow, p, multi_term, default_allocation, net_coproducts)
+                    self._add_ref_product(x.flow, p, multi_term, default_allocation)
         self._update_component_graph()
         self._all_added = True
 
-    def add_ref_product(self, flow, term, multi_term='abort', default_allocation=None, net_coproducts=False):
+    def add_ref_product(self, flow, term, multi_term='abort', default_allocation=None):
         """
         Here we are adding a reference product - column of the A + B matrix.  The termination must be supplied.
         :param flow: a product flow
@@ -574,15 +573,13 @@ class BackgroundEngine(object):
          'last' - take the last match (alphabetically by process name)
          'abort' - the default- do not allow a nondeterministic termination
         :param default_allocation: an LcQuantity to use for allocation if unallocated processes are encountered
-        :param net_coproducts: [False] for unallocated multi-output processes, compute net demand of coproducts instead
-         of allocating. (Works for USLCI; still buggy for ecoinvent)
         :return:
         """
         j = self.check_product_flow(flow, term)
 
         if j is None:
             try:
-                j = self._add_ref_product(flow, term, multi_term, default_allocation, net_coproducts)
+                j = self._add_ref_product(flow, term, multi_term, default_allocation)
             except TerminationError:
                 print('add_ref_product failed.')
                 return
@@ -590,13 +587,13 @@ class BackgroundEngine(object):
             self._update_component_graph()
         return j
 
-    def _add_ref_product(self, flow, term, multi_term, default_allocation, net_coproducts):
+    def _add_ref_product(self, flow, term, multi_term, default_allocation):
         old_recursion_limit = sys.getrecursionlimit()
         sys.setrecursionlimit(self.required_recursion_limit)
 
         j = self._create_product_flow(flow, term)
         try:
-            self._traverse_term_exchanges(j, multi_term, default_allocation, net_coproducts)
+            self._traverse_term_exchanges(j, multi_term, default_allocation)
         except TerminationError:
             self._rm_product_flow_children(j)
             print('Termination Error: process %s: ref_flow %s, ' % (j.process.external_ref, j.flow.external_ref))
@@ -606,16 +603,14 @@ class BackgroundEngine(object):
         sys.setrecursionlimit(old_recursion_limit)
         return j
 
-    def _traverse_term_exchanges(self, parent, multi_term, default_allocation, net_coproducts):
+    def _traverse_term_exchanges(self, parent, multi_term, default_allocation):
         """
         Implements the Tarjan traversal
         :param parent: a ProductFlow
         :param default_allocation:
-        :param net_coproducts:
         :return:
         """
         rx = parent.process.reference(parent.flow)
-        cutoff_refs = False
 
         if not rx.is_reference:
             print('### Nonreference RX found!\nterm: %s\nflow: %s\next_id: %s' % (rx.process,
@@ -624,33 +619,13 @@ class BackgroundEngine(object):
             rx = parent.process.reference()
             print('    using ref %s\n' % rx)
 
-        if 0:
-            if net_coproducts:
-                exchs = [x for x in parent.process.inventory(rx)]
-                cutoff_refs = True
-            else:
-                self._print('Cutting off at un-allocated multi-output process:\n %s\n %s' % (parent.process, rx))
-                exchs = []
-        else:
-            exchs = parent.process.inventory()
+        exchs = parent.process.inventory(ref_flow=rx)
 
         for exch in exchs:  # unallocated exchanges
-            if exch is rx:  # This will only work for literal processes and not process_refs, because
-                # process_ref.reference() returns an RxRef.  Instead we fallback to exch.is_reference
-                continue  # don't add self
-            if cutoff_refs:
-                val = pval = exch.value
-            else:
-                '''
-                if rx.is_reference:
-                    val = pval = exch[rx]
-                else:
-                    print('### Nonreference RX found!\nterm: %s\nflow: %s\next_id: %s' % (rx.process,
-                                                                                          rx.flow,
-                                                                                          rx.process.external_ref))
-                    val = pval = 0
-                '''
-                val = pval = exch[rx]
+            if exch.is_reference:  # in parent.process.reference_entity:
+                # we're done with the exchange
+                raise TypeError('Reference exchange encountered in bg inventory %s' % exch)
+            val = pval = exch.value  # allocated exchange
             if val is None or val == 0:
                 # don't add zero entries (or descendants) to sparse matrix
                 continue
@@ -662,24 +637,6 @@ class BackgroundEngine(object):
             # interior flow-- enforce normative direction
             if exch.direction == 'Output':
                 pval *= -1
-            if exch.is_reference:  # in parent.process.reference_entity:
-                if cutoff_refs:
-                    # for net coproducts- all coproducts after the first are simply created as free sources
-                    i = self.check_product_flow(exch.flow, parent.process)
-                    if i == parent:
-                        # don't add ourself as a coproduct
-                        continue
-                    if i is None:
-                        # TODO: need to figure out why this causes SCC recursion errors
-                        i = self._create_product_flow(exch.flow, parent.process)
-                        net = self._add_emission(exch.flow, exch.direction)
-                        # TODO: This should be 1.0 instead of val, but entries get auto-normalized in adjust_val()
-                        self.add_cutoff(i, net, val)
-                        self._surplus_coproducts[i] = parent
-                    # then the first also generates the coproducts; activity levels of free sources will be net demand
-                    self.add_interior(parent, i, pval)
-                # in either case, we're done with the exchange
-                continue
             # normal non-reference exchange. Either a dependency (if interior) or a cutoff (if exterior).
             term = self.terminate(exch, multi_term)
             if term is None:
@@ -699,7 +656,7 @@ class BackgroundEngine(object):
                 if i.debug:
                     print('Parent: %s' % parent.process)
                 try:
-                    self._traverse_term_exchanges(i, multi_term, default_allocation, net_coproducts)
+                    self._traverse_term_exchanges(i, multi_term, default_allocation)
                 except TerminationError:
                     self._rm_product_flow_children(i)
                     raise

@@ -1,4 +1,5 @@
 from .base import EntityRef
+from .exchange_ref import ExchangeRef
 
 
 class MultipleReferences(Exception):
@@ -125,7 +126,8 @@ class ProcessRef(EntityRef):
     '''
     def exchanges(self, **kwargs):
         for x in self._query.exchanges(self.external_ref, **kwargs):
-            yield x.make_ref(self._query)
+            yield ExchangeRef(self, self._query.make_ref(x.flow), x.direction, value=None, termination=x.termination,
+                              comment=x.comment)
 
     def exchange_values(self, flow, direction=None, termination=None, reference=None, **kwargs):
         if hasattr(flow, 'entity_type'):
@@ -135,12 +137,14 @@ class ProcessRef(EntityRef):
                 flow = flow.external_ref
         for x in  self._query.exchange_values(self.external_ref, flow, direction,
                                               termination=termination, reference=reference, **kwargs):
-            yield x.make_ref(self._query)
+            yield ExchangeRef(self, self._query.make_ref(x.flow), x.direction, value=x.value, termination=x.termination,
+                              comment=x.comment)
 
     def inventory(self, ref_flow=None, **kwargs):
         # ref_flow = self._use_ref_exch(ref_flow)  # ref_flow=None returns unallocated inventory
         for x in self._query.inventory(self.external_ref, ref_flow=ref_flow, **kwargs):
-            yield x.make_ref(self._query)
+            yield ExchangeRef(self, self._query.make_ref(x.flow), x.direction, value=x.value, termination=x.termination,
+                              comment=x.comment)
 
     def exchange_relation(self, ref_flow, exch_flow, direction, termination=None, **kwargs):
         ref_flow = self._use_ref_exch(ref_flow)

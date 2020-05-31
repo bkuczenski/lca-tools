@@ -38,7 +38,7 @@ class LciaEngine(TermManager):
        - dist = 0: only exact matchh
        - dist = 1: match or subcompartments
        - dist = 2: match, subcompartments, or parent
-       - dist = 3: .. or any parent
+       - dist = 3: .. or any parent up to NullContext
      * quell biogenic CO2 in quantity relation lookups
     """
     _quell_biogenic = None
@@ -50,6 +50,9 @@ class LciaEngine(TermManager):
         When overriding this function, place the super() call between pre-load and post-load activities.
         :return:
         """
+        if flowables is None:
+            flowables = DEFAULT_FLOWABLES
+
         # FlowablesDict-- mainly to upsample CAS numbers for matching
         self._fm = FlowablesDict()
 
@@ -83,8 +86,6 @@ class LciaEngine(TermManager):
         """
         if contexts is None:
             contexts = DEFAULT_CONTEXTS
-        if flowables is None:
-            flowables = DEFAULT_FLOWABLES
         super(LciaEngine, self).__init__(contexts=contexts, flowables=None, quantities=quantities, **kwargs)
 
         # override flowables manager

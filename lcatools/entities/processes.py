@@ -344,7 +344,7 @@ class LcProcess(LcEntity):
         if ref_flow is None:
             ref_exch = None
         else:
-            ref_exch = self.find_exchange(ref_flow, reference=True)
+            ref_exch = self.reference(ref_flow)
         for i in self._exchanges.values():
             if ref_exch is None:
                 # generate unallocated exchanges
@@ -462,8 +462,10 @@ class LcProcess(LcEntity):
                 if rf.flow == flow or rf.flow.match(flow):
                     yield self._exchanges[rf.key]
 
-    def reference(self, flow=None):
-        return self.find_exchange(flow, reference=True)
+    def reference(self, flow_ref=None):
+        if flow_ref in self._reference_entity:
+            return flow_ref
+        return self.find_exchange(flow_ref, reference=True)
 
     ''' # don't think I want this
     def reference_value(self, flow=None):

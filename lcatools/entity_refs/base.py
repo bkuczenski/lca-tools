@@ -19,6 +19,8 @@ The classes in this file get imported elsewhere; the CatalogRef class imports al
 """
 from synonym_dict import LowerDict
 
+from ..interfaces import EntityInterface
+
 
 class NoCatalog(Exception):
     pass
@@ -32,9 +34,9 @@ class EntityRefMergeError(Exception):
     pass
 
 
-class BaseRef(object):
+class BaseRef(EntityInterface):
     """
-    A base class for defining entity references.
+    A base class for defining entity references.  The base class can also store information, such as properties
     """
     _etype = None
 
@@ -73,10 +75,6 @@ class BaseRef(object):
         if self._etype is None:
             return 'unknown'
         return self._etype
-
-    @property
-    def is_entity(self):
-        return False
 
     def _localitem(self, item):
         if item in self._d:
@@ -243,7 +241,7 @@ class EntityRef(BaseRef):
 
         :param external_ref:
         :param query:
-        :param kwargs:
+        :param kwargs: masquerade: self-described origin is different from the query origin
         """
         origin = masquerade or query.origin
         super(EntityRef, self).__init__(origin, external_ref, **kwargs)

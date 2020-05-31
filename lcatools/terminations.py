@@ -2,8 +2,8 @@
 Flow Terminations are model-defined links between a particular flow and a process that terminates it.
 
 They originated as part of LcFragments but in fact they are more general. A FlowTermination is actually the same
-as a ProductFlow in lca-matrix, although the FlowTermination is more powerful.  It should be easy to construct
-either one from the other.
+as a ProductFlow in lca-matrix, plus features to compute LCIA.  It should be easy to construct either one from the
+other.
 """
 
 from lcatools.interfaces import PrivateArchive, check_direction, comp_dir, NoFactorsFound, QuantityRequired

@@ -5,7 +5,7 @@ The abstract classes in this sub-package define what information is made availab
 resource of some kind.  The interfaces must be instantiated in order to be used.  In the core package
 """
 
-from .abstract_query import UnknownOrigin, PrivateArchive, EntityNotFound
+from .abstract_query import PrivateArchive, EntityNotFound
 
 from .iconfigure import ConfigureInterface
 from .iexchange import ExchangeInterface, ExchangeRequired
@@ -43,10 +43,6 @@ class BasicQuery(IndexInterface, ExchangeInterface, QuantityInterface):
     @property
     def origin(self):
         return self._archive.ref
-
-    @property
-    def _tm(self):
-        return self._archive.tm
 
     '''
     I think that's all I need to do!
@@ -105,15 +101,18 @@ In most LCA software, including the current operational version of lca-tools, a 
 that is made up of a 'flowable' (substance, product, intervention, or service) and a 'context', which is 
 synonymous with an environmental compartment.
 
-We are planning a major shift to a data model where 'context' is a standalone entity, belonging to BasicArchive,
-the context of an exchange is stored in its termination, and 'flows' are context-free. This will have the 
-advantages of normalizing the definition of the exchange, reducing the number of flow entities in a database, and
-simplifying the process of seeking compatibility between databases.
+The US EPA review of elementary flows recommended managing the names of flowables and contexts separately, and that
+is the approach that is done here.  
 
-The new Flat Background already implements context-as-termination, but the mainline code has not yet been 
-changed. So we introduce this flag CONTEXT_STATUS_ to express to client code which one to do. It should take
-either of the two values: 'compat' means "old style" (flows have Compartments) and 'new' means use the new data
-model (exchange terminations are contexts) 
+The exchange model consists of : parent | flow(able), direction | [exch value] | [terminal node]
+
+If the terminal node is a context, the exchange is elementary. if it's a process, then intermediate. 
+If none, then cutoff.
+
+The new Flat Background already implements context-as-termination, but the main code has had to transition and we are 
+still technically debugging the CalRecycle project. So we introduce this flag CONTEXT_STATUS_ to express to client code 
+which one to do. It should take either of the two values: 'compat' means "old style" (flows have Compartments) and 
+'new' means use the new data model (exchange terminations are contexts) 
 """
 CONTEXT_STATUS_ = 'new'  # 'compat': context = flow['Compartment']; 'new': context = exch.termination
 

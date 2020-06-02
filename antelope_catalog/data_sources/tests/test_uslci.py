@@ -1,8 +1,7 @@
 import unittest
 
-from ... import LcCatalog
+from ... import LcCatalog, UnknownOrigin
 from ..local import CATALOG_ROOT, make_config, check_enabled
-from lcatools.interfaces import UnknownOrigin
 
 etypes = ('quantity', 'flow', 'process')
 

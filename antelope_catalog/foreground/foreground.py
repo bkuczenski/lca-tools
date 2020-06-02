@@ -7,9 +7,10 @@ import re
 
 from collections import defaultdict
 
+from ..catalog_query import UnknownOrigin
 from ..implementations import ForegroundImplementation
 
-from lcatools.interfaces import PropertyExists, UnknownOrigin
+from lcatools.interfaces import PropertyExists
 from lcatools.archives import BasicArchive, EntityExists, BASIC_ENTITY_TYPES
 from lcatools.entities.fragments import LcFragment
 from lcatools.entity_refs import CatalogRef

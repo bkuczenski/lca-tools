@@ -32,8 +32,8 @@ from lcatools.archives import REF_QTYS
 from lcatools.lcia_engine import LciaDb, DEFAULT_CONTEXTS, DEFAULT_FLOWABLES
 
 
-from lcatools.interfaces import local_ref, EntityNotFound, UnknownOrigin
-from ..catalog_query import CatalogQuery, INTERFACE_TYPES, zap_inventory
+from lcatools.interfaces import local_ref, EntityNotFound
+from ..catalog_query import CatalogQuery, INTERFACE_TYPES, zap_inventory, UnknownOrigin
 from .lc_resolver import LcCatalogResolver
 from ..lc_resource import LcResource, download_file
 # from lcatools.flowdb.compartments import REFERENCE_INT  # reference intermediate flows
@@ -497,7 +497,7 @@ class LcCatalog(object):
         res.make_cache(self.cache_file(self._localize_source(source)))
 
     def _background_for_origin(self, ref):
-        inx_ref = self.index_ref(ref, interface='inventory')
+        inx_ref = self.index_ref(ref, interface='exchange')
         bk_file = self._localize_source(os.path.join(self.archive_dir, '%s_background.mat' % inx_ref))
         bk = LcResource(inx_ref, bk_file, 'Background', interfaces='background', priority=99,
                         save_after=True, _internal=True)

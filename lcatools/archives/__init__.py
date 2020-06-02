@@ -4,7 +4,6 @@ from .archive_index import index_archive, BasicIndex, LcIndex
 from .term_manager import TermManager
 from .lc_archive import LcArchive, LC_ENTITY_TYPES
 from ..from_json import from_json
-from ..interfaces import UnknownOrigin
 
 import os
 import importlib
@@ -31,34 +30,19 @@ class Qdb(BasicArchive):
         self.load_from_dict(from_json(self.source))
 
 
-def create_archive(source, ds_type, catalog=None, **kwargs):
+def create_archive(source, ds_type, **kwargs):
     """
     Create an archive from a source and type specification.
     :param source:
     :param ds_type:
-    :param catalog: required to identify upstream archives, if specified
     :param kwargs:
     :return:
     """
     if ds_type.lower() == 'json':
-        a = archive_from_json(source, catalog=catalog, **kwargs)
+        a = archive_from_json(source, **kwargs)
     else:
         cls = archive_factory(ds_type)
-        if ds_type.lower() == 'ecoinventlcia':
-            # this is a GIANT HACK
-            ei_ref = '.'.join(['local', 'ecoinvent', kwargs['version']])
-            try:
-                res = catalog.get_resource(ei_ref, iface='inventory', strict=False)
-                res.check(catalog)
-                if hasattr(res.archive, 'load_flows'):
-                    res.archive.load_flows()
-                ar = res.archive
-            except UnknownOrigin:
-                ar = None
-
-            a = cls(source, ei_archive=ar, **kwargs)
-        else:
-            a = cls(source, **kwargs)
+        a = cls(source, **kwargs)
     return a
 
 
@@ -93,7 +77,7 @@ def archive_factory(ds_type):
                 mod = importlib.import_module('.%s' % dsl, package='antelope_%s' % dsl)
                 return mod.init_fcn
             except ImportError as e:
-                raise ArchiveError(e)  # what is going on here?
+                raise ArchiveError(ds_type)  # what is going on here?
 
 
 def archive_from_json(fname, factory=archive_factory, catalog=None, **archive_kwargs):
@@ -101,23 +85,12 @@ def archive_from_json(fname, factory=archive_factory, catalog=None, **archive_kw
     :param fname: JSON filename
     :param factory: function returning a class
     :param catalog: [None] necessary to retrieve upstream archives, if specified
-    :param static: [True]
     :return: an ArchiveInterface
     """
     j = from_json(fname)
 
-    upstream = None
-    if 'upstreamReference' in j:
-        print('**Upstream reference encountered: %s\n' % j['upstreamReference'])
-        if catalog is not None:
-            try:
-                upstream = catalog.get_archive(j['upstreamReference'])  # this doesn't even make sense anymore.
-            except KeyError:
-                print('Upstream reference not found in catalog!')
-                archive_kwargs['upstreamReference'] = j['upstreamReference']
-            except ValueError:
-                print('Upstream reference is ambiguous!')
-                archive_kwargs['upstreamReference'] = j['upstreamReference']
-
+    if 'upstreamReference' in j or catalog is not None:
+        print('**Upstream reference encountered: %s' % j['upstreamReference'])
+        print('**XX Upstream is gone; catalog argument is deprecated\n')
     cls = factory(j.pop('dataSourceType', 'LcArchive'))
-    return cls.from_already_open_file(j, fname, quiet=True, upstream=upstream, **archive_kwargs)
+    return cls.from_already_open_file(j, fname, quiet=True, **archive_kwargs)

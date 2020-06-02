@@ -7,7 +7,7 @@ import hashlib
 from lcatools.archives import InterfaceError, index_archive, update_archive, create_archive
 
 from .foreground import LcForeground
-from .catalog_query import INTERFACE_TYPES, NoCatalog, zap_inventory
+from .catalog_query import INTERFACE_TYPES, NoCatalog, zap_inventory, UnknownOrigin
 
 # from .providers import create_archive
 
@@ -122,11 +122,26 @@ class LcResource(object):
         else:
             src = self.source
 
+        kwargs = {**self.init_args}
+
         if self.ds_type.lower() in ('foreground', 'lcforeground'):
-            self._archive = LcForeground(src, catalog=catalog, ref=self.reference, **self.init_args)
+            self._archive = LcForeground(src, catalog=catalog, ref=self.reference, **kwargs)
         else:
+            if self.ds_type.lower() == 'ecoinventlcia':
+                # this is a GIANT HACK
+                # we need to bring along a local ecoinvent archive to lookup flow reference qtys
+                ei_ref = '.'.join(['local', 'ecoinvent', kwargs['version']])
+                try:
+                    res = catalog.get_resource(ei_ref, iface='exchange', strict=False)
+                    res.check(catalog)
+                    if hasattr(res.archive, 'load_flows'):
+                        res.archive.load_flows()
+                    kwargs['ei_archive'] = res.archive
+                except UnknownOrigin:
+                    pass
+
             try:
-                self._archive = create_archive(src, self.ds_type, catalog=catalog, ref=self.reference, **self.init_args)
+                self._archive = create_archive(src, self.ds_type, ref=self.reference, **kwargs)
             except FileNotFoundError as e:
                 raise ResourceInvalid('%s: %s' % (self.reference, e.filename))
         if catalog is not None and os.path.exists(catalog.cache_file(self.source)):

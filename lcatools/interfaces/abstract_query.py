@@ -2,10 +2,6 @@
 Root-level catalog interface
 """
 
-class UnknownOrigin(Exception):
-    pass
-
-
 class ValidationError(Exception):
     pass
 
@@ -51,6 +47,19 @@ class AbstractQuery(object):
     def origin(self):
         return NotImplemented
 
+    def make_ref(self, entity):
+        """
+        Query subclasses can return abstracted versions of query results
+        :param entity:
+        :return:
+        """
+        if entity is None:
+            return None
+        if entity.is_entity:
+            return entity.make_ref(self)
+        else:
+            return entity  # already a ref
+
     def _iface(self, itype, **kwargs):
         """
         Pseudo-abstract method to generate interfaces of the specified type upon demand.  Must be implemented
@@ -60,22 +69,9 @@ class AbstractQuery(object):
         """
         return NotImplemented
 
-    @property
-    def _tm(self):
-        return NotImplemented
-
     '''
     Internal workings
     '''
-    def is_elementary(self, context):
-        """
-        Stopgap used to expose access to a catalog's Qdb; in the future, flows will no longer exist and is_elementary
-        will be a trivial function of an exchange asking whether its termination is a context or not.
-        :param context:
-        :return: bool
-        """
-        return self._tm[context.fullname].elementary
-
     def _perform_query(self, itype, attrname, exc, *args, strict=False, **kwargs):
         self._debug('Performing %s query, iface %s' % (attrname, itype))
         try:
@@ -97,17 +93,6 @@ class AbstractQuery(object):
             pass
 
         raise exc('itype %s required for attribute %s | %s' % (itype, attrname, args))
-
-    def make_ref(self, entity):
-        if entity is None:
-            return None
-        if entity.is_entity:
-            try:
-                return entity.make_ref(self._grounded_query(entity.origin))
-            except UnknownOrigin:
-                return entity.make_ref(self._grounded_query(None))  # falls back to self
-        else:
-            return entity  # already a ref
 
     '''
     Can be overridden

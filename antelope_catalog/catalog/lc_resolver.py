@@ -2,7 +2,7 @@ import json
 import os
 from collections import defaultdict
 
-from lcatools.interfaces import UnknownOrigin
+from ..catalog_query import UnknownOrigin
 from ..lc_resource import LcResource
 
 

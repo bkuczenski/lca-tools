@@ -21,6 +21,10 @@ class NoCatalog(Exception):
     pass
 
 
+class UnknownOrigin(Exception):
+    pass
+
+
 class CatalogQuery(IndexInterface, BackgroundInterface, ExchangeInterface, QuantityInterface, ForegroundInterface):
     """
     A CatalogQuery is a class that performs any supported query against a supplied catalog.
@@ -54,6 +58,16 @@ class CatalogQuery(IndexInterface, BackgroundInterface, ExchangeInterface, Quant
     @property
     def _tm(self):
         return self._catalog.lcia_engine
+
+    def is_elementary(self, context):
+        """
+        Stopgap used to expose access to a catalog's Qdb; in the future, flows will no longer exist and is_elementary
+        will be a trivial function of an exchange asking whether its termination is a context or not.
+        :param context:
+        :return: bool
+        """
+        return self._tm[context.fullname].elementary
+
 
     def cascade(self, origin):
         """
@@ -130,7 +144,15 @@ class CatalogQuery(IndexInterface, BackgroundInterface, ExchangeInterface, Quant
         if entity.entity_type == 'fragment':
             # TODO: create a new ForegroundQuery to eliminate the need for this hack
             return entity  # don't make references for fragments just now
-        e_ref = super(CatalogQuery, self).make_ref(entity)
+        if entity is None:
+            return None
+        if entity.is_entity:
+            try:
+                e_ref = entity.make_ref(self._grounded_query(entity.origin))
+            except UnknownOrigin:
+                e_ref = entity.make_ref(self)
+        else:
+            e_ref = entity  # already a ref
         if entity.entity_type == 'quantity':
             # print('Going canonical')
             return self.get_canonical(e_ref)

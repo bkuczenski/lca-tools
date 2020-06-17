@@ -44,3 +44,4 @@ def tarjan_background(res, source=None, **kwargs):
         tb = TarjanBackground(source, save_after=True, **kwargs)
         bg = tb.make_interface('background')
         bg.setup_bm(res.make_interface('index'))
+        return bg

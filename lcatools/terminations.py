@@ -420,7 +420,7 @@ class FlowTermination(object):
             return '--'
         if self.term_node.entity_type == 'fragment':  # fg, bg, or subfragment
             return '%4g unit' % self.inbound_exchange_value
-        return '%4g %s' % (self.inbound_exchange_value, self.term_flow.unit())  # process
+        return '%4g %s' % (self.inbound_exchange_value, self.term_flow.unit)  # process
 
     def _unobserved_exchanges(self):
         """

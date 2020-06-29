@@ -117,7 +117,7 @@ class Exchange(object):
     @property
     def unit(self):
         try:
-            unit = self.flow.unit()
+            unit = self.flow.unit
         except AttributeError:
             unit = None
         return unit

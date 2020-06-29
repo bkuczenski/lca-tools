@@ -28,7 +28,7 @@ class FlowRef(EntityRef, FlowInterface):
 
     @property
     def _addl(self):
-        return self.unit()
+        return self.unit
 
     '''
     def has_characterization(self, quantity, location='GLO'):

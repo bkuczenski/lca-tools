@@ -329,6 +329,7 @@ class BackgroundEngine(object):
                 print(nums)
                 raise
 
+    '''
     def compute_lci(self, product_flow, **kwargs):
         if self.is_in_background(product_flow):
             num_ad = np.array([[self.tstack.bg_dict(product_flow.index), 0, 1.0]])
@@ -376,6 +377,7 @@ class BackgroundEngine(object):
 
         b = self._b_matrix * total
         return total, b
+    '''
 
     def _construct_b_matrix(self):
         """
@@ -419,6 +421,7 @@ class BackgroundEngine(object):
                 if bool(re.search(search, str(k), flags=re.IGNORECASE)):
                     yield k
 
+    '''
     def foreground_dependencies(self, product_flow):
         for fg in self._foreground:
             if fg.parent.index == product_flow.index:
@@ -428,6 +431,7 @@ class BackgroundEngine(object):
         for co in self._cutoff:
             if co.parent.index == product_flow.index:
                 yield co
+    ''' # cut to here
 
     def foreground(self, pf):
         """

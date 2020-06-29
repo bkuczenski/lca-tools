@@ -231,6 +231,7 @@ class ForegroundInterface(AbstractQuery):
 
     def set_balance_flow(self, fragment, **kwargs):
         """
+        This should get folded into observe
         Specify that a given fragment is a balancing flow for the parent node, with respect to the specified fragment's
         flow's reference quantity.
 
@@ -243,6 +244,7 @@ class ForegroundInterface(AbstractQuery):
 
     def unset_balance_flow(self, fragment, **kwargs):
         """
+        This should get folded into observe
         Specify that a given fragment's balance status should be removed.  The fragment's observed EV will remain at
         the most recently observed level.
         :param fragment:

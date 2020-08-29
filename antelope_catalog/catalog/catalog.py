@@ -37,7 +37,9 @@ from ..catalog_query import CatalogQuery, INTERFACE_TYPES
 from .lc_resolver import LcCatalogResolver
 from ..lc_resource import LcResource, download_file
 # from lcatools.flowdb.compartments import REFERENCE_INT  # reference intermediate flows
-from ..data_sources.local import TEST_ROOT
+
+TEST_ROOT = os.path.join(os.path.dirname(__file__), 'cat-test')  # volatile, inspectable
+
 
 from lcatools.archives import archive_from_json, InterfaceError
 

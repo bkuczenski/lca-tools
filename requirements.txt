@@ -1,0 +1,7 @@
+six
+requests
+lxml
+python-magic
+pylzma
+xlrd
+scipy

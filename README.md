@@ -3,6 +3,107 @@ A Python package for doing stuff with LCA data
 
 This software is meant to provide a set of free tools for _building_, _analyzing_ and _sharing_ life cycle inventory (LCI) models.
 
+# Quick Test
+
+In the shell (within your virtualenv):
+
+    $ pip install `requirements.txt`
+    
+To create persistent test catalog:
+
+    $ export ANTELOPE_CATALOG_ROOT=/path/to/create/catalog
+    $ python -m unittest antelope_catalog/data_sources/tests/test_aa_local.py
+
+To test the code:
+
+    $ python -m unittest antelope_catalog/data_sources/tests/test_uslci.py
+    ...
+    ...(many lines of output)
+    ...
+    registering local.uslci.olca/93a60a56-a3c8-17da-a746-0800200c9a66
+    local.uslci.olca.index.20200829: <source removed>
+    local.uslci.olca: /path/to/create/catalog/archives/local.uslci.olca.index.20200829_background.mat
+    Completed in 2.39 sec
+    ..completed 20 iterations
+    .completed 20 iterations
+    .
+    ----------------------------------------------------------------------
+    Ran 21 tests in 16.219s
+    
+    OK
+    $
+
+To learn more about the code, first look at these tests and others in  `antelope_catalog/data_sources/tests`
+
+
+# Quick Start
+
+Once you have USLCI installed (above), you can do basic LCA operations.
+
+    >>> from antelope_catalog import LcCatalog
+    >>> cat = LcCatalog('/path/to/create/catalog')
+    >>> # if you run the tests first, this catalog will already have contents
+    >>> cat.show_interfaces()
+    lcia.ipcc.2007.traci21 [basic, index, quantity]
+    local.lcia.traci.2.1 [basic, index, quantity]
+    local.qdb [basic, index, quantity]
+    local.uslci.ecospold [basic, inventory, quantity]
+    local.uslci.ecospold.index.20200829 [background, basic, index]
+    local.uslci.olca [basic, inventory, quantity]
+    local.uslci.olca.index.20200829 [background, basic, index]
+
+    >>> q = cat.query('local.uslci.olca')
+    >>> q.count('process')
+    767
+    
+    >>> r = next(q.processes(Name='refinery'))
+    >>> r.show()  # your results may vary
+    ProcessRef catalog reference (0aaf1e13-5d80-37f9-b7bb-81a6b8965c71)
+    origin: local.uslci.olca
+    UUID: 0aaf1e13-5d80-37f9-b7bb-81a6b8965c71
+       Name: Petroleum refining, at refinery
+    Comment: 
+    ==Local Fields==
+       SpatialScope: RNA
+      TemporalScope: {'begin': '2003-01-01-05:00', 'end': '2003-01-01-05:00'}
+    Classifications: ['Petroleum and Coal Products Manufacturing', 'Petroleum Refineries']
+
+    >>> [str(x) for x in r.inventory()]
+    ....
+
+    >>> lci = list(r.lci())
+    ...
+
+    MultipleReferences: You must specify a reference flow
+
+    >>> rxs = list(r.references())
+    >>> str(rxs[0])
+
+    >>> lci_0 = list(r.lci(rxs[0]))
+    >>> gwp = next(cat.query('lcia.ipcc').quantities(name='global warming'))
+    >>> res = gwp.do_lcia(lci_0)
+    >>> res.total()
+    399.983097567219
+
+    >>> res.show_details()
+    [lcia.ipcc.2007.traci21] Global Warming Air [kg CO2 eq] [LCIA] kg CO2 eq
+    ------------------------------------------------------------
+    
+    [local.uslci.olca] Petroleum refining, at refinery [RNA]:
+         269 =          1  x        269 [GLO] carbon dioxide, air
+         119 =         25  x       4.76 [GLO] methane, air
+        9.68 =         25  x      0.387 [GLO] methane, air
+         1.3 =        298  x    0.00436 [GLO] nitrous oxide, air
+       0.688 =          1  x      0.688 [GLO] carbon dioxide, air
+     0.00159 =    1.4e+03  x   1.14e-06 [GLO] Methane, tetrachloro-, air
+    0.000167 =        8.7  x   1.92e-05 [GLO] methylenechloride, air
+    6.09e-08 =         13  x   4.69e-09 [GLO] methyl chloride, air
+    2.58e-08 =        146  x   1.77e-10 [GLO] 1,1,1-trichloroethane, air
+    1.62e-08 =         31  x   5.22e-10 [GLO] chloroform, air
+    7.07e-09 =          5  x   1.41e-09 [GLO] Methane, bromo-, Halon 1001, air
+        400 [lcia.ipcc.2007.traci21] Global Warming Air [kg CO2 eq] [LCIA]
+
+
 
 ## Core components
 

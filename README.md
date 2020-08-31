@@ -7,7 +7,7 @@ This software is meant to provide a set of free tools for _building_, _analyzing
 
 In the shell (within your virtualenv):
 
-    $ pip install `requirements.txt`
+    $ pip install -r requirements.txt
     
 To create persistent test catalog:
 
@@ -38,7 +38,7 @@ To learn more about the code, first look at these tests and others in  `antelope
 
 # Quick Start
 
-Once you have USLCI installed (above), you can do basic LCA operations.
+Once you have USLCI installed (above), you can do basic LCA operations right away.
 
     >>> from antelope_catalog import LcCatalog
     >>> cat = LcCatalog('/path/to/create/catalog')
@@ -103,7 +103,7 @@ Once you have USLCI installed (above), you can do basic LCA operations.
     7.07e-09 =          5  x   1.41e-09 [GLO] Methane, bromo-, Halon 1001, air
         400 [lcia.ipcc.2007.traci21] Global Warming Air [kg CO2 eq] [LCIA]
 
-
+Coming soon: a TRACI 2.1 test-driven initialization. Ecoinvent is also available but you must have the data files already.
 
 ## Core components
 

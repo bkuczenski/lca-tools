@@ -5,6 +5,10 @@ ResourceInfo = namedtuple('ResourceInfo',
                           ('source', 'ds_type', 'download_url', 'download_md5sum', 'config', 'init_args'))
 
 
+class DataSourceError(Exception):
+    pass
+
+
 class DataSource(object):
     """
     An abstract class that defines how data sources are handled.

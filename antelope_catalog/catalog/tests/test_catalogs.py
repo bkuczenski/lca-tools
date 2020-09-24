@@ -1,6 +1,4 @@
 
-from ...data_sources.local import TEST_ROOT
-
 from .. import LcCatalog
 from ...lc_resource import LcResource
 from ...catalog_query import CatalogQuery, READONLY_INTERFACE_TYPES
@@ -9,7 +7,6 @@ from lcatools.archives.tests import basic_archive_src
 
 import os
 import unittest
-from shutil import rmtree
 
 
 uslci_fg = LcResource('test.uslci', '/data/LCI/USLCI/USLCI_Processes_ecospold1.zip', 'EcospoldV1Archive',
@@ -51,10 +48,6 @@ class LcCatalogFixture(unittest.TestCase):
         cls._cat.add_resource(uslci_fg)
         cls._cat.add_resource(uslci_bg)
         cls._cat.add_resource(test_resource)
-
-    @classmethod
-    def tearDownClass(cls):
-        rmtree(TEST_ROOT)
 
     def test_resolver_index(self):
         self.assertSetEqual({r for r in self._cat.references}, {'local.qdb', 'test.uslci', 'test.uslci.allocated',

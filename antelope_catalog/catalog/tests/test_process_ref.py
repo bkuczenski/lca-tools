@@ -2,11 +2,10 @@ import unittest
 import os
 
 from .. import LcCatalog
-from ...data_sources.local import TEST_ROOT
 
 from lcatools.archives import LcArchive
 
-cat = LcCatalog(TEST_ROOT)
+cat = LcCatalog.make_tester()
 
 blast_furnace = '00420798-e9d1-4de9-8745-09bd85f31db8'
 blast_furnace_gas = 'b254bbdf-fb2b-4878-aec9-2a7820f3f32e'

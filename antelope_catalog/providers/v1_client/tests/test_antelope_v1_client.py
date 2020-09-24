@@ -1,11 +1,10 @@
 import unittest
 
-from antelope_catalog.data_sources.local import TEST_ROOT
 from antelope_catalog import LcCatalog
 
 from lcatools.interfaces import IndexRequired
 
-cat = LcCatalog(TEST_ROOT)
+cat = LcCatalog.make_tester()
 ref = 'calrecycle.antelope'
 
 cat.new_resource(ref, 'http://www.antelope-lca.net/uo-lca/api/', 'AntelopeV1Client',

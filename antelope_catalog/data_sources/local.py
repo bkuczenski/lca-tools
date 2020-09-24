@@ -43,18 +43,30 @@ TO ADD A NEW DATA SOURCE:
 
 """
 
+import os
+import warnings
+
 from .gwp_ipcc_2007 import GwpIpcc2007
-from .ecoinvent import EcoinventConfig
-from .ecoinvent_lcia import EcoinventLciaConfig
 from .traci import TraciConfig
-from .calrecycle_lca import CalRecycleConfig
 from .uslci import UsLciConfig
+
+# local resources
+#from .ecoinvent import EcoinventConfig
+#from .ecoinvent_lcia import EcoinventLciaConfig
+#from .calrecycle_lca import CalRecycleConfig
 
 
 '''CATALOG_ROOT specifies the local folder that stores the reference catalog
+It must either:
+ - be specified in an environment variable os.environ['ANTELOPE_CATALOG_ROOT'], 
+ - or as a file in the local directory named antelope_catalog_root  
 '''
-CATALOG_ROOT = '/data/LCI/cat-demo/'  # persistent
-TEST_ROOT = '/data/LCI/cat-test/'  # volatile
+
+try:
+    CATALOG_ROOT = os.environ['ANTELOPE_CATALOG_ROOT']
+except KeyError:
+    CATALOG_ROOT = '/data/LCI/cat-demo/'  # persistent
+    warnings.warn('environ ANTELOPE_CATALOG_ROOT missing; using BK default: %s' % CATALOG_ROOT)
 
 '''RESOURCES_CONFIG 
 provides enabling and configuration information to the various data resource
@@ -78,20 +90,21 @@ RESOURCES_CONFIG = {
     'uslci': {
         'source': UsLciConfig,
         'enable_test': True
-    }
-}
-
-
-RESOURCES_CONFIG_LOCAL = {
-    'ecoinvent': {
-        'source': EcoinventConfig,
-        'data_root': '/data/LCI/Ecoinvent/',
-        'enable_test': False
     },
     'traci': {
         'source': TraciConfig,
         'data_root': '/data/LCI/TRACI/',
         'enable_test': True
+    }
+}
+
+
+"""
+RESOURCES_CONFIG_LOCAL = {
+    'ecoinvent': {
+        'source': EcoinventConfig,
+        'data_root': '/data/LCI/Ecoinvent/',
+        'enable_test': False
     },
     'calrecycle': {
         'source': CalRecycleConfig,
@@ -107,6 +120,7 @@ RESOURCES_CONFIG_LOCAL = {
 }
 
 RESOURCES_CONFIG.update(RESOURCES_CONFIG_LOCAL)  # still trying to figure out the best way to do this
+"""
 
 '''OPERATIONAL CONFIG
 Code below this line is used by the local init machinery to setup catalogs / testing

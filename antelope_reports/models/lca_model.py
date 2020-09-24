@@ -2,7 +2,7 @@
 LcaModel class-- specifies what makes up the core model
 """
 
-from lcatools.interfaces import EntityNotFound, EntitySpec, q_node_activity
+from antelope import EntityNotFound, EntitySpec, q_node_activity
 from .conventions import logistics_summary_ref, transport_model
 
 from .interface import LcaModelInterface

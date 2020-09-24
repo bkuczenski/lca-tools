@@ -4,11 +4,11 @@ Interim classes with useful building blocks
 
 from __future__ import print_function, unicode_literals
 
+from antelope import LcQuery
 
 from ..entities import LcProcess
 from ..implementations import ExchangeImplementation, BackgroundImplementation, LcConfigureImplementation
 from .basic_archive import BasicArchive, BASIC_ENTITY_TYPES
-from lcatools.interfaces import LcQuery
 
 
 LC_ENTITY_TYPES = BASIC_ENTITY_TYPES + ('process', )

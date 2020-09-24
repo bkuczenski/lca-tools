@@ -1,7 +1,6 @@
 import unittest
-from ...entities import LcFlow, LcQuantity
-from ..catalog_ref import CatalogRef
-from lcatools.interfaces import BasicQuery
+from .. import LcFlow, LcQuantity
+from antelope import CatalogRef
 
 
 q = LcQuantity.new('Dummy quantity', 'dum', origin='test.origin')

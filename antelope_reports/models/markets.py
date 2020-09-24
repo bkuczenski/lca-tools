@@ -1,4 +1,4 @@
-from lcatools.interfaces import EntityNotFound
+from antelope import EntityNotFound
 
 
 def __make_link(fg, parent, models, child):

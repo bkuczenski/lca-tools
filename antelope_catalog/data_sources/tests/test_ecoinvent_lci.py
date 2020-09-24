@@ -15,11 +15,11 @@ from collections import namedtuple
 
 from math import isclose
 
+from antelope import EntityNotFound
+
 from ... import LcCatalog
 from lcatools.entities import LcProcess
 from ...providers import archive_from_json
-
-from lcatools.interfaces import EntityNotFound
 
 from ..local import CATALOG_ROOT, check_enabled
 from lcatools.archives import LcArchive

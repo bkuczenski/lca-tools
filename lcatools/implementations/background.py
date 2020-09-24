@@ -1,7 +1,7 @@
 import re
 
 from .basic import BasicImplementation
-from ..interfaces import BackgroundInterface, ProductFlow, ExteriorFlow, EntityNotFound, comp_dir
+from antelope import BackgroundInterface, ProductFlow, ExteriorFlow, EntityNotFound, comp_dir
 
 
 class NonStaticBackground(Exception):

@@ -6,7 +6,7 @@
 import uuid
 # from collections import defaultdict
 
-from lcatools.interfaces import comp_dir, check_direction, PropertyExists
+from antelope import comp_dir, check_direction, PropertyExists, CatalogRef, NoCatalog
 
 from lcatools.fragment_flows import group_ios, FragmentFlow, frag_flow_lcia
 from lcatools.entities import LcEntity, LcFlow
@@ -14,7 +14,6 @@ from lcatools.exchanges import ExchangeValue
 from lcatools.literate_float import LiterateFloat
 from lcatools.interact import ifinput, parse_math
 from lcatools.terminations import FlowTermination
-from lcatools.entity_refs import CatalogRef, NoCatalog
 
 
 class InvalidParentChild(Exception):

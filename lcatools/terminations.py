@@ -6,10 +6,10 @@ as a ProductFlow in lca-matrix, plus features to compute LCIA.  It should be eas
 other.
 """
 
-from lcatools.interfaces import PrivateArchive, check_direction, comp_dir, NoFactorsFound, QuantityRequired
+from antelope import PrivateArchive, check_direction, comp_dir, NoFactorsFound, QuantityRequired
 
-from lcatools.exchanges import ExchangeValue
-from lcatools.lcia_results import LciaResult, LciaResults
+from .exchanges import ExchangeValue
+from .lcia_results import LciaResult, LciaResults
 
 
 # from lcatools.catalog_ref import NoCatalog

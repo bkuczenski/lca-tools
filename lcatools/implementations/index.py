@@ -1,7 +1,7 @@
 from collections import defaultdict
 
+from antelope import IndexInterface, comp_dir, CONTEXT_STATUS_
 from .basic import BasicImplementation
-from ..interfaces import IndexInterface, comp_dir, CONTEXT_STATUS_
 from lcatools.contexts import NullContext
 
 

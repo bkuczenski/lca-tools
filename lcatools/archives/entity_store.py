@@ -22,7 +22,7 @@ from datetime import datetime
 
 from collections import defaultdict
 
-from ..interfaces import local_ref
+from antelope import local_ref
 from ..from_json import to_json
 
 

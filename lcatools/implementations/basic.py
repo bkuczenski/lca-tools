@@ -1,4 +1,4 @@
-from ..interfaces import EntityNotFound
+from antelope import EntityNotFound
 
 
 class NoAccessToEntity(Exception):

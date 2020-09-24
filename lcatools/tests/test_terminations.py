@@ -1,6 +1,6 @@
 import unittest
 
-from lcatools.interfaces import comp_dir
+from antelope import comp_dir
 from lcatools.entities.tests import BasicEntityTest
 from lcatools.entities.fragment_editor import create_fragment
 from lcatools.terminations import FlowTermination

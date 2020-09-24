@@ -21,7 +21,7 @@ semi-persistent observational foreground.  The impact drivers are all stored in 
 
 """
 
-from lcatools.interfaces import EntityNotFound
+from antelope import EntityNotFound
 from .markets import make_routes, build_market_mix
 
 

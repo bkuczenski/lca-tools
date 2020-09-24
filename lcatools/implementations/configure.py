@@ -1,7 +1,7 @@
 from collections import namedtuple
+from antelope import ConfigureInterface, check_direction
 
 from .basic import BasicImplementation
-from ..interfaces import ConfigureInterface, check_direction
 
 
 ValidConfig = namedtuple('ValidConfig', ('nargs', 'argtypes'))

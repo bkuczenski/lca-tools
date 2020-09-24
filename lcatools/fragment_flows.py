@@ -1,4 +1,4 @@
-from lcatools.interfaces import comp_dir
+from antelope import comp_dir
 
 from .terminations import FlowTermination, SubFragmentAggregation
 from .characterizations import DuplicateCharacterizationError

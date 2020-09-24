@@ -1,7 +1,6 @@
 from lcatools.archives import Qdb, REF_QTYS
 from .lcia_engine import LciaEngine, DEFAULT_CONTEXTS, DEFAULT_FLOWABLES
-from lcatools.entity_refs import QuantityRef
-from lcatools.interfaces import FlowInterface
+from antelope import QuantityRef, FlowInterface
 
 import os
 

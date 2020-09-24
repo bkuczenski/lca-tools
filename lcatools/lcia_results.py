@@ -2,9 +2,9 @@
 This object replaces the LciaResult types spelled out in Antelope-- instead, it serializes to an LCIA result directly.
 
 """
-from lcatools.interfaces import comp_dir
-from lcatools.exchanges import ExchangeValue, DissipationExchange
-from lcatools.autorange import AutoRange
+from antelope import comp_dir
+from .exchanges import ExchangeValue, DissipationExchange
+from .autorange import AutoRange
 from numbers import Number
 from math import isclose
 # from lcatools.interfaces import to_uuid

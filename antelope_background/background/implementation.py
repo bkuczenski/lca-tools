@@ -1,5 +1,5 @@
 from lcatools.implementations import BackgroundImplementation
-from lcatools.interfaces import ExteriorFlow
+from antelope import ExteriorFlow
 from lcatools.exchanges import ExchangeValue
 
 from .flat_background import FlatBackground

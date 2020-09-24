@@ -12,7 +12,7 @@ import re  # for product_flows search
 import numpy as np
 from scipy.sparse import csc_matrix, csr_matrix
 
-from lcatools.interfaces import comp_dir
+from antelope import comp_dir
 
 from .tarjan_stack import TarjanStack
 from .product_flow import ProductFlow, NoMatchingReference

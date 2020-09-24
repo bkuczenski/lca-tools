@@ -1,5 +1,5 @@
+from antelope import ForegroundInterface, CONTEXT_STATUS_, EntityNotFound, comp_dir  # , BackgroundRequired
 from lcatools.implementations import BasicImplementation
-from lcatools.interfaces import ForegroundInterface, CONTEXT_STATUS_, EntityNotFound, comp_dir  # , BackgroundRequired
 
 from lcatools.entities.quantities import new_quantity
 from lcatools.entities.flows import new_flow

@@ -32,7 +32,7 @@ from lcatools.archives import REF_QTYS
 from lcatools.lcia_engine import LciaDb, DEFAULT_CONTEXTS, DEFAULT_FLOWABLES
 
 
-from lcatools.interfaces import local_ref, EntityNotFound
+from antelope import local_ref, EntityNotFound
 from ..catalog_query import CatalogQuery, INTERFACE_TYPES, zap_inventory, UnknownOrigin
 from .lc_resolver import LcCatalogResolver
 from ..lc_resource import LcResource, download_file

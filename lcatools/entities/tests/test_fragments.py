@@ -52,7 +52,7 @@ import unittest
 from ..fragment_editor import create_fragment
 from ..flows import LcFlow
 from lcatools.archives import Qdb
-from lcatools.interfaces import CONTEXT_STATUS_
+from antelope import CONTEXT_STATUS_
 
 origin = 'test.origin'
 

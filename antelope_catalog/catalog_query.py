@@ -2,8 +2,8 @@
 Query Interface -- used to operate catalog refs
 """
 
-from lcatools.interfaces import (IndexInterface, BackgroundInterface, ExchangeInterface, QuantityInterface,
-                                 ForegroundInterface, EntityNotFound, IndexRequired, PropertyExists)
+from antelope import (IndexInterface, BackgroundInterface, ExchangeInterface, QuantityInterface,
+                      ForegroundInterface, EntityNotFound, IndexRequired, PropertyExists)
 
 INTERFACE_TYPES = {'basic', 'index', 'exchange', 'background', 'quantity', 'foreground'}
 READONLY_INTERFACE_TYPES = {'basic', 'index', 'inventory', 'background', 'quantity'}

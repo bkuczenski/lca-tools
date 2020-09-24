@@ -1,8 +1,8 @@
 import json
 from collections import defaultdict
+from antelope import CatalogRef
 
 from lcatools.archives import BasicArchive, LC_ENTITY_TYPES
-from lcatools.entity_refs import CatalogRef
 from lcatools.fragment_flows import FragmentFlow
 
 from antelope_catalog.foreground import FOREGROUND_ENTITY_TYPES

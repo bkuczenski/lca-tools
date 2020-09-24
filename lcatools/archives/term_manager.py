@@ -18,7 +18,7 @@ Someday, it might make sense to expose it as a massive, central graph db.
 """
 from synonym_dict import SynonymDict
 
-from lcatools.interfaces import EntityNotFound
+from antelope import EntityNotFound
 from lcatools.contexts import ContextManager, Context, NullContext
 from .quantity_manager import QuantityManager
 

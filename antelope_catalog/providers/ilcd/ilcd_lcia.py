@@ -3,7 +3,7 @@ from ..xml_widgets import *
 from lcatools.entities import LcEntity, LcQuantity, LcUnit
 from .quantity import IlcdQuantityImplementation
 from .index import IlcdIndexImplementation
-from lcatools.interfaces import comp_dir
+from antelope import comp_dir
 
 
 def get_cf_value(exch, ns=None):

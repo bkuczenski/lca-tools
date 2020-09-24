@@ -1,5 +1,5 @@
 from .from_json import from_json, to_json
-from .interfaces import directions, comp_dir
+from antelope import directions, comp_dir
 from .archives import archive_from_json, archive_factory
 import re
 

@@ -29,7 +29,7 @@ from xlsxwriter import Workbook
 import xlrd
 from synonym_dict.lower_dict import LowerDict
 
-from lcatools.interfaces import EntityNotFound
+from antelope import EntityNotFound
 from lcatools.implementations.quantity import convert
 from lcatools.characterizations import DuplicateCharacterizationError
 

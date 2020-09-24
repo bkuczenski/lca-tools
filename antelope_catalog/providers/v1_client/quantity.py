@@ -2,7 +2,7 @@ from lcatools.implementations import QuantityImplementation
 from lcatools.lcia_results import LciaResult
 
 from math import isclose
-from lcatools.interfaces import EntityNotFound
+from antelope import EntityNotFound
 
 from lcatools.exchanges import ExchangeValue
 from lcatools.characterizations import QRResult

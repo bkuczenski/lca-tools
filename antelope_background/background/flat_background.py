@@ -11,8 +11,8 @@ from scipy.io import savemat, loadmat
 import os
 from collections import namedtuple
 
+from antelope import CONTEXT_STATUS_
 from ..engine import BackgroundEngine
-from lcatools.interfaces import CONTEXT_STATUS_
 from lcatools import from_json, to_json, comp_dir
 
 

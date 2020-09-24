@@ -35,7 +35,7 @@ The NullContext should be returned by the context manager
 """
 
 from synonym_dict.example_compartments import Compartment, CompartmentManager
-from lcatools.interfaces import valid_sense
+from antelope import valid_sense
 
 ELEMENTARY = {'resources', 'emissions'}
 

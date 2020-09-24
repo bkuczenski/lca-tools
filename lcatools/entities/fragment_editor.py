@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from lcatools.interfaces import check_direction, comp_dir
+from antelope import check_direction, comp_dir
 from .fragments import LcFragment, DependentFragment
 
 

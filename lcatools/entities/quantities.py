@@ -2,9 +2,9 @@ from __future__ import print_function, unicode_literals
 import uuid
 
 from synonym_dict import LowerDict
+from antelope import QuantityRef, convert
 
 from lcatools.entities.entities import LcEntity
-from lcatools.entity_refs.quantity_ref import QuantityRef, convert
 
 
 class QuantityAlreadyConfigured(Exception):

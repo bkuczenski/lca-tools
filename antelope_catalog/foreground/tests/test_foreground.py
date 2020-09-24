@@ -5,7 +5,7 @@ from uuid import uuid4
 
 from lcatools.entities.fragment_editor import create_fragment
 from .. import LcForeground
-from lcatools.entity_refs import CatalogRef  # , EntityRefMergeError  ## merge error no longer!
+from antelope import CatalogRef  # , EntityRefMergeError  ## merge error no longer!
 
 WORKING_DIR = os.path.join(os.path.dirname(__file__), 'test-foreground')
 

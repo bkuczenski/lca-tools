@@ -4,7 +4,7 @@ import re
 from .lc_resource import LcResource
 from lcatools.lcia_engine import LciaDb
 
-from lcatools.interfaces import EntityNotFound
+from antelope import EntityNotFound
 from lcatools.archives.entity_store import local_ref
 from lcatools.archives import InterfaceError
 

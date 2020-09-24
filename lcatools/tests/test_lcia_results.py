@@ -1,7 +1,7 @@
 import unittest
 
 from lcatools.lcia_results import LciaResult
-from lcatools.entity_refs import CatalogRef
+from antelope import CatalogRef
 
 
 class LciaResultTestCase(unittest.TestCase):

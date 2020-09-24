@@ -3,8 +3,7 @@ from __future__ import print_function, unicode_literals
 import uuid
 from itertools import chain
 from numbers import Number
-from lcatools.entity_refs import CatalogRef
-from lcatools.interfaces import EntityInterface, PropertyExists
+from antelope import CatalogRef, EntityInterface, PropertyExists
 
 from synonym_dict import LowerDict
 

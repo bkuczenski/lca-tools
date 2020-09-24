@@ -10,10 +10,9 @@ from collections import defaultdict
 from ..catalog_query import UnknownOrigin
 from ..implementations import ForegroundImplementation
 
-from lcatools.interfaces import PropertyExists
+from antelope import PropertyExists, CatalogRef
 from lcatools.archives import BasicArchive, EntityExists, BASIC_ENTITY_TYPES
 from lcatools.entities.fragments import LcFragment
-from lcatools.entity_refs import CatalogRef
 
 
 FOREGROUND_ENTITY_TYPES = BASIC_ENTITY_TYPES + ('fragment', )

@@ -1,5 +1,5 @@
+from antelope import ExchangeInterface
 from .basic import BasicImplementation
-from ..interfaces import ExchangeInterface
 
 
 class ExchangeImplementation(BasicImplementation, ExchangeInterface):

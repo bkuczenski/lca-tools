@@ -1,8 +1,8 @@
 import unittest
 
+from antelope import EntityNotFound
 
 from lcatools.archives import Qdb
-from lcatools.interfaces import EntityNotFound
 from lcatools.entities.tests.base_testclass import BasicEntityTest
 
 mass_uuid = '93a60a56-a3c8-11da-a746-0800200b9a66'

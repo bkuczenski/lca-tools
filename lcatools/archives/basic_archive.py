@@ -5,7 +5,7 @@ from .entity_store import EntityStore, SourceAlreadyKnown, EntityExists
 from .term_manager import TermManager
 
 from ..implementations import BasicImplementation, IndexImplementation, QuantityImplementation, ConfigureImplementation
-from lcatools.interfaces import BasicQuery, EntityNotFound, FlowInterface
+from antelope import BasicQuery, EntityNotFound, FlowInterface
 from lcatools.entities import LcQuantity, LcUnit, LcFlow
 from lcatools.characterizations import DuplicateCharacterizationError
 

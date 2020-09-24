@@ -2,12 +2,13 @@
 Each archive now has a TermManager which interprets query arguments as synonyms for canonical flows and contexts.  This
 can also be upgraded to an LciaEngine, which extends the synonymization strategy to quantities as well
 """
+from antelope import (QuantityInterface, NoFactorsFound, ConversionReferenceMismatch, EntityNotFound, FlowInterface,
+convert, NoUnitConversionTable)
+
 from .basic import BasicImplementation
 from ..characterizations import QRResult
-from ..interfaces import QuantityInterface, NoFactorsFound, ConversionReferenceMismatch, EntityNotFound, FlowInterface
 from ..contexts import NullContext
 from ..lcia_results import LciaResult
-from ..entity_refs import convert, NoUnitConversionTable
 
 
 class RefQuantityRequired(Exception):

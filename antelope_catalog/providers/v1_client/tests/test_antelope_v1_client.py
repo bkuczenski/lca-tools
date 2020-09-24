@@ -1,8 +1,8 @@
 import unittest
+from antelope import IndexRequired
 
 from antelope_catalog import LcCatalog
 
-from lcatools.interfaces import IndexRequired
 
 cat = LcCatalog.make_tester()
 ref = 'calrecycle.antelope'

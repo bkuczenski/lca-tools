@@ -29,9 +29,9 @@ What do we need to do for that?
 import os
 import csv
 from collections import namedtuple
+from antelope import comp_dir
 
 from lcatools.entities.fragment_editor import create_fragment, set_child_exchanges
-from lcatools.interfaces import comp_dir
 from antelope_catalog.catalog.lc_resolver import ResourceNotFound
 
 from .data_source import DataSource, DataCollection

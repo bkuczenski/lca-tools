@@ -5,7 +5,7 @@ import uuid
 
 from collections import defaultdict
 
-from ..interfaces import ExchangeRequired
+from antelope import ExchangeRequired
 
 from lcatools.entities.entities import LcEntity
 from lcatools.exchanges import Exchange, ExchangeValue, DuplicateExchangeError, AmbiguousReferenceError

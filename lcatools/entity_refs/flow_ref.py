@@ -1,6 +1,6 @@
 from .base import EntityRef
 
-from lcatools.interfaces.flow_interface import FlowInterface
+from lcatools.flow import Flow
 
 
 '''
@@ -12,7 +12,7 @@ Think about this for future.  For now, just reimplement everything.
 '''
 
 
-class FlowRef(EntityRef, FlowInterface):
+class FlowRef(EntityRef, Flow):
     """
     Flows can lookup:
     """

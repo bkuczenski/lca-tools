@@ -8,7 +8,7 @@ RefStats = namedtuple('RefStats', ('proc', 'elem', 'flowables'))
 
 test_refs = {'local.ecoinvent.3.4.apos': RefStats(13290, 4078, 1184)}
 
-_debug = True
+_debug = False
 
 if __name__ == '__main__':
     _run_ecoinvent = check_enabled('ecoinvent')
@@ -20,6 +20,7 @@ if _run_ecoinvent:
     cfg = make_config('ecoinvent')
 
 
+@unittest.skipIf(~_run_ecoinvent, 'Ecoinvent test skipped')
 class EcoinventDataSourceTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -50,4 +51,5 @@ class EcoinventDataSourceTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    if _run_ecoinvent:
+        unittest.main()

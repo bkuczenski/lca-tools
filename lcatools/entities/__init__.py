@@ -1,11 +1,10 @@
-from lcatools.interfaces import FlowInterface
 from .quantities import LcQuantity, LcUnit
-from .flows import LcFlow
+from .flows import Flow, LcFlow
 from .processes import LcProcess
 from .entities import LcEntity, entity_types
 from .fragments import LcFragment
 
-class DummyFlow(FlowInterface):
+class DummyFlow(Flow):
     """
     It's not even clear what the purpose of this is
     """

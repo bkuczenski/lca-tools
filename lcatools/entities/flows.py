@@ -3,7 +3,7 @@ import uuid
 
 from .entities import LcEntity
 # from lcatools.entities.quantities import LcQuantity
-from lcatools.interfaces.flow_interface import FlowInterface
+from lcatools.flow import Flow
 from lcatools.interfaces import CONTEXT_STATUS_
 
 
@@ -27,7 +27,7 @@ def new_flow(name, ref_quantity, cas_number='', comment='', context=None, compar
     return LcFlow(external_ref, Name=name, ReferenceQuantity=ref_quantity, **kwargs)
 
 
-class LcFlow(LcEntity, FlowInterface):
+class LcFlow(LcEntity, Flow):
 
     _ref_field = 'referenceQuantity'
     _new_fields = ['CasNumber']  # finally abolishing the obligation for the flow to have a Compartment

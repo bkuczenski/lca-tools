@@ -10,7 +10,6 @@ import sys  # for recursion limit
 import re  # for product_flows search
 
 import numpy as np
-import scipy as sp
 from scipy.sparse import csc_matrix, csr_matrix
 
 from lcatools.interfaces import comp_dir
@@ -332,7 +331,7 @@ class BackgroundEngine(object):
 
     def compute_lci(self, product_flow, **kwargs):
         if self.is_in_background(product_flow):
-            num_ad = sp.array([[self.tstack.bg_dict(product_flow.index), 0, 1.0]])
+            num_ad = np.array([[self.tstack.bg_dict(product_flow.index), 0, 1.0]])
             ad = self.construct_sparse(num_ad, self.tstack.ndim, 1)
             x, bx = self.compute_bg_lci(ad, **kwargs)
             return bx
@@ -386,7 +385,7 @@ class BackgroundEngine(object):
         """
         if self._b_matrix is not None:
             raise ValueError('B matrix already specified!')
-        num_bg = sp.array([[co.emission.index, self.tstack.bg_dict(co.parent.index), co.value]
+        num_bg = np.array([[co.emission.index, self.tstack.bg_dict(co.parent.index), co.value]
                            for co in self._bg_emission])
         self._b_matrix = self.construct_sparse(num_bg, self.mdim, self.tstack.ndim)
 
@@ -398,7 +397,7 @@ class BackgroundEngine(object):
 
     def _construct_a_matrix(self):
         ndim = self.tstack.ndim
-        num_bg = sp.array([[self.tstack.bg_dict(i.term.index), self.tstack.bg_dict(i.parent.index), i.value]
+        num_bg = np.array([[self.tstack.bg_dict(i.term.index), self.tstack.bg_dict(i.parent.index), i.value]
                            for i in self._interior])
         self._a_matrix = self.construct_sparse(num_bg, ndim, ndim)
 
@@ -506,9 +505,9 @@ class BackgroundEngine(object):
                 if co.parent.index in _fg_dict:
                     bf_exch.append(co)
 
-        num_af = sp.array([[fg_dict(i.term.index), fg_dict(i.parent.index), i.value] for i in af_exch])
-        num_ad = sp.array([[self.tstack.bg_dict(i.term.index), fg_dict(i.parent.index), i.value] for i in ad_exch])
-        num_bf = sp.array([[co.emission.index, fg_dict(co.parent.index), co.value] for co in bf_exch])
+        num_af = np.array([[fg_dict(i.term.index), fg_dict(i.parent.index), i.value] for i in af_exch])
+        num_ad = np.array([[self.tstack.bg_dict(i.term.index), fg_dict(i.parent.index), i.value] for i in ad_exch])
+        num_bf = np.array([[co.emission.index, fg_dict(co.parent.index), co.value] for co in bf_exch])
         ndim = self.tstack.ndim
         _af = self.construct_sparse(num_af, pdim, pdim)
         _ad = self.construct_sparse(num_ad, ndim, pdim)

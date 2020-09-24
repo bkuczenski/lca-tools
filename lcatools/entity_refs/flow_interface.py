@@ -7,6 +7,11 @@ class FlowInterface(object):
      - a reference quantity with a fixed unit
      - a flowable (a list of synonyms for the flowable substnce being described)
      - a context (a hierarchical list of strings designating the flows 'compartment' or category)
+
+    Must be implemented (properties):
+     - name - string
+     - link - string
+     - synonyms - iterable
     """
     _context = ()
     _context_set_level = 0

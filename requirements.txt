@@ -4,4 +4,5 @@ lxml
 python-magic
 pylzma
 xlrd
+numpy
 scipy

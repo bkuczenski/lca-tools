@@ -165,6 +165,8 @@ class BasicArchive(EntityStore):
             return IndexImplementation(self)
         elif iface == 'configure':
             return ConfigureImplementation(self)
+        elif iface == 'inventory':
+            return ValueError('inventory is no longer a valid interface name')
         else:
             raise InterfaceError('Unable to create interface %s' % iface)
 

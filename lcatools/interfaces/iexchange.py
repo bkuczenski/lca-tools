@@ -34,8 +34,24 @@ class ExchangeInterface(AbstractQuery):
         return self._perform_query(_interface, 'exchanges',
                                    ExchangeRequired, process, **kwargs)
 
+    def ev(self, process, flow, direction=None, termination=None, ref_flow=None, **kwargs):
+        """
+        Return a float.  Symmetric to quantity.cf
+        :param process:
+        :param flow:
+        :param direction: [None] if none, if flows exist with both directions, raise an error
+        :param termination: [None] if none, return sum of cutoff flows
+        :param ref_flow: [None] if none, return unallocated value. Otherwise, return value allocated to a unit of the
+         specified reference
+        :return: a float
+        """
+        return self._perform_query(_interface, 'exchange_values', ExchangeRequired,
+                                   process, flow, direction=direction, termination=termination, ref_flow=ref_flow,
+                                   **kwargs)
+
     def exchange_values(self, process, flow, direction=None, termination=None, reference=None, **kwargs):
         """
+        Leftover from earlier implementation; deprecated.
         Return a list of exchanges with values matching the specification
         :param process:
         :param flow:
@@ -88,14 +104,3 @@ class ExchangeInterface(AbstractQuery):
         """
         return self._perform_query(_interface, 'exchange_relation', ExchangeRequired,
                                    process, ref_flow, exch_flow, direction, termination=termination, **kwargs)
-
-    def traverse(self, fragment, scenario=None, **kwargs):
-        """
-        Traverse the fragment (observed) according to the scenario specification and return a list of FragmentFlows
-        :param fragment:
-        :param scenario:
-        :param kwargs:
-        :return:
-        """
-        return self._perform_query(_interface, 'traverse', ExchangeRequired,
-                                   fragment, scenario, **kwargs)

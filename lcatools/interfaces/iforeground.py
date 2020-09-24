@@ -113,7 +113,6 @@ class ForegroundInterface(AbstractQuery):
         :param force: if True, if name is taken, de-name the prior fragment and assign the name to the current one
         :return:
         """
-        self._deprecate('use observe()')
         return self._perform_query(_interface, 'name_fragment', ForegroundRequired,
                                    fragment, name, **kwargs)
 
@@ -279,5 +278,17 @@ class ForegroundInterface(AbstractQuery):
         :param kwargs:
         :return:
         """
-        return self._perform_query(_interface, 'fragment_from_exchanges', ForegroundRequired, parent=parent, include_context=include_context,
+        return self._perform_query(_interface, 'fragment_from_exchanges', ForegroundRequired,
+                                   parent=parent, include_context=include_context,
                                    multi_flow=multi_flow, **kwargs)
+
+    def traverse(self, fragment, scenario=None, **kwargs):
+        """
+        Traverse the fragment (observed) according to the scenario specification and return a list of FragmentFlows
+        :param fragment:
+        :param scenario:
+        :param kwargs:
+        :return:
+        """
+        return self._perform_query(_interface, 'traverse', ForegroundRequired,
+                                   fragment, scenario, **kwargs)

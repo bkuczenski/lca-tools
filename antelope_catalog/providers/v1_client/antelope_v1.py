@@ -7,7 +7,7 @@ from lcatools.fragment_flows import FragmentFlow
 
 from antelope_catalog.foreground import FOREGROUND_ENTITY_TYPES
 
-from .inventory import AntelopeExchangeImplementation
+from .exchange import AntelopeExchangeImplementation
 from .quantity import AntelopeQuantityImplementation
 from .index import AntelopeIndexImplementation
 from .exceptions import AntelopeV1Error
@@ -95,7 +95,7 @@ class AntelopeV1Client(BasicArchive):
     def make_interface(self, iface):
         if iface == 'index':
             return AntelopeIndexImplementation(self)
-        elif iface == 'inventory' or iface == 'exchange':
+        elif iface == 'exchange':
             return AntelopeExchangeImplementation(self)
         elif iface == 'quantity':
             return AntelopeQuantityImplementation(self)

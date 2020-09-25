@@ -1,5 +1,5 @@
 from ..term_manager import TermManager, QuantityConflict
-from lcatools.entities import LcQuantity, DummyFlow
+from lcatools.entities import LcQuantity, LcFlow
 from lcatools.contexts import Context
 import unittest
 
@@ -52,12 +52,12 @@ class TermManagerTest(unittest.TestCase):
          * extrac
         :return:
         """
-        flow = DummyFlow()
+        flow = LcFlow.new('Dummy Flow', ref_qty=rq, origin='test.origin')
         for k in ('phosphene', 'phxphn', '1234567'):
             flow._flowable.add_term(k)
-        flow.origin = 'test.origin'
         self.tm.add_flow(flow)
-        self.assertEqual(self.tm._fm[flow.link], 'phosphene')
+        self.assertEqual(self.tm._fm[flow.link], 'Dummy Flow')
+        self.assertEqual(self.tm._fm['Dummy Flow'], 'Dummy Flow')
         with self.assertRaises(KeyError):
             self.tm._fm['1234567']
 

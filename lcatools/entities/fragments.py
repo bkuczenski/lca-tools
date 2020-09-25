@@ -11,7 +11,6 @@ from antelope import comp_dir, check_direction, PropertyExists, CatalogRef, NoCa
 from lcatools.fragment_flows import group_ios, FragmentFlow, frag_flow_lcia
 from lcatools.entities import LcEntity, LcFlow
 from lcatools.exchanges import ExchangeValue
-from lcatools.literate_float import LiterateFloat
 from lcatools.interact import ifinput, parse_math
 from lcatools.terminations import FlowTermination
 
@@ -50,7 +49,7 @@ class DependentFragment(Exception):
 def _new_evs():
     d = dict()  # should be a LowerDict? should scenario names be case sensitive?
     d[0] = 1.0
-    d[1] = LiterateFloat(0.0)  # w.r.t. parent activity level  ## WTF is a LiterateFloat PPP
+    d[1] = 0.0
     return d
 
 
@@ -738,7 +737,7 @@ class LcFragment(LcEntity):
         if isinstance(scenario, tuple) or isinstance(scenario, set):
             raise ScenarioConflict('Set EV must specify single scenario')
 
-        value = float(value)  ## or LiterateFloat?
+        value = float(value)
 
         if units is not None and len(units) > 0:
             value *= self.flow.reference_entity.convert(units)

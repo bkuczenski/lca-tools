@@ -161,10 +161,6 @@ class LcEntity(EntityInterface):
         else:
             self._uuid = str(uuid.UUID(key))
 
-    @property
-    def link(self):
-        return '%s/%s' % (self.origin, self.external_ref)
-
     def _validate_reference(self, ref_entity):
         if ref_entity is None:
             # raise ValueError('Null reference')

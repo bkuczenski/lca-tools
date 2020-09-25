@@ -44,14 +44,6 @@ class LcQuantity(LcEntity):
         self._qi = None
 
     def __setitem__(self, key, value):
-        if key.lower() == 'unitconversion':
-            try:
-                v = LowerDict(**value)
-            except TypeError:
-                print(type(value))
-                print(value)
-                raise
-            value = v
         if key.lower() == 'indicator' and len(value) > 0:
             self._new_fields = ('Indicator', )
             self._is_lcia = True

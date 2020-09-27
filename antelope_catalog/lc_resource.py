@@ -6,11 +6,11 @@ import hashlib
 
 from lcatools.archives import InterfaceError, index_archive, update_archive, create_archive
 
-from .foreground import LcForeground
+# from .foreground import LcForeground
 from .catalog_query import INTERFACE_TYPES, NoCatalog, zap_inventory, UnknownOrigin
 
 # from .providers import create_archive
-
+from . import herd_factory
 
 class ResourceInvalid(Exception):
     """
@@ -124,8 +124,12 @@ class LcResource(object):
 
         kwargs = {**self.init_args}
 
-        if self.ds_type.lower() in ('foreground', 'lcforeground'):
-            self._archive = LcForeground(src, catalog=catalog, ref=self.reference, **kwargs)
+        if 'foreground' in self.interfaces:
+            kwargs['catalog'] = catalog
+
+        if 0: # self.ds_type.lower() in ('foreground', 'lcforeground'):
+            pass
+            # self._archive = LcForeground(src, catalog=catalog, ref=self.reference, **kwargs)
         else:
             if self.ds_type.lower() == 'ecoinventlcia':
                 # this is a GIANT HACK
@@ -141,7 +145,8 @@ class LcResource(object):
                     pass
 
             try:
-                self._archive = create_archive(src, self.ds_type, ref=self.reference, **kwargs)
+                self._archive = create_archive(src, self.ds_type, ref=self.reference,
+                                               factory=herd_factory, **kwargs)
             except FileNotFoundError as e:
                 raise ResourceInvalid('%s: %s' % (self.reference, e.filename))
         if catalog is not None and os.path.exists(catalog.cache_file(self.source)):

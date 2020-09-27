@@ -32,7 +32,7 @@ from lcatools.archives import REF_QTYS
 from lcatools.lcia_engine import LciaDb, DEFAULT_CONTEXTS, DEFAULT_FLOWABLES
 
 
-from antelope import local_ref, EntityNotFound
+from antelope import local_ref, EntityNotFound, CatalogRef
 from ..catalog_query import CatalogQuery, INTERFACE_TYPES, zap_inventory, UnknownOrigin
 from .lc_resolver import LcCatalogResolver
 from ..lc_resource import LcResource, download_file
@@ -660,6 +660,23 @@ class LcCatalog(object):
             origin, external_ref = origin.split('/', maxsplit=1)
         org = self.lookup(origin, external_ref)
         return self.query(org).get(external_ref)
+
+    def catalog_ref(self, origin, external_ref, entity_type=None, **kwargs):
+        """
+        TODO: make foreground-generated CatalogRefs lazy-loading. This mainly requires removing the expectation of a
+        locally-defined reference entity, and properly implementing and using a reference-retrieval process in the
+        basic interface.
+        :param origin:
+        :param external_ref:
+        :param entity_type:
+        :return:
+        """
+        try:
+            q = self.query(origin)
+            ref = q.get(external_ref)
+        except UnknownOrigin:
+            ref = CatalogRef(origin, external_ref, entity_type=entity_type, **kwargs)
+        return ref
 
     def foreground(self, path, ref=None, quiet=True, reset=False, delete=False):
         """

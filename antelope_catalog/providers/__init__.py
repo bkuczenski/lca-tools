@@ -3,9 +3,9 @@
 # from .ilcd import IlcdArchive
 
 
-import importlib
+# import importlib
 
-from lcatools.archives import LcArchive, archive_from_json
+# from lcatools.archives import LcArchive, archive_from_json
 
 from .ilcd import IlcdArchive, IlcdLcia
 from .ecospold2 import EcospoldV2Archive
@@ -14,8 +14,9 @@ from .ecospold import EcospoldV1Archive
 from .ecoinvent_lcia import EcoinventLcia
 from .openlca_jsonld import OpenLcaJsonLdArchive
 from .traci import Traci21Factors
-from .v1_client import AntelopeV1Client
 
+PROVIDERS = ['IlcdArchive', 'IlcdLcia', 'EcospoldV2Archive', 'EcospoldV1Archive',
+             'EcoinventLcia', 'OpenLcaJsonLdArchive', 'Traci21Factors']
 
 ''' # this has all been folded into archive.__init__
 class ArchiveError(Exception):

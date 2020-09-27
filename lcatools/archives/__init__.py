@@ -1,3 +1,4 @@
+
 from .entity_store import EntityStore, SourceAlreadyKnown, EntityExists, uuid_regex
 from .basic_archive import BasicArchive, BASIC_ENTITY_TYPES, InterfaceError, ArchiveError
 from .archive_index import index_archive, BasicIndex, LcIndex
@@ -5,10 +6,10 @@ from .term_manager import TermManager
 from .lc_archive import LcArchive, LC_ENTITY_TYPES
 from ..from_json import from_json
 
-import os
-import importlib
+from pathlib import Path
+# import pkgutil
 
-REF_QTYS = os.path.join(os.path.dirname(__file__), 'data', 'elcd_reference_quantities.json')
+REF_QTYS = str(Path(__file__).parent / 'data' / 'elcd_reference_quantities.json')
 
 
 class Qdb(BasicArchive):
@@ -30,25 +31,17 @@ class Qdb(BasicArchive):
         self.load_from_dict(from_json(self.source))
 
 
-def create_archive(source, ds_type, **kwargs):
-    """
-    Create an archive from a source and type specification.
-    :param source:
-    :param ds_type:
-    :param kwargs:
-    :return:
-    """
-    if ds_type.lower() == 'json':
-        a = archive_from_json(source, **kwargs)
-    else:
-        cls = archive_factory(ds_type)
-        a = cls(source, **kwargs)
-    return a
-
-
 def update_archive(archive, json_file):
     archive.load_from_dict(from_json(json_file), jsonfile=json_file)
 
+
+# find antelope providers
+init_map = {
+    'basicarchive': BasicArchive,
+    'basicindex': BasicIndex,
+    'lcarchive': LcArchive,
+    'lcindex': LcIndex
+}
 
 def archive_factory(ds_type):
     """
@@ -57,27 +50,9 @@ def archive_factory(ds_type):
     :return:
     """
     dsl = ds_type.lower()
-    init_map = {
-        'basicarchive': BasicArchive,
-        'basicindex': BasicIndex,
-        'lcarchive': LcArchive,
-        'lcindex': LcIndex
-    }
-    try:
-        init_fcn = init_map[dsl]
-        return init_fcn
-#        'foregroundarchive': ForegroundArchive.load,
-#        'foreground': ForegroundArchive.load
-    except KeyError:
-        try:
-            mod = importlib.import_module('.providers', package='antelope_catalog')
-            return getattr(mod, ds_type)
-        except AttributeError:
-            try:
-                mod = importlib.import_module('.%s' % dsl, package='antelope_%s' % dsl)
-                return mod.init_fcn
-            except ImportError as e:
-                raise ArchiveError(ds_type)  # what is going on here?
+    if dsl in init_map:
+        return init_map[dsl]
+    raise ArchiveError('No provider found for %s' % ds_type)
 
 
 def archive_from_json(fname, factory=archive_factory, catalog=None, **archive_kwargs):
@@ -94,3 +69,20 @@ def archive_from_json(fname, factory=archive_factory, catalog=None, **archive_kw
         print('**XX Upstream is gone; catalog argument is deprecated\n')
     cls = factory(j.pop('dataSourceType', 'LcArchive'))
     return cls.from_already_open_file(j, fname, quiet=True, **archive_kwargs)
+
+
+def create_archive(source, ds_type, factory=archive_factory, **kwargs):
+    """
+    Create an archive from a source and type specification.
+    :param source:
+    :param ds_type:
+    :param factory: override archive factory with fancier version
+    :param kwargs:
+    :return:
+    """
+    if ds_type.lower() == 'json':
+        a = archive_from_json(source, factory=factory, **kwargs)
+    else:
+        cls = factory(ds_type)
+        a = cls(source, **kwargs)
+    return a

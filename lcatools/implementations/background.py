@@ -19,7 +19,7 @@ class BackgroundImplementation(BasicImplementation, BackgroundInterface):
     The default Background Implementation exposes an ordinary inventory database as a collection of LCI results.
     Because it does not perform any ordering, there is no way to distinguish between foreground and background
     elements in a database using the proxy. It is thus inconsistent for the same resource to implement both
-    inventory and [proxy] background interfaces from the same resource.
+    inventory and [proxy] background interfaces.
     """
     def __init__(self, *args, **kwargs):
         super(BackgroundImplementation, self).__init__(*args, **kwargs)

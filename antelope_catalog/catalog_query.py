@@ -2,8 +2,10 @@
 Query Interface -- used to operate catalog refs
 """
 
-from antelope import (IndexInterface, BackgroundInterface, ExchangeInterface, QuantityInterface,
-                      ForegroundInterface, EntityNotFound, IndexRequired, PropertyExists)
+from antelope import (IndexInterface, BackgroundInterface, ExchangeInterface, QuantityInterface, EntityNotFound)
+#                      ForegroundInterface,
+#                      IndexRequired, PropertyExists,
+#                      )
 
 INTERFACE_TYPES = {'basic', 'index', 'exchange', 'background', 'quantity', 'foreground'}
 READONLY_INTERFACE_TYPES = {'basic', 'index', 'inventory', 'background', 'quantity'}
@@ -25,7 +27,11 @@ class UnknownOrigin(Exception):
     pass
 
 
-class CatalogQuery(IndexInterface, BackgroundInterface, ExchangeInterface, QuantityInterface, ForegroundInterface):
+class BackgroundSetup(Exception):
+    pass
+
+
+class CatalogQuery(IndexInterface, BackgroundInterface, ExchangeInterface, QuantityInterface): # , ForegroundInterface):
     """
     A CatalogQuery is a class that performs any supported query against a supplied catalog.
     Supported queries are defined in the lcatools.interfaces, which are all abstract.
@@ -94,6 +100,13 @@ class CatalogQuery(IndexInterface, BackgroundInterface, ExchangeInterface, Quant
             self._debug('Returning cached iface')
             yield self._iface_cache[itype]
         for i in self._catalog.gen_interfaces(self._origin, itype, strict=strict):
+            if itype == 'background':
+                self._debug('Setting up background interface')
+                try:
+                    i.setup_bm(self)
+                except AttributeError:
+                    raise BackgroundSetup('Failed to configure background')
+
             self._debug('yielding %s' % i)
             self._iface_cache[itype] = i  # only cache the most recent iface
             yield i

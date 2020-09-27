@@ -25,9 +25,9 @@ class TarjanBackgroundImplementation(BackgroundImplementation):
     So ultimately this is a query object that implements the background interface.
 
     The __init__ comes from the BasicImplementation, which requires an _archive as first argument.  In the default
-    BackgroundImplementation, this _archive is used to generally access all entities.  However, in the Tarjan background
-    the FlatBackground provides all necessary information-- which boils down to external_refs that can be looked up
-    using a separate implementation.
+    BackgroundImplementation, this _archive is used to generally provide all the entity data.  However, in the Tarjan
+    background the FlatBackground provides all necessary information-- which boils down to external_refs that can be
+    looked up via the catalog / client code.
 
     The BackgroundImplementation subclasses BasicImplementation and adds an _index attribute.  This index is used for
     creating the flat background and also for accessing contexts when generating elementary exchanges.

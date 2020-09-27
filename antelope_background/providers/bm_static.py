@@ -6,8 +6,8 @@ import os
 import time
 
 from lcatools.archives import LcArchive, InterfaceError
-from .flat_background import FlatBackground, SUPPORTED_FILETYPES
-from .implementation import TarjanBackgroundImplementation
+from ..background.flat_background import FlatBackground, SUPPORTED_FILETYPES
+from ..background.implementation import TarjanBackgroundImplementation
 
 
 class TarjanBackground(LcArchive):

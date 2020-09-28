@@ -1,11 +1,4 @@
-from antelope import EntityNotFound
-
-
-class NoAccessToEntity(Exception):
-    """
-    Used when the actual entity is not accessible
-    """
-    pass
+from antelope import EntityNotFound, NoAccessToEntity
 
 
 class BasicImplementation(object):

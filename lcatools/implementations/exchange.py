@@ -64,7 +64,3 @@ class ExchangeImplementation(BasicImplementation, ExchangeInterface):
         else:
             x = p.get_exchange(hash((p.external_ref, exch_flow, direction, termination)))
             return x[norm]
-
-    def traverse(self, fragment, scenario=None, **kwargs):
-        frag = self._archive.retrieve_or_fetch_entity(fragment)
-        return frag.top().traverse(scenario, observed=True)

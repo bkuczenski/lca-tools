@@ -110,9 +110,6 @@ class IndexImplementation(BasicImplementation, IndexInterface):
             return NullContext
         return cx
 
-    def synonyms(self, item, **kwargs):
-        return self._archive.tm.synonyms(item)
-
     '''
     def mix(self, flow_ref, direction):
         if not isinstance(flow_ref, str):

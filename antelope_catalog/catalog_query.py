@@ -6,6 +6,7 @@ from antelope import (IndexInterface, BackgroundInterface, ExchangeInterface, Qu
 #                      ForegroundInterface,
 #                      IndexRequired, PropertyExists,
 #                      )
+from antelope.refs.exchange_ref import RxRef
 
 INTERFACE_TYPES = {'basic', 'index', 'exchange', 'background', 'quantity', 'foreground'}
 READONLY_INTERFACE_TYPES = {'basic', 'index', 'inventory', 'background', 'quantity'}
@@ -132,6 +133,26 @@ class CatalogQuery(IndexInterface, BackgroundInterface, ExchangeInterface, Quant
                                          **kwargs)
             self._entity_cache[eid] = self.make_ref(entity)
         return self._entity_cache[eid]
+
+    def get_reference(self, external_ref):
+        k = (external_ref, True)
+        if k not in self._entity_cache:
+            ref = self._perform_query(None, 'get_reference', EntityNotFound, external_ref)
+            # quantity: unit
+            # flow: quantity
+            # process: list
+            # fragment: fragment
+            #[context: context]
+            if ref is None:
+                deref = None
+            elif isinstance(ref, list):
+                deref = [RxRef(x.process, x.flow, x.direction, x.comment) for x in ref]
+            elif ref.entity_type == 'unit':
+                deref = ref.unitstring
+            else:
+                deref = self.make_ref(ref)
+            self._entity_cache[k] = deref
+        return self._entity_cache[k]
 
     '''
     LCIA Support

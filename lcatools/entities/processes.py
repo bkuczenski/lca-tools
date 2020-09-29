@@ -200,10 +200,6 @@ class LcProcess(LcEntity):
     def name(self):
         return self['Name']
 
-    def _make_ref_ref(self, query):
-        return [RxRef(self.external_ref, x.flow.make_ref(query), x.direction, comment=x.comment)
-                for x in self.references()]
-
     def __str__(self):
         return '%s [%s]' % (self._d['Name'], self._d['SpatialScope'])
 
@@ -454,13 +450,9 @@ class LcProcess(LcEntity):
         if self._alloc_by_quantity is not None:
             self.allocate_by_quantity(self._alloc_by_quantity)
 
-    def references(self, flow=None):
+    def references(self):
         for rf in self.reference_entity:
-            if flow is None:
-                yield self._exchanges[rf.key]
-            else:
-                if rf.flow == flow or rf.flow.match(flow):
-                    yield self._exchanges[rf.key]
+            yield self._exchanges[rf.key]
 
     def reference(self, flow_ref=None):
         if flow_ref in self._reference_entity:

@@ -110,3 +110,6 @@ class BasicImplementation(object):
             if e is not None:
                 return e
         raise EntityNotFound(external_ref)
+
+    def synonyms(self, item, **kwargs):
+        return self._archive.tm.synonyms(item)

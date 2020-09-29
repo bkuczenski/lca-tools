@@ -83,7 +83,10 @@ class AllocationGrid(BaseTableOutput):
 
     def _add_alloc_refs(self, arg, flow=None):
         col_idx = len(self._columns)
-        for k in arg.references(flow=flow):
+        for k in arg.references():
+            if flow is not None:
+                if flow != k.flow:
+                    continue
             rx = ExchangeValue(k.process, k.flow, k.direction, value=1.0)  # we do this to avoid calling RxRef.value
             # (and because table exchanges are normalized to this value, so 1.0 is the only correct value to report)
             rx.set_ref(k.process)

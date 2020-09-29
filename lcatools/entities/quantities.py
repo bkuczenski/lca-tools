@@ -90,9 +90,6 @@ class LcQuantity(LcEntity):
     def unit(self):
         return self.reference_entity.unitstring
 
-    def _make_ref_ref(self, query):
-        return self.reference_entity
-
     @property
     def is_lcia_method(self):
         return self._is_lcia

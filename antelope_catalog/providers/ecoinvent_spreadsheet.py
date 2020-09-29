@@ -1,10 +1,12 @@
 from __future__ import print_function, unicode_literals
 
+from antelope import MultipleReferences
+
 from lcatools.archives import LcArchive
 from .xl_dict import XlDict
 from lcatools.entities import LcProcess, LcFlow, LcQuantity
 from .ecospold2 import EcospoldV2Archive
-from lcatools.interact import pick_reference
+# from lcatools.interact import pick_reference
 
 from lcatools.from_json import from_json
 
@@ -150,8 +152,8 @@ class EcoinventSpreadsheet(LcArchive):
     def _find_rf(p, ref_flow=None):
         if ref_flow is None:
             if len(p.reference_entity) > 1:
-                print('This process has multiple allocations. Select reference flow:')
-                ref_flow = pick_reference(p)
+                raise MultipleReferences('Must specify reference flow')
+                # ref_flow = pick_reference(p)
             else:
                 ref_flow = list(p.reference_entity)[0].flow
 

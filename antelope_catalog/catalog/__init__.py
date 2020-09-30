@@ -1,2 +1,0 @@
-from .catalog import LcCatalog
-

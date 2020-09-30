@@ -1,0 +1,175 @@
+==========
+Mon Sep 28 21:33:03 -0700 2020
+
+Mon 2020-09-28 15:22:28 -0700
+
+CUrrent stall point with foreground:
+ - when to use fragment refs versus actual fragments?
+ * at issue: when working with Antelope, for traverse we are supposed to send 'top()' but that method is not implemented.  In fact, fragment refs are supposed to be strictly top fragments, I believe (???) so we can just take it out.,
+ nope- that is going to be an endless loop.
+ ah, I already re-implemented traversal... now it's down to a process ref issue... progress!
+ 
+Mon 2020-09-28 20:49:43 -0700
+
+At this point the ProcessRef is failing to lookup a reference flow
+and this is a FragmentFlow.antelope_v1 debug sesh
+which totally naturally seems like it would need review [not to mention doesn't belong in FragmentFlow]
+
+Aha.
+I remember this.
+Antelope v1 does not have reference flows
+I don't think the process even has any idea of its reference flow
+so the flow then is the flow of the fragment
+which is wha
+
+but also the problem is that the ref is required to have the reference entity on hand
+when it should #1 be able to retrieve it
+there needs to be a get_reference() but it has to return null
+
+maybe for now I can punt by just passing the direction- which is the only reason it's asking. so the process just needs to provide it which it can without code changes.
+-- I'm assuming the antelope code didn't support implicit process inversion - I'm pretty sure it failed explicit (e.g. gabi-style) process inversion because of excessive direction checking on LCIA. but obviously it couldn't because it didn't know process refs.
+I'm overthinking this.
+I should just pass comp_dir(j['direction']) and be done
+
+but still.. process_ref.reference{(), _entity, s()} needs reworked summit bad
+bc we can't create flows or quantities without references
+but we can create process REFs without KNOWING reference flows
+so we need a way to look them up and we need to cache them and it needs to be an API route to get_reference. everything has a reference, even if it is an empty list.
+parent contexts have none- so that is a potential error case
+but get_reference() needs to be a thing
+Mon 2020-09-28 21:23:52 -0700
+it's listed in the goddamn paper in doco
+
+Mon 2020-09-28 21:33:18 -0700
+
+process / process_ref reference / references usage audit
+
+process_ref:references:
+  - test_alloc_consistency: as references iterator
+  - in process_ref weirdly to __init__
+  - in _show_ref to print, which is app never used
+  - to enumerate external_refs of flows in default_rx
+  - by reference(), to implement
+  - test_flow_termination, again to iterate petro refs
+
+Anyway, references() should not take an argument. reference() should outsource the task to flow.match()
+reference_entity should query and obtain on demand
+
+damn, used in allocation grid with an argument
+
+ok this is weirdly hard because (a) I don't know what client code expects and (b) I don't know what it was intended to expect, not to mention (c) I don't know what it should expect
+
+but the only case references() is apparently called with an arg is in allocation grid, wherein it should have been done in client code as a filter
+so fine. the real question is, how is reference() being used?
+
+LcProcess.references() are the same 13
+
+
+Let's do LcProcess.reference() first for review
+I mean, we don't really need to do this.
+the argument should be an external ref, a link, or an entity
+so basically I'm saying ref_a.match(ref_b) should return true if ref_a == ref_b or if
+
+no. match is fine. I should return true if equal or match
+I suppose I do see the logic of doing references with a filter- although I think that is best left to client code.
+reference() job is to return one. so if more than one match, .. warn.
+
+process uses find_exchange(ref, reference=True)
+which first makes candidates using a reverse-map on external_ref, which it carefully extracts [_gen_exchanges] and then just tries to pare down to just one, or throws multipleReferences-- so it really is just find_reference in which case why tf are we using it that way
+
+find_exchange is used in reference(), has_reference(), and is_allocated(), always with reference=True. so it's really find_reference. from client code.
+
+what ever. it's fucking stupid.
+the process ref usage- it's going to be an external_ref, link, or an entity itself which should test equality based on origin + external ref
+
+Mon 2020-09-28 22:19:52 -0700
+
+Problem with get_reference(): it returns true entities. with process, I need to be returning RxRefs...
+... or do I? aren't those exactly what ExchangeRefs are for? fuck this RxRef shit.
+
+so how should this work?
+- from_query no longer requires reference_entity
+- away with _make_ref_ref
+- instead the basic impl just returns the reference entity straight from the archive
+- 
+
+basic query returns the entity.
+catalog query returns a reference, and keeps a cache.
+catalog query could implement get_reference just fuckin fine, and make ExchangeRefs instead of RxRefs.  where are RxRefs used? in process_ref
+
+OK. This is thick. but this is good. RxRef has to die.
+
+RxRef interface:
+__init__(process_external_ref, flow.make_ref, direction, comment
+process has to get set later because of this stupidness
+
+... for rx in reference_entity: rx.process = self
+catalog refs shouldn't even be allowed to specify references!
+ok anyway
+once process is set by process_ref to be process_ref, the API is:
+
+X .process -> process_ref
+X .flow  -> flow_ref
+X .direction
+X .unit -> flow_ref.unit
+ .comment
+ .value -> ExchangeRequired!
+ .termination -> None -- it's an RxRef!
+ .is_reference -> True
+ ._value_string -> ' --- '
+ .key -> self._hash -> hash(process_ref, flow_ref, direction, None) :: same as Exchange
+ .lkey -> flow_ref, direction, None :: used to try to make equality comparison checking faster?
+ .link -> badly supported "process_link/reference/flow_ref"
+ __hash__ -> self._hash
+ __eq__ -> checks lkey
+ __str__
+
+And the ExchangeRef interface currently is:
+ __init__(process, flow, direction, value, unit, termination, reference, **kwargs)
+
+and the API:
+= .process 
+= .flow
+= .direction
+o .value
+o .termination
+= .unit
+ __getitem__
+ .type
+ __str__
+
+OK so we just need to add the equality and hashing stuff [wait but why?] we wanted RxRefs to be indistinguishable from true exchanges but why?
+Anyway, the key should include process link, flow ref, direction, term ref
+the lkey is used: to test RxRef equality; in exchanges ref checking; and in traversal observer.
+I guess we should keep it. lkey is for a strictly local comparison and is the same: flow ref, direction, term ref
+
+$$$ question:
+do we always want exchanges and exchange refs to hash the same? or always different?
+in a catalog, two different dbs, openlca 1.10.3 and open lca 1.10.4 - those will be different origins so different exchange refs so different.
+
+
+
+ 
+Mon 2020-09-28 23:17:16 -0700
+
+I feel like I'm in pretty deep here- you can always tell I'm in deep when I encounter LcUnit--
+what are we doing? implementing get_Reference. the reference for a quantity is a unit string. full stop.
+at the basic level you can just give back whatever the implementation gives you. at the catalog level you have to give back the unitstring. why does LcUnit even exist? so that it can give type = 'unit' to validate LcEntity creation. and to store ILCD UUIDs (subsequently abandoned) (but Andreas also has unit UUIDs but they are just as useless)
+
+anyway when I call get_reference(quantity) I want to get back quantity.unit
+
+Mon 2020-09-28 23:59:31 -0700
+OK, tests are passing but the antelope traversal test takes like 12 seconds
+
+Tue 2020-09-29 14:50:43 -0700
+
+Update: this seems to be actual transport delay on the requests.Session().get() calls-- which implicates the host-- which is not surprising.
+
+Tue 2020-09-29 16:14:50 -0700
+
+New question-- now that I've split off all the core stuff and it runs tests in 0.7 sec and has no dependencies, I am faced with the question of what to do with the Catalog?  This includes:
+ - all the providers
+ - file_store, pylzma, magic, etc
+ - all the data sources, lxml, xlrd
+
+I think the thing to do is this: the core package is USELESS without something to DO with it.  Users are going to want to compute results.  That means they will want to load datasets. That means I need to keep the providers (and the MODEST list of requirements, the only heavy one being lxml) in antelope_core.

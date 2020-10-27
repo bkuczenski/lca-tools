@@ -1,7 +1,7 @@
 import os
 import json
 
-from antelope_catalog import LcCatalog
+from antelope_core import LcCatalog
 from .lc_pub import AntelopeV1Pub, AntelopeV2Pub
 
 

@@ -14,7 +14,7 @@ from .av2_types import FlowSchema, QuantitySchema, ProcessSchema
 
 from itertools import islice
 
-from antelope_catalog import LcResource
+from antelope_core.catalog import StaticCatalog
 
 
 list_fields = ('id', 'origin', 'name')
@@ -25,10 +25,9 @@ def _get_query():
     User must write this code
     :return: an object suitable for use as an input argument to an LcQuery
     """
-    a = LcResource.from_json('/data/LCI/cat-food/resources/local.uslci.olca')[0]
-    a.check(None)
-    a.archive.load_all()
-    return a.archive.query
+    cat = StaticCatalog('/data/LCI/cat-demo')
+    q = cat.query('local.uslci.olca')
+    return q
 
 
 app = Flask(__name__)
@@ -79,6 +78,27 @@ def flows():
 def flow(entity_id):
     return show_entity(entity_id, _etype='flow')
 
+
+@app.route('/processes')
+def processes():
+    count = request.args.get('count', 50)
+    if len(request.args) > 0:
+        only = list_fields + tuple(k.lower() for k in request.args.keys() if k not in ('count',))
+    else:
+        only = list_fields
+    ps_schema = ProcessSchema(many=True, only=only)
+
+    f = query.processes(**request.args)
+    if count > 0:
+        gen = islice(f, count)
+    else:
+        gen = f
+    return jsonify(ps_schema.dump(gen))
+
+
+@app.route('/processes/<entity_id>')
+def process(entity_id):
+    return show_entity(entity_id, _etype='process')
 
 def _get_right(entity_id, _etype=None):
     entity = query.get(entity_id)

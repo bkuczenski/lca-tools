@@ -173,3 +173,29 @@ New question-- now that I've split off all the core stuff and it runs tests in 0
  - all the data sources, lxml, xlrd
 
 I think the thing to do is this: the core package is USELESS without something to DO with it.  Users are going to want to compute results.  That means they will want to load datasets. That means I need to keep the providers (and the MODEST list of requirements, the only heavy one being lxml) in antelope_core.
+
+Wed 2020-09-30 00:11:38 -0700
+
+OK, so now we have a StaticCatalog, the classic LcCatalog, and a ForegroundCatalog that adds the ability to create foregrounds (but doesn't depend on foregrounds).
+
+Prior tests are all still working. No new ones have been written.
+
+
+
+Next things to do:
+ - get the EPA foreground and hackathon work ported.  Implement it as a fork or a pull request to antelope_foreground.
+ - for every issue encountered during that work, write a test.
+ - write a flask server that takes url request, parses it as a query argument to a default origin. use the existing marshmallow junk to serve it
+ hire someone to redo it properly
+
+implement open api spec
+okay but
+that's what I need to pay someone to do
+for now I just have a json spec
+
+so that is a concern
+
+plus catra is happening
+plus the mcgovern pitch
+plus TNC!! and I'm daydreaming of 2 PAPERS
+and October is upon us
